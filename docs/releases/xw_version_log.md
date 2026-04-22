@@ -168,3 +168,77 @@ Do not include:
 - The live `C:\xw` workspace had earlier local dependency-lock contamination, so release validation proof was taken from the isolated fresh copy instead of relying on the contaminated workspace tree.
 - This does not indicate a repo-code blocker.
 - This freeze environment did not expose `.git` metadata or a working `git` binary, so the release tag must be created from the canonical git checkout rather than from this unpacked package-prep workspace.
+
+---
+
+## Release: `xw-sprint-2-ready`
+
+### Date
+2026-04-22
+
+### Sprint
+Sprint 2
+
+### Status
+Ready
+
+### Why this snapshot exists
+This snapshot marks the point where Sprint 2 assistant/runtime expansion is complete, minimally user-accessible from the Assistant page, and ready for trusted baseline packaging.
+
+### Included in this snapshot
+- Assistant/runtime support for:
+  - `update_transaction`
+  - `delete_transaction`
+  - `recategorize_transaction`
+  - `summarize_spending`
+- Assistant action parsing for all approved Sprint 2 tool paths
+- Real read-only `summarize_spending` summary execution
+- Minimum safe Assistant page trigger UI for all approved Sprint 2 actions
+- Narrow schema hardening on Sprint 2 tool request branches
+- Focused unit coverage for assistant UI wiring, action parsing, runtime execution, summary correctness, and transaction boundary behavior
+
+### Not included in this snapshot
+- New primary pages
+- Open-ended chat behavior
+- PDF imports
+- Direct bank or card linking
+- Dashboard expansion
+- Sprint 3 staged import workflow work
+
+### Validation state
+- focused Sprint 2 closeout validation command passed:
+  - `npm.cmd run test -- --run src/tests/unit/assistant-composer.test.tsx src/tests/unit/assistant-action.test.ts src/tests/unit/assistant-server.test.ts src/tests/unit/ai-tools.test.ts src/tests/unit/transactions-read-model.test.ts src/tests/unit/transactions-domain.test.ts src/tests/unit/transaction-mutations.test.ts`
+- `7` test files passed
+- `64` tests passed
+- validation scope covered:
+  - `assistant-composer`
+  - `assistant-action`
+  - `assistant-server`
+  - `ai-tools`
+  - `transactions-read-model`
+  - `transactions-domain`
+  - `transaction-mutations`
+
+### Package exclusions
+Do not include:
+- `.next/`
+- `node_modules/`
+- `playwright-results/`
+- `test-results/`
+- `validation-fresh/`
+- `tsconfig.tsbuildinfo`
+
+### Known remaining risks
+- Closeout validation was scoped to the Sprint 2 assistant/runtime/UI surface, not a full repo-wide release sweep.
+- The Assistant UI remains intentionally bounded and operational rather than conversational.
+- The minimal action UI still depends on explicit IDs and bounded field entry rather than richer guided selection.
+
+### Active source-of-truth notes at this release
+- Sprint 2 is ready.
+- `xw` should be updated now.
+- The Assistant page is no longer create/list only.
+- `summarize_spending` is a real read-only capability.
+- Next execution focus should move to Sprint 3 staged import workflow planning only after freezing this baseline.
+
+### Recommended next release direction
+The next meaningful xw snapshot should be created only after Sprint 3 staged import workflow scope is implemented and validated from the frozen `xw-sprint-2-ready` baseline.

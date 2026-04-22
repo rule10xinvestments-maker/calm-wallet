@@ -151,3 +151,63 @@ Ready
 1. Freeze/package `xw-sprint-1-ready`.
 2. Start Sprint 2 from the approved mutation-capable assistant tool surface.
 3. Keep runtime wiring behind validation, policy, ownership, audit, and service execution.
+
+---
+
+## Sprint 2 Closeout Update
+
+### Date
+2026-04-22
+
+### Status
+Ready
+
+### Add this to my knowledge now
+- Sprint 2 is ready.
+- `xw` should be updated now.
+- Recommended release label: `xw-sprint-2-ready`.
+- The Assistant/runtime surface now supports:
+  - `update_transaction`
+  - `delete_transaction`
+  - `recategorize_transaction`
+  - `summarize_spending`
+- The Assistant page now exposes a minimum safe trigger UI for all approved Sprint 2 actions.
+- `summarize_spending` is now a real read-only capability and no longer returns `not_implemented`.
+- Runtime logging remains preserved across the approved Sprint 2 assistant action paths.
+
+### Locked decisions changed this sprint
+- No new primary pages.
+- No weakening of the AI runtime boundary.
+- No direct AI-to-database write path.
+- No natural-language freeform assistant behavior was introduced.
+
+### Repo reality changed this sprint
+- Assistant action parsing now handles all approved Sprint 2 tool paths.
+- Assistant request/result shaping now covers all approved Sprint 2 tool paths.
+- Assistant composer UI now supports bounded create, update, delete, recategorize, and summarize flows.
+- A pure read-model spending summary helper now exists for the trusted summarize path.
+- Focused tests now cover Sprint 2 assistant UI wiring, action parsing, server/runtime behavior, and summary correctness.
+
+### Validation state
+- Focused Sprint 2 closeout validation passed for:
+  - `assistant-composer`
+  - `assistant-action`
+  - `assistant-server`
+  - `ai-tools`
+  - `transactions-read-model`
+  - `transactions-domain`
+  - `transaction-mutations`
+- The focused grouped validation result was:
+  - `7` test files passed
+  - `64` tests passed
+
+### What is now overridden
+- Older notes that describe the Assistant page as create/list only.
+- Older notes that describe `summarize_spending` as scaffolded or `not_implemented`.
+- Older Sprint 2 status notes that imply backend completion without UI accessibility.
+
+### Next sprint start order
+1. Freeze/package `xw-sprint-2-ready`.
+2. Start Sprint 3 from the frozen Sprint 2 baseline.
+3. Keep the trusted Assistant/runtime boundary unchanged unless explicitly re-scoped.
+4. Move next into staged import workflow work for supported inputs only.

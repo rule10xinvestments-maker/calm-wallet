@@ -20,12 +20,12 @@ export function AssistantOverview({ action, initialState, recentTransactions }: 
       <ScreenHeader
         eyebrow="Assistant"
         title="A calm assistant check-in"
-        description="Use a narrow, trusted path to save a transaction fast or pull your recent tracked items."
+        description="Use a narrow, trusted path to create, update, delete, recategorize, or summarize tracked items."
       />
       <Card>
         <CardHeader>
-          <CardTitle>Quick capture</CardTitle>
-          <CardDescription>This assistant stays tool-bound in Sprint 1. It can save a transaction or show recent tracked items.</CardDescription>
+          <CardTitle>Quick actions</CardTitle>
+          <CardDescription>This assistant stays tool-bound in Sprint 2. Choose one bounded action and submit only the minimum fields it needs.</CardDescription>
         </CardHeader>
         <CardContent>
           <AssistantComposer action={action} initialState={initialState} />

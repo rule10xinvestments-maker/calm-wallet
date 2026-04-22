@@ -62,8 +62,15 @@ export type AiToolSuccessMap = {
   recategorize_transaction: TransactionMutationResult;
   list_transactions: Transaction[];
   summarize_spending: {
-    status: "not_implemented";
-    message: string;
+    transactionType: "expense" | "income";
+    transactionCount: number;
+    occurredFrom: string | null;
+    occurredTo: string | null;
+    totalsByCurrency: Array<{
+      currency: string;
+      amountMinor: number;
+      amountDisplay: string;
+    }>;
     filters: SummarizeSpendingToolInput;
   };
 };

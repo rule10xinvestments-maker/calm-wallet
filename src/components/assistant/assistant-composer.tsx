@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssistantActionState } from "@/lib/server/assistant";
 
@@ -13,6 +13,9 @@ type AssistantComposerProps = {
 
 export function AssistantComposer({ action, initialState }: AssistantComposerProps) {
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
+  const [selectedAction, setSelectedAction] = useState<
+    "create_transaction" | "update_transaction" | "delete_transaction" | "recategorize_transaction" | "summarize_spending"
+  >("create_transaction");
 
   return (
     <div className="space-y-4">
@@ -34,65 +37,217 @@ export function AssistantComposer({ action, initialState }: AssistantComposerPro
       ) : null}
 
       <form action={formAction} className="space-y-3">
-        <input name="toolName" type="hidden" value="create_transaction" />
+        <input name="toolName" type="hidden" value={selectedAction} />
         <input name="currency" type="hidden" value="USD" />
 
-        <div className="grid grid-cols-2 gap-3">
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-slate-700">Action</span>
+          <select
+            aria-label="Action"
+            className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+            name="assistantActionSelection"
+            onChange={(event) => setSelectedAction(event.target.value as typeof selectedAction)}
+            value={selectedAction}
+          >
+            <option value="create_transaction">Create transaction</option>
+            <option value="update_transaction">Update transaction</option>
+            <option value="delete_transaction">Delete transaction</option>
+            <option value="recategorize_transaction">Recategorize transaction</option>
+            <option value="summarize_spending">Summarize spending</option>
+          </select>
+        </label>
+
+        {selectedAction === "create_transaction" ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">Intent</span>
+                <select
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                  defaultValue="expense"
+                  name="transactionType"
+                >
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">Amount</span>
+                <input
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                  inputMode="decimal"
+                  name="amount"
+                  placeholder="24.50"
+                />
+              </label>
+            </div>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Merchant</span>
+              <input
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="merchant"
+                placeholder="Optional merchant"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Note</span>
+              <textarea
+                className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="note"
+                placeholder="Optional note"
+              />
+            </label>
+          </>
+        ) : null}
+
+        {selectedAction === "update_transaction" ? (
+          <>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Transaction ID</span>
+              <input
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="transactionId"
+                placeholder="Required transaction id"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">Amount</span>
+                <input
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                  inputMode="decimal"
+                  name="amount"
+                  placeholder="Optional amount"
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">Occurred date</span>
+                <input
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                  name="occurredAt"
+                  type="date"
+                />
+              </label>
+            </div>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Category ID</span>
+              <input
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="categoryId"
+                placeholder="Optional category id"
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Merchant</span>
+              <input
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="merchant"
+                placeholder="Optional merchant"
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Note</span>
+              <textarea
+                className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="note"
+                placeholder="Optional note"
+              />
+            </label>
+          </>
+        ) : null}
+
+        {selectedAction === "delete_transaction" ? (
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Intent</span>
-            <select
-              className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-              defaultValue="expense"
-              name="transactionType"
-            >
-              <option value="expense">Expense</option>
-              <option value="income">Income</option>
-            </select>
-          </label>
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Amount</span>
+            <span className="text-sm font-medium text-slate-700">Transaction ID</span>
             <input
               className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-              inputMode="decimal"
-              name="amount"
-              placeholder="24.50"
+              name="transactionId"
+              placeholder="Required transaction id"
             />
           </label>
-        </div>
+        ) : null}
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Merchant</span>
-          <input
-            className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-            name="merchant"
-            placeholder="Optional merchant"
-          />
-        </label>
+        {selectedAction === "recategorize_transaction" ? (
+          <>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Transaction ID</span>
+              <input
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="transactionId"
+                placeholder="Required transaction id"
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Category ID</span>
+              <input
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                name="categoryId"
+                placeholder="Leave blank to uncategorize"
+              />
+            </label>
+          </>
+        ) : null}
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Note</span>
-          <textarea
-            className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-            name="note"
-            placeholder="Optional note"
-          />
-        </label>
+        {selectedAction === "summarize_spending" ? (
+          <>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Intent</span>
+              <select
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                defaultValue="expense"
+                name="transactionType"
+              >
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">From</span>
+                <input
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                  name="occurredFrom"
+                  type="date"
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">To</span>
+                <input
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
+                  name="occurredTo"
+                  type="date"
+                />
+              </label>
+            </div>
+          </>
+        ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Button disabled={isPending} type="submit">
-            {isPending ? "Saving..." : "Save item"}
-          </Button>
-          <button
-            className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            disabled={isPending}
-            formAction={formAction}
-            name="toolName"
-            type="submit"
-            value="list_transactions"
-          >
-            Show recent
-          </button>
-        </div>
+        <Button className="w-full" disabled={isPending} type="submit">
+          {isPending
+            ? "Working..."
+            : selectedAction === "create_transaction"
+              ? "Save item"
+              : selectedAction === "update_transaction"
+                ? "Update item"
+                : selectedAction === "delete_transaction"
+                  ? "Delete item"
+                  : selectedAction === "recategorize_transaction"
+                    ? "Update category"
+                    : "Run summary"}
+        </Button>
+      </form>
+
+      <form action={formAction}>
+        <input name="toolName" type="hidden" value="list_transactions" />
+        <button
+          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          disabled={isPending}
+          type="submit"
+        >
+          Show recent
+        </button>
       </form>
 
       {state.recentItems.length ? (

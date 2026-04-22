@@ -10,6 +10,7 @@ import {
 } from "@/domain/ai/tool-schemas";
 import type { AiRuntimeContext, AiToolName, AiToolRegistryEntry } from "@/domain/ai/tool-types";
 import type { TransactionService } from "@/domain/transactions/service";
+import { buildSpendingSummaryData } from "@/lib/server/transactions-read-model";
 
 export type AiToolExecutorDependencies = {
   transactions: Pick<
@@ -89,14 +90,27 @@ export const AI_TOOL_REGISTRY: Record<AiToolName, AiRegisteredTool> = {
   summarize_spending: {
     toolName: "summarize_spending",
     requiresAuth: true,
-    summary: "Return a Sprint 1 scaffold response for spending summaries.",
+    summary: "Summarize spending through the validated transaction read path.",
     schema: summarizeSpendingToolSchema,
     policy: defaultAiToolPolicy,
-    execute: async ({ input }) => ({
-      status: "not_implemented" as const,
-      message: "Summarize spending is scaffolded for Sprint 1 but does not yet provide analytics.",
-      filters: input as { occurredFrom?: string; occurredTo?: string; transactionType?: "expense" | "income" },
-    }),
+    execute: async ({ context, input, services }) => {
+      const filters = input as { occurredFrom?: string; occurredTo?: string; transactionType?: "expense" | "income" };
+      const summaryFilters = {
+        includeDeleted: false,
+        transactionType: filters.transactionType ?? "expense",
+        occurredFrom: filters.occurredFrom,
+        occurredTo: filters.occurredTo,
+      };
+      const transactions = await services.transactions.listTransactions(context.userId, summaryFilters);
+
+      return {
+        ...buildSpendingSummaryData({
+          transactions,
+          filters: summaryFilters,
+        }),
+        filters,
+      };
+    },
   },
 };
 

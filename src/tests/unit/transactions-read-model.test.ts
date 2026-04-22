@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_TRANSACTION_SOURCE } from "@/domain/transactions/types";
 import {
+  buildSpendingSummaryData,
   buildInsightsData,
   filterTransactionsForView,
   getReviewStateMeta,
@@ -70,5 +71,30 @@ describe("transactions read model", () => {
     expect(data.incomeMinor).toBe(5000);
     expect(data.expenseMinor).toBe(2000);
     expect(data.categoryBreakdown[0]?.label).toBe("Groceries");
+  });
+
+  it("builds a read-only spending summary for the requested transaction type", () => {
+    const data = buildSpendingSummaryData({
+      transactions: [
+        makeTransaction({ transactionType: "expense", amountMinor: 2000, currency: "USD" }),
+        makeTransaction({ transactionType: "expense", amountMinor: 1500, currency: "USD", id: "2" }),
+        makeTransaction({ transactionType: "income", amountMinor: 5000, currency: "USD", id: "3" }),
+      ],
+      filters: {
+        transactionType: "expense",
+        occurredFrom: "2026-04-01T00:00:00.000Z",
+        occurredTo: "2026-04-30T23:59:59.999Z",
+      },
+    });
+
+    expect(data.transactionType).toBe("expense");
+    expect(data.transactionCount).toBe(2);
+    expect(data.totalsByCurrency).toEqual([
+      {
+        currency: "USD",
+        amountMinor: 3500,
+        amountDisplay: "$35.00",
+      },
+    ]);
   });
 });

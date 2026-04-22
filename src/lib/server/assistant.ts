@@ -8,12 +8,25 @@ import { initialAssistantActionState } from "@/lib/actions/assistant-state";
 import { formatMoney } from "@/lib/server/transactions-read-model";
 
 export type AssistantCommandInput = {
-  toolName: "create_transaction" | "list_transactions";
+  toolName:
+    | "create_transaction"
+    | "list_transactions"
+    | "update_transaction"
+    | "delete_transaction"
+    | "recategorize_transaction"
+    | "summarize_spending";
+  transactionId?: string;
   transactionType?: "expense" | "income";
   amount?: string;
   merchant?: string;
   note?: string;
   currency?: string;
+  occurredAt?: string;
+  categoryId?: string;
+  occurredFrom?: string;
+  occurredTo?: string;
+  reviewState?: ReviewState;
+  uncertaintyReason?: string;
 };
 
 export type AssistantActionState = {
@@ -52,6 +65,76 @@ export function parseAmountToMinorUnits(value: string) {
   return Math.round(normalized * 100);
 }
 
+function toNullableText(value: string | undefined) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function parseAssistantOccurredAt(value: string | undefined) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const date = new Date(`${trimmed}T12:00:00.000Z`);
+
+    if (Number.isNaN(date.getTime())) {
+      throw new Error("Enter a valid occurred date.");
+    }
+
+    return date.toISOString();
+  }
+
+  const date = new Date(trimmed);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Enter a valid occurred date.");
+  }
+
+  return date.toISOString();
+}
+
+function parseAssistantDateBoundary(value: string | undefined, boundary: "start" | "end") {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const time = boundary === "start" ? "T00:00:00.000Z" : "T23:59:59.999Z";
+    const date = new Date(`${trimmed}${time}`);
+
+    if (Number.isNaN(date.getTime())) {
+      throw new Error(`Enter a valid ${boundary === "start" ? "start" : "end"} date.`);
+    }
+
+    return date.toISOString();
+  }
+
+  const date = new Date(trimmed);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Enter a valid ${boundary === "start" ? "start" : "end"} date.`);
+  }
+
+  return date.toISOString();
+}
+
 export function buildAssistantToolRequest(input: AssistantCommandInput) {
   if (input.toolName === "list_transactions") {
     return {
@@ -59,6 +142,80 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
       input: {
         limit: 5,
         includeDeleted: false,
+      },
+    };
+  }
+
+  if (input.toolName === "summarize_spending") {
+    return {
+      toolName: "summarize_spending" as const,
+      input: {
+        ...(input.occurredFrom !== undefined ? { occurredFrom: parseAssistantDateBoundary(input.occurredFrom, "start") } : {}),
+        ...(input.occurredTo !== undefined ? { occurredTo: parseAssistantDateBoundary(input.occurredTo, "end") } : {}),
+        ...(input.transactionType ? { transactionType: input.transactionType } : {}),
+      },
+    };
+  }
+
+  if (input.toolName === "delete_transaction") {
+    const transactionId = input.transactionId?.trim();
+
+    if (!transactionId) {
+      throw new Error("Choose a transaction before deleting it.");
+    }
+
+    return {
+      toolName: "delete_transaction" as const,
+      input: {
+        transactionId,
+      },
+    };
+  }
+
+  if (input.toolName === "recategorize_transaction") {
+    const transactionId = input.transactionId?.trim();
+
+    if (!transactionId) {
+      throw new Error("Choose a transaction before updating its category.");
+    }
+
+    return {
+      toolName: "recategorize_transaction" as const,
+      input: {
+        transactionId,
+        categoryId: toNullableText(input.categoryId) ?? null,
+      },
+    };
+  }
+
+  if (input.toolName === "update_transaction") {
+    const transactionId = input.transactionId?.trim();
+
+    if (!transactionId) {
+      throw new Error("Choose a transaction before updating it.");
+    }
+
+    const amount = input.amount?.trim();
+    const updates = {
+      ...(amount ? { amountMinor: parseAmountToMinorUnits(amount) ?? Number.NaN } : {}),
+      ...(input.currency?.trim() ? { currency: input.currency.trim() } : {}),
+      ...(input.occurredAt !== undefined ? { occurredAt: parseAssistantOccurredAt(input.occurredAt) } : {}),
+      ...(input.categoryId !== undefined ? { categoryId: toNullableText(input.categoryId) } : {}),
+      ...(input.merchant !== undefined ? { merchant: toNullableText(input.merchant) } : {}),
+      ...(input.note !== undefined ? { note: toNullableText(input.note) } : {}),
+      ...(input.reviewState ? { reviewState: input.reviewState } : {}),
+      ...(input.uncertaintyReason !== undefined ? { uncertaintyReason: toNullableText(input.uncertaintyReason) } : {}),
+    };
+
+    if (Object.keys(updates).length === 0) {
+      throw new Error("Add at least one field before updating a transaction.");
+    }
+
+    return {
+      toolName: "update_transaction" as const,
+      input: {
+        transactionId,
+        updates,
       },
     };
   }
@@ -141,6 +298,69 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
         merchant: result.data.transaction.merchant,
         reviewState: result.data.transaction.reviewState,
       },
+    };
+  }
+
+  if (result.toolName === "update_transaction" && "transaction" in result.data) {
+    return {
+      ...initialAssistantActionState,
+      status: "success",
+      message:
+        isReviewStateNeedingReview(result.data.transaction.reviewState)
+          ? "Transaction updated and kept in review."
+          : "Transaction updated.",
+      reviewState: result.data.transaction.reviewState,
+      latestTransaction: {
+        id: result.data.transaction.id,
+        amountMinor: result.data.transaction.amountMinor,
+        currency: result.data.transaction.currency,
+        merchant: result.data.transaction.merchant,
+        reviewState: result.data.transaction.reviewState,
+      },
+    };
+  }
+
+  if (result.toolName === "delete_transaction" && "transaction" in result.data) {
+    return {
+      ...initialAssistantActionState,
+      status: "success",
+      message: "Transaction removed from your tracked items.",
+    };
+  }
+
+  if (result.toolName === "recategorize_transaction" && "transaction" in result.data) {
+    return {
+      ...initialAssistantActionState,
+      status: "success",
+      message: result.data.transaction.categoryId ? "Category updated." : "Transaction moved to uncategorized.",
+    };
+  }
+
+  if (result.toolName === "summarize_spending" && "totalsByCurrency" in result.data) {
+    const subject = result.data.transactionType === "income" ? "Income" : "Spend";
+
+    if (!result.data.totalsByCurrency.length) {
+      return {
+        ...initialAssistantActionState,
+        status: "success",
+        message: `${subject} is $0.00 across 0 transactions.`,
+      };
+    }
+
+    if (result.data.totalsByCurrency.length === 1) {
+      const total = result.data.totalsByCurrency[0];
+      return {
+        ...initialAssistantActionState,
+        status: "success",
+        message: `${subject} is ${total?.amountDisplay ?? "$0.00"} across ${result.data.transactionCount} transactions.`,
+      };
+    }
+
+    const totals = result.data.totalsByCurrency.map((entry) => `${entry.amountDisplay} ${entry.currency}`).join(", ");
+    return {
+      ...initialAssistantActionState,
+      status: "success",
+      message: `${subject} totals across ${result.data.transactionCount} transactions: ${totals}.`,
     };
   }
 

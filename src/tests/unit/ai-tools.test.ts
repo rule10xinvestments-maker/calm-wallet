@@ -154,6 +154,98 @@ describe("AI tool executor", () => {
     }
   });
 
+  it("rejects invalid update_transaction payloads and logs the failure", async () => {
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "update_transaction",
+        input: {
+          transactionId: "11111111-1111-1111-1111-111111111111",
+          updates: {
+            note: "Updated",
+          },
+          unexpected: true,
+        },
+      },
+      services: { transactions: makeTransactionServices() },
+    });
+
+    expect(result.result.ok).toBe(false);
+    if (!result.result.ok) {
+      expect(result.result.outcome).toBe("invalid");
+      expect(result.result.error.code).toBe("invalid_tool_input");
+    }
+    expect(result.runtimeLog?.tool_name).toBe("update_transaction");
+    expect(result.runtimeLog?.policy_outcome).toBe("invalid");
+  });
+
+  it("rejects invalid delete_transaction payloads and logs the failure", async () => {
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "delete_transaction",
+        input: {
+          transactionId: "11111111-1111-1111-1111-111111111111",
+          unexpected: true,
+        },
+      },
+      services: { transactions: makeTransactionServices() },
+    });
+
+    expect(result.result.ok).toBe(false);
+    if (!result.result.ok) {
+      expect(result.result.outcome).toBe("invalid");
+      expect(result.result.error.code).toBe("invalid_tool_input");
+    }
+    expect(result.runtimeLog?.tool_name).toBe("delete_transaction");
+    expect(result.runtimeLog?.policy_outcome).toBe("invalid");
+  });
+
+  it("rejects invalid recategorize_transaction payloads and logs the failure", async () => {
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "recategorize_transaction",
+        input: {
+          transactionId: "11111111-1111-1111-1111-111111111111",
+          categoryId: "33333333-3333-3333-3333-333333333333",
+          unexpected: true,
+        },
+      },
+      services: { transactions: makeTransactionServices() },
+    });
+
+    expect(result.result.ok).toBe(false);
+    if (!result.result.ok) {
+      expect(result.result.outcome).toBe("invalid");
+      expect(result.result.error.code).toBe("invalid_tool_input");
+    }
+    expect(result.runtimeLog?.tool_name).toBe("recategorize_transaction");
+    expect(result.runtimeLog?.policy_outcome).toBe("invalid");
+  });
+
+  it("rejects invalid summarize_spending payloads and logs the failure", async () => {
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "summarize_spending",
+        input: {
+          transactionType: "expense",
+          unexpected: true,
+        },
+      },
+      services: { transactions: makeTransactionServices() },
+    });
+
+    expect(result.result.ok).toBe(false);
+    if (!result.result.ok) {
+      expect(result.result.outcome).toBe("invalid");
+      expect(result.result.error.code).toBe("invalid_tool_input");
+    }
+    expect(result.runtimeLog?.tool_name).toBe("summarize_spending");
+    expect(result.runtimeLog?.policy_outcome).toBe("invalid");
+  });
+
   it("denies execution when authenticated context is missing", async () => {
     const result = await executeAiTool({
       context: { userId: null, isAuthenticated: false },
@@ -216,7 +308,13 @@ describe("AI tool executor", () => {
     });
   });
 
-  it("returns a clear summarize_spending scaffold", async () => {
+  it("returns a real summarize_spending summary and logs it", async () => {
+    const transactions = makeTransactionServices();
+    vi.mocked(transactions.listTransactions).mockResolvedValueOnce([
+      makeTransaction({ amountMinor: 2000, currency: "USD" }),
+      makeTransaction({ id: "2", amountMinor: 1500, currency: "USD" }),
+    ]);
+
     const result = await executeAiTool({
       context: { userId: "user-1", isAuthenticated: true },
       request: {
@@ -225,17 +323,27 @@ describe("AI tool executor", () => {
           transactionType: "expense",
         },
       },
-      services: { transactions: makeTransactionServices() },
+      services: { transactions },
     });
 
     expect(result.result.ok).toBe(true);
     if (
       result.result.ok &&
       result.result.toolName === "summarize_spending" &&
-      "status" in result.result.data
+      "totalsByCurrency" in result.result.data
     ) {
-      expect(result.result.data.status).toBe("not_implemented");
+      expect(result.result.data.transactionType).toBe("expense");
+      expect(result.result.data.transactionCount).toBe(2);
+      expect(result.result.data.totalsByCurrency).toEqual([
+        {
+          currency: "USD",
+          amountMinor: 3500,
+          amountDisplay: "$35.00",
+        },
+      ]);
     }
+    expect(result.runtimeLog?.tool_name).toBe("summarize_spending");
+    expect(result.runtimeLog?.policy_outcome).toBe("allowed");
   });
 
   it("returns a generic execution failure message without leaking internals", async () => {

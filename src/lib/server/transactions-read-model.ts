@@ -39,6 +39,18 @@ export type InsightsData = {
   }>;
 };
 
+export type SpendingSummaryData = {
+  transactionType: "expense" | "income";
+  transactionCount: number;
+  occurredFrom: string | null;
+  occurredTo: string | null;
+  totalsByCurrency: Array<{
+    currency: string;
+    amountMinor: number;
+    amountDisplay: string;
+  }>;
+};
+
 export function formatMoney(amountMinor: number, currency: string) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -177,6 +189,39 @@ export function buildInsightsData(
     currency,
     monthLabel: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     categoryBreakdown,
+  };
+}
+
+export function buildSpendingSummaryData(args: {
+  transactions: Transaction[];
+  filters?: {
+    occurredFrom?: string;
+    occurredTo?: string;
+    transactionType?: "expense" | "income";
+  };
+}): SpendingSummaryData {
+  const transactionType = args.filters?.transactionType ?? "expense";
+  const filtered = args.transactions.filter((transaction) => transaction.transactionType === transactionType);
+  const totalsByCurrencyMap = new Map<string, number>();
+
+  filtered.forEach((transaction) => {
+    totalsByCurrencyMap.set(transaction.currency, (totalsByCurrencyMap.get(transaction.currency) ?? 0) + transaction.amountMinor);
+  });
+
+  const totalsByCurrency = Array.from(totalsByCurrencyMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([currency, amountMinor]) => ({
+      currency,
+      amountMinor,
+      amountDisplay: formatMoney(amountMinor, currency),
+    }));
+
+  return {
+    transactionType,
+    transactionCount: filtered.length,
+    occurredFrom: args.filters?.occurredFrom ?? null,
+    occurredTo: args.filters?.occurredTo ?? null,
+    totalsByCurrency,
   };
 }
 
