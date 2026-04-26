@@ -299,6 +299,14 @@ export async function createSupabaseTransactionService() {
         query = query.eq("category_id", filters.categoryId);
       }
 
+      if (filters.importRecordId) {
+        query = query.eq("import_record_id", filters.importRecordId);
+      }
+
+      if (filters.importCandidateId) {
+        query = query.eq("import_candidate_id", filters.importCandidateId);
+      }
+
       if (filters.occurredFrom) {
         query = query.gte("occurred_at", filters.occurredFrom);
       }

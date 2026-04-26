@@ -86,6 +86,8 @@ export const listTransactionsSchema = z.object({
   reviewState: reviewStateSchema.optional(),
   source: transactionSourceSchema.optional(),
   categoryId: idSchema.optional(),
+  importRecordId: idSchema.optional(),
+  importCandidateId: idSchema.optional(),
   occurredFrom: z.string().datetime("Occurred from must be a valid ISO datetime.").optional(),
   occurredTo: z.string().datetime("Occurred to must be a valid ISO datetime.").optional(),
   includeDeleted: z.boolean().optional(),

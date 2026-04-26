@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   buildImportStoragePath,
-  IMPORT_STORAGE_ROOT,
+  IMPORT_STORAGE_BUCKET,
   sanitizeImportFilename,
   SUPPORTED_IMPORT_TYPES,
 } from "@/lib/imports/storage";
 
 describe("import storage helpers", () => {
+  it("keeps the staged imports bucket private and explicit", () => {
+    expect(IMPORT_STORAGE_BUCKET).toBe("staged-imports");
+  });
+
   it("keeps Sprint 1 import types explicit", () => {
     expect(SUPPORTED_IMPORT_TYPES).toEqual(["receipt_image", "csv_import"]);
   });
@@ -24,8 +28,17 @@ describe("import storage helpers", () => {
       now: new Date("2026-04-21T09:10:11.123Z"),
     });
 
-    expect(path).toBe(
-      `${IMPORT_STORAGE_ROOT}/user-123/csv_import/2026/04/2026-04-21T09-10-11-123Z-april-statement.csv`,
-    );
+    expect(path).toBe("user-123/csv_import/2026/04/2026-04-21T09-10-11-123Z-april-statement.csv");
+  });
+
+  it("starts each staged storage path with the owning user id", () => {
+    const path = buildImportStoragePath({
+      userId: "user-123",
+      importType: "receipt_image",
+      originalFilename: "Receipt.jpg",
+      now: new Date("2026-04-21T09:10:11.123Z"),
+    });
+
+    expect(path.startsWith("user-123/receipt_image/")).toBe(true);
   });
 });

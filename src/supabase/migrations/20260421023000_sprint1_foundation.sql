@@ -202,6 +202,11 @@ create table if not exists public.notification_preferences (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+insert into storage.buckets (id, name, public)
+values ('staged-imports', 'staged-imports', false)
+on conflict (id) do update
+set public = excluded.public;
+
 create index if not exists idx_categories_direction_sort_order
   on public.categories(direction, sort_order);
 
@@ -519,3 +524,42 @@ for update
 to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+drop policy if exists "staged_imports_select_own" on storage.objects;
+drop policy if exists "staged_imports_insert_own" on storage.objects;
+drop policy if exists "staged_imports_update_own" on storage.objects;
+
+create policy "staged_imports_select_own"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'staged-imports'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[2] in ('receipt_image', 'csv_import')
+);
+
+create policy "staged_imports_insert_own"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'staged-imports'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[2] in ('receipt_image', 'csv_import')
+);
+
+create policy "staged_imports_update_own"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'staged-imports'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[2] in ('receipt_image', 'csv_import')
+)
+with check (
+  bucket_id = 'staged-imports'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[2] in ('receipt_image', 'csv_import')
+);

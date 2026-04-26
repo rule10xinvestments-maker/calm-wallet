@@ -242,3 +242,71 @@ Do not include:
 
 ### Recommended next release direction
 The next meaningful xw snapshot should be created only after Sprint 3 staged import workflow scope is implemented and validated from the frozen `xw-sprint-2-ready` baseline.
+
+---
+
+## Release: `xw-sprint-3-ready`
+
+### Date
+2026-04-26
+
+### Sprint
+Sprint 3
+
+### Status
+Ready
+
+### Why this snapshot exists
+This snapshot marks the point where the bounded staged import workflow is functionally complete, validated, and ready for trusted baseline packaging.
+
+### Included in this snapshot
+- Ownership-safe staged import record and candidate domain foundation
+- Private `staged-imports` storage foundation with owned object-path policy
+- Staged upload preparation, upload transport, and upload-completion helpers
+- End-to-end staged upload flow on the existing Assistant page
+- Owned staged import read models, loaders, lists, and actions
+- Parser-result ingestion foundation
+- Minimal candidate review foundation and action path:
+  - accept candidate
+  - reject candidate
+  - idempotent accept retry
+- Existing Transactions page staged import visibility, candidate previews, review progress, review-status indicator, and minimal review controls
+
+### Not included in this snapshot
+- New primary pages
+- PDF imports
+- Bank linking
+- Card linking
+- OCR or parser-engine execution
+- Broad review UI
+- Transaction editing from staged import review controls
+- Sprint 4 work
+
+### Validation status
+- focused Sprint 3 closeout validation command passed:
+  - `npm.cmd run test -- --run src/tests/unit/import-storage.test.ts src/tests/unit/imports-domain.test.ts src/tests/unit/imports-read-model.test.ts src/tests/unit/imports-intake-action.test.ts src/tests/unit/imports-upload-preparation.test.ts src/tests/unit/imports-upload-transport.test.ts src/tests/unit/imports-upload-completion.test.ts src/tests/unit/imports-parser-result-ingestion.test.ts src/tests/unit/imports-review-decision.test.ts src/tests/unit/imports-review-decision-action.test.ts src/tests/unit/imports-review-progress.test.ts src/tests/unit/imports-review-progress-action.test.ts src/tests/unit/assistant-composer.test.tsx src/tests/unit/imports-browser-upload.test.ts src/tests/unit/transactions-overview.test.tsx`
+- `15` test files passed
+- `95` tests passed
+
+### Packaging exclusions
+Do not include:
+- `.next/`
+- `node_modules/`
+- `playwright-results/`
+- `test-results/`
+- `validation-fresh/`
+- `tsconfig.tsbuildinfo`
+
+### Known remaining risks
+- Closeout validation was intentionally scoped to the Sprint 3 staged import surface, not a full repo-wide release sweep.
+- Parser execution remains intentionally out of scope.
+- The Transactions review UI is intentionally minimal and stays inside the existing page detail area only.
+
+### Active source-of-truth notes at this release
+- Sprint 3 is ready.
+- `xw` should be updated now.
+- Supported staged import directions remain locked to `receipt_image` and `csv_import`.
+- The next sprint should build only the next bounded staged import lifecycle step from this frozen baseline.
+
+### Recommended next release direction
+The next meaningful xw snapshot should be created only after Sprint 4 extends the bounded staged import lifecycle on top of the frozen `xw-sprint-3-ready` baseline without widening import directions or adding new primary pages.

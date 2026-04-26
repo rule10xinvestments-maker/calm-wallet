@@ -1,6 +1,6 @@
 import type { ImportType } from "@/lib/db/types";
 
-export const IMPORT_STORAGE_ROOT = "imports";
+export const IMPORT_STORAGE_BUCKET = "staged-imports";
 export const SUPPORTED_IMPORT_TYPES = ["receipt_image", "csv_import"] as const satisfies readonly ImportType[];
 
 type BuildImportStoragePathInput = {
@@ -32,5 +32,5 @@ export function buildImportStoragePath({
   const timestamp = now.toISOString().replace(/[:.]/g, "-");
   const sanitizedFilename = sanitizeImportFilename(originalFilename);
 
-  return [IMPORT_STORAGE_ROOT, userId, importType, year, month, `${timestamp}-${sanitizedFilename}`].join("/");
+  return [userId, importType, year, month, `${timestamp}-${sanitizedFilename}`].join("/");
 }

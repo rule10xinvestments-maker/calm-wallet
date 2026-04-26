@@ -211,3 +211,57 @@ Ready
 2. Start Sprint 3 from the frozen Sprint 2 baseline.
 3. Keep the trusted Assistant/runtime boundary unchanged unless explicitly re-scoped.
 4. Move next into staged import workflow work for supported inputs only.
+
+---
+
+## Sprint 3 Closeout Update
+
+### Date
+2026-04-26
+
+### Status
+Ready
+
+### Add this to my knowledge now
+- Sprint 3 is ready.
+- `xw` should be updated now.
+- Recommended release label: `xw-sprint-3-ready`.
+- Supported staged import directions remain limited to:
+  - `receipt_image`
+  - `csv_import`
+- The repo now contains a bounded staged import workflow including:
+  - private staged upload
+  - owned staged import visibility
+  - minimal candidate accept/reject review
+- The existing Assistant page now supports the first truthful staged upload flow.
+- The existing Transactions page now shows staged imports, candidate previews, review progress, and a minimal accept/reject review surface.
+
+### Locked decisions changed this sprint
+- No new primary pages.
+- No PDF import support.
+- No bank or card linking.
+- No uncontrolled parser or AI execution.
+- Sprint 3 remained bounded to staged import workflow only.
+
+### Repo reality changed this sprint
+- Import domain/service boundaries now exist for staged import records and candidates.
+- Private staged import storage foundation now exists with owned storage policies.
+- Signed private upload transport and upload-completion persistence now exist.
+- Parser-result ingestion, review-decision, and review-progress foundations now exist.
+- Minimal review controls now exist inside the existing Transactions page staged import detail area.
+
+### Validation state
+- Grouped Sprint 3 closeout validation passed.
+- `15` Sprint 3-focused test files passed.
+- `95` tests passed.
+
+### What is now overridden
+- Older notes that describe imports as storage-path scaffolding only.
+- Older notes that describe Transactions staged imports as read-only without review controls.
+- Older notes that imply Sprint 3 still needs a truthful end-to-end staged upload path.
+
+### Next sprint start order
+1. Freeze/package `xw-sprint-3-ready`.
+2. Start Sprint 4 from the frozen Sprint 3 baseline only.
+3. Keep import directions locked to `receipt_image` and `csv_import`.
+4. Build only the next bounded staged import lifecycle step.

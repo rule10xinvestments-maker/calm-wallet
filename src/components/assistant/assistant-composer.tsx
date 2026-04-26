@@ -1,7 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  completeStagedImportUploadAction,
+  createStagedImportIntakeAction,
+  createStagedImportUploadTransportAction,
+} from "@/lib/actions/imports";
+import {
+  initialImportIntakeActionState,
+  initialImportUploadCompletionActionState,
+  initialImportUploadTransportActionState,
+} from "@/lib/actions/imports-state";
+import { uploadStagedImportFile } from "@/lib/imports/browser-upload";
 import type { AssistantActionState } from "@/lib/server/assistant";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
@@ -11,11 +22,132 @@ type AssistantComposerProps = {
   initialState: AssistantActionState;
 };
 
+type UploadFlowState = {
+  status: "idle" | "uploading" | "success" | "error";
+  message: string | null;
+  importType: "receipt_image" | "csv_import" | null;
+  filename: string | null;
+};
+
+const initialUploadFlowState: UploadFlowState = {
+  status: "idle",
+  message: null,
+  importType: null,
+  filename: null,
+};
+
+function fileMatchesImportType(importType: "receipt_image" | "csv_import", file: File) {
+  if (importType === "receipt_image") {
+    return file.type.startsWith("image/");
+  }
+
+  return file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv");
+}
+
 export function AssistantComposer({ action, initialState }: AssistantComposerProps) {
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
   const [selectedAction, setSelectedAction] = useState<
     "create_transaction" | "update_transaction" | "delete_transaction" | "recategorize_transaction" | "summarize_spending"
   >("create_transaction");
+  const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
+
+  async function handleImportUploadSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedFile) {
+      setUploadState({
+        status: "error",
+        message: "Choose a receipt image or CSV file first.",
+        importType: null,
+        filename: null,
+      });
+      return;
+    }
+
+    if (!fileMatchesImportType(selectedImportType, selectedFile)) {
+      setUploadState({
+        status: "error",
+        message:
+          selectedImportType === "receipt_image"
+            ? "Choose an image file for receipt image imports."
+            : "Choose a CSV file for CSV imports.",
+        importType: selectedImportType,
+        filename: selectedFile.name,
+      });
+      return;
+    }
+
+    setUploadState({
+      status: "uploading",
+      message: "Uploading staged import...",
+      importType: selectedImportType,
+      filename: selectedFile.name,
+    });
+
+    try {
+      const intakeFormData = new FormData();
+      intakeFormData.set("importType", selectedImportType);
+      intakeFormData.set("originalFilename", selectedFile.name);
+      intakeFormData.set("mimeType", selectedFile.type || "application/octet-stream");
+
+      const intakeResult = await createStagedImportIntakeAction(initialImportIntakeActionState, intakeFormData);
+
+      if (intakeResult.status !== "success" || !intakeResult.intake) {
+        throw new Error(intakeResult.message ?? "Unable to create staged import.");
+      }
+
+      const transportFormData = new FormData();
+      transportFormData.set("importRecordId", intakeResult.intake.importRecordId);
+
+      const transportResult = await createStagedImportUploadTransportAction(
+        initialImportUploadTransportActionState,
+        transportFormData,
+      );
+
+      if (transportResult.status !== "success" || !transportResult.uploadContract) {
+        throw new Error(transportResult.message ?? "Unable to create upload contract.");
+      }
+
+      await uploadStagedImportFile({
+        bucket: transportResult.uploadContract.bucket,
+        storagePath: transportResult.uploadContract.storagePath,
+        uploadToken: transportResult.uploadContract.uploadToken,
+        file: selectedFile,
+      });
+
+      const completionFormData = new FormData();
+      completionFormData.set("importRecordId", intakeResult.intake.importRecordId);
+      completionFormData.set("storagePath", transportResult.uploadContract.storagePath);
+      completionFormData.set("originalFilename", selectedFile.name);
+      completionFormData.set("mimeType", selectedFile.type || "application/octet-stream");
+
+      const completionResult = await completeStagedImportUploadAction(
+        initialImportUploadCompletionActionState,
+        completionFormData,
+      );
+
+      if (completionResult.status !== "success" || !completionResult.completion) {
+        throw new Error(completionResult.message ?? "Unable to save staged import upload.");
+      }
+
+      setSelectedFile(null);
+      setUploadState({
+        status: "success",
+        message: `Staged import uploaded as ${completionResult.completion.importType}.`,
+        importType: completionResult.completion.importType,
+        filename: completionResult.completion.originalFilename,
+      });
+    } catch (error) {
+      setUploadState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Unable to upload staged import.",
+        importType: selectedImportType,
+        filename: selectedFile.name,
+      });
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -35,6 +167,64 @@ export function AssistantComposer({ action, initialState }: AssistantComposerPro
           ) : null}
         </div>
       ) : null}
+
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-slate-900">Staged import upload</p>
+          <p className="text-xs text-slate-500">Upload one receipt image or CSV file into private staged storage only.</p>
+        </div>
+
+        {uploadState.message ? (
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              uploadState.status === "error"
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : uploadState.status === "success"
+                  ? "border-sky-200 bg-sky-50 text-sky-700"
+                  : "border-amber-200 bg-amber-50 text-amber-700"
+            }`}
+          >
+            <p className="font-medium">{uploadState.message}</p>
+            {uploadState.status === "success" && uploadState.importType && uploadState.filename ? (
+              <p className="mt-1 text-xs text-slate-600">
+                Uploaded {uploadState.filename} as {uploadState.importType}.
+              </p>
+            ) : null}
+            {uploadState.status === "error" && uploadState.filename ? (
+              <p className="mt-1 text-xs text-slate-600">File: {uploadState.filename}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <form className="space-y-3" onSubmit={handleImportUploadSubmit}>
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">Import type</span>
+            <select
+              aria-label="Import type"
+              className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+              onChange={(event) => setSelectedImportType(event.target.value as "receipt_image" | "csv_import")}
+              value={selectedImportType}
+            >
+              <option value="receipt_image">Receipt image</option>
+              <option value="csv_import">CSV import</option>
+            </select>
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">File</span>
+            <input
+              accept={selectedImportType === "receipt_image" ? "image/*" : ".csv,text/csv"}
+              className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+          </label>
+
+          <Button className="w-full" disabled={uploadState.status === "uploading"} type="submit">
+            {uploadState.status === "uploading" ? "Uploading..." : "Upload staged import"}
+          </Button>
+        </form>
+      </div>
 
       <form action={formAction} className="space-y-3">
         <input name="toolName" type="hidden" value={selectedAction} />

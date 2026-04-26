@@ -82,6 +82,8 @@ export type ListTransactionsFilters = {
   reviewState?: ReviewState;
   source?: TransactionSource;
   categoryId?: string;
+  importRecordId?: string;
+  importCandidateId?: string;
   occurredFrom?: string;
   occurredTo?: string;
   includeDeleted?: boolean;
