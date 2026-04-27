@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import { prepareStagedImportUpload } from "@/lib/server/imports-upload-preparation";
 
 describe("imports upload preparation", () => {
@@ -28,7 +29,7 @@ describe("imports upload preparation", () => {
         mimeType: "image/jpeg",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ createImportRecord })),
         buildImportStoragePath: vi.fn(() => "user-1/receipt_image/2026/04/2026-04-22T10-00-00-000Z-receipt.jpg"),
         sanitizeImportFilename: vi.fn(() => "receipt.jpg"),
@@ -70,7 +71,7 @@ describe("imports upload preparation", () => {
         mimeType: "text/csv",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ createImportRecord })),
         buildImportStoragePath: vi.fn(() => "user-1/csv_import/2026/04/2026-04-22T10-00-00-000Z-statement.csv"),
         sanitizeImportFilename: vi.fn(() => "statement.csv"),
@@ -115,7 +116,7 @@ describe("imports upload preparation", () => {
           mimeType: "application/pdf",
         },
         {
-          getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+          getCurrentUser: vi.fn(async () => mockUser()),
           createImportRecordService: vi.fn(async () => ({ createImportRecord })),
           buildImportStoragePath: vi.fn(),
           sanitizeImportFilename: vi.fn(),
@@ -148,7 +149,7 @@ describe("imports upload preparation", () => {
         mimeType: "image/jpeg",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ createImportRecord })),
         buildImportStoragePath: vi.fn(() => "user-1/receipt_image/2026/04/2026-04-22T10-00-00-000Z-receipt.jpg"),
         sanitizeImportFilename: vi.fn(() => "receipt.jpg"),

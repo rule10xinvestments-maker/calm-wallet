@@ -21,6 +21,8 @@ const requiredTextSchema = z.string().trim().min(1, "This field is required.");
 const transactionTypeSchema = z.enum(["expense", "income"]);
 const currencySchema = z
   .string()
+  .trim()
+  .toUpperCase()
   .regex(/^[A-Z]{3}$/, "Currency must be a 3-letter uppercase code.");
 
 export const createImportRecordSchema = z.object({
@@ -127,21 +129,28 @@ export const updateImportCandidateStatusSchema = z
     }
   });
 
-export const parserResultCandidateSchema = createImportCandidateShape.omit({
-  importRecordId: true,
-}).superRefine((value, ctx) => {
-  if (value.reviewState === "needs_attention" && !value.uncertaintyReason) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "An uncertainty reason is required when review needs attention.",
-      path: ["uncertaintyReason"],
-    });
-  }
-});
+export const parserResultCandidateSchema = createImportCandidateShape
+  .omit({
+    importRecordId: true,
+    reviewState: true,
+    acceptanceState: true,
+  })
+  .required({
+    transactionType: true,
+    amountMinor: true,
+    currency: true,
+    occurredAt: true,
+  })
+  .extend({
+    transactionType: transactionTypeSchema,
+    amountMinor: z.number().int().positive("Amount must be greater than 0."),
+    currency: currencySchema,
+    occurredAt: z.string().datetime("Occurred at must be a valid ISO datetime."),
+  });
 
 export const ingestImportParserResultSchema = z.object({
   importRecordId: idSchema,
-  candidates: z.array(parserResultCandidateSchema).max(500),
+  candidates: z.array(z.unknown()).max(500),
 });
 
 export const reviewImportCandidateSchema = z.object({

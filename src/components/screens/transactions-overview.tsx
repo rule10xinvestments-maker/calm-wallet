@@ -41,26 +41,6 @@ function formatImportDate(value: string) {
   });
 }
 
-function summarizeCandidateStates<TState extends string>(
-  items: Array<{ reviewState: string; acceptanceState: string }>,
-  getState: (item: { reviewState: string; acceptanceState: string }) => TState,
-) {
-  if (!items.length) {
-    return "No candidates yet.";
-  }
-
-  const counts = new Map<TState, number>();
-
-  for (const item of items) {
-    const state = getState(item);
-    counts.set(state, (counts.get(state) ?? 0) + 1);
-  }
-
-  return Array.from(counts.entries())
-    .map(([state, count]) => `${count} ${state}`)
-    .join(", ");
-}
-
 type CandidatePreview = {
   id: string;
   amountDisplay: string;
@@ -99,19 +79,6 @@ type TransactionsOverviewProps = {
   initialReviewActionState: ImportCandidateReviewDecisionActionState;
 };
 
-function buildReviewProgress(candidatePreviews: CandidatePreview[]) {
-  const acceptedCount = candidatePreviews.filter((candidate) => candidate.acceptanceState === "accepted").length;
-  const rejectedCount = candidatePreviews.filter((candidate) => candidate.acceptanceState === "rejected").length;
-  const pendingCount = candidatePreviews.filter((candidate) => candidate.acceptanceState === "pending").length;
-
-  return {
-    totalCandidateCount: candidatePreviews.length,
-    acceptedCount,
-    rejectedCount,
-    pendingCount,
-  };
-}
-
 function ReviewActionMessage({ state }: { state: ImportCandidateReviewDecisionActionState }) {
   if (state.status === "idle" || !state.message) {
     return null;
@@ -137,6 +104,59 @@ function getReviewCompletionLabel(reviewProgress: {
   return "Review remaining";
 }
 
+function getReviewProgressLabel(reviewProgress: {
+  totalCandidateCount: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  pendingCount: number;
+}) {
+  if (reviewProgress.totalCandidateCount === 0) {
+    return "No items to review";
+  }
+
+  if (reviewProgress.pendingCount === 0) {
+    return "Review complete";
+  }
+
+  const reviewedCount = reviewProgress.acceptedCount + reviewProgress.rejectedCount;
+
+  if (reviewedCount === 0) {
+    return `${reviewProgress.pendingCount} ${reviewProgress.pendingCount === 1 ? "item" : "items"} to review`;
+  }
+
+  return `${reviewedCount} of ${reviewProgress.totalCandidateCount} reviewed`;
+}
+
+function getLifecycleStatusLabel(args: {
+  status: StagedImportListItem["status"];
+  reviewProgress: {
+    totalCandidateCount: number;
+    pendingCount: number;
+  };
+}) {
+  if (args.status === "uploaded") {
+    return "Uploaded";
+  }
+
+  if (args.status === "parsing") {
+    return "Parsing";
+  }
+
+  if (args.status === "failed") {
+    return "Failed";
+  }
+
+  if (args.status === "reviewed") {
+    return "Review complete";
+  }
+
+  if (args.reviewProgress.pendingCount === 0) {
+    return "Review complete";
+  }
+
+  return "Ready for review";
+}
+
 type StagedImportCardProps = {
   item: StagedImportListItem;
   detail: StagedImportDetail | undefined;
@@ -151,12 +171,26 @@ function StagedImportCard({
   initialReviewActionState,
 }: StagedImportCardProps) {
   const [candidatePreviews, setCandidatePreviews] = useState(detail?.candidatePreviews ?? []);
+  const [reviewProgress, setReviewProgress] = useState(
+    detail?.reviewProgress ?? {
+      totalCandidateCount: 0,
+      acceptedCount: 0,
+      rejectedCount: 0,
+      pendingCount: 0,
+    },
+  );
+  const [importStatus, setImportStatus] = useState(item.status);
   const [reviewActionState, setReviewActionState] = useState(initialReviewActionState);
   const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
-  const reviewProgress = buildReviewProgress(candidatePreviews);
-  const reviewSummary = summarizeCandidateStates(candidatePreviews, (candidate) => candidate.reviewState);
-  const acceptanceSummary = summarizeCandidateStates(candidatePreviews, (candidate) => candidate.acceptanceState);
+  const pendingCandidates = candidatePreviews.filter((candidate) => candidate.acceptanceState === "pending");
+  const reviewSummary = detail?.reviewSummary ?? "No candidates yet.";
+  const acceptanceSummary = detail?.acceptanceSummary ?? "No candidates yet.";
   const reviewCompletionLabel = getReviewCompletionLabel(reviewProgress);
+  const progressLabel = getReviewProgressLabel(reviewProgress);
+  const lifecycleStatusLabel = getLifecycleStatusLabel({
+    status: importStatus,
+    reviewProgress,
+  });
 
   async function handleReviewDecision(importCandidateId: string, decision: "accept" | "reject") {
     setPendingCandidateId(importCandidateId);
@@ -181,6 +215,13 @@ function StagedImportCard({
               : candidate,
           ),
         );
+        setReviewProgress({
+          totalCandidateCount: nextState.decisionResult.reviewCompletion.totalCandidateCount,
+          acceptedCount: nextState.decisionResult.reviewCompletion.acceptedCount,
+          rejectedCount: nextState.decisionResult.reviewCompletion.rejectedCount,
+          pendingCount: nextState.decisionResult.reviewCompletion.pendingCount,
+        });
+        setImportStatus(nextState.decisionResult.reviewCompletion.status);
       }
     } finally {
       setPendingCandidateId(null);
@@ -194,15 +235,17 @@ function StagedImportCard({
           <p className="text-sm font-medium text-slate-900">{item.originalFilename}</p>
           <p className="text-xs uppercase tracking-wide text-slate-500">{importTypeLabels[item.importType]}</p>
         </div>
-        <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{item.status}</p>
+        <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{lifecycleStatusLabel}</p>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
         <span>{item.mimeType}</span>
         <span>Created {formatImportDate(item.createdAt)}</span>
         <span>Updated {formatImportDate(item.updatedAt)}</span>
-        <span>{reviewCompletionLabel}</span>
+        <span>{progressLabel}</span>
       </div>
-      {item.failureReason ? <p className="mt-2 text-xs text-rose-600">{item.failureReason}</p> : null}
+      {importStatus === "failed" ? (
+        <p className="mt-2 text-xs text-rose-600">Import failed. No review is available for this upload.</p>
+      ) : null}
       <details className="mt-3">
         <summary className="cursor-pointer text-xs font-medium text-sky-700">View details</summary>
         <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
@@ -210,7 +253,7 @@ function StagedImportCard({
             <span className="font-medium text-slate-800">Type:</span> {importTypeLabels[item.importType]}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Status:</span> {item.status}
+            <span className="font-medium text-slate-800">Status:</span> {lifecycleStatusLabel}
           </p>
           <p>
             <span className="font-medium text-slate-800">Filename:</span> {item.originalFilename}
@@ -229,7 +272,7 @@ function StagedImportCard({
           </p>
           <p>
             <span className="font-medium text-slate-800">Review progress:</span>{" "}
-            {reviewProgress.acceptedCount} accepted, {reviewProgress.rejectedCount} rejected, {reviewProgress.pendingCount} pending
+            {progressLabel}
           </p>
           <p>
             <span className="font-medium text-slate-800">Candidate review:</span> {reviewSummary}
@@ -237,54 +280,44 @@ function StagedImportCard({
           <p>
             <span className="font-medium text-slate-800">Candidate acceptance:</span> {acceptanceSummary}
           </p>
-          {candidatePreviews.length ? (
+          {pendingCandidates.length ? (
             <div className="space-y-2">
-              <p className="font-medium text-slate-800">Candidate previews</p>
+              <p className="font-medium text-slate-800">Pending review</p>
               <div className="space-y-2">
-                {candidatePreviews.map((candidate) => (
+                {pendingCandidates.map((candidate) => (
                   <div key={candidate.id} className="rounded-xl bg-slate-50 px-3 py-2">
                     <p className="font-medium text-slate-800">{candidate.amountDisplay}</p>
                     <p>{candidate.dateLabel}</p>
                     <p>{candidate.description}</p>
                     <p>{candidate.merchantGuess}</p>
-                    <p>
-                      {candidate.reviewState} review • {candidate.acceptanceState} acceptance
-                    </p>
-                    {candidate.acceptanceState === "pending" ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          className="rounded-2xl bg-sky-600 px-3 py-2 text-xs font-medium text-white"
-                          disabled={pendingCandidateId === candidate.id}
-                          onClick={() => void handleReviewDecision(candidate.id, "accept")}
-                          type="button"
-                        >
-                          Accept candidate
-                        </button>
-                        <button
-                          className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700"
-                          disabled={pendingCandidateId === candidate.id}
-                          onClick={() => void handleReviewDecision(candidate.id, "reject")}
-                          type="button"
-                        >
-                          Reject candidate
-                        </button>
-                      </div>
-                    ) : null}
+                    <p>{candidate.reviewState} review | {candidate.acceptanceState} acceptance</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        className="rounded-2xl bg-sky-600 px-3 py-2 text-xs font-medium text-white"
+                        disabled={pendingCandidateId === candidate.id}
+                        onClick={() => void handleReviewDecision(candidate.id, "accept")}
+                        type="button"
+                      >
+                        Accept candidate
+                      </button>
+                      <button
+                        className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700"
+                        disabled={pendingCandidateId === candidate.id}
+                        onClick={() => void handleReviewDecision(candidate.id, "reject")}
+                        type="button"
+                      >
+                        Reject candidate
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-              <ReviewActionMessage state={reviewActionState} />
             </div>
           ) : (
-            <p>No candidate previews yet.</p>
+            <p>{reviewProgress.totalCandidateCount > 0 ? reviewCompletionLabel : "No pending items to review."}</p>
           )}
-          {item.failureReason ? (
-            <p>
-              <span className="font-medium text-slate-800">Failure reason:</span> {item.failureReason}
-            </p>
-          ) : (
-            <p>No failure reason recorded.</p>
-          )}
+          <ReviewActionMessage state={reviewActionState} />
+          {importStatus === "failed" ? <p>The import could not be prepared for review.</p> : null}
         </div>
       </details>
     </div>

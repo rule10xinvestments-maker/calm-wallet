@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import { loadStagedImportList } from "@/lib/server/imports-list";
 
 describe("imports list", () => {
@@ -26,7 +27,7 @@ describe("imports list", () => {
     const result = await loadStagedImportList(
       {},
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ listImportRecords })),
       },
     );
@@ -68,7 +69,7 @@ describe("imports list", () => {
     await loadStagedImportList(
       { status: "failed" },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ listImportRecords })),
       },
     );
@@ -109,7 +110,7 @@ describe("imports list", () => {
     const result = await loadStagedImportList(
       {},
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ listImportRecords })),
       },
     );
@@ -121,7 +122,7 @@ describe("imports list", () => {
     const result = await loadStagedImportList(
       {},
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ listImportRecords: vi.fn(async () => []) })),
       },
     );

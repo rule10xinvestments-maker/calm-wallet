@@ -3,6 +3,34 @@ import type { AiPolicyOutcome, AiToolExecutionResult, AiToolName } from "@/domai
 
 export type AiActionLogInsert = Database["public"]["Tables"]["ai_action_logs"]["Insert"];
 
+function getRecordValue(value: unknown, key: string): unknown {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  return (value as Record<string, unknown>)[key];
+}
+
+function nullableStringFromUnknown(value: unknown): string | null {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (value instanceof Error) {
+    return value.message;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+
+  return null;
+}
+
 export function summarizeToolResult(result: AiToolExecutionResult) {
   if (!result.ok) {
     return result.error.message;
@@ -13,7 +41,11 @@ export function summarizeToolResult(result: AiToolExecutionResult) {
   }
 
   if (result.toolName === "summarize_spending" && "message" in result.data) {
-    return result.data.message;
+    const message = nullableStringFromUnknown(getRecordValue(result.data, "message"));
+
+    if (message) {
+      return message;
+    }
   }
 
   return `Executed ${result.toolName} successfully.`;

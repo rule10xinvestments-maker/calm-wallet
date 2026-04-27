@@ -134,31 +134,34 @@ Treat current implemented repo behavior as narrower than the full product contra
 Current repo truth:
 
 - current protected pages are Assistant, Transactions, and Insights
-- current assistant UI scope is narrow
-- current assistant surface supports create transaction and list recent transactions
-- natural-language chat mutation flows are not yet fully implemented in the current UI
-- imports are foundation/staging oriented, not broad automation
+- current assistant UI scope is bounded and operational
+- current assistant/runtime surface supports the approved transaction actions from prior sprints
+- staged imports support only `receipt_image` and `csv_import`
+- staged import upload, upload transport, parser-result ingestion, review progress, accept/reject decisions, and review completion are implemented behind service-layer and ownership boundaries
+- the staged import lifecycle is hardened as `uploaded -> parsing`, `parsing -> parsed`, `parsing -> failed`, and `parsed -> reviewed` only when all candidates are accepted or rejected
+- parser-result ingestion runs only from `parsing`, skips invalid rows safely, fails safely when no valid rows exist, and ignores parser-provided lifecycle/status fields
+- Transactions shows pending staged import candidates as reviewable work and keeps accepted/rejected candidates non-actionable
 - notification delivery is not yet implemented
 - PDF import must not appear
 - stale older enum examples or legacy notes should not override current repo constants or locked docs
 
 ## Current Execution Status
 
-Sprint 1 should now be treated as ready.
+Sprint 4 should now be treated as ready.
 
 xw should be updated now.
 
-Recommended handoff snapshot label: **xw-sprint-1-ready**
+Recommended handoff snapshot label: **xw-sprint-4-ready**
 
-Next execution focus: **Sprint 2 assistant runtime implementation**
+Next execution focus: **Sprint 5 planning from the frozen Sprint 4 baseline**
 
-## Sprint 2 Starting Order
+## Sprint 5 Starting Order
 
-1. expand assistant runtime actions safely through approved tool contracts
-2. keep all writes behind validators, policy, ownership checks, and service layer
-3. add transaction mutation actions beyond create/list only when auditability is preserved
-4. keep UI scope aligned to the 3-page product shape
-5. continue excluding PDF imports, direct bank linking, extra pages, and uncontrolled AI behavior
+1. Freeze/package `xw-sprint-4-ready`.
+2. Start from the frozen Sprint 4 baseline only.
+3. Keep all writes behind validators, policy, ownership checks, and service layer.
+4. Keep UI scope aligned to the 3-page product shape.
+5. Continue excluding PDF imports, direct bank/card linking, extra pages, broad CSV mapping UX, parser/OCR engines, and uncontrolled AI behavior.
 
 ## Non-Negotiable Guardrails
 

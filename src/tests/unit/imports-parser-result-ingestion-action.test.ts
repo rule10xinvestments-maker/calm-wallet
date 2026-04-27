@@ -41,7 +41,10 @@ describe("imports parser result ingestion action", () => {
     ingestImportParserResult.mockResolvedValueOnce({
       importRecordId: "record-1",
       importType: "receipt_image",
+      status: "parsed",
       candidatesCreated: 1,
+      skippedInvalidRowCount: 0,
+      skippedInvalidRowSummary: null,
       candidates: [
         {
           id: "candidate-1",
@@ -94,7 +97,10 @@ describe("imports parser result ingestion action", () => {
       ingestion: {
         importRecordId: "record-1",
         importType: "receipt_image",
+        status: "parsed",
         candidatesCreated: 1,
+        skippedInvalidRowCount: 0,
+        skippedInvalidRowSummary: null,
         candidates: [
           {
             id: "candidate-1",
@@ -174,7 +180,10 @@ describe("imports parser result ingestion action", () => {
     ingestImportParserResult.mockResolvedValueOnce({
       importRecordId: "record-2",
       importType: "csv_import",
+      status: "parsed",
       candidatesCreated: 2,
+      skippedInvalidRowCount: 1,
+      skippedInvalidRowSummary: "1 parser row was skipped because required transaction fields were missing or invalid.",
       candidates: [],
     });
 
@@ -186,11 +195,46 @@ describe("imports parser result ingestion action", () => {
 
     expect(result).toEqual({
       status: "success",
-      message: "Created 2 import candidates.",
+      message: "Created 2 import candidates. 1 parser row was skipped because required transaction fields were missing or invalid.",
       ingestion: {
         importRecordId: "record-2",
         importType: "csv_import",
+        status: "parsed",
         candidatesCreated: 2,
+        skippedInvalidRowCount: 1,
+        skippedInvalidRowSummary: "1 parser row was skipped because required transaction fields were missing or invalid.",
+        candidates: [],
+      },
+    });
+  });
+
+  it("returns a safe no-reviewable-rows message for failed ingestion", async () => {
+    ingestImportParserResult.mockResolvedValueOnce({
+      importRecordId: "record-3",
+      importType: "csv_import",
+      status: "failed",
+      candidatesCreated: 0,
+      skippedInvalidRowCount: 0,
+      skippedInvalidRowSummary: null,
+      candidates: [],
+    });
+
+    const { ingestStagedImportParserResultAction } = await import("@/lib/actions/imports");
+    const result = await ingestStagedImportParserResultAction(
+      initialImportParserResultIngestionActionState,
+      makeFormData({ importRecordId: "record-3", candidates: [] }),
+    );
+
+    expect(result).toEqual({
+      status: "success",
+      message: "Parser result did not contain reviewable rows.",
+      ingestion: {
+        importRecordId: "record-3",
+        importType: "csv_import",
+        status: "failed",
+        candidatesCreated: 0,
+        skippedInvalidRowCount: 0,
+        skippedInvalidRowSummary: null,
         candidates: [],
       },
     });

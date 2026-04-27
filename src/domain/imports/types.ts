@@ -129,9 +129,11 @@ export type ParserResultCandidateInput = {
   reviewState?: ImportCandidateReviewState;
   acceptanceState?: ImportCandidateAcceptanceState;
   uncertaintyReason?: string | null;
+  status?: unknown;
+  importStatus?: unknown;
 };
 
 export type IngestImportParserResultInput = {
   importRecordId: string;
-  candidates: ParserResultCandidateInput[];
+  candidates: unknown[];
 };

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
+import type { ImportRecord } from "@/domain/imports/types";
 import { createStagedImportUploadTransport } from "@/lib/server/imports-upload-transport";
 import { IMPORT_STORAGE_BUCKET } from "@/lib/imports/storage";
 
@@ -32,7 +34,7 @@ describe("imports upload transport", () => {
         importRecordId: "record-1",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ getImportRecordById })),
         createSignedUploadUrl,
       },
@@ -64,7 +66,7 @@ describe("imports upload transport", () => {
         importRecordId: "record-2",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => ({
             id: "record-2",
@@ -110,6 +112,19 @@ describe("imports upload transport", () => {
 
   it("rejects unsupported import types", async () => {
     const createSignedUploadUrl = vi.fn();
+    const unsupportedImportRecord = {
+      id: "record-1",
+      userId: "user-1",
+      importType: "pdf_import",
+      storagePath: "user-1/pdf_import/2026/04/file.pdf",
+      originalFilename: "file.pdf",
+      mimeType: "application/pdf",
+      status: "uploaded",
+      parseQuality: "unknown",
+      failureReason: null,
+      createdAt: "2026-04-22T10:00:00.000Z",
+      updatedAt: "2026-04-22T10:00:00.000Z",
+    } satisfies Omit<ImportRecord, "importType"> & { importType: string };
 
     await expect(
       createStagedImportUploadTransport(
@@ -117,21 +132,9 @@ describe("imports upload transport", () => {
           importRecordId: "record-1",
         },
         {
-          getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+          getCurrentUser: vi.fn(async () => mockUser()),
           createImportRecordService: vi.fn(async () => ({
-            getImportRecordById: vi.fn(async () => ({
-              id: "record-1",
-              userId: "user-1",
-              importType: "pdf_import" as never,
-              storagePath: "user-1/pdf_import/2026/04/file.pdf",
-              originalFilename: "file.pdf",
-              mimeType: "application/pdf",
-              status: "uploaded",
-              parseQuality: "unknown",
-              failureReason: null,
-              createdAt: "2026-04-22T10:00:00.000Z",
-              updatedAt: "2026-04-22T10:00:00.000Z",
-            })),
+            getImportRecordById: vi.fn(async () => unsupportedImportRecord as ImportRecord),
           })),
           createSignedUploadUrl,
         },
@@ -160,7 +163,7 @@ describe("imports upload transport", () => {
         importRecordId: "record-1",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({ getImportRecordById })),
         createSignedUploadUrl: vi.fn(async () => ({
           signedUrl: "https://example.test/upload/receipt",
@@ -179,7 +182,7 @@ describe("imports upload transport", () => {
         importRecordId: "record-3",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => ({
             id: "record-3",

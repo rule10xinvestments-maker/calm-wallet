@@ -4,6 +4,7 @@ import type { ImportRecordStatus, ImportRecordType } from "@/domain/imports/type
 import type { IMPORT_STORAGE_BUCKET } from "@/lib/imports/storage";
 import type { ImportCandidate } from "@/domain/imports/types";
 import type { Transaction } from "@/domain/transactions/types";
+import type { ImportReviewCompletionResult } from "@/lib/server/imports-review-completion";
 
 export type ImportReviewActionState = {
   status: "idle" | "success" | "error";
@@ -121,8 +122,11 @@ export const initialImportParsingCompletionActionState: ImportParsingCompletionA
 export type ImportParserResultIngestionResult = {
   importRecordId: string;
   importType: ImportRecordType;
+  status: "parsed" | "failed";
   candidatesCreated: number;
   candidates: ImportCandidate[];
+  skippedInvalidRowCount: number;
+  skippedInvalidRowSummary: string | null;
 };
 
 export type ImportParserResultIngestionActionState = {
@@ -142,6 +146,7 @@ export type ImportCandidateReviewDecisionResult = {
   candidate: ImportCandidate;
   transaction: Transaction | null;
   transactionCreated: boolean;
+  reviewCompletion: ImportReviewCompletionResult;
 };
 
 export type ImportCandidateReviewDecisionActionState = {

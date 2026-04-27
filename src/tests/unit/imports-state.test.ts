@@ -273,8 +273,11 @@ describe("imports action state", () => {
       ingestion: {
         importRecordId: "11111111-1111-1111-1111-111111111111",
         importType: "receipt_image",
+        status: "parsed",
         candidatesCreated: 1,
         candidates: [],
+        skippedInvalidRowCount: 0,
+        skippedInvalidRowSummary: null,
       },
     };
 
@@ -335,6 +338,17 @@ describe("imports action state", () => {
           updatedAt: "2026-04-23T10:01:00.000Z",
         },
         transactionCreated: true,
+        reviewCompletion: {
+          importRecordId: "22222222-2222-2222-2222-222222222222",
+          importType: "receipt_image",
+          status: "reviewed",
+          totalCandidateCount: 1,
+          acceptedCount: 1,
+          rejectedCount: 0,
+          pendingCount: 0,
+          reviewCompleted: true,
+          transitioned: true,
+        },
       },
     };
 

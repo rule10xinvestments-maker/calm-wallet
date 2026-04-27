@@ -9,13 +9,18 @@ import type { ImportCandidate, ReviewImportCandidateInput } from "@/domain/impor
 import { createSupabaseTransactionService, type TransactionService } from "@/domain/transactions/service";
 import type { CreateTransactionInput, Transaction } from "@/domain/transactions/types";
 import { getCurrentUser } from "@/lib/auth/session";
+import {
+  completeOwnedImportReviewIfReady,
+  type ImportReviewCompletionResult,
+} from "@/lib/server/imports-review-completion";
+import { SUPPORTED_IMPORT_TYPES } from "@/lib/imports/storage";
 
 export type ReviewImportCandidateDependencies = {
   getCurrentUser: typeof getCurrentUser;
   createImportCandidateService: () => Promise<
-    Pick<ImportCandidateService, "getImportCandidateById" | "updateImportCandidateStatus">
+    Pick<ImportCandidateService, "getImportCandidateById" | "listImportCandidates" | "updateImportCandidateStatus">
   >;
-  createImportRecordService: () => Promise<Pick<ImportRecordService, "getImportRecordById">>;
+  createImportRecordService: () => Promise<Pick<ImportRecordService, "getImportRecordById" | "updateImportRecordStatus">>;
   createTransactionService: () => Promise<Pick<TransactionService, "createTransaction" | "listTransactions">>;
 };
 
@@ -24,6 +29,7 @@ export type ReviewImportCandidateResult = {
   candidate: ImportCandidate;
   transaction: Transaction | null;
   transactionCreated: boolean;
+  reviewCompletion: ImportReviewCompletionResult;
 };
 
 const defaultDependencies: ReviewImportCandidateDependencies = {
@@ -32,6 +38,10 @@ const defaultDependencies: ReviewImportCandidateDependencies = {
   createImportRecordService: createSupabaseImportRecordService,
   createTransactionService: createSupabaseTransactionService,
 };
+
+function isSupportedImportType(value: string): value is "receipt_image" | "csv_import" {
+  return SUPPORTED_IMPORT_TYPES.includes(value as "receipt_image" | "csv_import");
+}
 
 function mapCandidateToTransactionInput(args: {
   candidate: ImportCandidate;
@@ -84,9 +94,10 @@ export async function reviewImportCandidate(
   }
 
   const importRecordService = await dependencies.createImportRecordService();
+  let importRecord: Awaited<ReturnType<ImportRecordService["getImportRecordById"]>>;
 
   try {
-    await importRecordService.getImportRecordById(user.id, candidate.importRecordId);
+    importRecord = await importRecordService.getImportRecordById(user.id, candidate.importRecordId);
   } catch (error) {
     if (error instanceof Error && error.message === "Import record not found.") {
       return null;
@@ -95,11 +106,40 @@ export async function reviewImportCandidate(
     throw error;
   }
 
+  if (!isSupportedImportType(importRecord.importType)) {
+    throw new Error("Unsupported import type.");
+  }
+
+  const targetAcceptanceState = parsed.decision === "accept" ? "accepted" : "rejected";
+
+  if (candidate.acceptanceState !== "pending" && candidate.acceptanceState !== targetAcceptanceState) {
+    throw new Error("Import candidate has already been reviewed.");
+  }
+
+  if (parsed.decision === "reject" && candidate.acceptanceState === "rejected") {
+    const reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
+      importRecordService,
+      importCandidateService,
+    });
+
+    return {
+      decision: "reject",
+      candidate,
+      transaction: null,
+      transactionCreated: false,
+      reviewCompletion,
+    };
+  }
+
   if (parsed.decision === "reject") {
     const rejectedCandidate = await importCandidateService.updateImportCandidateStatus(user.id, candidate.id, {
       reviewState: "reviewed",
       acceptanceState: "rejected",
       acceptedTransactionId: null,
+    });
+    const reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
+      importRecordService,
+      importCandidateService,
     });
 
     return {
@@ -107,6 +147,7 @@ export async function reviewImportCandidate(
       candidate: rejectedCandidate,
       transaction: null,
       transactionCreated: false,
+      reviewCompletion,
     };
   }
 
@@ -124,16 +165,20 @@ export async function reviewImportCandidate(
       acceptanceState: "accepted",
       acceptedTransactionId: existingTransaction.id,
     });
+    const reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
+      importRecordService,
+      importCandidateService,
+    });
 
     return {
       decision: "accept",
       candidate: acceptedCandidate,
       transaction: existingTransaction,
       transactionCreated: false,
+      reviewCompletion,
     };
   }
 
-  const importRecord = await importRecordService.getImportRecordById(user.id, candidate.importRecordId);
   const createdTransaction = await transactionService.createTransaction(
     user.id,
     mapCandidateToTransactionInput({
@@ -147,11 +192,16 @@ export async function reviewImportCandidate(
     acceptanceState: "accepted",
     acceptedTransactionId: createdTransaction.transaction.id,
   });
+  const reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
+    importRecordService,
+    importCandidateService,
+  });
 
   return {
     decision: "accept",
     candidate: acceptedCandidate,
     transaction: createdTransaction.transaction,
     transactionCreated: true,
+    reviewCompletion,
   };
 }

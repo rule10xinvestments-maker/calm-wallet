@@ -265,3 +265,65 @@ Ready
 2. Start Sprint 4 from the frozen Sprint 3 baseline only.
 3. Keep import directions locked to `receipt_image` and `csv_import`.
 4. Build only the next bounded staged import lifecycle step.
+
+---
+
+## Sprint 4 Closeout Update
+
+### Date
+2026-04-27
+
+### Status
+Ready
+
+### Add this to my knowledge now
+- Sprint 4 is ready.
+- `xw` should be updated now.
+- Recommended release label: `xw-sprint-4-ready`.
+- The staged import lifecycle is now hardened through:
+  - `uploaded -> parsing`
+  - `parsing -> parsed`
+  - `parsing -> failed`
+  - `parsed -> reviewed` only when all candidates are accepted or rejected
+- The existing Transactions page now distinguishes pending review work from completed accepted/rejected candidates.
+- Parser-result ingestion now runs only from `parsing`, creates only valid pending-review candidates, skips invalid rows safely, and fails imports safely when there are zero valid rows.
+
+### Locked decisions changed this sprint
+- No new primary pages.
+- No PDF import support.
+- No bank or card linking.
+- No OCR or parser-engine execution.
+- No broad CSV mapping UX.
+- No weakening of ownership, validation, service-layer, or AI runtime boundaries.
+
+### Repo reality changed this sprint
+- Import lifecycle transition helpers now enforce the intended staged import state graph.
+- Review completion only transitions parsed imports to reviewed when no pending candidates remain.
+- Transactions staged import UI now shows compact review progress and safe failed/completed states.
+- Parser-result ingestion now validates each parser row before persistence and ignores parser-provided lifecycle/status fields.
+- Unit coverage now includes lifecycle, review completion, review UX, parser ingestion hardening, and typed auth mock support.
+
+### Validation state
+- Full Sprint 4 freeze validation passed:
+  - `npm.cmd run typecheck`
+  - `npm.cmd run lint`
+  - `npm.cmd run test`
+  - `npm.cmd run build`
+  - `npm.cmd run test:e2e`
+- Unit validation result:
+  - `36` files passed
+  - `267` tests passed
+- E2E validation result:
+  - `4` Playwright tests passed
+- First sandboxed e2e attempt failed on an `EPERM` unlink of `C:\xw\test-results\.last-run.json`; the approved rerun outside the sandbox passed.
+
+### What is now overridden
+- Older notes that describe staged imports as upload-only or parser-ingestion foundation only.
+- Older notes that imply parser-result ingestion can run after an import is already parsed.
+- Older notes that imply accepted/rejected candidates remain actionable review work.
+
+### Next sprint start order
+1. Freeze/package `xw-sprint-4-ready`.
+2. Start Sprint 5 from the frozen Sprint 4 baseline only.
+3. Preserve staged import directions as `receipt_image` and `csv_import`.
+4. Keep parser execution, PDF imports, bank/card linking, new pages, and broad CSV UX out of scope unless a later sprint explicitly re-plans them.

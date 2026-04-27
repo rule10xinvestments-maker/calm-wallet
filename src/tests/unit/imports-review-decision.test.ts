@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import { reviewImportCandidate } from "@/lib/server/imports-review-decision";
 
-function makeCandidate() {
+function makeCandidate(overrides: Record<string, unknown> = {}) {
   return {
     id: "33333333-3333-3333-3333-333333333333",
     userId: "user-1",
@@ -20,10 +21,11 @@ function makeCandidate() {
     uncertaintyReason: null,
     createdAt: "2026-04-23T10:00:00.000Z",
     updatedAt: "2026-04-23T10:00:00.000Z",
+    ...overrides,
   };
 }
 
-function makeImportRecord() {
+function makeImportRecord(overrides: Record<string, unknown> = {}) {
   return {
     id: "11111111-1111-1111-1111-111111111111",
     userId: "user-1",
@@ -36,6 +38,22 @@ function makeImportRecord() {
     failureReason: null,
     createdAt: "2026-04-23T09:00:00.000Z",
     updatedAt: "2026-04-23T09:05:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeReviewCompletion(overrides: Record<string, unknown> = {}) {
+  return {
+    importRecordId: "11111111-1111-1111-1111-111111111111",
+    importType: "receipt_image" as const,
+    status: "reviewed" as const,
+    totalCandidateCount: 1,
+    acceptedCount: 1,
+    rejectedCount: 0,
+    pendingCount: 0,
+    reviewCompleted: true,
+    transitioned: true,
+    ...overrides,
   };
 }
 
@@ -85,13 +103,15 @@ describe("imports review decision", () => {
         decision: "accept",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportCandidateService: vi.fn(async () => ({
           getImportCandidateById: vi.fn(async () => makeCandidate()),
+          listImportCandidates: vi.fn(async () => [makeCandidate({ acceptanceState: "accepted" as const, reviewState: "reviewed" as const, acceptedTransactionId: "transaction-1" })]),
           updateImportCandidateStatus,
         })),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => makeImportRecord()),
+          updateImportRecordStatus: vi.fn(async () => makeImportRecord({ status: "reviewed" as const })),
         })),
         createTransactionService: vi.fn(async () => ({
           listTransactions: vi.fn(async () => []),
@@ -113,6 +133,7 @@ describe("imports review decision", () => {
           acceptanceState: "accepted",
           acceptedTransactionId: "transaction-1",
         }),
+        reviewCompletion: expect.objectContaining(makeReviewCompletion()),
       }),
     );
   });
@@ -132,17 +153,26 @@ describe("imports review decision", () => {
         decision: "accept",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportCandidateService: vi.fn(async () => ({
           getImportCandidateById: vi.fn(async () => ({
             ...makeCandidate(),
             acceptanceState: "accepted" as const,
             acceptedTransactionId: "transaction-1",
           })),
+          listImportCandidates: vi.fn(async () => [
+            {
+              ...makeCandidate(),
+              acceptanceState: "accepted" as const,
+              reviewState: "reviewed" as const,
+              acceptedTransactionId: "transaction-1",
+            },
+          ]),
           updateImportCandidateStatus,
         })),
         createImportRecordService: vi.fn(async () => ({
-          getImportRecordById: vi.fn(async () => makeImportRecord()),
+          getImportRecordById: vi.fn(async () => makeImportRecord({ status: "reviewed" as const })),
+          updateImportRecordStatus: vi.fn(async () => makeImportRecord({ status: "reviewed" as const })),
         })),
         createTransactionService: vi.fn(async () => ({
           listTransactions: vi.fn(async () => [makeTransaction()]),
@@ -163,6 +193,101 @@ describe("imports review decision", () => {
           acceptanceState: "accepted",
           acceptedTransactionId: "transaction-1",
         }),
+        reviewCompletion: expect.objectContaining(
+          makeReviewCompletion({
+            transitioned: false,
+          }),
+        ),
+      }),
+    );
+  });
+
+  it("does not let reject reverse an already accepted candidate", async () => {
+    const updateImportCandidateStatus = vi.fn();
+    const createTransaction = vi.fn();
+
+    await expect(
+      reviewImportCandidate(
+        {
+          importCandidateId: "33333333-3333-3333-3333-333333333333",
+          decision: "reject",
+        },
+        {
+          getCurrentUser: vi.fn(async () => mockUser()),
+          createImportCandidateService: vi.fn(async () => ({
+            getImportCandidateById: vi.fn(async () =>
+              makeCandidate({
+                reviewState: "reviewed" as const,
+                acceptanceState: "accepted" as const,
+                acceptedTransactionId: "transaction-1",
+              }),
+            ),
+            listImportCandidates: vi.fn(async () => []),
+            updateImportCandidateStatus,
+          })),
+          createImportRecordService: vi.fn(async () => ({
+            getImportRecordById: vi.fn(async () => makeImportRecord({ status: "reviewed" as const })),
+            updateImportRecordStatus: vi.fn(),
+          })),
+          createTransactionService: vi.fn(async () => ({
+            listTransactions: vi.fn(async () => [makeTransaction()]),
+            createTransaction,
+          })),
+        },
+      ),
+    ).rejects.toThrow("Import candidate has already been reviewed.");
+
+    expect(updateImportCandidateStatus).not.toHaveBeenCalled();
+    expect(createTransaction).not.toHaveBeenCalled();
+  });
+
+  it("keeps reject idempotent for an already rejected candidate", async () => {
+    const updateImportCandidateStatus = vi.fn();
+    const createTransaction = vi.fn();
+
+    const result = await reviewImportCandidate(
+      {
+        importCandidateId: "33333333-3333-3333-3333-333333333333",
+        decision: "reject",
+      },
+      {
+        getCurrentUser: vi.fn(async () => mockUser()),
+        createImportCandidateService: vi.fn(async () => ({
+          getImportCandidateById: vi.fn(async () =>
+            makeCandidate({
+              reviewState: "reviewed" as const,
+              acceptanceState: "rejected" as const,
+            }),
+          ),
+          listImportCandidates: vi.fn(async () => [
+            makeCandidate({
+              reviewState: "reviewed" as const,
+              acceptanceState: "rejected" as const,
+            }),
+          ]),
+          updateImportCandidateStatus,
+        })),
+        createImportRecordService: vi.fn(async () => ({
+          getImportRecordById: vi.fn(async () => makeImportRecord({ status: "reviewed" as const })),
+          updateImportRecordStatus: vi.fn(async () => makeImportRecord({ status: "reviewed" as const })),
+        })),
+        createTransactionService: vi.fn(async () => ({
+          listTransactions: vi.fn(async () => []),
+          createTransaction,
+        })),
+      },
+    );
+
+    expect(updateImportCandidateStatus).not.toHaveBeenCalled();
+    expect(createTransaction).not.toHaveBeenCalled();
+    expect(result).toEqual(
+      expect.objectContaining({
+        decision: "reject",
+        transactionCreated: false,
+        transaction: null,
+        candidate: expect.objectContaining({
+          acceptanceState: "rejected",
+        }),
       }),
     );
   });
@@ -182,13 +307,25 @@ describe("imports review decision", () => {
         decision: "reject",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportCandidateService: vi.fn(async () => ({
           getImportCandidateById: vi.fn(async () => makeCandidate()),
+          listImportCandidates: vi.fn(async () => [
+            {
+              ...makeCandidate(),
+              acceptanceState: "rejected" as const,
+              reviewState: "reviewed" as const,
+            },
+          ]),
           updateImportCandidateStatus,
         })),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => makeImportRecord()),
+          updateImportRecordStatus: vi.fn(async () =>
+            makeImportRecord({
+              status: "reviewed" as const,
+            }),
+          ),
         })),
         createTransactionService: vi.fn(async () => ({
           listTransactions: vi.fn(async () => []),
@@ -207,6 +344,12 @@ describe("imports review decision", () => {
           acceptanceState: "rejected",
           acceptedTransactionId: null,
         }),
+        reviewCompletion: expect.objectContaining(
+          makeReviewCompletion({
+            acceptedCount: 0,
+            rejectedCount: 1,
+          }),
+        ),
       }),
     );
   });
@@ -223,10 +366,12 @@ describe("imports review decision", () => {
         getCurrentUser: vi.fn(async () => null),
         createImportCandidateService: vi.fn(async () => ({
           getImportCandidateById,
+          listImportCandidates: vi.fn(),
           updateImportCandidateStatus: vi.fn(),
         })),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(),
+          updateImportRecordStatus: vi.fn(),
         })),
         createTransactionService: vi.fn(async () => ({
           listTransactions: vi.fn(),
@@ -248,15 +393,17 @@ describe("imports review decision", () => {
         decision: "accept",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportCandidateService: vi.fn(async () => ({
           getImportCandidateById: vi.fn(async () => {
             throw new Error("Import candidate not found.");
           }),
+          listImportCandidates: vi.fn(),
           updateImportCandidateStatus: vi.fn(),
         })),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(),
+          updateImportRecordStatus: vi.fn(),
         })),
         createTransactionService: vi.fn(async () => ({
           listTransactions: vi.fn(async () => []),
@@ -277,13 +424,15 @@ describe("imports review decision", () => {
           decision: "maybe" as "accept",
         },
         {
-          getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+          getCurrentUser: vi.fn(async () => mockUser()),
           createImportCandidateService: vi.fn(async () => ({
             getImportCandidateById: vi.fn(),
+            listImportCandidates: vi.fn(),
             updateImportCandidateStatus: vi.fn(),
           })),
           createImportRecordService: vi.fn(async () => ({
             getImportRecordById: vi.fn(),
+            updateImportRecordStatus: vi.fn(),
           })),
           createTransactionService: vi.fn(async () => ({
             listTransactions: vi.fn(),

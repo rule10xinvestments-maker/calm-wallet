@@ -38,3 +38,16 @@ Recommended next objective:
 - Do not add bank or card linking.
 - Do not weaken ownership, validation, or service boundaries.
 - Keep the product at exactly three primary protected pages.
+
+## Closeout status
+Sprint 4 is complete and ready to freeze as `xw-sprint-4-ready`.
+
+Closeout record:
+- `docs/sprint-closeouts/sprint-4-closeout.md`
+
+Final validation passed:
+- `npm.cmd run typecheck`
+- `npm.cmd run lint`
+- `npm.cmd run test`
+- `npm.cmd run build`
+- `npm.cmd run test:e2e`

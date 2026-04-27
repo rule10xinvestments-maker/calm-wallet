@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import { completeImportParsing } from "@/lib/server/imports-parsing-completion";
 
 describe("imports parsing completion", () => {
@@ -41,7 +42,7 @@ describe("imports parsing completion", () => {
         parseQuality: "high",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById,
           updateImportRecordStatus,
@@ -89,7 +90,7 @@ describe("imports parsing completion", () => {
         failureReason: "CSV columns were incomplete.",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => ({
             id: "record-2",
@@ -149,7 +150,7 @@ describe("imports parsing completion", () => {
         status: "parsed",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => {
             throw new Error("Import record not found.");
@@ -171,7 +172,7 @@ describe("imports parsing completion", () => {
           status: "parsed",
         },
         {
-          getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+          getCurrentUser: vi.fn(async () => mockUser()),
           createImportRecordService: vi.fn(async () => ({
             getImportRecordById: vi.fn(async () => ({
               id: "record-1",
@@ -201,7 +202,7 @@ describe("imports parsing completion", () => {
           status: "failed",
         },
         {
-          getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+          getCurrentUser: vi.fn(async () => mockUser()),
           createImportRecordService: vi.fn(async () => ({
             getImportRecordById: vi.fn(async () => ({
               id: "record-2",
@@ -223,6 +224,36 @@ describe("imports parsing completion", () => {
     ).rejects.toThrow("A failure reason is required when an import fails.");
   });
 
+  it("rejects unsupported import types", async () => {
+    await expect(
+      completeImportParsing(
+        {
+          importRecordId: "record-4",
+          status: "parsed",
+        },
+        {
+          getCurrentUser: vi.fn(async () => mockUser()),
+          createImportRecordService: vi.fn(async () => ({
+            getImportRecordById: vi.fn(async () => ({
+              id: "record-4",
+              userId: "user-1",
+              importType: "pdf_import" as never,
+              storagePath: "imports/user-1/pdf_import/2026/04/file.pdf",
+              originalFilename: "file.pdf",
+              mimeType: "application/pdf",
+              status: "parsing" as const,
+              parseQuality: "unknown" as const,
+              failureReason: null,
+              createdAt: "2026-04-22T10:00:00.000Z",
+              updatedAt: "2026-04-22T10:05:00.000Z",
+            })),
+            updateImportRecordStatus: vi.fn(),
+          })),
+        },
+      ),
+    ).rejects.toThrow("Unsupported import type.");
+  });
+
   it("returns the expected completion result shape", async () => {
     const result = await completeImportParsing(
       {
@@ -230,7 +261,7 @@ describe("imports parsing completion", () => {
         status: "parsed",
       },
       {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => ({
             id: "record-3",

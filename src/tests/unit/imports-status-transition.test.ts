@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import { transitionImportRecordToParsing } from "@/lib/server/imports-status-transition";
 
 describe("imports status transition", () => {
@@ -35,7 +36,7 @@ describe("imports status transition", () => {
     }));
 
     const result = await transitionImportRecordToParsing("record-1", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       createImportRecordService: vi.fn(async () => ({
         getImportRecordById,
         updateImportRecordStatus,
@@ -78,7 +79,7 @@ describe("imports status transition", () => {
     const updateImportRecordStatus = vi.fn();
 
     const result = await transitionImportRecordToParsing("record-1", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       createImportRecordService: vi.fn(async () => ({
         getImportRecordById: vi.fn(async () => {
           throw new Error("Import record not found.");
@@ -94,7 +95,7 @@ describe("imports status transition", () => {
   it("rejects invalid current status", async () => {
     await expect(
       transitionImportRecordToParsing("record-1", {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => ({
             id: "record-1",
@@ -118,7 +119,7 @@ describe("imports status transition", () => {
   it("rejects unsupported import types", async () => {
     await expect(
       transitionImportRecordToParsing("record-1", {
-        getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+        getCurrentUser: vi.fn(async () => mockUser()),
         createImportRecordService: vi.fn(async () => ({
           getImportRecordById: vi.fn(async () => ({
             id: "record-1",
@@ -141,7 +142,7 @@ describe("imports status transition", () => {
 
   it("returns the expected transition result shape", async () => {
     const result = await transitionImportRecordToParsing("record-2", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       createImportRecordService: vi.fn(async () => ({
         getImportRecordById: vi.fn(async () => ({
           id: "record-2",

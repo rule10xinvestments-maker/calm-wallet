@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import { loadAuthenticatedStagedImportBundle } from "@/lib/server/imports-loader";
 import type { StagedImportBundle } from "@/lib/server/imports-read-model";
 
@@ -41,7 +42,7 @@ describe("imports loader", () => {
     const loadOwned = vi.fn(async () => makeBundle());
 
     const result = await loadAuthenticatedStagedImportBundle("11111111-1111-1111-1111-111111111111", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       loadOwnedStagedImportBundle: loadOwned,
     });
 
@@ -66,7 +67,7 @@ describe("imports loader", () => {
 
   it("fails closed for non-owned access", async () => {
     const result = await loadAuthenticatedStagedImportBundle("11111111-1111-1111-1111-111111111111", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       loadOwnedStagedImportBundle: vi.fn(async () => null),
     });
 
@@ -75,7 +76,7 @@ describe("imports loader", () => {
 
   it("returns the staged import bundle shape cleanly", async () => {
     const result = await loadAuthenticatedStagedImportBundle("11111111-1111-1111-1111-111111111111", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       loadOwnedStagedImportBundle: vi.fn(async () =>
         makeBundle({
           candidates: [],

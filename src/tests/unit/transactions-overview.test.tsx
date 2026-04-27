@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TransactionsOverview } from "@/components/screens/transactions-overview";
 import { initialImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
+import type { ImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
 import type { TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { StagedImportListItem } from "@/lib/server/imports-list";
 
@@ -84,28 +85,27 @@ function makeOverviewProps() {
 }
 
 describe("transactions overview", () => {
-  it("renders the staged imports section safely with data", () => {
+  it("renders pending candidates as reviewable work", () => {
     render(<TransactionsOverview {...makeOverviewProps()} />);
 
     expect(screen.getByText("Staged imports")).toBeInTheDocument();
     expect(screen.getAllByText("receipt.jpg")).toHaveLength(2);
     expect(screen.getAllByText("Receipt image")).toHaveLength(2);
-    expect(screen.getAllByText("uploaded")).toHaveLength(2);
-    expect(screen.getByText("Review remaining")).toBeInTheDocument();
+    expect(screen.getAllByText("Uploaded")).toHaveLength(2);
+    expect(screen.getAllByText("1 item to review")).toHaveLength(2);
     expect(screen.getByText("View details")).toBeInTheDocument();
     expect(screen.getByText(/Candidates:/)).toBeInTheDocument();
     expect(screen.getByText(/Review progress:/)).toBeInTheDocument();
-    expect(screen.getByText(/0 accepted, 0 rejected, 1 pending/)).toBeInTheDocument();
     expect(screen.getByText(/Candidate review:/)).toBeInTheDocument();
     expect(screen.getByText(/1 pending_review/)).toBeInTheDocument();
     expect(screen.getByText(/Candidate acceptance:/)).toBeInTheDocument();
     expect(screen.getByText(/^1 pending$/)).toBeInTheDocument();
-    expect(screen.getByText("Candidate previews")).toBeInTheDocument();
+    expect(screen.getByText("Pending review")).toBeInTheDocument();
     expect(screen.getByText("$12.34")).toBeInTheDocument();
     expect(screen.getAllByText("Apr 22")).toHaveLength(3);
     expect(screen.getByText("Lunch receipt")).toBeInTheDocument();
     expect(screen.getByText("Corner Cafe")).toBeInTheDocument();
-    expect(screen.getByText("pending_review review • pending acceptance")).toBeInTheDocument();
+    expect(screen.getByText("pending_review review | pending acceptance")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Accept candidate" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reject candidate" })).toBeInTheDocument();
   });
@@ -144,11 +144,11 @@ describe("transactions overview", () => {
     );
 
     expect(screen.getAllByText("No candidates yet.")).toHaveLength(2);
-    expect(screen.getByText("Review remaining")).toBeInTheDocument();
-    expect(screen.getByText("No candidate previews yet.")).toBeInTheDocument();
+    expect(screen.getAllByText("No items to review")).toHaveLength(2);
+    expect(screen.getByText("No pending items to review.")).toBeInTheDocument();
   });
 
-  it("renders the review-complete indicator correctly", () => {
+  it("does not present accepted or rejected candidates as pending work", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -188,7 +188,145 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByText("Review complete")).toBeInTheDocument();
+    expect(screen.getAllByText("Review complete").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("1 accepted, 1 rejected")).toBeInTheDocument();
+    expect(screen.queryByText("$12.34")).not.toBeInTheDocument();
+    expect(screen.queryByText("$4.50")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept candidate" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject candidate" })).not.toBeInTheDocument();
+  });
+
+  it("renders compact progress from server-provided review truth", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        stagedImportDetails={{
+          "record-1": {
+            reviewProgress: {
+              totalCandidateCount: 3,
+              acceptedCount: 1,
+              rejectedCount: 0,
+              pendingCount: 2,
+            },
+            candidateCount: 3,
+            reviewSummary: "1 reviewed, 2 pending_review",
+            acceptanceSummary: "1 accepted, 2 pending",
+            candidatePreviews: [
+              {
+                id: "candidate-1",
+                amountDisplay: "$12.34",
+                dateLabel: "Apr 22",
+                description: "Lunch receipt",
+                merchantGuess: "Corner Cafe",
+                reviewState: "reviewed",
+                acceptanceState: "accepted",
+              },
+              {
+                id: "candidate-2",
+                amountDisplay: "$4.50",
+                dateLabel: "Apr 22",
+                description: "Coffee",
+                merchantGuess: "Cafe",
+                reviewState: "pending_review",
+                acceptanceState: "pending",
+              },
+              {
+                id: "candidate-3",
+                amountDisplay: "$8.00",
+                dateLabel: "Apr 22",
+                description: "Parking",
+                merchantGuess: "City Parking",
+                reviewState: "pending_review",
+                acceptanceState: "pending",
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText("1 of 3 reviewed")).toHaveLength(2);
+    expect(screen.queryByText("$12.34")).not.toBeInTheDocument();
+    expect(screen.getByText("$4.50")).toBeInTheDocument();
+    expect(screen.getByText("$8.00")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Accept candidate" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Reject candidate" })).toHaveLength(2);
+  });
+
+  it("renders a calm completed state when review is complete", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        stagedImports={[makeStagedImport({ status: "reviewed" })]}
+        stagedImportDetails={{
+          "record-1": {
+            reviewProgress: {
+              totalCandidateCount: 1,
+              acceptedCount: 1,
+              rejectedCount: 0,
+              pendingCount: 0,
+            },
+            candidateCount: 1,
+            reviewSummary: "1 reviewed",
+            acceptanceSummary: "1 accepted",
+            candidatePreviews: [
+              {
+                id: "candidate-1",
+                amountDisplay: "$12.34",
+                dateLabel: "Apr 22",
+                description: "Lunch receipt",
+                merchantGuess: "Corner Cafe",
+                reviewState: "reviewed",
+                acceptanceState: "accepted",
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText("Review complete").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole("button", { name: "Accept candidate" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject candidate" })).not.toBeInTheDocument();
+  });
+
+  it("renders the ready-for-review lifecycle label for parsed imports", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        stagedImports={[makeStagedImport({ status: "parsed" })]}
+      />,
+    );
+
+    expect(screen.getAllByText("Ready for review")).toHaveLength(2);
+  });
+
+  it("renders failed imports with safe state copy", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        stagedImports={[makeStagedImport({ status: "failed", failureReason: "Stack trace: parser exploded" })]}
+        stagedImportDetails={{
+          "record-1": {
+            reviewProgress: {
+              totalCandidateCount: 0,
+              acceptedCount: 0,
+              rejectedCount: 0,
+              pendingCount: 0,
+            },
+            candidateCount: 0,
+            reviewSummary: "No candidates yet.",
+            acceptanceSummary: "No candidates yet.",
+            candidatePreviews: [],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText("Failed")).toHaveLength(2);
+    expect(screen.getByText("Import failed. No review is available for this upload.")).toBeInTheDocument();
+    expect(screen.getByText("The import could not be prepared for review.")).toBeInTheDocument();
+    expect(screen.queryByText(/Stack trace/)).not.toBeInTheDocument();
   });
 
   it("wires the accept control to the safe action path", async () => {
@@ -236,6 +374,17 @@ describe("transactions overview", () => {
           updatedAt: "2026-04-22T10:01:00.000Z",
         },
         transactionCreated: true,
+        reviewCompletion: {
+          importRecordId: "record-1",
+          importType: "receipt_image" as const,
+          status: "reviewed" as const,
+          totalCandidateCount: 1,
+          acceptedCount: 1,
+          rejectedCount: 0,
+          pendingCount: 0,
+          reviewCompleted: true,
+          transitioned: true,
+        },
       },
     }));
 
@@ -244,11 +393,15 @@ describe("transactions overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Accept candidate" }));
 
     await waitFor(() => expect(reviewAction).toHaveBeenCalledOnce());
-    const formData = reviewAction.mock.calls[0]?.[1] as FormData;
+    const firstCall = reviewAction.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const [, formData] = firstCall as unknown as [ImportCandidateReviewDecisionActionState, FormData];
     expect(formData.get("importCandidateId")).toBe("candidate-1");
     expect(formData.get("decision")).toBe("accept");
     expect(await screen.findByText("Import candidate accepted and transaction created.")).toBeInTheDocument();
-    expect(screen.getByText("reviewed review • accepted acceptance")).toBeInTheDocument();
+    expect(screen.queryByText("reviewed review | accepted acceptance")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Review complete").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole("button", { name: "Accept candidate" })).not.toBeInTheDocument();
   });
 
   it("wires the reject control to the safe action path", async () => {
@@ -278,6 +431,17 @@ describe("transactions overview", () => {
         },
         transaction: null,
         transactionCreated: false,
+        reviewCompletion: {
+          importRecordId: "record-1",
+          importType: "receipt_image" as const,
+          status: "reviewed" as const,
+          totalCandidateCount: 1,
+          acceptedCount: 0,
+          rejectedCount: 1,
+          pendingCount: 0,
+          reviewCompleted: true,
+          transitioned: true,
+        },
       },
     }));
 
@@ -286,10 +450,14 @@ describe("transactions overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reject candidate" }));
 
     await waitFor(() => expect(reviewAction).toHaveBeenCalledOnce());
-    const formData = reviewAction.mock.calls[0]?.[1] as FormData;
+    const firstCall = reviewAction.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const [, formData] = firstCall as unknown as [ImportCandidateReviewDecisionActionState, FormData];
     expect(formData.get("importCandidateId")).toBe("candidate-1");
     expect(formData.get("decision")).toBe("reject");
     expect(await screen.findByText("Import candidate rejected.")).toBeInTheDocument();
-    expect(screen.getByText("reviewed review • rejected acceptance")).toBeInTheDocument();
+    expect(screen.queryByText("reviewed review | rejected acceptance")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Review complete").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole("button", { name: "Reject candidate" })).not.toBeInTheDocument();
   });
 });

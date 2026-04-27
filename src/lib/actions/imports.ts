@@ -338,7 +338,12 @@ export async function ingestStagedImportParserResultAction(
 
     return {
       status: "success",
-      message: `Created ${ingestion.candidatesCreated} import candidate${ingestion.candidatesCreated === 1 ? "" : "s"}.`,
+      message:
+        ingestion.status === "failed"
+          ? "Parser result did not contain reviewable rows."
+          : `Created ${ingestion.candidatesCreated} import candidate${ingestion.candidatesCreated === 1 ? "" : "s"}.${
+              ingestion.skippedInvalidRowSummary ? ` ${ingestion.skippedInvalidRowSummary}` : ""
+            }`,
       ingestion,
     };
   } catch (error) {

@@ -115,7 +115,7 @@ describe("assistant composer", () => {
   });
 
   it("reaches success through the staged upload flow with a bounded uploading state", async () => {
-    let resolveUpload: (() => void) | null = null;
+    let resolveUpload = () => {};
 
     createStagedImportIntakeAction.mockResolvedValueOnce({
       status: "success",
@@ -174,7 +174,7 @@ describe("assistant composer", () => {
 
     expect(await screen.findByText("Uploading staged import...")).toBeInTheDocument();
 
-    resolveUpload?.();
+    resolveUpload();
 
     expect(await screen.findByText("Staged import uploaded as receipt_image.")).toBeInTheDocument();
     expect(await screen.findByText("Uploaded receipt.jpg as receipt_image.")).toBeInTheDocument();

@@ -310,3 +310,82 @@ Do not include:
 
 ### Recommended next release direction
 The next meaningful xw snapshot should be created only after Sprint 4 extends the bounded staged import lifecycle on top of the frozen `xw-sprint-3-ready` baseline without widening import directions or adding new primary pages.
+
+---
+
+## Release: `xw-sprint-4-ready`
+
+### Date
+2026-04-27
+
+### Sprint
+Sprint 4
+
+### Status
+Ready
+
+### Why this snapshot exists
+This snapshot marks the point where the bounded staged import lifecycle, Transactions review experience, and parser-result ingestion hardening are complete and ready for trusted baseline packaging.
+
+### Included in this snapshot
+- Staged import lifecycle hardening:
+  - `uploaded -> parsing`
+  - `parsing -> parsed`
+  - `parsing -> failed`
+  - `parsed -> reviewed` only after all candidates are accepted or rejected
+- Transactions page staged review hardening:
+  - pending candidates shown as actionable work
+  - accepted/rejected candidates removed from pending actions
+  - compact progress copy
+  - safe failed-import copy
+  - calm completed state
+- Parser-result ingestion hardening:
+  - ingestion only from `parsing`
+  - required money fields for persisted candidates
+  - invalid parser rows skipped safely
+  - zero valid rows fail safely
+  - unsupported import types rejected
+  - parser-provided lifecycle/status ignored
+- Full validation gate, including Playwright e2e.
+
+### Not included in this snapshot
+- New primary pages
+- PDF imports
+- Bank linking
+- Card linking
+- OCR or parser-engine execution
+- Broad CSV mapping UX
+- Retry or repair flow for failed imports
+
+### Validation status
+- `npm.cmd run typecheck`: passed
+- `npm.cmd run lint`: passed
+- `npm.cmd run test`: passed, `36` files and `267` tests
+- `npm.cmd run build`: passed
+- `npm.cmd run test:e2e`: passed, `4` Playwright tests
+- Note: first sandboxed e2e attempt failed on `EPERM` unlinking `C:\xw\test-results\.last-run.json`; rerun outside the sandbox passed.
+
+### Packaging exclusions
+Do not include:
+- `.next/`
+- `node_modules/`
+- `playwright-results/`
+- `test-results/`
+- `validation-fresh/`
+- `tsconfig.tsbuildinfo`
+
+### Known remaining risks
+- Parser execution remains out of scope.
+- Skipped invalid parser-row summaries are returned safely by ingestion actions, not separately persisted as audit records.
+- Failed import retry/repair is intentionally not implemented.
+- Review UX remains compact inside the existing Transactions page.
+
+### Active source-of-truth notes at this release
+- Sprint 4 is ready.
+- `xw` should be updated now.
+- Recommended release label: `xw-sprint-4-ready`.
+- Supported staged import directions remain locked to `receipt_image` and `csv_import`.
+- The next sprint must start from this frozen baseline and must not widen import scope without explicit planning.
+
+### Recommended next release direction
+The next meaningful xw snapshot should be created only after Sprint 5 adds its explicitly planned scope on top of frozen `xw-sprint-4-ready`, preserving the current import and runtime guardrails.

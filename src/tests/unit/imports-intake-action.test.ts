@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import { initialImportIntakeActionState } from "@/lib/actions/imports-state";
 
 function makeFormData(importType: string, overrides: { originalFilename?: string; mimeType?: string } = {}) {
@@ -31,7 +32,7 @@ describe("imports intake action", () => {
 
     const { createStagedImportIntakeAction } = await import("@/lib/actions/imports");
     const result = await createStagedImportIntakeAction(initialImportIntakeActionState, makeFormData("receipt_image"), {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       createImportRecordService: vi.fn(async () => ({ createImportRecord })),
       buildImportStoragePath: vi.fn(() => "imports/user-1/receipt_image/2026/04/2026-04-22T10-00-00-000Z-receipt.jpg"),
       sanitizeImportFilename: vi.fn(() => "receipt.jpg"),
@@ -82,7 +83,7 @@ describe("imports intake action", () => {
 
     const { createStagedImportIntakeAction } = await import("@/lib/actions/imports");
     const result = await createStagedImportIntakeAction(initialImportIntakeActionState, formData, {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       createImportRecordService: vi.fn(async () => ({ createImportRecord })),
       buildImportStoragePath: vi.fn(() => "imports/user-1/csv_import/2026/04/2026-04-22T10-00-00-000Z-statement.csv"),
       sanitizeImportFilename: vi.fn(() => "statement.csv"),
@@ -118,7 +119,7 @@ describe("imports intake action", () => {
 
     const { createStagedImportIntakeAction } = await import("@/lib/actions/imports");
     const result = await createStagedImportIntakeAction(initialImportIntakeActionState, makeFormData("pdf_import"), {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       createImportRecordService: vi.fn(async () => ({ createImportRecord })),
       buildImportStoragePath: vi.fn(),
       sanitizeImportFilename: vi.fn(),
@@ -150,7 +151,7 @@ describe("imports intake action", () => {
 
     const { createStagedImportIntakeAction } = await import("@/lib/actions/imports");
     const result = await createStagedImportIntakeAction(initialImportIntakeActionState, makeFormData("receipt_image"), {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       createImportRecordService: vi.fn(async () => ({ createImportRecord })),
       buildImportStoragePath: vi.fn(() => "imports/user-1/receipt_image/2026/04/2026-04-22T10-00-00-000Z-receipt.jpg"),
       sanitizeImportFilename: vi.fn(() => "receipt.jpg"),

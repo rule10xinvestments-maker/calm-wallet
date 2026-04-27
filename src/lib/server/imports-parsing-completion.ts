@@ -87,7 +87,7 @@ export async function completeImportParsing(
   return {
     importRecordId: updated.id,
     importType: updated.importType,
-    status: updated.status,
+    status: input.status,
     parseQuality: updated.parseQuality,
     failureReason: updated.failureReason,
     storagePath: updated.storagePath,

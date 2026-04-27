@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { mockUser } from "@/tests/unit/test-users";
 import {
   loadStagedImportReviewProgress,
   mapStagedImportReviewProgress,
@@ -72,7 +73,7 @@ function makeBundle(overrides: Partial<StagedImportBundle> = {}): StagedImportBu
 describe("imports review progress", () => {
   it("loads review progress for an owned staged import record", async () => {
     const result = await loadStagedImportReviewProgress("11111111-1111-1111-1111-111111111111", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       loadOwnedStagedImportBundle: vi.fn(async () => makeBundle()),
     });
 
@@ -99,7 +100,7 @@ describe("imports review progress", () => {
 
   it("fails closed for non-owned or missing import records", async () => {
     const result = await loadStagedImportReviewProgress("11111111-1111-1111-1111-111111111111", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       loadOwnedStagedImportBundle: vi.fn(async () => null),
     });
 
@@ -108,7 +109,7 @@ describe("imports review progress", () => {
 
   it("handles the empty candidate set cleanly", async () => {
     const result = await loadStagedImportReviewProgress("11111111-1111-1111-1111-111111111111", {
-      getCurrentUser: vi.fn(async () => ({ id: "user-1" } as { id: string })),
+      getCurrentUser: vi.fn(async () => mockUser()),
       loadOwnedStagedImportBundle: vi.fn(async () => makeBundle({ candidates: [] })),
     });
 
