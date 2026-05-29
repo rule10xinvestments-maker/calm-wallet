@@ -1,7 +1,7 @@
 import { AuthScreen } from "@/components/screens/auth-screen";
 import { getSafeNextPath } from "@/lib/auth/redirects";
 import { type AuthFormState } from "@/lib/auth/form-state";
-import { signInAction } from "@/lib/auth/actions";
+import { signInAction, signInWithGoogleAction } from "@/lib/auth/actions";
 import { redirectIfAuthenticated } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +27,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       action={signInAction}
       title="Welcome back"
       description="Review your spending, ask quick budget questions, and keep your plan in view."
+      googleAction={signInWithGoogleAction}
       initialState={initialState}
       nextPath={nextPath}
       submitLabel="Sign in"

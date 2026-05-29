@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { AuthFormState } from "@/lib/auth/form-state";
-import { resolvePostAuthRedirect } from "@/lib/auth/redirects";
+import { buildSignInRedirectUrl, getAuthCallbackErrorMessage, resolvePostAuthRedirect } from "@/lib/auth/redirects";
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import { AUTH_SIGN_IN_PATH, getRequiredEnv } from "@/lib/auth/shared";
 import { signInSchema, signUpSchema } from "@/lib/auth/validation";
@@ -109,6 +109,39 @@ export async function signUpAction(_previousState: AuthFormState, formData: Form
       success: null,
     };
   }
+}
+
+export async function signInWithGoogleAction(formData: FormData) {
+  const next = resolvePostAuthRedirect(typeof formData.get("next") === "string" ? String(formData.get("next")) : null);
+  let providerUrl: string | null = null;
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const redirectTo = new URL("/auth/callback", getRequiredEnv("NEXT_PUBLIC_SITE_URL")).toString();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+      },
+    });
+
+    if (!error && data.url) {
+      providerUrl = data.url;
+    }
+  } catch {
+    providerUrl = null;
+  }
+
+  if (!providerUrl) {
+    redirect(
+      buildSignInRedirectUrl({
+        next,
+        error: getAuthCallbackErrorMessage(),
+      }),
+    );
+  }
+
+  redirect(providerUrl);
 }
 
 export async function signOutAction() {

@@ -1,6 +1,6 @@
 import { AuthScreen } from "@/components/screens/auth-screen";
 import { getSafeNextPath } from "@/lib/auth/redirects";
-import { signUpAction } from "@/lib/auth/actions";
+import { signInWithGoogleAction, signUpAction } from "@/lib/auth/actions";
 import { redirectIfAuthenticated } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       action={signUpAction}
       title="Create your notebook"
       description="Start with a simple spending home designed for calm daily check-ins."
+      googleAction={signInWithGoogleAction}
       includeFullName
       nextPath={nextPath}
       submitLabel="Sign up"

@@ -10,13 +10,17 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-function renderSignUp(action = vi.fn(async () => initialAuthFormState)) {
+function renderSignUp(
+  action = vi.fn(async () => initialAuthFormState),
+  googleAction?: (formData: FormData) => Promise<void>,
+) {
   render(
     <AuthForm
       action={action}
       alternateHref="/sign-in"
       alternateLabel="Already have an account?"
       description="Start with a simple spending home designed for calm daily check-ins."
+      googleAction={googleAction}
       includeFullName
       submitLabel="Sign up"
       title="Create your notebook"
@@ -26,13 +30,17 @@ function renderSignUp(action = vi.fn(async () => initialAuthFormState)) {
   return action;
 }
 
-function renderSignIn(action = vi.fn(async () => initialAuthFormState)) {
+function renderSignIn(
+  action = vi.fn(async () => initialAuthFormState),
+  googleAction?: (formData: FormData) => Promise<void>,
+) {
   render(
     <AuthForm
       action={action}
       alternateHref="/sign-up"
       alternateLabel="Create an account"
       description="Review your spending, ask quick budget questions, and keep your plan in view."
+      googleAction={googleAction}
       submitLabel="Sign in"
       title="Welcome back"
     />,
@@ -42,6 +50,34 @@ function renderSignIn(action = vi.fn(async () => initialAuthFormState)) {
 }
 
 describe("auth form", () => {
+  it("renders Google sign-in without removing email and password auth", () => {
+    renderSignIn(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined));
+
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
+    expect(screen.getByText("or")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+  });
+
+  it("renders Google sign-up as an option", () => {
+    renderSignUp(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined));
+
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Full name")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign up" })).toBeInTheDocument();
+  });
+
+  it("submits the Google form through the provided auth action", async () => {
+    const googleAction = vi.fn(async () => undefined);
+    const emailAction = renderSignIn(vi.fn(async () => initialAuthFormState), googleAction);
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+
+    await waitFor(() => expect(googleAction).toHaveBeenCalledOnce());
+    expect(emailAction).not.toHaveBeenCalled();
+  });
+
   it("rejects mismatched sign-up passwords before submit", async () => {
     const action = renderSignUp();
 

@@ -15,6 +15,7 @@ type AuthFormProps = {
   alternateHref: string;
   alternateLabel: string;
   action: (state: AuthFormState, formData: FormData) => Promise<AuthFormState>;
+  googleAction?: (formData: FormData) => Promise<void>;
   includeFullName?: boolean;
   initialState?: AuthFormState;
   nextPath?: string | null;
@@ -27,6 +28,7 @@ export function AuthForm({
   alternateHref,
   alternateLabel,
   action,
+  googleAction,
   includeFullName = false,
   initialState = initialAuthFormState,
   nextPath = null,
@@ -123,6 +125,25 @@ export function AuthForm({
         <CardDescription className="text-base leading-6">{description}</CardDescription>
       </CardHeader>
       <CardContent>
+        {googleAction ? (
+          <>
+            <form action={googleAction}>
+              {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
+              <Button
+                className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                type="submit"
+              >
+                Continue with Google
+              </Button>
+            </form>
+            <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span>or</span>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+          </>
+        ) : null}
+
         <form action={formAction} className="space-y-4" onSubmit={handleSubmit}>
           {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
           {includeFullName ? (

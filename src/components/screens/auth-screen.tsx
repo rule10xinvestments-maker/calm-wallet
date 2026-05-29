@@ -8,6 +8,7 @@ type AuthScreenProps = {
   alternateHref: string;
   alternateLabel: string;
   action: (state: AuthFormState, formData: FormData) => Promise<AuthFormState>;
+  googleAction?: (formData: FormData) => Promise<void>;
   includeFullName?: boolean;
   initialState?: AuthFormState;
   nextPath?: string | null;
@@ -20,6 +21,7 @@ export function AuthScreen({
   alternateHref,
   alternateLabel,
   action,
+  googleAction,
   includeFullName,
   initialState,
   nextPath,
@@ -30,6 +32,7 @@ export function AuthScreen({
       alternateHref={alternateHref}
       alternateLabel={alternateLabel}
       description={description}
+      googleAction={googleAction}
       includeFullName={includeFullName}
       initialState={initialState}
       nextPath={nextPath}
