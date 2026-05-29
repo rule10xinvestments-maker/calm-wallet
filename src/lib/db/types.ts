@@ -49,6 +49,38 @@ export type Database = {
           updated_at?: string;
         };
       };
+      fx_rates: {
+        Row: {
+          id: string;
+          base_currency: string;
+          quote_currency: string;
+          rate: number;
+          rate_date: string;
+          source: string;
+          fetched_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          base_currency: string;
+          quote_currency: string;
+          rate: number;
+          rate_date: string;
+          source: string;
+          fetched_at: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          base_currency?: string;
+          quote_currency?: string;
+          rate?: number;
+          rate_date?: string;
+          source?: string;
+          fetched_at?: string;
+          created_at?: string;
+        };
+      };
       categories: {
         Row: {
           id: string;
@@ -93,6 +125,7 @@ export type Database = {
           currency: string;
           occurred_at: string;
           category_id: string | null;
+          item_name: string | null;
           merchant: string | null;
           note: string | null;
           source: TransactionSource;
@@ -112,6 +145,7 @@ export type Database = {
           currency: string;
           occurred_at: string;
           category_id?: string | null;
+          item_name?: string | null;
           merchant?: string | null;
           note?: string | null;
           source: TransactionSource;
@@ -131,6 +165,7 @@ export type Database = {
           currency?: string;
           occurred_at?: string;
           category_id?: string | null;
+          item_name?: string | null;
           merchant?: string | null;
           note?: string | null;
           source?: TransactionSource;
@@ -408,6 +443,41 @@ export type Database = {
           overspending_enabled?: boolean;
           unusual_spending_enabled?: boolean;
           savings_opportunities_enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          disabled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          disabled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          endpoint?: string;
+          p256dh?: string;
+          auth?: string;
+          user_agent?: string | null;
+          disabled_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

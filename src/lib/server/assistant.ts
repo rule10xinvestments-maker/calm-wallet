@@ -1,7 +1,20 @@
-import { DEFAULT_TRANSACTION_SOURCE, type ReviewState } from "@/domain/transactions/types";
+import { DEFAULT_TRANSACTION_SOURCE, type ReviewState, type Transaction } from "@/domain/transactions/types";
+import {
+  type CategoryMemoryService,
+} from "@/domain/category-memory/service";
+import {
+  resolveControlledCategory,
+  type ControlledCategory,
+  type CategoryResolutionResult,
+} from "@/domain/assistant/category-resolver";
+import {
+  parseNaturalLanguageAssistantInput,
+  type NaturalLanguageCorrectionTarget,
+  type NaturalLanguageAssistantIntent,
+} from "@/domain/assistant/natural-language-parser";
 import type { AiActionLogInsert } from "@/domain/ai/runtime-log";
 import { executeAiTool } from "@/domain/ai/tool-executor";
-import type { AiToolExecutionResult } from "@/domain/ai/tool-types";
+import type { AiToolExecutionResult, AiToolRequest } from "@/domain/ai/tool-types";
 import { isReviewStateNeedingReview } from "@/domain/transactions/policy";
 import type { TransactionService } from "@/domain/transactions/service";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
@@ -13,16 +26,27 @@ export type AssistantCommandInput = {
     | "list_transactions"
     | "update_transaction"
     | "delete_transaction"
+    | "restore_transaction"
     | "recategorize_transaction"
-    | "summarize_spending";
+    | "summarize_spending"
+    | "answer_financial_question";
   transactionId?: string;
   transactionType?: "expense" | "income";
   amount?: string;
+  itemName?: string;
   merchant?: string;
   note?: string;
   currency?: string;
   occurredAt?: string;
   categoryId?: string;
+  categoryLabel?: string;
+  questionKind?:
+    | "monthly_spending_total"
+    | "monthly_income_total"
+    | "category_spending_total"
+    | "recent_largest_expense"
+    | "needs_review_summary"
+    | "recent_transactions_summary";
   occurredFrom?: string;
   occurredTo?: string;
   reviewState?: ReviewState;
@@ -38,6 +62,7 @@ export type AssistantActionState = {
     amountMinor: number;
     currency: string;
     merchant: string | null;
+    itemName?: string | null;
     reviewState: string;
   } | null;
   recentItems: Array<{
@@ -48,6 +73,21 @@ export type AssistantActionState = {
     needsReview: boolean;
   }>;
 };
+
+type ResolvedCreateTransactionIntent = Extract<NaturalLanguageAssistantIntent, { kind: "create_transaction" }> & {
+  categoryResolution?: CategoryResolutionResult;
+};
+
+type AssistantTransactionService = Pick<
+  TransactionService,
+  | "createTransaction"
+  | "updateTransaction"
+  | "deleteTransaction"
+  | "restoreTransaction"
+  | "recategorizeTransaction"
+  | "listTransactions"
+  | "getLatestSoftDeletedTransaction"
+>;
 
 export function parseAmountToMinorUnits(value: string) {
   const trimmed = value.trim();
@@ -140,8 +180,10 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
     return {
       toolName: "list_transactions" as const,
       input: {
-        limit: 5,
+        limit: input.reviewState ? 10 : 5,
         includeDeleted: false,
+        ...(input.reviewState ? { reviewState: input.reviewState } : {}),
+        ...(input.transactionType ? { transactionType: input.transactionType } : {}),
       },
     };
   }
@@ -157,6 +199,23 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
     };
   }
 
+  if (input.toolName === "answer_financial_question") {
+    if (!input.questionKind) {
+      throw new Error("Choose a supported spending question before asking.");
+    }
+
+    return {
+      toolName: "answer_financial_question" as const,
+      input: {
+        questionKind: input.questionKind,
+        ...(input.occurredFrom !== undefined ? { occurredFrom: parseAssistantDateBoundary(input.occurredFrom, "start") } : {}),
+        ...(input.occurredTo !== undefined ? { occurredTo: parseAssistantDateBoundary(input.occurredTo, "end") } : {}),
+        ...(input.categoryId ? { categoryId: input.categoryId } : {}),
+        ...(input.categoryLabel ? { categoryLabel: input.categoryLabel } : {}),
+      },
+    };
+  }
+
   if (input.toolName === "delete_transaction") {
     const transactionId = input.transactionId?.trim();
 
@@ -166,6 +225,21 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
 
     return {
       toolName: "delete_transaction" as const,
+      input: {
+        transactionId,
+      },
+    };
+  }
+
+  if (input.toolName === "restore_transaction") {
+    const transactionId = input.transactionId?.trim();
+
+    if (!transactionId) {
+      throw new Error("Choose a transaction before restoring it.");
+    }
+
+    return {
+      toolName: "restore_transaction" as const,
       input: {
         transactionId,
       },
@@ -201,6 +275,7 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
       ...(input.currency?.trim() ? { currency: input.currency.trim() } : {}),
       ...(input.occurredAt !== undefined ? { occurredAt: parseAssistantOccurredAt(input.occurredAt) } : {}),
       ...(input.categoryId !== undefined ? { categoryId: toNullableText(input.categoryId) } : {}),
+      ...(input.itemName !== undefined ? { itemName: toNullableText(input.itemName) } : {}),
       ...(input.merchant !== undefined ? { merchant: toNullableText(input.merchant) } : {}),
       ...(input.note !== undefined ? { note: toNullableText(input.note) } : {}),
       ...(input.reviewState ? { reviewState: input.reviewState } : {}),
@@ -237,9 +312,13 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
       amountMinor,
       currency: input.currency ?? "USD",
       occurredAt: new Date().toISOString(),
+      ...(input.categoryId !== undefined ? { categoryId: toNullableText(input.categoryId) } : {}),
+      itemName: input.itemName?.trim() || input.merchant?.trim() || null,
       merchant: input.merchant?.trim() || null,
       note: input.note?.trim() || null,
       source: DEFAULT_TRANSACTION_SOURCE,
+      ...(input.reviewState ? { reviewState: input.reviewState } : {}),
+      ...(input.uncertaintyReason !== undefined ? { uncertaintyReason: toNullableText(input.uncertaintyReason) } : {}),
     },
   };
 }
@@ -248,6 +327,7 @@ export function mapTransactionsToAssistantItems(
   transactions: Array<{
     id: string;
     merchant: string | null;
+    itemName?: string | null;
     note: string | null;
     amountMinor: number;
     currency: string;
@@ -257,7 +337,7 @@ export function mapTransactionsToAssistantItems(
 ) {
   return transactions.map((transaction) => ({
     id: transaction.id,
-    title: transaction.merchant || "Unnamed transaction",
+    title: transaction.itemName || transaction.merchant || transaction.note || "Unnamed transaction",
     subtitle: transaction.note || new Date(transaction.occurredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     amountDisplay: formatMoney(transaction.amountMinor, transaction.currency),
     needsReview: isReviewStateNeedingReview(transaction.reviewState),
@@ -274,29 +354,39 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
   }
 
   if (result.toolName === "list_transactions" && Array.isArray(result.data)) {
+    const hasNeedsReviewFilter = result.data.length > 0 && result.data.every((item) => isReviewStateNeedingReview(item.reviewState));
+
     return {
       ...initialAssistantActionState,
       status: "success",
-      message: result.data.length ? "Recent tracked items loaded." : "No tracked items yet.",
+      message: hasNeedsReviewFilter
+        ? "Needs review loaded."
+        : result.data.length
+          ? "Recent tracked items loaded."
+          : "No tracked items yet.",
       recentItems: mapTransactionsToAssistantItems(result.data),
     };
   }
 
   if (result.toolName === "create_transaction" && "transaction" in result.data) {
+    const transaction = result.data.transaction;
+    const amountDisplay = formatMoney(transaction.amountMinor, transaction.currency);
+
     return {
       ...initialAssistantActionState,
       status: "success",
       message:
-        isReviewStateNeedingReview(result.data.transaction.reviewState)
-          ? "Saved and marked for review."
-          : "Saved to your tracked items.",
-      reviewState: result.data.transaction.reviewState,
+        isReviewStateNeedingReview(transaction.reviewState)
+          ? `Saved ${amountDisplay} as Needs Review.`
+          : `Saved ${amountDisplay} to tracked items.`,
+      reviewState: transaction.reviewState,
       latestTransaction: {
-        id: result.data.transaction.id,
-        amountMinor: result.data.transaction.amountMinor,
-        currency: result.data.transaction.currency,
-        merchant: result.data.transaction.merchant,
-        reviewState: result.data.transaction.reviewState,
+        id: transaction.id,
+        amountMinor: transaction.amountMinor,
+        currency: transaction.currency,
+        itemName: transaction.itemName,
+        merchant: transaction.merchant,
+        reviewState: transaction.reviewState,
       },
     };
   }
@@ -314,6 +404,7 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
         id: result.data.transaction.id,
         amountMinor: result.data.transaction.amountMinor,
         currency: result.data.transaction.currency,
+        itemName: result.data.transaction.itemName,
         merchant: result.data.transaction.merchant,
         reviewState: result.data.transaction.reviewState,
       },
@@ -324,7 +415,15 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
     return {
       ...initialAssistantActionState,
       status: "success",
-      message: "Transaction removed from your tracked items.",
+      message: "Deleted your last transaction.",
+    };
+  }
+
+  if (result.toolName === "restore_transaction" && "transaction" in result.data) {
+    return {
+      ...initialAssistantActionState,
+      status: "success",
+      message: "Restored your last deleted transaction.",
     };
   }
 
@@ -336,7 +435,7 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
     };
   }
 
-  if (result.toolName === "summarize_spending" && "totalsByCurrency" in result.data) {
+  if (result.toolName === "summarize_spending" && "totalsByCurrency" in result.data && "transactionType" in result.data) {
     const subject = result.data.transactionType === "income" ? "Income" : "Spend";
 
     if (!result.data.totalsByCurrency.length) {
@@ -364,6 +463,71 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
     };
   }
 
+  if (result.toolName === "answer_financial_question" && "questionKind" in result.data) {
+    const data = result.data;
+    const [firstTotal] = data.totalsByCurrency;
+    const totalDisplay = firstTotal?.amountDisplay ?? "$0.00";
+
+    if (data.questionKind === "recent_largest_expense") {
+      return {
+        ...initialAssistantActionState,
+        status: "success",
+        message: data.largestExpense
+          ? `Your largest recent tracked expense is ${data.largestExpense.amountDisplay} at ${data.largestExpense.title}.`
+          : "I couldn't find any tracked expenses for that question.",
+      };
+    }
+
+    if (data.questionKind === "needs_review_summary") {
+      return {
+        ...initialAssistantActionState,
+        status: "success",
+        message: data.needsReviewCount
+          ? `${data.needsReviewCount} tracked transactions need review.`
+          : "No tracked transactions need review.",
+      };
+    }
+
+    if (data.questionKind === "recent_transactions_summary") {
+      return {
+        ...initialAssistantActionState,
+        status: "success",
+        message: data.recentItems.length
+          ? `I found ${data.recentItems.length} recent tracked transactions.`
+          : "No tracked transactions yet.",
+        recentItems: data.recentItems.map((item) => ({
+          id: item.id,
+          title: item.title,
+          subtitle: new Date(item.occurredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          amountDisplay: item.amountDisplay,
+          needsReview: false,
+        })),
+      };
+    }
+
+    if (data.questionKind === "monthly_income_total") {
+      return {
+        ...initialAssistantActionState,
+        status: "success",
+        message: `Tracked income is ${totalDisplay} across ${data.transactionCount} transactions.`,
+      };
+    }
+
+    if (data.questionKind === "category_spending_total") {
+      return {
+        ...initialAssistantActionState,
+        status: "success",
+        message: `Tracked ${data.categoryLabel ?? "category"} spending is ${totalDisplay} across ${data.transactionCount} transactions.`,
+      };
+    }
+
+    return {
+      ...initialAssistantActionState,
+      status: "success",
+      message: `Tracked spending is ${totalDisplay} across ${data.transactionCount} transactions.`,
+    };
+  }
+
   return {
     ...initialAssistantActionState,
     status: "error",
@@ -374,19 +538,32 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
 export async function runAssistantCommand(args: {
   userId: string;
   input: AssistantCommandInput;
-  transactionService: Pick<
-    TransactionService,
-    "createTransaction" | "updateTransaction" | "deleteTransaction" | "recategorizeTransaction" | "listTransactions"
-  >;
+  transactionService: AssistantTransactionService;
   persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
 }) {
   const request = buildAssistantToolRequest(args.input);
+  const execution = await executeAssistantToolRequest({
+    userId: args.userId,
+    request,
+    transactionService: args.transactionService,
+    persistRuntimeLog: args.persistRuntimeLog,
+  });
+
+  return summarizeAssistantResult(execution.result);
+}
+
+async function executeAssistantToolRequest(args: {
+  userId: string;
+  request: AiToolRequest;
+  transactionService: AssistantTransactionService;
+  persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
+}) {
   const execution = await executeAiTool({
     context: {
       userId: args.userId,
       isAuthenticated: true,
     },
-    request,
+    request: args.request,
     services: {
       transactions: args.transactionService,
     },
@@ -396,5 +573,403 @@ export async function runAssistantCommand(args: {
     await args.persistRuntimeLog(execution.runtimeLog);
   }
 
-  return summarizeAssistantResult(execution.result);
+  return execution;
+}
+
+function normalizeTargetText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function titleForTransaction(transaction: Transaction) {
+  return transaction.itemName || transaction.merchant || transaction.note || "transaction";
+}
+
+function resolveTransactionTarget(args: {
+  target: NaturalLanguageCorrectionTarget;
+  transactions: Transaction[];
+}):
+  | {
+      status: "resolved";
+      transaction: Transaction;
+    }
+  | {
+      status: "none" | "ambiguous";
+      message: string;
+    } {
+  const target = args.target;
+
+  if (target.kind === "id") {
+    const match = args.transactions.find((transaction) => transaction.id === target.transactionId);
+
+    return match
+      ? {
+          status: "resolved",
+          transaction: match,
+        }
+      : {
+          status: "none",
+          message: "I couldn't find a matching transaction.",
+        };
+  }
+
+  if (target.kind === "last" || target.kind === "current") {
+    const [latest] = args.transactions;
+
+    return latest
+      ? {
+          status: "resolved",
+          transaction: latest,
+        }
+      : {
+          status: "none",
+          message: "I couldn't find a matching transaction.",
+        };
+  }
+
+  const targetText = normalizeTargetText(target.text);
+  const matches = args.transactions.filter((transaction) => {
+    const haystack = normalizeTargetText([transaction.itemName, transaction.merchant, transaction.note].filter(Boolean).join(" "));
+    return haystack.includes(targetText);
+  });
+
+  if (matches.length === 1) {
+    return {
+      status: "resolved",
+      transaction: matches[0]!,
+    };
+  }
+
+  if (matches.length > 1) {
+    return {
+      status: "ambiguous",
+      message: "I found two matching items. Which one should I change?",
+    };
+  }
+
+  return {
+    status: "none",
+    message: "I couldn't find a matching transaction.",
+  };
+}
+
+async function listCorrectionCandidateTransactions(args: {
+  userId: string;
+  transactionService: AssistantTransactionService;
+  persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
+}) {
+  const execution = await executeAssistantToolRequest({
+    userId: args.userId,
+    request: {
+      toolName: "list_transactions",
+      input: {
+        limit: 10,
+        includeDeleted: false,
+      },
+    },
+    transactionService: args.transactionService,
+    persistRuntimeLog: args.persistRuntimeLog,
+  });
+
+  if (!execution.result.ok || execution.result.toolName !== "list_transactions" || !Array.isArray(execution.result.data)) {
+    return null;
+  }
+
+  return execution.result.data;
+}
+
+function mapNaturalLanguageIntentToAssistantInput(
+  intent: NaturalLanguageAssistantIntent | ResolvedCreateTransactionIntent,
+): AssistantCommandInput | null {
+  if (intent.kind === "create_transaction") {
+    const categoryResolution = "categoryResolution" in intent ? intent.categoryResolution : undefined;
+    const clearCategoryId = categoryResolution?.confidence === "clear" ? categoryResolution.categoryId : undefined;
+
+    return {
+      toolName: "create_transaction",
+      transactionType: intent.transactionType,
+      amount: intent.amount,
+      currency: intent.currency,
+      itemName: intent.merchant,
+      note: intent.note,
+      categoryId: clearCategoryId,
+      reviewState: clearCategoryId ? undefined : intent.reviewState,
+      uncertaintyReason: clearCategoryId ? undefined : intent.uncertaintyReason,
+    };
+  }
+
+  if (intent.kind === "list_recent") {
+    return {
+      toolName: "list_transactions",
+    };
+  }
+
+  if (intent.kind === "list_needs_review") {
+    return {
+      toolName: "list_transactions",
+      reviewState: "needs_attention",
+    };
+  }
+
+  if (intent.kind === "summarize_spending") {
+    return {
+      toolName: "summarize_spending",
+      transactionType: intent.transactionType,
+    };
+  }
+
+  if (intent.kind === "answer_financial_question") {
+    return {
+      toolName: "answer_financial_question",
+      questionKind: intent.questionKind,
+      occurredFrom: intent.occurredFrom,
+      occurredTo: intent.occurredTo,
+    };
+  }
+
+  return null;
+}
+
+export async function runNaturalLanguageAssistantCommand(args: {
+  userId: string;
+  text: string;
+  transactionService: AssistantTransactionService;
+  categoryOptions?: ControlledCategory[];
+  categoryMemoryService?: Pick<CategoryMemoryService, "findCategoryMemoryMatch">;
+  persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
+}): Promise<AssistantActionState> {
+  let intent: NaturalLanguageAssistantIntent | ResolvedCreateTransactionIntent = parseNaturalLanguageAssistantInput(args.text);
+
+  if (intent.kind === "clarification_needed" || intent.kind === "unsupported") {
+    return {
+      ...initialAssistantActionState,
+      status: "error",
+      message: intent.message,
+    };
+  }
+
+  if (intent.kind === "restore_transaction") {
+    const target = await args.transactionService.getLatestSoftDeletedTransaction(args.userId);
+
+    if (!target) {
+      return {
+        ...initialAssistantActionState,
+        status: "error",
+        message: "I couldn't find a recent deleted transaction to restore.",
+      };
+    }
+
+    return runAssistantCommand({
+      userId: args.userId,
+      input: {
+        toolName: "restore_transaction",
+        transactionId: target.id,
+      },
+      transactionService: args.transactionService,
+      persistRuntimeLog: args.persistRuntimeLog,
+    });
+  }
+
+  if (
+    intent.kind === "delete_transaction" ||
+    intent.kind === "recategorize_transaction" ||
+    intent.kind === "mark_correct"
+  ) {
+    const candidates = await listCorrectionCandidateTransactions({
+      userId: args.userId,
+      transactionService: args.transactionService,
+      persistRuntimeLog: args.persistRuntimeLog,
+    });
+
+    if (!candidates) {
+      return {
+        ...initialAssistantActionState,
+        status: "error",
+        message: "I couldn't find a matching transaction.",
+      };
+    }
+
+    const target = resolveTransactionTarget({
+      target: intent.target,
+      transactions: candidates,
+    });
+
+    if (target.status !== "resolved") {
+      return {
+        ...initialAssistantActionState,
+        status: "error",
+        message: intent.kind === "delete_transaction" && target.status === "ambiguous" ? "I can only delete that if the target is clear." : target.message,
+        recentItems: mapTransactionsToAssistantItems(candidates),
+      };
+    }
+
+    if (intent.kind === "delete_transaction") {
+      const result = await runAssistantCommand({
+        userId: args.userId,
+        input: {
+          toolName: "delete_transaction",
+          transactionId: target.transaction.id,
+        },
+        transactionService: args.transactionService,
+        persistRuntimeLog: args.persistRuntimeLog,
+      });
+
+      return {
+        ...result,
+        message:
+          result.status === "success"
+            ? intent.target.kind === "last" || intent.target.kind === "current"
+              ? "Deleted your last transaction."
+              : `Deleted ${titleForTransaction(target.transaction)}.`
+            : result.message,
+      };
+    }
+
+    if (intent.kind === "mark_correct") {
+      const result = await runAssistantCommand({
+        userId: args.userId,
+        input: {
+          toolName: "update_transaction",
+          transactionId: target.transaction.id,
+          reviewState: "reviewed",
+          uncertaintyReason: "",
+        },
+        transactionService: args.transactionService,
+        persistRuntimeLog: args.persistRuntimeLog,
+      });
+
+      return {
+        ...result,
+        message: result.status === "success" ? "Marked that as correct." : result.message,
+      };
+    }
+
+    const categoryResolution = resolveControlledCategory({
+      phrase: intent.categoryPhrase,
+      transactionType: target.transaction.transactionType,
+      categories: args.categoryOptions ?? [],
+    });
+
+    if (categoryResolution.confidence !== "clear") {
+      return {
+        ...initialAssistantActionState,
+        status: "error",
+        message: "I couldn't match that to a controlled category.",
+      };
+    }
+
+    const recategorizeResult = await runAssistantCommand({
+      userId: args.userId,
+      input: {
+        toolName: "recategorize_transaction",
+        transactionId: target.transaction.id,
+        categoryId: categoryResolution.categoryId,
+      },
+      transactionService: args.transactionService,
+      persistRuntimeLog: args.persistRuntimeLog,
+    });
+
+    if (recategorizeResult.status !== "success") {
+      return recategorizeResult;
+    }
+
+    await runAssistantCommand({
+      userId: args.userId,
+      input: {
+        toolName: "update_transaction",
+        transactionId: target.transaction.id,
+        reviewState: "reviewed",
+        uncertaintyReason: "",
+      },
+      transactionService: args.transactionService,
+      persistRuntimeLog: args.persistRuntimeLog,
+    });
+
+    return {
+      ...recategorizeResult,
+      message: `Changed ${titleForTransaction(target.transaction)} to ${categoryResolution.categoryLabel}.`,
+    };
+  }
+
+  if (intent.kind === "create_transaction") {
+    const memoryMatch = args.categoryMemoryService
+      ? await args.categoryMemoryService.findCategoryMemoryMatch(args.userId, {
+          merchant: undefined,
+          description: intent.note,
+          transactionType: intent.transactionType,
+        })
+      : null;
+    const categoryResolution =
+      memoryMatch?.strength === "strong"
+        ? {
+            confidence: "clear" as const,
+            reviewRecommendation: "reviewed" as const,
+            categoryId: memoryMatch.category.id,
+            categorySlug: memoryMatch.category.slug,
+            categoryLabel: memoryMatch.category.label,
+            matchedAlias: "category memory",
+          }
+        : resolveControlledCategory({
+      phrase: [intent.merchant, intent.note].filter(Boolean).join(" "),
+      transactionType: intent.transactionType,
+      categories: args.categoryOptions ?? [],
+          });
+
+    intent = {
+      ...intent,
+      categoryResolution,
+      ...(categoryResolution.confidence === "clear"
+        ? {
+            reviewState: undefined,
+            uncertaintyReason: undefined,
+          }
+        : {}),
+    };
+  }
+
+  if (intent.kind === "answer_financial_question" && intent.questionKind === "category_spending_total") {
+    const categoryResolution = resolveControlledCategory({
+      phrase: intent.categoryPhrase ?? "",
+      transactionType: "expense",
+      categories: args.categoryOptions ?? [],
+    });
+
+    if (categoryResolution.confidence !== "clear") {
+      return {
+        ...initialAssistantActionState,
+        status: "error",
+        message: "I couldn't match that to a controlled category.",
+      };
+    }
+
+    return runAssistantCommand({
+      userId: args.userId,
+      input: {
+        toolName: "answer_financial_question",
+        questionKind: intent.questionKind,
+        categoryId: categoryResolution.categoryId,
+        categoryLabel: categoryResolution.categoryLabel,
+        occurredFrom: intent.occurredFrom,
+        occurredTo: intent.occurredTo,
+      },
+      transactionService: args.transactionService,
+      persistRuntimeLog: args.persistRuntimeLog,
+    });
+  }
+
+  const assistantInput = mapNaturalLanguageIntentToAssistantInput(intent);
+
+  if (!assistantInput) {
+    return {
+      ...initialAssistantActionState,
+      status: "error",
+      message: "That assistant action is not available yet.",
+    };
+  }
+
+  return runAssistantCommand({
+    userId: args.userId,
+    input: assistantInput,
+    transactionService: args.transactionService,
+    persistRuntimeLog: args.persistRuntimeLog,
+  });
 }

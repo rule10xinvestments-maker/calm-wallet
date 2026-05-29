@@ -159,6 +159,42 @@ describe("imports upload completion", () => {
     expect(completeImportRecordUpload).not.toHaveBeenCalled();
   });
 
+  it("rejects receipt upload completion when mime type is PDF", async () => {
+    const completeImportRecordUpload = vi.fn();
+
+    await expect(
+      persistStagedImportUploadCompletion(
+        {
+          importRecordId: "record-1",
+          storagePath: "user-1/receipt_image/2026/04/receipt.pdf",
+          originalFilename: "receipt.pdf",
+          mimeType: "application/pdf",
+        },
+        {
+          getCurrentUser: vi.fn(async () => mockUser()),
+          createImportRecordService: vi.fn(async () => ({
+            getImportRecordById: vi.fn(async () => ({
+              id: "record-1",
+              userId: "user-1",
+              importType: "receipt_image" as const,
+              storagePath: "user-1/receipt_image/old",
+              originalFilename: "old.jpg",
+              mimeType: "image/jpeg",
+              status: "uploaded" as const,
+              parseQuality: "unknown" as const,
+              failureReason: null,
+              createdAt: "2026-04-22T10:00:00.000Z",
+              updatedAt: "2026-04-22T10:00:00.000Z",
+            })),
+            completeImportRecordUpload,
+          })),
+          sanitizeImportFilename: vi.fn(),
+        },
+      ),
+    ).rejects.toThrow("Receipt upload must be a supported image file.");
+    expect(completeImportRecordUpload).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid upload completion status when provided", async () => {
     await expect(
       persistStagedImportUploadCompletion(

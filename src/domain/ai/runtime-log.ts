@@ -48,6 +48,10 @@ export function summarizeToolResult(result: AiToolExecutionResult) {
     }
   }
 
+  if (result.toolName === "answer_financial_question") {
+    return "Answered a read-only financial question.";
+  }
+
   return `Executed ${result.toolName} successfully.`;
 }
 

@@ -1,7 +1,23 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  Car,
+  CircleHelp,
+  HeartPulse,
+  ReceiptText,
+  ShoppingBag,
+  ShoppingBasket,
+  Tag,
+  Ticket,
+  Utensils,
+  User,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
 
@@ -16,16 +32,98 @@ type TransactionItemCardProps = {
   initialState: TransactionMutationState;
 };
 
+const REVIEW_STATE_OPTIONS: Array<{ label: string; value: TransactionListItem["reviewState"] }> = [
+  { label: "Reviewed", value: "reviewed" },
+  { label: "Pending review", value: "pending_review" },
+  { label: "Needs review", value: "needs_attention" },
+];
+
 function ActionMessage({ state }: { state: TransactionMutationState }) {
   if (state.status === "idle" || !state.message) {
     return null;
   }
 
+  return <p className={`text-xs ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{state.message}</p>;
+}
+
+function PendingSubmitButton({
+  children,
+  className,
+  pendingLabel,
+}: {
+  children: string;
+  className: string;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
   return (
-    <p className={`text-xs ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>
-      {state.message}
-    </p>
+    <button className={className} disabled={pending} type="submit">
+      {pending ? pendingLabel : children}
+    </button>
   );
+}
+
+function getCategoryIcon(item: TransactionListItem): LucideIcon {
+  const label = item.categoryLabel.toLowerCase();
+
+  if (item.amountTone === "income" || label.includes("income") || label.includes("salary") || label.includes("pay")) {
+    return Wallet;
+  }
+
+  if (item.reviewLabel !== "Reviewed") {
+    return AlertCircle;
+  }
+
+  if (label.includes("dining") || label.includes("food")) {
+    return Utensils;
+  }
+
+  if (label.includes("grocer")) {
+    return ShoppingBasket;
+  }
+
+  if (label.includes("travel") || label.includes("transport") || label.includes("taxi") || label.includes("car")) {
+    return Car;
+  }
+
+  if (label.includes("bill") || label.includes("utilit") || label.includes("receipt")) {
+    return ReceiptText;
+  }
+
+  if (label.includes("shopping")) {
+    return ShoppingBag;
+  }
+
+  if (label.includes("personal")) {
+    return User;
+  }
+
+  if (label.includes("health") || label.includes("medical")) {
+    return HeartPulse;
+  }
+
+  if (label.includes("entertain") || label.includes("ticket")) {
+    return Ticket;
+  }
+
+  if (label.includes("uncategorized") || label.includes("needs")) {
+    return CircleHelp;
+  }
+
+  return Tag;
+}
+
+function getReviewLabel(reviewState: TransactionListItem["reviewState"]) {
+  if (reviewState === "reviewed") {
+    return "Reviewed";
+  }
+
+  if (reviewState === "needs_attention") {
+    return "Needs review";
+  }
+
+  return "Pending review";
 }
 
 export function TransactionItemCard({
@@ -37,10 +135,19 @@ export function TransactionItemCard({
   initialState,
 }: TransactionItemCardProps) {
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | null>(null);
+  const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
+  const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
+  const pendingDetailsItemRef = useRef<TransactionListItem | null>(null);
+  const previousItemRef = useRef(item);
   const [recategorizeState, recategorizeFormAction] = useActionState(recategorizeAction, initialState);
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
   const [deleteState, deleteFormAction] = useActionState(deleteAction, initialState);
+  const displayItem = optimisticItem ?? item;
+  const CategoryIcon = getCategoryIcon(displayItem);
+  const needsReview = displayItem.reviewLabel !== "Reviewed";
 
   useEffect(() => {
     if (recategorizeState.status === "success" || updateState.status === "success" || deleteState.status === "success") {
@@ -48,131 +155,258 @@ export function TransactionItemCard({
     }
   }, [deleteState.status, recategorizeState.status, router, updateState.status]);
 
+  useEffect(() => {
+    if (updateState.status === "success" && submittedUpdateIntent === "details") {
+      const completedItem = pendingDetailsItemRef.current ?? pendingDetailsItem;
+
+      if (completedItem) {
+        setOptimisticItem(completedItem);
+      }
+
+      pendingDetailsItemRef.current = null;
+      setPendingDetailsItem(null);
+      setIsEditingDetails(false);
+    }
+
+    if (updateState.status === "error" && submittedUpdateIntent === "details") {
+      pendingDetailsItemRef.current = null;
+      setPendingDetailsItem(null);
+    }
+  }, [pendingDetailsItem, submittedUpdateIntent, updateState.status]);
+
+  useEffect(() => {
+    if (previousItemRef.current !== item) {
+      previousItemRef.current = item;
+      setOptimisticItem(null);
+    }
+  }, [item]);
+
+  function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget);
+    const itemName = String(formData.get("itemName") ?? "").trim() || null;
+    const merchant = String(formData.get("merchant") ?? "").trim() || null;
+    const note = String(formData.get("note") ?? "").trim() || null;
+    const occurredDate = String(formData.get("occurredAt") ?? "").trim();
+    const categoryId = String(formData.get("categoryId") ?? "").trim() || null;
+    const reviewState = String(formData.get("reviewState") ?? displayItem.reviewState) as TransactionListItem["reviewState"];
+    const uncertaintyReason = reviewState === "reviewed" ? null : String(formData.get("uncertaintyReason") ?? "").trim() || null;
+    const occurredAt = /^\d{4}-\d{2}-\d{2}$/.test(occurredDate) ? `${occurredDate}T12:00:00.000Z` : displayItem.occurredAt;
+
+    const nextItem: TransactionListItem = {
+      ...displayItem,
+      title: itemName || displayItem.title || "Unnamed transaction",
+      subtitle: new Date(occurredAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      categoryLabel: categoryId ? categories.find((category) => category.id === categoryId)?.label ?? displayItem.categoryLabel : "Uncategorized",
+      itemName,
+      merchant,
+      note,
+      occurredAt,
+      categoryId,
+      reviewState,
+      reviewLabel: getReviewLabel(reviewState),
+      uncertaintyReason,
+    };
+
+    pendingDetailsItemRef.current = nextItem;
+    setSubmittedUpdateIntent("details");
+    setPendingDetailsItem(nextItem);
+  }
+
   return (
-    <div className="rounded-2xl bg-slate-50 px-4 py-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-medium text-slate-900">{item.title}</p>
-          <p className="text-sm text-slate-500">
-            {item.categoryLabel} · {item.subtitle}
-          </p>
-          {item.reviewLabel !== "Tracked" ? <p className="text-xs text-amber-600">{item.reviewLabel}</p> : null}
-        </div>
-        <p className={`text-sm font-semibold ${item.amountTone === "income" ? "text-emerald-700" : "text-slate-700"}`}>
-          {item.amountDisplay}
-        </p>
-      </div>
+    <div className="rounded-2xl bg-slate-50 px-3 py-3">
+      <button
+        aria-expanded={isExpanded}
+        className="grid w-full grid-cols-[auto_1fr_auto] items-start gap-3 text-left"
+        onClick={() => setIsExpanded((value) => !value)}
+        type="button"
+      >
+        <span
+          aria-label={`${displayItem.categoryLabel} category icon`}
+          className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700"
+        >
+          <CategoryIcon aria-hidden="true" size={18} strokeWidth={2} />
+        </span>
+        <span className="min-w-0 space-y-0.5">
+          <span className="block break-words text-sm font-medium leading-5 text-slate-900">{displayItem.title}</span>
+          <span className="block text-xs leading-5 text-slate-500">
+            {displayItem.categoryLabel} · {displayItem.subtitle}
+          </span>
+          {displayItem.note ? (
+            <span className="block truncate text-xs leading-5 text-slate-500" title={`Note: ${displayItem.note}`}>
+              Note: {displayItem.note}
+            </span>
+          ) : null}
+          {displayItem.merchant && displayItem.merchant !== displayItem.title ? (
+            <span className="block truncate text-xs leading-5 text-slate-500" title={`Merchant: ${displayItem.merchant}`}>
+              Merchant: {displayItem.merchant}
+            </span>
+          ) : null}
+          {needsReview ? <span className="block text-xs font-medium leading-5 text-amber-600">{displayItem.reviewLabel}</span> : null}
+        </span>
+        <span className="grid justify-items-end gap-1">
+          <span className={`shrink-0 text-sm font-semibold ${displayItem.amountTone === "income" ? "text-emerald-700" : "text-slate-800"}`}>
+            {displayItem.amountDisplay}
+          </span>
+          {needsReview ? (
+            <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700">Review</span>
+          ) : null}
+        </span>
+      </button>
 
-      <div className="mt-3 grid gap-3">
-        <form action={recategorizeFormAction} className="flex gap-2">
-          <input name="transactionId" type="hidden" value={item.id} />
-          <select
-            className="min-h-10 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-            defaultValue={item.categoryId ?? ""}
-            name="categoryId"
-          >
-            <option value="">Uncategorized</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
-              </option>
-            ))}
-          </select>
-          <button className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700" type="submit">
-            Save
-          </button>
-        </form>
-        <ActionMessage state={recategorizeState} />
+      {isExpanded ? (
+        <div className="mt-3 grid gap-3 border-t border-slate-200 pt-3">
+          <form action={recategorizeFormAction} className="flex gap-2">
+            <input name="transactionId" type="hidden" value={item.id} />
+            <select
+              className="min-h-10 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+              defaultValue={displayItem.categoryId ?? ""}
+              name="categoryId"
+            >
+              <option value="">Uncategorized</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+            <button className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700" type="submit">
+              Save
+            </button>
+          </form>
+          <ActionMessage state={recategorizeState} />
 
-        <div className="flex gap-2">
-          <button
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
-            onClick={() => setIsEditing((value) => !value)}
-            type="button"
-          >
-            {isEditing ? "Close edit" : "Edit"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+              onClick={() => setIsEditingDetails((value) => !value)}
+              type="button"
+            >
+              {isEditingDetails ? "Close details" : "Edit details"}
+            </button>
 
-          {item.reviewState !== "reviewed" ? (
-            <form action={updateFormAction}>
+            {displayItem.reviewState !== "reviewed" ? (
+              <form action={updateFormAction}>
+                <input name="transactionId" type="hidden" value={item.id} />
+                <input name="itemName" type="hidden" value={displayItem.itemName ?? displayItem.title} />
+                <input name="merchant" type="hidden" value={displayItem.merchant ?? ""} />
+                <input name="note" type="hidden" value={displayItem.note ?? ""} />
+                <input name="occurredAt" type="hidden" value={displayItem.occurredAt.slice(0, 10)} />
+                <input name="categoryId" type="hidden" value={displayItem.categoryId ?? ""} />
+                <input name="reviewState" type="hidden" value="reviewed" />
+                <input name="uncertaintyReason" type="hidden" value="" />
+                <button
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+                  onClick={() => setSubmittedUpdateIntent("mark-reviewed")}
+                  type="submit"
+                >
+                  Mark reviewed
+                </button>
+              </form>
+            ) : null}
+
+            <form action={deleteFormAction}>
               <input name="transactionId" type="hidden" value={item.id} />
-              <input name="merchant" type="hidden" value={item.merchant ?? ""} />
-              <input name="note" type="hidden" value={item.note ?? ""} />
-              <input name="occurredAt" type="hidden" value={item.occurredAt.slice(0, 10)} />
-              <input name="categoryId" type="hidden" value={item.categoryId ?? ""} />
-              <input name="reviewState" type="hidden" value="reviewed" />
-              <input name="uncertaintyReason" type="hidden" value="" />
-              <button className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700" type="submit">
-                Mark tracked
+              <button className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700" type="submit">
+                Delete
               </button>
             </form>
+          </div>
+          <ActionMessage
+            state={
+              deleteState.status === "success"
+                ? deleteState
+                : updateState.status !== "idle" && (!isEditingDetails || submittedUpdateIntent === "mark-reviewed")
+                  ? updateState
+                  : initialState
+            }
+          />
+
+          {isEditingDetails ? (
+            <form
+              action={updateFormAction}
+              className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 pb-24"
+              onSubmit={handleDetailsSubmit}
+            >
+              <input name="transactionId" type="hidden" value={item.id} />
+              <label className="grid gap-1">
+                <span className="text-xs font-medium text-slate-600">Item name</span>
+                <input
+                  className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                  defaultValue={displayItem.itemName ?? displayItem.title}
+                  name="itemName"
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-medium text-slate-600">Merchant</span>
+                <input
+                  className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                  defaultValue={displayItem.merchant ?? ""}
+                  name="merchant"
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-medium text-slate-600">Note</span>
+                <textarea
+                  className="min-h-20 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                  defaultValue={displayItem.note ?? ""}
+                  name="note"
+                />
+              </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-medium text-slate-600">Occurred date</span>
+                <input
+                  className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                  defaultValue={displayItem.occurredAt.slice(0, 10)}
+                  name="occurredAt"
+                  type="date"
+                />
+              </label>
+              <fieldset className="grid gap-2">
+                <legend className="text-xs font-medium text-slate-600">Review state</legend>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {REVIEW_STATE_OPTIONS.map((option) => (
+                    <label key={option.value} className="block">
+                      <input
+                        className="peer sr-only"
+                        defaultChecked={displayItem.reviewState === option.value}
+                        name="reviewState"
+                        type="radio"
+                        value={option.value}
+                      />
+                      <span className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm font-medium text-slate-700 transition peer-checked:border-sky-300 peer-checked:bg-sky-50 peer-checked:text-sky-800">
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <label className="grid gap-1">
+                <span className="text-xs font-medium text-slate-600">Uncertainty note</span>
+                <input
+                  className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                  defaultValue={displayItem.uncertaintyReason ?? ""}
+                  name="uncertaintyReason"
+                />
+              </label>
+              <input name="categoryId" type="hidden" value={displayItem.categoryId ?? ""} />
+              <div className="sticky bottom-20 z-10 -mx-3 mt-1 border-t border-slate-100 bg-white/95 px-3 pb-3 pt-3 backdrop-blur">
+                <PendingSubmitButton
+                  className="min-h-11 w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  pendingLabel="Saving..."
+                >
+                  Save changes
+                </PendingSubmitButton>
+              </div>
+              <ActionMessage
+                state={submittedUpdateIntent === "details" && updateState.status === "error" ? updateState : initialState}
+              />
+            </form>
           ) : null}
-
-          <form action={deleteFormAction}>
-            <input name="transactionId" type="hidden" value={item.id} />
-            <button className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700" type="submit">
-              Delete
-            </button>
-          </form>
         </div>
-        <ActionMessage state={deleteState.status === "success" ? deleteState : updateState} />
-
-        {isEditing ? (
-          <form action={updateFormAction} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3">
-            <input name="transactionId" type="hidden" value={item.id} />
-            <label className="grid gap-1">
-              <span className="text-xs font-medium text-slate-600">Merchant</span>
-              <input
-                className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                defaultValue={item.merchant ?? ""}
-                name="merchant"
-              />
-            </label>
-            <label className="grid gap-1">
-              <span className="text-xs font-medium text-slate-600">Note</span>
-              <textarea
-                className="min-h-20 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                defaultValue={item.note ?? ""}
-                name="note"
-              />
-            </label>
-            <label className="grid gap-1">
-              <span className="text-xs font-medium text-slate-600">Occurred date</span>
-              <input
-                className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                defaultValue={item.occurredAt.slice(0, 10)}
-                name="occurredAt"
-                type="date"
-              />
-            </label>
-            <label className="grid gap-1">
-              <span className="text-xs font-medium text-slate-600">Review state</span>
-              <select
-                className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                defaultValue={item.reviewState}
-                name="reviewState"
-              >
-                <option value="reviewed">Tracked</option>
-                <option value="pending_review">Pending review</option>
-                <option value="needs_attention">Needs review</option>
-              </select>
-            </label>
-            <label className="grid gap-1">
-              <span className="text-xs font-medium text-slate-600">Uncertainty note</span>
-              <input
-                className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                defaultValue={item.uncertaintyReason ?? ""}
-                name="uncertaintyReason"
-              />
-            </label>
-            <input name="categoryId" type="hidden" value={item.categoryId ?? ""} />
-            <button className="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white" type="submit">
-              Save changes
-            </button>
-            <ActionMessage state={updateState} />
-          </form>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

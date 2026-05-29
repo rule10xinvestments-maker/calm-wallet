@@ -66,6 +66,7 @@ function makeTransaction(overrides: Record<string, unknown> = {}) {
     currency: "USD",
     occurredAt: "2026-04-23T09:00:00.000Z",
     categoryId: null,
+    itemName: "Coffee shop",
     merchant: "Corner Cafe",
     note: "Coffee shop",
     source: "receipt_image" as const,

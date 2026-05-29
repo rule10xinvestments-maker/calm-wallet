@@ -134,6 +134,33 @@ describe("imports intake action", () => {
     expect(createImportRecord).not.toHaveBeenCalled();
   });
 
+  it("rejects receipt PDFs before creating an import record", async () => {
+    const createImportRecord = vi.fn();
+
+    const { createStagedImportIntakeAction } = await import("@/lib/actions/imports");
+    const result = await createStagedImportIntakeAction(
+      initialImportIntakeActionState,
+      makeFormData("receipt_image", {
+        originalFilename: "receipt.pdf",
+        mimeType: "application/pdf",
+      }),
+      {
+        getCurrentUser: vi.fn(async () => mockUser()),
+        createImportRecordService: vi.fn(async () => ({ createImportRecord })),
+        buildImportStoragePath: vi.fn(),
+        sanitizeImportFilename: vi.fn(),
+        now: () => new Date("2026-04-22T10:00:00.000Z"),
+      },
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Receipt upload must be a supported image file.",
+      intake: null,
+    });
+    expect(createImportRecord).not.toHaveBeenCalled();
+  });
+
   it("returns the expected staged intake result shape", async () => {
     const createImportRecord = vi.fn(async () => ({
       id: "record-3",

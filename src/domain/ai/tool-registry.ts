@@ -5,17 +5,29 @@ import {
   deleteTransactionToolSchema,
   listTransactionsToolSchema,
   recategorizeTransactionToolSchema,
+  answerFinancialQuestionToolSchema,
+  restoreTransactionToolSchema,
   summarizeSpendingToolSchema,
   updateTransactionToolSchema,
 } from "@/domain/ai/tool-schemas";
 import type { AiRuntimeContext, AiToolName, AiToolRegistryEntry } from "@/domain/ai/tool-types";
 import type { TransactionService } from "@/domain/transactions/service";
-import { buildSpendingSummaryData } from "@/lib/server/transactions-read-model";
+import { canReadUserTransactionSummaries } from "@/domain/transactions/policy";
+import {
+  buildAssistantFinancialQuestionAnswer,
+  buildSpendingSummaryData,
+  type AssistantFinancialQuestionInput,
+} from "@/lib/server/transactions-read-model";
 
 export type AiToolExecutorDependencies = {
   transactions: Pick<
     TransactionService,
-    "createTransaction" | "updateTransaction" | "deleteTransaction" | "recategorizeTransaction" | "listTransactions"
+    | "createTransaction"
+    | "updateTransaction"
+    | "deleteTransaction"
+    | "restoreTransaction"
+    | "recategorizeTransaction"
+    | "listTransactions"
   >;
 };
 
@@ -65,6 +77,17 @@ export const AI_TOOL_REGISTRY: Record<AiToolName, AiRegisteredTool> = {
       return services.transactions.deleteTransaction(context.userId, payload.transactionId, { actorType: "ai" });
     },
   },
+  restore_transaction: {
+    toolName: "restore_transaction",
+    requiresAuth: true,
+    summary: "Restore a soft-deleted transaction through the validated transaction service.",
+    schema: restoreTransactionToolSchema,
+    policy: defaultAiToolPolicy,
+    execute: async ({ context, input, services }) => {
+      const payload = input as { transactionId: string };
+      return services.transactions.restoreTransaction(context.userId, payload.transactionId, { actorType: "ai" });
+    },
+  },
   recategorize_transaction: {
     toolName: "recategorize_transaction",
     requiresAuth: true,
@@ -110,6 +133,43 @@ export const AI_TOOL_REGISTRY: Record<AiToolName, AiRegisteredTool> = {
         }),
         filters,
       };
+    },
+  },
+  answer_financial_question: {
+    toolName: "answer_financial_question",
+    requiresAuth: true,
+    summary: "Answer a narrow read-only spending question through the validated transaction read path.",
+    schema: answerFinancialQuestionToolSchema,
+    policy: defaultAiToolPolicy,
+    execute: async ({ context, input, services }) => {
+      if (!canReadUserTransactionSummaries(context.userId)) {
+        throw new Error("Authenticated user is required.");
+      }
+
+      const financialQuestion = input as AssistantFinancialQuestionInput;
+      const transactionType =
+        financialQuestion.questionKind === "monthly_income_total"
+          ? "income"
+          : financialQuestion.questionKind === "monthly_spending_total" ||
+              financialQuestion.questionKind === "category_spending_total" ||
+              financialQuestion.questionKind === "recent_largest_expense"
+            ? "expense"
+            : undefined;
+
+      const transactions = await services.transactions.listTransactions(context.userId, {
+        includeDeleted: false,
+        limit: financialQuestion.questionKind === "recent_transactions_summary" ? 5 : 100,
+        ...(transactionType ? { transactionType } : {}),
+        ...(financialQuestion.questionKind === "needs_review_summary" ? { reviewState: "needs_attention" as const } : {}),
+        ...(financialQuestion.categoryId ? { categoryId: financialQuestion.categoryId } : {}),
+        ...(financialQuestion.occurredFrom ? { occurredFrom: financialQuestion.occurredFrom } : {}),
+        ...(financialQuestion.occurredTo ? { occurredTo: financialQuestion.occurredTo } : {}),
+      });
+
+      return buildAssistantFinancialQuestionAnswer({
+        transactions,
+        input: financialQuestion,
+      });
     },
   },
 };

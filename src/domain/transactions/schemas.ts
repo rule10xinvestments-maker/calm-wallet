@@ -26,6 +26,7 @@ export const createTransactionSchema = z
     currency: currencySchema,
     occurredAt: z.string().datetime("Occurred at must be a valid ISO datetime."),
     categoryId: idSchema.nullable().optional(),
+    itemName: z.string().trim().max(120).nullable().optional(),
     merchant: z.string().trim().max(120).nullable().optional(),
     note: z.string().trim().max(500).nullable().optional(),
     source: transactionSourceSchema,
@@ -50,6 +51,7 @@ export const updateTransactionSchema = z
     currency: currencySchema.optional(),
     occurredAt: z.string().datetime("Occurred at must be a valid ISO datetime.").optional(),
     categoryId: idSchema.nullable().optional(),
+    itemName: z.string().trim().max(120).nullable().optional(),
     merchant: z.string().trim().max(120).nullable().optional(),
     note: z.string().trim().max(500).nullable().optional(),
     reviewState: reviewStateSchema.optional(),
@@ -73,6 +75,10 @@ export const updateTransactionSchema = z
   });
 
 export const deleteTransactionSchema = z.object({
+  transactionId: idSchema,
+});
+
+export const restoreTransactionSchema = z.object({
   transactionId: idSchema,
 });
 

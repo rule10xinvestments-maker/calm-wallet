@@ -30,6 +30,7 @@ export type Transaction = {
   currency: string;
   occurredAt: string;
   categoryId: string | null;
+  itemName: string | null;
   merchant: string | null;
   note: string | null;
   source: TransactionSource;
@@ -48,6 +49,7 @@ export type CreateTransactionInput = {
   currency: string;
   occurredAt: string;
   categoryId?: string | null;
+  itemName?: string | null;
   merchant?: string | null;
   note?: string | null;
   source: TransactionSource;
@@ -62,6 +64,7 @@ export type UpdateTransactionInput = {
   currency?: string;
   occurredAt?: string;
   categoryId?: string | null;
+  itemName?: string | null;
   merchant?: string | null;
   note?: string | null;
   reviewState?: ReviewState;

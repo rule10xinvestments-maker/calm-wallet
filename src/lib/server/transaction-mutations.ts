@@ -1,5 +1,6 @@
 import type { TransactionService } from "@/domain/transactions/service";
 import type { ReviewState } from "@/domain/transactions/types";
+import { createSupabaseCategoryMemoryService, type CategoryMemoryService } from "@/domain/category-memory/service";
 
 export type TransactionMutationState = {
   status: "idle" | "success" | "error";
@@ -25,9 +26,14 @@ function toRequiredString(value: FormDataEntryValue | null, field: string) {
 
 function toIsoDateTime(value: FormDataEntryValue | null) {
   const raw = toRequiredString(value, "Occurred date");
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    throw new Error("Enter a valid occurred date.");
+  }
+
   const date = new Date(`${raw}T12:00:00.000Z`);
 
-  if (Number.isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== raw) {
     throw new Error("Enter a valid occurred date.");
   }
 
@@ -38,15 +44,58 @@ export async function executeRecategorizeTransaction(args: {
   userId: string;
   transactionId: string;
   categoryId: string | null;
-  transactionService: Pick<TransactionService, "recategorizeTransaction">;
+  transactionService: Pick<TransactionService, "updateTransaction">;
+  categoryMemoryService?: Pick<CategoryMemoryService, "recordCategoryCorrectionMemory">;
 }): Promise<TransactionMutationState> {
-  await args.transactionService.recategorizeTransaction(args.userId, args.transactionId, args.categoryId, {
-    actorType: "user",
-  });
+  const result = await args.transactionService.updateTransaction(
+    args.userId,
+    args.transactionId,
+    args.categoryId
+      ? {
+          categoryId: args.categoryId,
+          reviewState: "reviewed",
+          uncertaintyReason: null,
+        }
+      : {
+          categoryId: null,
+        },
+    {
+      actorType: "user",
+    },
+  );
+
+  if (args.categoryId) {
+    const categoryMemoryService = args.categoryMemoryService ?? (await createSupabaseCategoryMemoryService());
+    const signals = [
+      result.transaction.merchant
+        ? {
+            signalType: "merchant" as const,
+            signalValue: result.transaction.merchant,
+          }
+        : null,
+      result.transaction.note
+        ? {
+            signalType: "phrase" as const,
+            signalValue: result.transaction.note,
+          }
+        : null,
+    ].filter(
+      (signal): signal is { signalType: "merchant" | "phrase"; signalValue: string } =>
+        signal !== null && signal.signalValue.trim().length >= 3,
+    );
+
+    for (const signal of signals) {
+      await categoryMemoryService.recordCategoryCorrectionMemory(args.userId, {
+        ...signal,
+        preferredCategoryId: args.categoryId,
+        preferredTransactionType: result.transaction.transactionType,
+      });
+    }
+  }
 
   return {
     status: "success",
-    message: "Category updated.",
+    message: args.categoryId ? "Category saved." : "Category updated.",
   };
 }
 
@@ -71,6 +120,7 @@ export async function executeUpdateTransaction(args: {
   transactionService: Pick<TransactionService, "updateTransaction">;
 }): Promise<TransactionMutationState> {
   const transactionId = toRequiredString(args.formData.get("transactionId"), "Transaction");
+  const itemName = toNullableString(args.formData.get("itemName"));
   const merchant = toNullableString(args.formData.get("merchant"));
   const note = toNullableString(args.formData.get("note"));
   const occurredAt = toIsoDateTime(args.formData.get("occurredAt"));
@@ -83,6 +133,7 @@ export async function executeUpdateTransaction(args: {
     transactionId,
     {
       merchant,
+      itemName,
       note,
       occurredAt,
       categoryId,
@@ -96,6 +147,6 @@ export async function executeUpdateTransaction(args: {
 
   return {
     status: "success",
-    message: reviewState === "reviewed" ? "Transaction updated and marked tracked." : "Transaction updated.",
+    message: "Changes saved.",
   };
 }

@@ -17,8 +17,9 @@ function makeTransactionItem(overrides: Partial<TransactionListItem> = {}): Tran
     subtitle: "Apr 22",
     amountDisplay: "$12.00",
     amountTone: "expense",
-    reviewLabel: "Tracked",
+    reviewLabel: "Reviewed",
     categoryLabel: "Groceries",
+    itemName: "Market",
     merchant: "Market",
     note: null,
     occurredAt: "2026-04-22T10:00:00.000Z",
@@ -110,7 +111,7 @@ describe("transactions overview", () => {
     expect(screen.getByRole("button", { name: "Reject candidate" })).toBeInTheDocument();
   });
 
-  it("renders a clean empty state for staged imports", () => {
+  it("hides the staged imports section when there are no staged imports", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -119,7 +120,12 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByText("No staged imports yet.")).toBeInTheDocument();
+    expect(screen.getByText("Latest entries")).toBeInTheDocument();
+    expect(screen.getByText("Market")).toBeInTheDocument();
+    expect(screen.queryByText("Staged imports")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("No staged imports yet. Upload a receipt image or CSV from Assistant when you have something to review."),
+    ).not.toBeInTheDocument();
   });
 
   it("renders a clean no-candidate summary in staged import details", () => {
@@ -362,6 +368,7 @@ describe("transactions overview", () => {
           currency: "USD",
           occurredAt: "2026-04-22T10:00:00.000Z",
           categoryId: null,
+          itemName: "Lunch receipt",
           merchant: "Corner Cafe",
           note: "Lunch receipt",
           source: "receipt_image" as const,

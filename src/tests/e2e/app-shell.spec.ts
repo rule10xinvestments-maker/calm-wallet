@@ -4,7 +4,7 @@ test("sign in page renders auth fields", async ({ page }) => {
   await page.goto("/sign-in");
   await expect(page.getByText("Welcome back")).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
-  await expect(page.getByLabel("Password")).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 });
 
 test.describe("protected route redirects", () => {

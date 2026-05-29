@@ -70,6 +70,7 @@ function normalizeParserCandidate(input: unknown): NormalizedParserCandidate | n
     occurredAt: parsed.data.occurredAt,
     description: parsed.data.description ?? null,
     merchantGuess: parsed.data.merchantGuess ?? null,
+    categoryId: parsed.data.categoryId ?? null,
     confidenceScore: parsed.data.confidenceScore ?? null,
     uncertaintyReason: parsed.data.uncertaintyReason ?? null,
     reviewState: "pending_review",
@@ -86,6 +87,7 @@ function toCandidateSignature(
     | "occurredAt"
     | "description"
     | "merchantGuess"
+    | "categoryId"
     | "confidenceScore"
     | "reviewState"
     | "acceptanceState"
@@ -99,6 +101,7 @@ function toCandidateSignature(
     candidate.occurredAt ?? null,
     candidate.description ?? null,
     candidate.merchantGuess ?? null,
+    candidate.categoryId ?? null,
     candidate.confidenceScore ?? null,
     candidate.reviewState,
     candidate.acceptanceState,
@@ -162,6 +165,7 @@ export async function ingestImportParserResult(
       occurredAt: candidate.occurredAt,
       description: candidate.description ?? null,
       merchantGuess: candidate.merchantGuess ?? null,
+      categoryId: candidate.categoryId ?? null,
       confidenceScore: candidate.confidenceScore ?? null,
       reviewState: candidate.reviewState,
       acceptanceState: candidate.acceptanceState,

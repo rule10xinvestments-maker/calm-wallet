@@ -62,6 +62,7 @@ create table if not exists public.transactions (
   currency text not null,
   occurred_at timestamptz not null,
   category_id uuid references public.categories(id) on delete set null,
+  item_name text,
   merchant text,
   note text,
   source text not null,

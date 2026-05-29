@@ -57,6 +57,7 @@ export async function signUpAction(_previousState: AuthFormState, formData: Form
     fullName: formData.get("fullName"),
     email: formData.get("email"),
     password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
   });
 
   if (!parsed.success) {
@@ -89,12 +90,18 @@ export async function signUpAction(_previousState: AuthFormState, formData: Form
     revalidatePath("/", "layout");
 
     if (data.session) {
-      redirect(next);
+      return {
+        error: null,
+        success: "Account created. You are signed in.",
+        redirectTo: next,
+      };
     }
 
     return {
       error: null,
-      success: "Account created. Check your email to confirm your sign-up, then sign in.",
+      success:
+        "Account created. Check your email to confirm your sign-up. If it does not arrive, check spam or try again in a few minutes.",
+      redirectTo: null,
     };
   } catch (error) {
     return {

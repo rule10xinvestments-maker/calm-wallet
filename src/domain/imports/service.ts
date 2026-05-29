@@ -234,6 +234,7 @@ export function createImportCandidateService(adapter: ImportCandidateServiceAdap
           occurred_at: parsed.occurredAt ?? null,
           description: normalizeOptionalText(parsed.description),
           merchant_guess: normalizeOptionalText(parsed.merchantGuess),
+          category_id: parsed.categoryId ?? null,
           confidence_score: parsed.confidenceScore ?? null,
           review_state: parsed.reviewState,
           acceptance_state: parsed.acceptanceState,

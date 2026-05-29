@@ -232,10 +232,10 @@ function StagedImportCard({
     <div className="rounded-2xl bg-slate-50 px-4 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
-          <p className="text-sm font-medium text-slate-900">{item.originalFilename}</p>
+          <p className="break-words text-sm font-medium text-slate-900">{item.originalFilename}</p>
           <p className="text-xs uppercase tracking-wide text-slate-500">{importTypeLabels[item.importType]}</p>
         </div>
-        <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{lifecycleStatusLabel}</p>
+        <p className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{lifecycleStatusLabel}</p>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
         <span>{item.mimeType}</span>
@@ -390,19 +390,21 @@ export function TransactionsOverview({
             ))
           ) : (
             <div className="rounded-2xl bg-slate-50 px-4 py-6 text-sm text-slate-500">
-              No transactions match this view yet.
+              {query
+                ? "No tracked transactions match that search."
+                : "No tracked transactions match this view yet."}
             </div>
           )}
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Staged imports</CardTitle>
-          <CardDescription>Recent import uploads waiting for later parsing or review flow wiring.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {stagedImports.length ? (
-            stagedImports.map((item) => (
+      {stagedImports.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Staged imports</CardTitle>
+            <CardDescription>Recent private uploads staged for review, completion, or safe parse status.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {stagedImports.map((item) => (
               <StagedImportCard
                 key={item.importRecordId}
                 detail={stagedImportDetails[item.importRecordId]}
@@ -410,14 +412,10 @@ export function TransactionsOverview({
                 item={item}
                 reviewAction={reviewAction}
               />
-            ))
-          ) : (
-            <div className="rounded-2xl bg-slate-50 px-4 py-6 text-sm text-slate-500">
-              No staged imports yet.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
     </section>
   );
 }

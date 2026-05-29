@@ -14,6 +14,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     currency: "USD",
     occurredAt: "2026-04-21T00:00:00.000Z",
     categoryId: null,
+    itemName: null,
     merchant: null,
     note: null,
     source: "manual",
@@ -37,7 +38,12 @@ function makeMutationResult(overrides: Partial<Transaction> = {}): TransactionMu
 
 function makeTransactionServices(): Pick<
   TransactionService,
-  "createTransaction" | "updateTransaction" | "deleteTransaction" | "recategorizeTransaction" | "listTransactions"
+  | "createTransaction"
+  | "updateTransaction"
+  | "deleteTransaction"
+  | "restoreTransaction"
+  | "recategorizeTransaction"
+  | "listTransactions"
 > {
   return {
     createTransaction: vi.fn(async (_userId, input) =>
@@ -76,6 +82,13 @@ function makeTransactionServices(): Pick<
         updatedAt: "2026-04-21T01:00:00.000Z",
       }),
     ),
+    restoreTransaction: vi.fn(async (_userId, transactionId) =>
+      makeMutationResult({
+        id: transactionId,
+        deletedAt: null,
+        updatedAt: "2026-04-21T02:00:00.000Z",
+      }),
+    ),
     recategorizeTransaction: vi.fn(async (_userId, transactionId, categoryId) =>
       makeMutationResult({
         id: transactionId,
@@ -89,10 +102,12 @@ function makeTransactionServices(): Pick<
 describe("AI tool registry", () => {
   it("contains only the supported whitelisted tools", () => {
     expect(Object.keys(AI_TOOL_REGISTRY).sort()).toEqual([
+      "answer_financial_question",
       "create_transaction",
       "delete_transaction",
       "list_transactions",
       "recategorize_transaction",
+      "restore_transaction",
       "summarize_spending",
       "update_transaction",
     ]);
@@ -199,6 +214,52 @@ describe("AI tool executor", () => {
     }
     expect(result.runtimeLog?.tool_name).toBe("delete_transaction");
     expect(result.runtimeLog?.policy_outcome).toBe("invalid");
+  });
+
+  it("rejects invalid restore_transaction payloads and logs the failure", async () => {
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "restore_transaction",
+        input: {
+          transactionId: "11111111-1111-1111-1111-111111111111",
+          unexpected: true,
+        },
+      },
+      services: { transactions: makeTransactionServices() },
+    });
+
+    expect(result.result.ok).toBe(false);
+    if (!result.result.ok) {
+      expect(result.result.outcome).toBe("invalid");
+      expect(result.result.error.code).toBe("invalid_tool_input");
+    }
+    expect(result.runtimeLog?.tool_name).toBe("restore_transaction");
+    expect(result.runtimeLog?.policy_outcome).toBe("invalid");
+  });
+
+  it("allows restore_transaction through the validated service path and logs it", async () => {
+    const transactions = makeTransactionServices();
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "restore_transaction",
+        input: {
+          transactionId: "11111111-1111-1111-1111-111111111111",
+        },
+      },
+      services: { transactions },
+    });
+
+    expect(result.result.ok).toBe(true);
+    expect(transactions.restoreTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "11111111-1111-1111-1111-111111111111",
+      { actorType: "ai" },
+    );
+    expect(transactions.deleteTransaction).not.toHaveBeenCalled();
+    expect(result.runtimeLog?.tool_name).toBe("restore_transaction");
+    expect(result.runtimeLog?.policy_outcome).toBe("allowed");
   });
 
   it("rejects invalid recategorize_transaction payloads and logs the failure", async () => {
@@ -330,7 +391,8 @@ describe("AI tool executor", () => {
     if (
       result.result.ok &&
       result.result.toolName === "summarize_spending" &&
-      "totalsByCurrency" in result.result.data
+      "totalsByCurrency" in result.result.data &&
+      "transactionType" in result.result.data
     ) {
       expect(result.result.data.transactionType).toBe("expense");
       expect(result.result.data.transactionCount).toBe(2);
@@ -344,6 +406,69 @@ describe("AI tool executor", () => {
     }
     expect(result.runtimeLog?.tool_name).toBe("summarize_spending");
     expect(result.runtimeLog?.policy_outcome).toBe("allowed");
+  });
+
+  it("answers a read-only financial question without calling mutation services", async () => {
+    const transactions = makeTransactionServices();
+    vi.mocked(transactions.listTransactions).mockResolvedValueOnce([
+      makeTransaction({ amountMinor: 2000, currency: "USD", occurredAt: "2026-05-01T00:00:00.000Z" }),
+      makeTransaction({ id: "2", amountMinor: 1500, currency: "USD", occurredAt: "2026-05-02T00:00:00.000Z" }),
+    ]);
+
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "answer_financial_question",
+        input: {
+          questionKind: "monthly_spending_total",
+          occurredFrom: "2026-05-01T00:00:00.000Z",
+          occurredTo: "2026-05-31T23:59:59.999Z",
+        },
+      },
+      services: { transactions },
+    });
+
+    expect(result.result.ok).toBe(true);
+    expect(transactions.listTransactions).toHaveBeenCalledWith("user-1", {
+      includeDeleted: false,
+      limit: 100,
+      transactionType: "expense",
+      occurredFrom: "2026-05-01T00:00:00.000Z",
+      occurredTo: "2026-05-31T23:59:59.999Z",
+    });
+    expect(transactions.createTransaction).not.toHaveBeenCalled();
+    expect(transactions.updateTransaction).not.toHaveBeenCalled();
+    expect(transactions.deleteTransaction).not.toHaveBeenCalled();
+    if (result.result.ok && result.result.toolName === "answer_financial_question" && "totalsByCurrency" in result.result.data) {
+      expect(result.result.data.totalsByCurrency[0]).toEqual({
+        currency: "USD",
+        amountMinor: 3500,
+        amountDisplay: "$35.00",
+      });
+    }
+    expect(result.runtimeLog?.tool_name).toBe("answer_financial_question");
+    expect(result.runtimeLog?.policy_outcome).toBe("allowed");
+  });
+
+  it("rejects invalid financial question payloads and logs the failure", async () => {
+    const result = await executeAiTool({
+      context: { userId: "user-1", isAuthenticated: true },
+      request: {
+        toolName: "answer_financial_question",
+        input: {
+          questionKind: "category_spending_total",
+        },
+      },
+      services: { transactions: makeTransactionServices() },
+    });
+
+    expect(result.result.ok).toBe(false);
+    if (!result.result.ok) {
+      expect(result.result.outcome).toBe("invalid");
+      expect(result.result.error.code).toBe("invalid_tool_input");
+    }
+    expect(result.runtimeLog?.tool_name).toBe("answer_financial_question");
+    expect(result.runtimeLog?.policy_outcome).toBe("invalid");
   });
 
   it("returns a generic execution failure message without leaking internals", async () => {

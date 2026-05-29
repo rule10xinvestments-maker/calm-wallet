@@ -10,6 +10,7 @@ const ALLOWED_UPDATE_FIELDS = [
   "currency",
   "occurredAt",
   "categoryId",
+  "itemName",
   "merchant",
   "note",
   "reviewState",
@@ -61,6 +62,14 @@ export function canSoftDeleteTransaction(transaction: Transaction) {
   return transaction.deletedAt === null;
 }
 
+export function canRestoreTransaction(transaction: Transaction) {
+  return transaction.deletedAt !== null;
+}
+
 export function canRecategorizeTransaction(transaction: Transaction) {
   return transaction.deletedAt === null;
+}
+
+export function canReadUserTransactionSummaries(userId: string | null | undefined) {
+  return typeof userId === "string" && userId.trim().length > 0;
 }

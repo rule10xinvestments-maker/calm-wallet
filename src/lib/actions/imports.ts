@@ -9,7 +9,11 @@ import {
   initialImportParsingStartActionState,
   initialImportReviewProgressActionState,
   initialImportUploadTransportActionState,
+  initialReceiptCandidateStagingActionState,
+  initialReceiptImageUploadActionState,
+  initialCsvBankStatementUploadActionState,
   initialImportUploadCompletionActionState,
+  type CsvBankStatementUploadActionState,
   type ImportCandidateReviewDecisionActionState,
   type ImportIntakeActionState,
   type ImportListActionState,
@@ -18,6 +22,8 @@ import {
   type ImportParsingStartActionState,
   type ImportReviewProgressActionState,
   type ImportUploadTransportActionState,
+  type ReceiptCandidateStagingActionState,
+  type ReceiptImageUploadActionState,
   type ImportUploadCompletionActionState,
 } from "@/lib/actions/imports-state";
 import {
@@ -55,6 +61,9 @@ import {
   type TransitionImportRecordToParsingDependencies,
 } from "@/lib/server/imports-status-transition";
 import { prepareStagedImportUpload, type PrepareStagedImportUploadDependencies } from "@/lib/server/imports-upload-preparation";
+import { uploadReceiptImage, type UploadReceiptImageDependencies } from "@/lib/server/receipt-image-import";
+import { stageReceiptCandidate, type StageReceiptCandidateDependencies } from "@/lib/server/receipt-candidate-staging";
+import { uploadCsvBankStatement, type UploadCsvBankStatementDependencies } from "@/lib/server/csv-bank-statement-import";
 
 export async function loadStagedImportBundleAction(
   importRecordId: string,
@@ -138,6 +147,78 @@ export async function createStagedImportIntakeAction(
       ...initialImportIntakeActionState,
       status: "error",
       message: error instanceof Error ? error.message : "Unable to create staged import.",
+    };
+  }
+}
+
+export async function uploadReceiptImageAction(
+  _prevState: ReceiptImageUploadActionState,
+  formData: FormData,
+  dependencies?: UploadReceiptImageDependencies,
+): Promise<ReceiptImageUploadActionState> {
+  const file = formData.get("file");
+
+  try {
+    const upload = await uploadReceiptImage(file instanceof File ? file : null, dependencies);
+
+    if (!upload) {
+      return {
+        ...initialReceiptImageUploadActionState,
+        status: "error",
+        message: "Authenticated user is required.",
+      };
+    }
+
+    return {
+      status: "success",
+      message: "Receipt image uploaded for review.",
+      upload,
+    };
+  } catch (error) {
+    return {
+      ...initialReceiptImageUploadActionState,
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to upload receipt image.",
+    };
+  }
+}
+
+export async function uploadCsvBankStatementAction(
+  _prevState: CsvBankStatementUploadActionState,
+  formData: FormData,
+  dependencies?: UploadCsvBankStatementDependencies,
+): Promise<CsvBankStatementUploadActionState> {
+  const file = formData.get("file");
+
+  try {
+    const result = await uploadCsvBankStatement(file instanceof File ? file : null, dependencies);
+
+    if (!result) {
+      return {
+        ...initialCsvBankStatementUploadActionState,
+        status: "error",
+        message: "Authenticated user is required.",
+      };
+    }
+
+    const created = result.ingestion?.candidatesCreated ?? 0;
+    const skipped = result.parserSkippedRowCount + result.duplicateRowCount + (result.ingestion?.skippedInvalidRowCount ?? 0);
+
+    return {
+      status: "success",
+      message:
+        result.ingestion?.status === "parsed"
+          ? `CSV import staged ${created} review candidate${created === 1 ? "" : "s"}.${
+              skipped > 0 ? ` ${skipped} row${skipped === 1 ? " was" : "s were"} skipped.` : ""
+            }`
+          : "CSV import uploaded but could not be prepared for review.",
+      result,
+    };
+  } catch (error) {
+    return {
+      ...initialCsvBankStatementUploadActionState,
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to upload CSV import.",
     };
   }
 }
@@ -351,6 +432,56 @@ export async function ingestStagedImportParserResultAction(
       ...initialImportParserResultIngestionActionState,
       status: "error",
       message: error instanceof Error ? error.message : "Unable to ingest parser results.",
+    };
+  }
+}
+
+export async function stageReceiptCandidateAction(
+  _prevState: ReceiptCandidateStagingActionState,
+  formData: FormData,
+  dependencies?: StageReceiptCandidateDependencies,
+): Promise<ReceiptCandidateStagingActionState> {
+  const importRecordId =
+    typeof formData.get("importRecordId") === "string" ? String(formData.get("importRecordId")).trim() : "";
+  const transactionType = typeof formData.get("transactionType") === "string" ? String(formData.get("transactionType")).trim() : "";
+  const amountMinor = typeof formData.get("amountMinor") === "string" ? Number(String(formData.get("amountMinor"))) : Number.NaN;
+  const currency = typeof formData.get("currency") === "string" ? String(formData.get("currency")).trim() : "";
+  const occurredAt = typeof formData.get("occurredAt") === "string" ? String(formData.get("occurredAt")).trim() : "";
+  const description = typeof formData.get("description") === "string" ? String(formData.get("description")).trim() : "";
+  const merchantGuess = typeof formData.get("merchantGuess") === "string" ? String(formData.get("merchantGuess")).trim() : "";
+
+  try {
+    const candidate = await stageReceiptCandidate(
+      {
+        importRecordId,
+        transactionType: transactionType as "expense" | "income",
+        amountMinor,
+        currency,
+        occurredAt,
+        description: description || null,
+        merchantGuess: merchantGuess || null,
+      },
+      dependencies,
+    );
+
+    if (!candidate) {
+      return {
+        ...initialReceiptCandidateStagingActionState,
+        status: "error",
+        message: "Receipt candidate could not be staged.",
+      };
+    }
+
+    return {
+      status: "success",
+      message: "Receipt candidate staged for review.",
+      candidate,
+    };
+  } catch (error) {
+    return {
+      ...initialReceiptCandidateStagingActionState,
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to stage receipt candidate.",
     };
   }
 }

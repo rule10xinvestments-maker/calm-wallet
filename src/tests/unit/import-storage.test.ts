@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildImportStoragePath,
   IMPORT_STORAGE_BUCKET,
+  isSupportedCsvMimeType,
   sanitizeImportFilename,
   SUPPORTED_IMPORT_TYPES,
 } from "@/lib/imports/storage";
@@ -40,5 +41,12 @@ describe("import storage helpers", () => {
     });
 
     expect(path.startsWith("user-123/receipt_image/")).toBe(true);
+  });
+
+  it("allows only CSV-compatible MIME types with a CSV extension", () => {
+    expect(isSupportedCsvMimeType("text/csv", "statement.csv")).toBe(true);
+    expect(isSupportedCsvMimeType("application/vnd.ms-excel", "statement.csv")).toBe(true);
+    expect(isSupportedCsvMimeType("application/pdf", "statement.csv")).toBe(false);
+    expect(isSupportedCsvMimeType("text/csv", "statement.pdf")).toBe(false);
   });
 });

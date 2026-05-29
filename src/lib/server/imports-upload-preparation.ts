@@ -3,6 +3,8 @@ import type { ImportRecordType } from "@/domain/imports/types";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
   buildImportStoragePath,
+  isSupportedCsvMimeType,
+  isSupportedReceiptImageMimeType,
   sanitizeImportFilename,
   SUPPORTED_IMPORT_TYPES,
 } from "@/lib/imports/storage";
@@ -34,6 +36,16 @@ function isSupportedImportType(value: string): value is ImportRecordType {
   return SUPPORTED_IMPORT_TYPES.includes(value as ImportRecordType);
 }
 
+function validateImportMimeType(args: { importType: ImportRecordType; originalFilename: string; mimeType: string }) {
+  if (args.importType === "receipt_image" && !isSupportedReceiptImageMimeType(args.mimeType)) {
+    throw new Error("Receipt upload must be a supported image file.");
+  }
+
+  if (args.importType === "csv_import" && !isSupportedCsvMimeType(args.mimeType, args.originalFilename)) {
+    throw new Error("CSV import must be a CSV file.");
+  }
+}
+
 export async function prepareStagedImportUpload(
   input: PrepareStagedImportUploadInput,
   dependencies: PrepareStagedImportUploadDependencies = defaultDependencies,
@@ -52,6 +64,7 @@ export async function prepareStagedImportUpload(
 
   const originalFilename = input.originalFilename.trim();
   const mimeType = input.mimeType.trim();
+  validateImportMimeType({ importType, originalFilename, mimeType });
   const sanitizedFilename = dependencies.sanitizeImportFilename(originalFilename);
   const storagePath = dependencies.buildImportStoragePath({
     userId: user.id,

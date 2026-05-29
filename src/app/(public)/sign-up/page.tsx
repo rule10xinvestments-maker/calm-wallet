@@ -3,6 +3,8 @@ import { getSafeNextPath } from "@/lib/auth/redirects";
 import { signUpAction } from "@/lib/auth/actions";
 import { redirectIfAuthenticated } from "@/lib/auth/guards";
 
+export const dynamic = "force-dynamic";
+
 type SignUpPageProps = {
   searchParams?: Promise<{
     next?: string;

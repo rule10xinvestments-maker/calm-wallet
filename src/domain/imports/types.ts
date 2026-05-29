@@ -91,6 +91,7 @@ export type CreateImportCandidateInput = {
   occurredAt?: string | null;
   description?: string | null;
   merchantGuess?: string | null;
+  categoryId?: string | null;
   confidenceScore?: number | null;
   reviewState?: ImportCandidateReviewState;
   acceptanceState?: ImportCandidateAcceptanceState;
@@ -125,6 +126,7 @@ export type ParserResultCandidateInput = {
   occurredAt?: string | null;
   description?: string | null;
   merchantGuess?: string | null;
+  categoryId?: string | null;
   confidenceScore?: number | null;
   reviewState?: ImportCandidateReviewState;
   acceptanceState?: ImportCandidateAcceptanceState;

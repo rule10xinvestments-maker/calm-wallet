@@ -37,6 +37,8 @@
   ],
   "exclude": [
     "node_modules",
-    "validation-fresh"
+    "validation-fresh",
+    "xw-mvp-release-candidate-1",
+    "xw-sprint-*-ready"
   ]
 }

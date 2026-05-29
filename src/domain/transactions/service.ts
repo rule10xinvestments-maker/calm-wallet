@@ -8,6 +8,7 @@ import {
 import {
   canCreateFinancialTransaction,
   canRecategorizeTransaction,
+  canRestoreTransaction,
   canSoftDeleteTransaction,
   normalizeReviewDecision,
   pickAllowedTransactionUpdates,
@@ -17,6 +18,7 @@ import {
   deleteTransactionSchema,
   listTransactionsSchema,
   recategorizeTransactionSchema,
+  restoreTransactionSchema,
   updateTransactionSchema,
 } from "@/domain/transactions/schemas";
 import type {
@@ -41,6 +43,7 @@ export type TransactionServiceAdapter = {
     updates: Database["public"]["Tables"]["transactions"]["Update"],
   ): QueryResult<TransactionRow>;
   listTransactions(userId: string, filters: ListTransactionsFilters): QueryResult<TransactionRow[]>;
+  getLatestSoftDeletedTransaction(userId: string): QueryResult<TransactionRow>;
   insertTransactionEvent(row: TransactionEventInsertRow): QueryResult<{ id: string }>;
 };
 
@@ -107,6 +110,7 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         currency: parsed.currency,
         occurred_at: parsed.occurredAt,
         category_id: parsed.categoryId ?? null,
+        item_name: parsed.itemName?.trim() || null,
         merchant: parsed.merchant?.trim() || null,
         note: parsed.note?.trim() || null,
         source: parsed.source,
@@ -156,6 +160,7 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         currency: allowedUpdates.currency,
         occurred_at: allowedUpdates.occurredAt,
         category_id: allowedUpdates.categoryId === undefined ? undefined : allowedUpdates.categoryId,
+        item_name: mapOptionalTextUpdate(allowedUpdates.itemName),
         merchant: mapOptionalTextUpdate(allowedUpdates.merchant),
         note: mapOptionalTextUpdate(allowedUpdates.note),
         review_state: reviewDecision.reviewState,
@@ -242,10 +247,52 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
       return { transaction, eventCreated };
     },
 
+    async restoreTransaction(
+      userId: string,
+      transactionId: string,
+      actorContext?: TransactionActorContext,
+    ): Promise<TransactionMutationResult> {
+      restoreTransactionSchema.parse({ transactionId });
+      const existing = mapTransactionRowToDomain(
+        assertResult(await adapter.getTransactionById(userId, transactionId), "Transaction not found."),
+      );
+
+      if (!canRestoreTransaction(existing)) {
+        throw new Error("Only deleted transactions can be restored.");
+      }
+
+      const updateResult = await adapter.updateTransaction(userId, transactionId, {
+        deleted_at: null,
+      });
+
+      const row = assertResult(updateResult, "Unable to restore transaction.");
+      const transaction = mapTransactionRowToDomain(row);
+      const eventCreated = await writeAuditEvent(adapter, {
+        userId,
+        transactionId: transaction.id,
+        actorType: getActorContext(actorContext).actorType,
+        eventType: "restored",
+        beforeJson: mapDomainTransactionToEventPayload(existing),
+        afterJson: mapDomainTransactionToEventPayload(transaction),
+      });
+
+      return { transaction, eventCreated };
+    },
+
     async listTransactions(userId: string, filters: ListTransactionsFilters = {}): Promise<Transaction[]> {
       const parsed = listTransactionsSchema.parse(filters);
       const rows = assertResult(await adapter.listTransactions(userId, parsed), "Unable to list transactions.");
       return rows.map(mapTransactionRowToDomain);
+    },
+
+    async getLatestSoftDeletedTransaction(userId: string): Promise<Transaction | null> {
+      const result = await adapter.getLatestSoftDeletedTransaction(userId);
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      return result.data ? mapTransactionRowToDomain(result.data) : null;
     },
   };
 }
@@ -320,6 +367,18 @@ export async function createSupabaseTransactionService() {
       }
 
       return query;
+    },
+
+    async getLatestSoftDeletedTransaction(userId) {
+      return supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
     },
 
     async insertTransactionEvent(row) {

@@ -2,7 +2,12 @@ import { createSupabaseImportRecordService, type ImportRecordService } from "@/d
 import type { ImportRecordType } from "@/domain/imports/types";
 import type { StagedImportIntakeResult } from "@/lib/actions/imports-state";
 import { getCurrentUser } from "@/lib/auth/session";
-import { sanitizeImportFilename, SUPPORTED_IMPORT_TYPES } from "@/lib/imports/storage";
+import {
+  isSupportedCsvMimeType,
+  isSupportedReceiptImageMimeType,
+  sanitizeImportFilename,
+  SUPPORTED_IMPORT_TYPES,
+} from "@/lib/imports/storage";
 
 export type PersistStagedImportUploadCompletionDependencies = {
   getCurrentUser: typeof getCurrentUser;
@@ -28,6 +33,16 @@ const defaultDependencies: PersistStagedImportUploadCompletionDependencies = {
 
 function isSupportedImportType(value: string): value is ImportRecordType {
   return SUPPORTED_IMPORT_TYPES.includes(value as ImportRecordType);
+}
+
+function validateImportMimeType(args: { importType: ImportRecordType; originalFilename: string; mimeType: string }) {
+  if (args.importType === "receipt_image" && !isSupportedReceiptImageMimeType(args.mimeType)) {
+    throw new Error("Receipt upload must be a supported image file.");
+  }
+
+  if (args.importType === "csv_import" && !isSupportedCsvMimeType(args.mimeType, args.originalFilename)) {
+    throw new Error("CSV import must be a CSV file.");
+  }
 }
 
 export async function persistStagedImportUploadCompletion(
@@ -56,6 +71,12 @@ export async function persistStagedImportUploadCompletion(
   if (!isSupportedImportType(existing.importType)) {
     throw new Error("Unsupported import type.");
   }
+
+  validateImportMimeType({
+    importType: existing.importType,
+    originalFilename: input.originalFilename,
+    mimeType: input.mimeType,
+  });
 
   const completed = await importRecordService.completeImportRecordUpload(user.id, input.importRecordId, {
     storagePath: input.storagePath,

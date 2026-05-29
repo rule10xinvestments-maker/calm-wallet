@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_TRANSACTION_SOURCE } from "@/domain/transactions/types";
 import {
   buildSpendingSummaryData,
+  buildAssistantFinancialQuestionAnswer,
   buildInsightsData,
   filterTransactionsForView,
   getReviewStateMeta,
@@ -18,6 +19,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     currency: "USD",
     occurredAt: "2026-04-10T00:00:00.000Z",
     categoryId: null,
+    itemName: "Market",
     merchant: "Market",
     note: null,
     source: DEFAULT_TRANSACTION_SOURCE,
@@ -35,7 +37,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
 describe("transactions read model", () => {
   it("keeps review-state mapping UI-ready", () => {
     expect(getReviewStateMeta("needs_attention").label).toBe("Needs review");
-    expect(getReviewStateMeta("reviewed").label).toBe("Tracked");
+    expect(getReviewStateMeta("reviewed").label).toBe("Reviewed");
   });
 
   it("supports page segmentation", () => {
@@ -53,24 +55,393 @@ describe("transactions read model", () => {
   it("maps real list items calmly for the transactions page", () => {
     const items = mapTransactionsToListItems([makeTransaction()], {});
     expect(items[0]?.title).toBe("Market");
-    expect(items[0]?.reviewLabel).toBe("Tracked");
+    expect(items[0]?.reviewLabel).toBe("Reviewed");
+  });
+
+  it("uses item name as the primary title and keeps merchant separate", () => {
+    const items = mapTransactionsToListItems([makeTransaction({ itemName: "mustar", merchant: "CCC", note: "for home" })], {});
+
+    expect(items[0]).toMatchObject({
+      title: "mustar",
+      itemName: "mustar",
+      merchant: "CCC",
+      note: "for home",
+    });
+  });
+
+  it("keeps EUR income displayed as EUR on the transactions page", () => {
+    const items = mapTransactionsToListItems([
+      makeTransaction({
+        transactionType: "income",
+        amountMinor: 500,
+        currency: "EUR",
+      }),
+    ], {});
+
+    expect(items[0]?.amountDisplay).toBe("+€5.00");
   });
 
   it("builds lightweight tracked insights", () => {
     const data = buildInsightsData(
       [
-        makeTransaction({ transactionType: "expense", amountMinor: 2000, categoryId: "food" }),
-        makeTransaction({ transactionType: "income", amountMinor: 5000, id: "2" }),
+        makeTransaction({ transactionType: "expense", amountMinor: 2000, categoryId: "food", itemName: "Market", merchant: null }),
+        makeTransaction({ transactionType: "income", amountMinor: 5000, id: "2", categoryId: "salary", itemName: "Payroll", merchant: null }),
       ],
-      { food: "Groceries" },
+      { food: "Groceries", salary: "Salary" },
       "USD",
       new Date("2026-04-21T00:00:00.000Z"),
     );
 
     expect(data.trackedBalanceMinor).toBe(3000);
+    expect(data.availableDisplayCurrencies).toEqual(["USD"]);
     expect(data.incomeMinor).toBe(5000);
     expect(data.expenseMinor).toBe(2000);
     expect(data.categoryBreakdown[0]?.label).toBe("Groceries");
+    expect(data.categoryBreakdown[0]?.transactionCount).toBe(1);
+    expect(data.categoryBreakdown[0]?.recentEntries[0]).toMatchObject({
+      title: "Market",
+      amountDisplay: "$20.00",
+      occurredLabel: "Apr 10",
+    });
+    expect(data.incomeCategoryBreakdown[0]).toMatchObject({
+      label: "Salary",
+      amountMinor: 5000,
+      transactionCount: 1,
+    });
+    expect(data.incomeCategoryBreakdown[0]?.recentEntries[0]).toMatchObject({
+      title: "Payroll",
+      amountDisplay: "$50.00",
+    });
+    expect(data.largestRecentExpenses[0]?.amountDisplay).toBe("$20.00");
+    expect(data.budgetProgress).toEqual([]);
+  });
+
+  it("converts EUR income into RON display totals without mutating original transaction currency", () => {
+    const eurIncome = makeTransaction({
+      id: "income-eur",
+      transactionType: "income",
+      amountMinor: 500,
+      currency: "EUR",
+      occurredAt: "2026-04-10T00:00:00.000Z",
+    });
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "expense-ron",
+          transactionType: "expense",
+          amountMinor: 10000,
+          currency: "RON",
+          occurredAt: "2026-04-09T00:00:00.000Z",
+        }),
+        eurIncome,
+      ],
+      {},
+      "RON",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [
+        {
+          baseCurrency: "EUR",
+          quoteCurrency: "EUR",
+          rate: 1,
+          rateDate: "2026-04-20",
+          source: "ECB euro reference rates",
+          fetchedAt: "2026-04-20T12:00:00.000Z",
+        },
+        {
+          baseCurrency: "EUR",
+          quoteCurrency: "RON",
+          rate: 5,
+          rateDate: "2026-04-20",
+          source: "ECB euro reference rates",
+          fetchedAt: "2026-04-20T12:00:00.000Z",
+        },
+      ],
+    );
+
+    expect(eurIncome.currency).toBe("EUR");
+    expect(data.displayCurrency).toBe("RON");
+    expect(data.availableDisplayCurrencies).toEqual(["EUR", "RON"]);
+    expect(data.monthlyIncomeDisplayMinor).toBe(2500);
+    expect(data.trackedBalanceDisplayMinor).toBe(-7500);
+    expect(data.hasConvertedCurrencies).toBe(true);
+    expect(data.convertedCurrencyBreakdowns.find((item) => item.currency === "EUR")).toMatchObject({
+      incomeMinor: 500,
+      incomeDisplayMinor: 2500,
+      incomeDisplay: "€5.00",
+      convertedIncomeDisplay: "RON\u00a025.00",
+    });
+  });
+
+  it("converts the same EUR income and RON expense into requested EUR totals", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "expense-ron",
+          transactionType: "expense",
+          amountMinor: 10000,
+          currency: "RON",
+          occurredAt: "2026-04-09T00:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "income-eur",
+          transactionType: "income",
+          amountMinor: 5000,
+          currency: "EUR",
+          occurredAt: "2026-04-10T00:00:00.000Z",
+        }),
+      ],
+      {},
+      "RON",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [
+        {
+          baseCurrency: "EUR",
+          quoteCurrency: "EUR",
+          rate: 1,
+          rateDate: "2026-04-20",
+          source: "ECB euro reference rates",
+          fetchedAt: "2026-04-20T12:00:00.000Z",
+        },
+        {
+          baseCurrency: "EUR",
+          quoteCurrency: "RON",
+          rate: 5,
+          rateDate: "2026-04-20",
+          source: "ECB euro reference rates",
+          fetchedAt: "2026-04-20T12:00:00.000Z",
+        },
+      ],
+      "EUR",
+    );
+
+    expect(data.displayCurrency).toBe("EUR");
+    expect(data.availableDisplayCurrencies).toEqual(["EUR", "RON"]);
+    expect(data.monthlyIncomeDisplayMinor).toBe(5000);
+    expect(data.monthlyExpenseDisplayMinor).toBe(2000);
+    expect(data.trackedBalanceDisplayMinor).toBe(3000);
+    expect(data.categoryBreakdown[0]?.amountMinor).toBe(2000);
+    expect(data.categoryBreakdown[0]?.amountDisplay).toBe("≈ €20");
+  });
+
+  it("converts the same EUR income and RON expense into requested RON totals", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "expense-ron",
+          transactionType: "expense",
+          amountMinor: 10000,
+          currency: "RON",
+          occurredAt: "2026-04-09T00:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "income-eur",
+          transactionType: "income",
+          amountMinor: 5000,
+          currency: "EUR",
+          occurredAt: "2026-04-10T00:00:00.000Z",
+        }),
+      ],
+      {},
+      "EUR",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [
+        {
+          baseCurrency: "EUR",
+          quoteCurrency: "EUR",
+          rate: 1,
+          rateDate: "2026-04-20",
+          source: "ECB euro reference rates",
+          fetchedAt: "2026-04-20T12:00:00.000Z",
+        },
+        {
+          baseCurrency: "EUR",
+          quoteCurrency: "RON",
+          rate: 5,
+          rateDate: "2026-04-20",
+          source: "ECB euro reference rates",
+          fetchedAt: "2026-04-20T12:00:00.000Z",
+        },
+      ],
+      "RON",
+    );
+
+    expect(data.displayCurrency).toBe("RON");
+    expect(data.availableDisplayCurrencies).toEqual(["EUR", "RON"]);
+    expect(data.monthlyIncomeDisplayMinor).toBe(25000);
+    expect(data.monthlyExpenseDisplayMinor).toBe(10000);
+    expect(data.trackedBalanceDisplayMinor).toBe(15000);
+    expect(data.categoryBreakdown[0]?.amountMinor).toBe(10000);
+    expect(data.categoryBreakdown[0]?.amountDisplay).toBe("RON\u00a0100");
+  });
+
+  it("falls back calmly when a mixed-currency rate is unavailable", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "expense-ron", transactionType: "expense", amountMinor: 10000, currency: "RON" }),
+        makeTransaction({ id: "income-usd", transactionType: "income", amountMinor: 500, currency: "USD" }),
+      ],
+      {},
+      "RON",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.hasMissingRates).toBe(true);
+    expect(data.trackedBalanceDisplayMinor).toBe(-10000);
+    expect(data.convertedCurrencyBreakdowns.find((item) => item.currency === "USD")?.incomeDisplayMinor).toBeNull();
+  });
+
+  it("excludes soft-deleted foreign-currency income from converted totals", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "expense-ron", transactionType: "expense", amountMinor: 10000, currency: "RON" }),
+        makeTransaction({
+          id: "income-eur",
+          transactionType: "income",
+          amountMinor: 500,
+          currency: "EUR",
+          deletedAt: "2026-04-21T00:00:00.000Z",
+        }),
+      ],
+      {},
+      "RON",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [
+        {
+          baseCurrency: "EUR",
+          quoteCurrency: "RON",
+          rate: 5,
+          rateDate: "2026-04-20",
+          source: "ECB euro reference rates",
+          fetchedAt: "2026-04-20T12:00:00.000Z",
+        },
+      ],
+    );
+
+    expect(data.monthlyIncomeDisplayMinor).toBe(0);
+    expect(data.trackedBalanceDisplayMinor).toBe(-10000);
+    expect(data.trackedTransactionCount).toBe(1);
+  });
+
+  it("builds monthly clarity insights with needs-review and largest expenses", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "1", transactionType: "expense", amountMinor: 2000, categoryId: "food" }),
+        makeTransaction({ id: "2", transactionType: "expense", amountMinor: 8000, categoryId: "rent", itemName: "Rent", merchant: null }),
+        makeTransaction({ id: "3", transactionType: "income", amountMinor: 12000 }),
+        makeTransaction({ id: "4", transactionType: "expense", amountMinor: 700, reviewState: "needs_attention" }),
+      ],
+      { food: "Groceries", rent: "Housing" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.trackedTransactionCount).toBe(4);
+    expect(data.currentMonthTransactionCount).toBe(4);
+    expect(data.needsReviewCount).toBe(1);
+    expect(data.trackedBalanceMinor).toBe(1300);
+    expect(data.incomeMinor).toBe(12000);
+    expect(data.expenseMinor).toBe(10700);
+    expect(data.categoryBreakdown[0]?.label).toBe("Housing");
+    expect(data.largestRecentExpenses[0]?.title).toBe("Rent");
+  });
+
+  it("builds empty monthly clarity insights without bank-balance claims", () => {
+    const data = buildInsightsData([], {}, "USD", new Date("2026-04-21T00:00:00.000Z"));
+
+    expect(data.trackedTransactionCount).toBe(0);
+    expect(data.currentMonthTransactionCount).toBe(0);
+    expect(data.needsReviewCount).toBe(0);
+    expect(data.trackedBalanceMinor).toBe(0);
+    expect(data.categoryBreakdown).toEqual([]);
+    expect(data.largestRecentExpenses).toEqual([]);
+    expect(data.budgetProgress).toEqual([]);
+  });
+
+  it("builds budget progress math for monthly category budgets", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "1",
+          transactionType: "expense",
+          amountMinor: 3000,
+          categoryId: "food",
+        }),
+        makeTransaction({
+          id: "2",
+          transactionType: "expense",
+          amountMinor: 2500,
+          categoryId: "food",
+        }),
+      ],
+      { food: "Groceries" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [
+        {
+          id: "budget-1",
+          userId: "user-1",
+          monthStart: "2026-04-01",
+          categoryId: "food",
+          amountMinor: 10000,
+          currency: "USD",
+          createdAt: "2026-04-01T00:00:00.000Z",
+          updatedAt: "2026-04-01T00:00:00.000Z",
+        },
+      ],
+    );
+
+    expect(data.budgetProgress[0]).toMatchObject({
+      budgetId: "budget-1",
+      categoryLabel: "Groceries",
+      amountMinor: 10000,
+      spentMinor: 5500,
+      remainingMinor: 4500,
+      percentUsed: 55,
+      isOverBudget: false,
+    });
+  });
+
+  it("flags over-budget monthly category budgets", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          transactionType: "expense",
+          amountMinor: 12500,
+          categoryId: "food",
+        }),
+      ],
+      { food: "Groceries" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [
+        {
+          id: "budget-1",
+          userId: "user-1",
+          monthStart: "2026-04-01",
+          categoryId: "food",
+          amountMinor: 10000,
+          currency: "USD",
+          createdAt: "2026-04-01T00:00:00.000Z",
+          updatedAt: "2026-04-01T00:00:00.000Z",
+        },
+      ],
+    );
+
+    expect(data.budgetProgress[0]).toMatchObject({
+      spentMinor: 12500,
+      remainingMinor: -2500,
+      remainingDisplay: "$25",
+      percentUsed: 125,
+      isOverBudget: true,
+    });
   });
 
   it("builds a read-only spending summary for the requested transaction type", () => {
@@ -96,5 +467,30 @@ describe("transactions read model", () => {
         amountDisplay: "$35.00",
       },
     ]);
+  });
+
+  it("builds read-only assistant financial question answers", () => {
+    const data = buildAssistantFinancialQuestionAnswer({
+      transactions: [
+        makeTransaction({ id: "1", amountMinor: 2000, currency: "USD", categoryId: "food" }),
+        makeTransaction({ id: "2", amountMinor: 1500, currency: "USD", categoryId: "food" }),
+        makeTransaction({ id: "3", transactionType: "income", amountMinor: 5000, currency: "USD" }),
+      ],
+      input: {
+        questionKind: "category_spending_total",
+        categoryId: "food",
+        categoryLabel: "Groceries",
+        occurredFrom: "2026-04-01T00:00:00.000Z",
+        occurredTo: "2026-04-30T23:59:59.999Z",
+      },
+    });
+
+    expect(data.categoryLabel).toBe("Groceries");
+    expect(data.transactionCount).toBe(2);
+    expect(data.totalsByCurrency[0]).toEqual({
+      currency: "USD",
+      amountMinor: 3500,
+      amountDisplay: "$35.00",
+    });
   });
 });

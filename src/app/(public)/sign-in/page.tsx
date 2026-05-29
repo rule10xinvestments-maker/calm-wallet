@@ -4,6 +4,8 @@ import { type AuthFormState } from "@/lib/auth/form-state";
 import { signInAction } from "@/lib/auth/actions";
 import { redirectIfAuthenticated } from "@/lib/auth/guards";
 
+export const dynamic = "force-dynamic";
+
 type SignInPageProps = {
   searchParams?: Promise<{
     error?: string;

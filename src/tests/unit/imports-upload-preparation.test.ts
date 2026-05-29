@@ -127,6 +127,28 @@ describe("imports upload preparation", () => {
     expect(createImportRecord).not.toHaveBeenCalled();
   });
 
+  it("rejects receipt_image uploads with PDF mime type", async () => {
+    const createImportRecord = vi.fn();
+
+    await expect(
+      prepareStagedImportUpload(
+        {
+          importType: "receipt_image",
+          originalFilename: "receipt.pdf",
+          mimeType: "application/pdf",
+        },
+        {
+          getCurrentUser: vi.fn(async () => mockUser()),
+          createImportRecordService: vi.fn(async () => ({ createImportRecord })),
+          buildImportStoragePath: vi.fn(),
+          sanitizeImportFilename: vi.fn(),
+          now: () => new Date("2026-04-22T10:00:00.000Z"),
+        },
+      ),
+    ).rejects.toThrow("Receipt upload must be a supported image file.");
+    expect(createImportRecord).not.toHaveBeenCalled();
+  });
+
   it("returns the expected preparation contract shape", async () => {
     const createImportRecord = vi.fn(async () => ({
       id: "record-3",

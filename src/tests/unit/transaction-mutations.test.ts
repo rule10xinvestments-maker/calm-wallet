@@ -16,6 +16,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     currency: "USD",
     occurredAt: "2026-04-21T00:00:00.000Z",
     categoryId: null,
+    itemName: "Market",
     merchant: "Market",
     note: null,
     source: "manual",
@@ -37,6 +38,21 @@ function makeMutationResult(overrides: Partial<Transaction> = {}): TransactionMu
   };
 }
 
+function makeCategoryMemory() {
+  return {
+    id: "memory-1",
+    userId: "user-1",
+    signalType: "merchant" as const,
+    signalValue: "market",
+    preferredTransactionType: "expense" as const,
+    preferredCategoryId: "cat-1",
+    strength: 1,
+    lastUsedAt: null,
+    createdAt: "2026-04-21T00:00:00.000Z",
+    updatedAt: "2026-04-21T00:00:00.000Z",
+  };
+}
+
 function makeMutationServices(): Pick<TransactionService, "deleteTransaction" | "recategorizeTransaction" | "updateTransaction"> {
   return {
     deleteTransaction: vi.fn(async () => makeMutationResult({ deletedAt: "2026-04-21T01:00:00.000Z" })),
@@ -52,18 +68,59 @@ function makeMutationServices(): Pick<TransactionService, "deleteTransaction" | 
 }
 
 describe("transaction mutation helpers", () => {
-  it("uses the transaction service path for recategorize", async () => {
+  it("saves a selected category and clears needs-review state in one action", async () => {
     const services = makeMutationServices();
+    const recordCategoryCorrectionMemory = vi.fn(async () => makeCategoryMemory());
 
     const result = await executeRecategorizeTransaction({
       userId: "user-1",
       transactionId: "txn-1",
       categoryId: "cat-1",
       transactionService: services,
+      categoryMemoryService: { recordCategoryCorrectionMemory },
     });
 
-    expect(services.recategorizeTransaction).toHaveBeenCalledOnce();
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      {
+        categoryId: "cat-1",
+        reviewState: "reviewed",
+        uncertaintyReason: null,
+      },
+      { actorType: "user" },
+    );
+    expect(recordCategoryCorrectionMemory).toHaveBeenCalledWith("user-1", {
+      signalType: "merchant",
+      signalValue: "Updated Market",
+      preferredCategoryId: "cat-1",
+      preferredTransactionType: "expense",
+    });
     expect(result.status).toBe("success");
+    expect(result.message).toBe("Category saved.");
+  });
+
+  it("does not create correction memory when a transaction is left uncategorized", async () => {
+    const services = makeMutationServices();
+    const recordCategoryCorrectionMemory = vi.fn();
+
+    await executeRecategorizeTransaction({
+      userId: "user-1",
+      transactionId: "txn-1",
+      categoryId: null,
+      transactionService: services,
+      categoryMemoryService: { recordCategoryCorrectionMemory },
+    });
+
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      {
+        categoryId: null,
+      },
+      { actorType: "user" },
+    );
+    expect(recordCategoryCorrectionMemory).not.toHaveBeenCalled();
   });
 
   it("uses the transaction service path for soft delete", async () => {
@@ -83,6 +140,7 @@ describe("transaction mutation helpers", () => {
     const services = makeMutationServices();
     const formData = new FormData();
     formData.set("transactionId", "txn-1");
+    formData.set("itemName", "Market");
     formData.set("merchant", "Updated Market");
     formData.set("note", "Updated");
     formData.set("occurredAt", "2026-04-21");
@@ -100,6 +158,7 @@ describe("transaction mutation helpers", () => {
       "user-1",
       "txn-1",
       expect.objectContaining({
+        itemName: "Market",
         merchant: "Updated Market",
         note: "Updated",
         categoryId: null,
@@ -108,5 +167,6 @@ describe("transaction mutation helpers", () => {
       { actorType: "user" },
     );
     expect(result.status).toBe("success");
+    expect(result.message).toBe("Changes saved.");
   });
 });

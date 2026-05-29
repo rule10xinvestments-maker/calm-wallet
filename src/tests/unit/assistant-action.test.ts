@@ -4,6 +4,9 @@ import type { AiActionLogInsert } from "@/domain/ai/runtime-log";
 const requireAuthenticatedSession = vi.fn();
 const createSupabaseTransactionService = vi.fn();
 const runAssistantCommand = vi.fn();
+const runNaturalLanguageAssistantCommand = vi.fn();
+const loadControlledCategoryOptions = vi.fn();
+const createSupabaseCategoryMemoryService = vi.fn();
 const insert = vi.fn();
 const from = vi.fn(() => ({ insert }));
 const createSupabaseServerClient = vi.fn(() => ({ from }));
@@ -16,17 +19,32 @@ vi.mock("@/domain/transactions/service", () => ({
   createSupabaseTransactionService,
 }));
 
+vi.mock("@/domain/category-memory/service", () => ({
+  createSupabaseCategoryMemoryService,
+}));
+
 vi.mock("@/lib/server/assistant", () => ({
   runAssistantCommand,
+  runNaturalLanguageAssistantCommand,
 }));
 
 vi.mock("@/lib/auth/server-client", () => ({
   createSupabaseServerClient,
 }));
 
+vi.mock("@/lib/server/transactions-read-model", () => ({
+  loadControlledCategoryOptions,
+}));
+
 describe("assistant action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    loadControlledCategoryOptions.mockResolvedValue([]);
+    createSupabaseCategoryMemoryService.mockResolvedValue({
+      findCategoryMemoryMatch: vi.fn(),
+      recordCategoryCorrectionMemory: vi.fn(),
+      applyCategoryMemorySuggestion: vi.fn(),
+    });
   });
 
   it("parses update_transaction form data and preserves runtime log persistence", async () => {
@@ -371,5 +389,96 @@ describe("assistant action", () => {
     expect(insert).toHaveBeenCalledWith(runtimeLogPayload);
     expect(result.status).toBe("success");
     expect(result.message).toBe("Spend is $35.00 across 2 transactions.");
+  });
+
+  it("routes natural-language input through the bounded assistant path", async () => {
+    const transactionService = {
+      createTransaction: vi.fn(),
+      updateTransaction: vi.fn(),
+      deleteTransaction: vi.fn(),
+      recategorizeTransaction: vi.fn(),
+      listTransactions: vi.fn(),
+    };
+    const runtimeLogPayload: AiActionLogInsert = {
+      user_id: "user-1",
+      tool_name: "create_transaction",
+      raw_payload: {
+        toolName: "create_transaction",
+        input: {
+          transactionType: "expense",
+          amountMinor: 500,
+        },
+      },
+      validated_payload: null,
+      policy_outcome: "allowed",
+      result_summary: "Executed create_transaction successfully.",
+      error_code: null,
+    };
+
+    requireAuthenticatedSession.mockResolvedValue({
+      user: {
+        id: "user-1",
+      },
+    });
+    createSupabaseTransactionService.mockResolvedValue(transactionService);
+    loadControlledCategoryOptions.mockResolvedValueOnce([
+      {
+        id: "33333333-3333-3333-3333-333333333333",
+        slug: "dining",
+        label: "Dining",
+        direction: "expense",
+      },
+    ]);
+    runNaturalLanguageAssistantCommand.mockImplementationOnce(async ({ persistRuntimeLog }) => {
+      await persistRuntimeLog(runtimeLogPayload);
+
+      return {
+        status: "success",
+        message: "Saved $5.00 as Needs Review.",
+        reviewState: "needs_attention",
+        latestTransaction: null,
+        recentItems: [],
+      };
+    });
+
+    const { assistantAction } = await import("@/lib/actions/assistant");
+    const formData = new FormData();
+    formData.set("naturalLanguageInput", "coffee 5");
+
+    const result = await assistantAction(
+      {
+        status: "idle",
+        message: null,
+        reviewState: null,
+        latestTransaction: null,
+        recentItems: [],
+      },
+      formData,
+    );
+
+    expect(runAssistantCommand).not.toHaveBeenCalled();
+    expect(loadControlledCategoryOptions).toHaveBeenCalledOnce();
+    expect(runNaturalLanguageAssistantCommand).toHaveBeenCalledWith({
+      userId: "user-1",
+      text: "coffee 5",
+      transactionService,
+      categoryOptions: [
+        {
+          id: "33333333-3333-3333-3333-333333333333",
+          slug: "dining",
+          label: "Dining",
+          direction: "expense",
+        },
+      ],
+      categoryMemoryService: expect.objectContaining({
+        findCategoryMemoryMatch: expect.any(Function),
+      }),
+      persistRuntimeLog: expect.any(Function),
+    });
+    expect(createSupabaseServerClient).toHaveBeenCalledOnce();
+    expect(from).toHaveBeenCalledWith("ai_action_logs");
+    expect(insert).toHaveBeenCalledWith(runtimeLogPayload);
+    expect(result.status).toBe("success");
+    expect(result.message).toBe("Saved $5.00 as Needs Review.");
   });
 });

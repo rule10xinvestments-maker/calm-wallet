@@ -75,6 +75,7 @@ const createImportCandidateShape = z.object({
   occurredAt: z.string().datetime("Occurred at must be a valid ISO datetime.").nullable().optional(),
   description: z.string().trim().max(240).nullable().optional(),
   merchantGuess: z.string().trim().max(120).nullable().optional(),
+  categoryId: idSchema.nullable().optional(),
   confidenceScore: z.number().min(0).max(1).nullable().optional(),
   reviewState: reviewStateSchema.default(DEFAULT_IMPORT_CANDIDATE_REVIEW_STATE),
   acceptanceState: acceptanceStateSchema.default(DEFAULT_IMPORT_CANDIDATE_ACCEPTANCE_STATE),

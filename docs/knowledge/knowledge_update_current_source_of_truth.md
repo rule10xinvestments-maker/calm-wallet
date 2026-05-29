@@ -1,6 +1,6 @@
-# Knowledge Update — Current Source of Truth and Execution Status
+# Knowledge Update Current Source Of Truth And Execution Status
 
-Status: upload-ready knowledge file
+Status: Sprint 14 ready knowledge file
 
 Use this file as the current knowledge correction until replaced by a newer locked update.
 
@@ -40,7 +40,7 @@ Do not sacrifice speed and simplicity for feature breadth.
 
 ## Locked Product Structure
 
-The app has exactly 3 primary pages:
+The app has exactly 3 protected primary pages:
 
 1. AI Assistant
 2. Transactions
@@ -80,7 +80,7 @@ The system should categorize intelligently when context is sufficient.
 
 If uncertain, use a review state instead of pretending certainty.
 
-User corrections should be remembered and reused later.
+User corrections are remembered and reused later through user-owned category correction memory when the match is strong.
 
 ## Locked Balance Terminology
 
@@ -136,6 +136,10 @@ Current repo truth:
 - current protected pages are Assistant, Transactions, and Insights
 - current assistant UI scope is bounded and operational
 - current assistant/runtime surface supports the approved transaction actions from prior sprints
+- natural-language correction intents exist for delete, recategorize, mark correct, show needs review, and show recent
+- safe target resolution exists for last, current, text, and id references
+- ambiguous correction targets do not mutate
+- undo last restore for a recently soft-deleted transaction is supported through the approved restore transaction runtime path
 - staged imports support only `receipt_image` and `csv_import`
 - staged import upload, upload transport, parser-result ingestion, review progress, accept/reject decisions, and review completion are implemented behind service-layer and ownership boundaries
 - the staged import lifecycle is hardened as `uploaded -> parsing`, `parsing -> parsed`, `parsing -> failed`, and `parsed -> reviewed` only when all candidates are accepted or rejected
@@ -147,21 +151,93 @@ Current repo truth:
 
 ## Current Execution Status
 
-Sprint 4 should now be treated as ready.
+Sprint 15 should now be treated as ready.
 
 xw should be updated now.
 
-Recommended handoff snapshot label: **xw-sprint-4-ready**
+Recommended handoff snapshot label: **xw-sprint-15-ready**
 
-Next execution focus: **Sprint 5 planning from the frozen Sprint 4 baseline**
+Sprint 15 validation passed:
 
-## Sprint 5 Starting Order
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e`
 
-1. Freeze/package `xw-sprint-4-ready`.
-2. Start from the frozen Sprint 4 baseline only.
-3. Keep all writes behind validators, policy, ownership checks, and service layer.
-4. Keep UI scope aligned to the 3-page product shape.
-5. Continue excluding PDF imports, direct bank/card linking, extra pages, broad CSV mapping UX, parser/OCR engines, and uncontrolled AI behavior.
+Next execution focus: **Sprint 16 from the frozen Sprint 15 baseline**
+
+## Sprint 15 Current Source Of Truth
+
+Sprint 15 should now be treated as ready.
+
+Recommended handoff snapshot label: **xw-sprint-15-ready**
+
+Sprint 15 validation passed:
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e`
+
+Current repo reality:
+
+- Sprint 8 `restore_transaction` is accepted and remains protected by authenticated e2e regression.
+- Sprint 9 Receipt Image Import MVP is accepted and remains review-first, private, and untrusted.
+- Sprint 10 Assistant Spending Questions v1 is read-only and service-backed.
+- Sprint 11 Insights Page v1 is accepted as a monthly clarity layer on tracked user-owned data only.
+- Sprint 12 Budget Setup v1 is accepted as optional monthly controlled-category budgets inside Insights.
+- Sprint 13 CSV Bank Statement Import MVP is accepted as a private, review-first staged import path.
+- Sprint 14 Category Correction Memory v1 is accepted as user-owned, controlled-category-only memory.
+- Sprint 15 Notifications Foundation v1 is accepted as user-controlled preference and subscription scaffolding.
+- Notification preferences are user-owned, service-backed, and surfaced only inside the existing Assistant page.
+- Push subscription storage scaffolding exists with owner-scoped RLS and disable support.
+- Daily reminder and monthly review eligibility helpers exist with disabled, outside-window, already-sent, and already-active suppression states.
+- Notification copy templates are calm and non-judgmental.
+- No real push delivery, scheduler, autonomous AI notification sending, spammy alert behavior, new primary page, PDF import support, bank/card linking, Available balance wording, bank-balance claims, or uncontrolled AI behavior was added.
+
+Next execution focus: **Sprint 16 from the frozen Sprint 15 baseline**
+
+## Sprint 14 Current Source Of Truth
+
+Sprint 14 should now be treated as ready.
+
+Recommended handoff snapshot label: **xw-sprint-14-ready**
+
+Sprint 14 validation passed:
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e`
+
+Current repo reality:
+
+- Sprint 8 `restore_transaction` is accepted and remains protected by authenticated e2e regression.
+- Sprint 9 Receipt Image Import MVP is accepted and remains review-first, private, and untrusted.
+- Sprint 10 Assistant Spending Questions v1 is read-only and service-backed.
+- Sprint 11 Insights Page v1 is accepted as a monthly clarity layer on tracked user-owned data only.
+- Sprint 12 Budget Setup v1 is accepted as optional monthly controlled-category budgets inside Insights.
+- Sprint 13 CSV Bank Statement Import MVP is accepted as a private, review-first staged import path.
+- Sprint 14 Category Correction Memory v1 is accepted as user-owned, controlled-category-only memory.
+- Supported Assistant financial question intents are monthly spending total, monthly income total, category spending total, recent largest expense, needs-review summary, and recent transactions summary.
+- Assistant financial answers use Tracked-data wording, not Available balance or bank-balance wording.
+- Assistant financial questions go through tool schema validation, policy validation, ownership-scoped service reads, and runtime logging.
+- Insights shows monthly tracked spending, monthly tracked income, Tracked balance, category breakdown, largest recent expenses, Needs Review count, and empty/low-data states.
+- Insights budget progress shows budget amount, actual spending, remaining amount, percent used, and over-budget state.
+- Budgets use controlled expense/both categories only; no custom categories, rollover budgets, envelope system, forecasting, or Assistant budget-writing tool was added.
+- CSV import validates authenticated users, compatible MIME types, safe file size, sanitized filenames, and user-scoped private storage paths.
+- CSV parsing is bounded by max rows, max columns, max cell length, and simple amount/date/description/debit-credit header detection.
+- CSV rows stage pending review candidates only; they do not create final transactions automatically.
+- Duplicate CSV rows and same-user existing transaction matches are skipped before staging.
+- Category memory records merchant, phrase, and import-description signals from user-approved corrections.
+- Strong memory matches can suggest categories for Assistant capture, receipt staging, and CSV staging.
+- Weak memory matches remain reviewable.
+- No new primary pages, custom categories, rule-builder UI, global learning, model training, PDF import support, bank/card linking, automatic trusted bulk import, arbitrary SQL, direct assistant database access, financial advice, Available balance wording, or uncontrolled AI behavior was added.
+
+Next execution focus: **Sprint 15 from the frozen Sprint 14 baseline**
 
 ## Non-Negotiable Guardrails
 
@@ -174,10 +250,12 @@ Do not let the product drift into:
 - direct AI-to-database writes
 - PDF import support in the current scope
 - bank/card linking in the current scope
+- generic undo behavior
 
 ## Working Rule
 
 When repo reality, legacy prompts, and memory conflict:
+
 - first follow locked docs
 - then follow current repo truth for implemented behavior
 - ignore stale legacy instructions that conflict

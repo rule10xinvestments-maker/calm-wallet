@@ -8,6 +8,10 @@ import { reviewImportCandidateSchema } from "@/domain/imports/schemas";
 import type { ImportCandidate, ReviewImportCandidateInput } from "@/domain/imports/types";
 import { createSupabaseTransactionService, type TransactionService } from "@/domain/transactions/service";
 import type { CreateTransactionInput, Transaction } from "@/domain/transactions/types";
+import {
+  createSupabaseCategoryMemoryService,
+  type CategoryMemoryService,
+} from "@/domain/category-memory/service";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
   completeOwnedImportReviewIfReady,
@@ -22,6 +26,7 @@ export type ReviewImportCandidateDependencies = {
   >;
   createImportRecordService: () => Promise<Pick<ImportRecordService, "getImportRecordById" | "updateImportRecordStatus">>;
   createTransactionService: () => Promise<Pick<TransactionService, "createTransaction" | "listTransactions">>;
+  createCategoryMemoryService?: () => Promise<Pick<CategoryMemoryService, "recordCategoryCorrectionMemory">>;
 };
 
 export type ReviewImportCandidateResult = {
@@ -37,6 +42,7 @@ const defaultDependencies: ReviewImportCandidateDependencies = {
   createImportCandidateService: createSupabaseImportCandidateService,
   createImportRecordService: createSupabaseImportRecordService,
   createTransactionService: createSupabaseTransactionService,
+  createCategoryMemoryService: createSupabaseCategoryMemoryService,
 };
 
 function isSupportedImportType(value: string): value is "receipt_image" | "csv_import" {
@@ -59,6 +65,7 @@ function mapCandidateToTransactionInput(args: {
     currency: candidate.currency,
     occurredAt: candidate.occurredAt,
     categoryId: candidate.categoryId,
+    itemName: candidate.description || candidate.merchantGuess,
     merchant: candidate.merchantGuess,
     note: candidate.description,
     source: importType,
@@ -67,6 +74,42 @@ function mapCandidateToTransactionInput(args: {
     importRecordId: candidate.importRecordId,
     importCandidateId: candidate.id,
   };
+}
+
+async function recordAcceptedCandidateMemory(args: {
+  userId: string;
+  candidate: ImportCandidate;
+  categoryMemoryService: Pick<CategoryMemoryService, "recordCategoryCorrectionMemory"> | null;
+}) {
+  if (!args.categoryMemoryService || !args.candidate.categoryId || !args.candidate.transactionType) {
+    return;
+  }
+
+  const signals = [
+    args.candidate.merchantGuess
+      ? {
+          signalType: "merchant" as const,
+          signalValue: args.candidate.merchantGuess,
+        }
+      : null,
+    args.candidate.description
+      ? {
+          signalType: "import_description" as const,
+          signalValue: args.candidate.description,
+        }
+      : null,
+  ].filter(
+    (signal): signal is { signalType: "merchant" | "import_description"; signalValue: string } =>
+      signal !== null && signal.signalValue.trim().length >= 3,
+  );
+
+  for (const signal of signals) {
+    await args.categoryMemoryService.recordCategoryCorrectionMemory(args.userId, {
+      ...signal,
+      preferredCategoryId: args.candidate.categoryId,
+      preferredTransactionType: args.candidate.transactionType,
+    });
+  }
 }
 
 export async function reviewImportCandidate(
@@ -169,6 +212,13 @@ export async function reviewImportCandidate(
       importRecordService,
       importCandidateService,
     });
+    await recordAcceptedCandidateMemory({
+      userId: user.id,
+      candidate: acceptedCandidate,
+      categoryMemoryService: dependencies.createCategoryMemoryService
+        ? await dependencies.createCategoryMemoryService()
+        : null,
+    });
 
     return {
       decision: "accept",
@@ -195,6 +245,13 @@ export async function reviewImportCandidate(
   const reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
     importRecordService,
     importCandidateService,
+  });
+  await recordAcceptedCandidateMemory({
+    userId: user.id,
+    candidate: acceptedCandidate,
+    categoryMemoryService: dependencies.createCategoryMemoryService
+      ? await dependencies.createCategoryMemoryService()
+      : null,
   });
 
   return {

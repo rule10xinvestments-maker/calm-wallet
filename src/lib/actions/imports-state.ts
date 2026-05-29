@@ -41,6 +41,37 @@ export const initialImportIntakeActionState: ImportIntakeActionState = {
   intake: null,
 };
 
+export type ReceiptImageUploadActionState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+  upload: StagedImportIntakeResult | null;
+};
+
+export const initialReceiptImageUploadActionState: ReceiptImageUploadActionState = {
+  status: "idle",
+  message: null,
+  upload: null,
+};
+
+export type CsvBankStatementUploadResult = {
+  upload: StagedImportIntakeResult;
+  ingestion: ImportParserResultIngestionResult | null;
+  parserSkippedRowCount: number;
+  duplicateRowCount: number;
+};
+
+export type CsvBankStatementUploadActionState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+  result: CsvBankStatementUploadResult | null;
+};
+
+export const initialCsvBankStatementUploadActionState: CsvBankStatementUploadActionState = {
+  status: "idle",
+  message: null,
+  result: null,
+};
+
 export type ImportUploadTransportResult = {
   importRecordId: string;
   importType: ImportRecordType;
@@ -139,6 +170,18 @@ export const initialImportParserResultIngestionActionState: ImportParserResultIn
   status: "idle",
   message: null,
   ingestion: null,
+};
+
+export type ReceiptCandidateStagingActionState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+  candidate: ImportCandidate | null;
+};
+
+export const initialReceiptCandidateStagingActionState: ReceiptCandidateStagingActionState = {
+  status: "idle",
+  message: null,
+  candidate: null,
 };
 
 export type ImportCandidateReviewDecisionResult = {
