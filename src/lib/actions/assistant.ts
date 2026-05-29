@@ -6,12 +6,39 @@ import type { AiActionLogInsert } from "@/domain/ai/runtime-log";
 import { createSupabaseTransactionService } from "@/domain/transactions/service";
 import { createSupabaseCategoryMemoryService } from "@/domain/category-memory/service";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
+import { logSafeAssistantActionError } from "@/lib/server/safe-error-logging";
 import { loadControlledCategoryOptions } from "@/lib/server/transactions-read-model";
 import {
   type AssistantActionState,
   runAssistantCommand,
   runNaturalLanguageAssistantCommand,
 } from "@/lib/server/assistant";
+
+function getOptionalFormString(formData: FormData, name: string) {
+  return typeof formData.get(name) === "string" ? String(formData.get(name)) : undefined;
+}
+
+function getSafeTransactionType(value: FormDataEntryValue | null) {
+  return value === "expense" || value === "income" ? value : null;
+}
+
+async function persistAssistantRuntimeLog(payload: AiActionLogInsert) {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.from("ai_action_logs").insert(payload satisfies AiActionLogInsert);
+  const error = result && typeof result === "object" && "error" in result ? result.error : null;
+
+  if (error) {
+    logSafeAssistantActionError(
+      {
+        operation: "assistantRuntimeLogInsert",
+        authenticatedUserPresent: Boolean(payload.user_id),
+        toolName: payload.tool_name,
+        table: "ai_action_logs",
+      },
+      error,
+    );
+  }
+}
 
 export async function assistantAction(_prevState: AssistantActionState, formData: FormData): Promise<AssistantActionState> {
   const auth = await requireAuthenticatedSession();
@@ -25,11 +52,22 @@ export async function assistantAction(_prevState: AssistantActionState, formData
     };
   }
 
-  const transactionService = await createSupabaseTransactionService();
   const naturalLanguageInput =
     typeof formData.get("naturalLanguageInput") === "string" ? String(formData.get("naturalLanguageInput")).trim() : "";
+  const manualToolName = String(formData.get("toolName") ?? "create_transaction") as
+    | "create_transaction"
+    | "list_transactions"
+    | "update_transaction"
+    | "delete_transaction"
+    | "restore_transaction"
+    | "recategorize_transaction"
+    | "summarize_spending"
+    | "answer_financial_question";
+  const transactionType = getSafeTransactionType(formData.get("transactionType"));
 
   try {
+    const transactionService = await createSupabaseTransactionService();
+
     if (naturalLanguageInput) {
       const categoryOptions = await loadControlledCategoryOptions();
       const categoryMemoryService = await createSupabaseCategoryMemoryService();
@@ -40,36 +78,25 @@ export async function assistantAction(_prevState: AssistantActionState, formData
         transactionService,
         categoryOptions,
         categoryMemoryService,
-        persistRuntimeLog: async (payload) => {
-          const supabase = await createSupabaseServerClient();
-          await supabase.from("ai_action_logs").insert(payload satisfies AiActionLogInsert);
-        },
+        persistRuntimeLog: persistAssistantRuntimeLog,
       });
     }
 
     return await runAssistantCommand({
       userId: user.id,
       input: {
-        toolName: String(formData.get("toolName") ?? "create_transaction") as
-          | "create_transaction"
-          | "list_transactions"
-          | "update_transaction"
-          | "delete_transaction"
-          | "restore_transaction"
-          | "recategorize_transaction"
-          | "summarize_spending"
-          | "answer_financial_question",
-        transactionId: typeof formData.get("transactionId") === "string" ? String(formData.get("transactionId")) : undefined,
+        toolName: manualToolName,
+        transactionId: getOptionalFormString(formData, "transactionId"),
         transactionType: (formData.get("transactionType") as "expense" | "income" | null) ?? undefined,
-        amount: typeof formData.get("amount") === "string" ? String(formData.get("amount")) : undefined,
-        merchant: typeof formData.get("merchant") === "string" ? String(formData.get("merchant")) : undefined,
-        note: typeof formData.get("note") === "string" ? String(formData.get("note")) : undefined,
-        currency: typeof formData.get("currency") === "string" ? String(formData.get("currency")) : undefined,
-        occurredAt: typeof formData.get("occurredAt") === "string" ? String(formData.get("occurredAt")) : undefined,
-        occurredFrom: typeof formData.get("occurredFrom") === "string" ? String(formData.get("occurredFrom")) : undefined,
-        occurredTo: typeof formData.get("occurredTo") === "string" ? String(formData.get("occurredTo")) : undefined,
-        categoryId: typeof formData.get("categoryId") === "string" ? String(formData.get("categoryId")) : undefined,
-        categoryLabel: typeof formData.get("categoryLabel") === "string" ? String(formData.get("categoryLabel")) : undefined,
+        amount: getOptionalFormString(formData, "amount"),
+        merchant: getOptionalFormString(formData, "merchant"),
+        note: getOptionalFormString(formData, "note"),
+        currency: getOptionalFormString(formData, "currency"),
+        occurredAt: getOptionalFormString(formData, "occurredAt"),
+        occurredFrom: getOptionalFormString(formData, "occurredFrom"),
+        occurredTo: getOptionalFormString(formData, "occurredTo"),
+        categoryId: getOptionalFormString(formData, "categoryId"),
+        categoryLabel: getOptionalFormString(formData, "categoryLabel"),
         questionKind:
           (formData.get("questionKind") as
             | "monthly_spending_total"
@@ -85,12 +112,20 @@ export async function assistantAction(_prevState: AssistantActionState, formData
           typeof formData.get("uncertaintyReason") === "string" ? String(formData.get("uncertaintyReason")) : undefined,
       },
       transactionService,
-      persistRuntimeLog: async (payload) => {
-        const supabase = await createSupabaseServerClient();
-        await supabase.from("ai_action_logs").insert(payload satisfies AiActionLogInsert);
-      },
+      persistRuntimeLog: persistAssistantRuntimeLog,
     });
-  } catch {
+  } catch (error) {
+    logSafeAssistantActionError(
+      {
+        operation: "assistantAction",
+        authenticatedUserPresent: true,
+        actionName: naturalLanguageInput ? "natural_language_quick_add" : "manual_action",
+        toolName: naturalLanguageInput ? null : manualToolName,
+        transactionType,
+      },
+      error,
+    );
+
     return {
       ...initialAssistantActionState,
       status: "error",

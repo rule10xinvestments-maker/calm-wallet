@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_TRANSACTION_SOURCE } from "@/domain/transactions/types";
 import type { ControlledCategory } from "@/domain/assistant/category-resolver";
 import { buildAssistantToolRequest, runAssistantCommand, runNaturalLanguageAssistantCommand } from "@/lib/server/assistant";
@@ -147,6 +147,14 @@ const controlledCategories: ControlledCategory[] = [
 ];
 
 describe("assistant server integration", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("builds a create_transaction request with locked source values", () => {
     const request = buildAssistantToolRequest({
       toolName: "create_transaction",

@@ -2,6 +2,19 @@ import { createAiRuntimeLogPayload } from "@/domain/ai/runtime-log";
 import { AI_TOOL_REGISTRY, getAiRegisteredTool, type AiToolExecutorDependencies } from "@/domain/ai/tool-registry";
 import { rejectUnsupportedTool } from "@/domain/ai/tool-policy";
 import type { AiRuntimeContext, AiToolExecutionResult, AiToolRequest } from "@/domain/ai/tool-types";
+import { logSafeAssistantActionError } from "@/lib/server/safe-error-logging";
+
+function getSafeTransactionType(input: unknown) {
+  if (input && typeof input === "object" && "transactionType" in input) {
+    const transactionType = (input as { transactionType?: unknown }).transactionType;
+
+    if (transactionType === "expense" || transactionType === "income") {
+      return transactionType;
+    }
+  }
+
+  return null;
+}
 
 export async function executeAiTool(args: {
   context: AiRuntimeContext;
@@ -92,7 +105,17 @@ export async function executeAiTool(args: {
         result,
       }),
     };
-  } catch {
+  } catch (error) {
+    logSafeAssistantActionError(
+      {
+        operation: "executeAiTool",
+        authenticatedUserPresent: Boolean(args.context.userId),
+        toolName: tool.toolName,
+        transactionType: getSafeTransactionType(policy.validatedRequest.input),
+      },
+      error,
+    );
+
     const result: AiToolExecutionResult<typeof tool.toolName> = {
       ok: false,
       toolName: tool.toolName,

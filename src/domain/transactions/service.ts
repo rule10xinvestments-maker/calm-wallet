@@ -32,7 +32,14 @@ import type {
   UpdateTransactionInput,
 } from "@/domain/transactions/types";
 
-type QueryResult<T> = Promise<{ data: T | null; error: { message: string } | null }>;
+type QueryError = {
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+type QueryResult<T> = Promise<{ data: T | null; error: QueryError | null }>;
 
 export type TransactionServiceAdapter = {
   insertTransaction(row: Database["public"]["Tables"]["transactions"]["Insert"]): QueryResult<TransactionRow>;
@@ -53,9 +60,17 @@ function getActorContext(actorContext?: TransactionActorContext): TransactionAct
   return actorContext ?? { actorType: "user" };
 }
 
-function assertResult<T>(result: { data: T | null; error: { message: string } | null }, fallbackMessage: string) {
+function makeServiceError(error: QueryError) {
+  const serviceError = new Error(error.message) as Error & Pick<QueryError, "code" | "details" | "hint">;
+  serviceError.code = error.code;
+  serviceError.details = error.details;
+  serviceError.hint = error.hint;
+  return serviceError;
+}
+
+function assertResult<T>(result: { data: T | null; error: QueryError | null }, fallbackMessage: string) {
   if (result.error) {
-    throw new Error(result.error.message);
+    throw makeServiceError(result.error);
   }
 
   if (result.data === null) {
@@ -289,7 +304,7 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
       const result = await adapter.getLatestSoftDeletedTransaction(userId);
 
       if (result.error) {
-        throw new Error(result.error.message);
+        throw makeServiceError(result.error);
       }
 
       return result.data ? mapTransactionRowToDomain(result.data) : null;

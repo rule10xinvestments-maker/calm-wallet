@@ -481,4 +481,136 @@ describe("assistant action", () => {
     expect(result.status).toBe("success");
     expect(result.message).toBe("Saved $5.00 as Needs Review.");
   });
+
+  it("logs safe diagnostics when the assistant action throws before command execution", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const databaseError = Object.assign(new Error("Could not find the 'item_name' column of 'transactions' in the schema cache"), {
+      code: "PGRST204",
+    });
+
+    requireAuthenticatedSession.mockResolvedValue({
+      user: {
+        id: "user-1",
+      },
+    });
+    createSupabaseTransactionService.mockRejectedValueOnce(databaseError);
+
+    try {
+      const { assistantAction } = await import("@/lib/actions/assistant");
+      const formData = new FormData();
+      formData.set("naturalLanguageInput", "private rent note 50");
+
+      const result = await assistantAction(
+        {
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        },
+        formData,
+      );
+
+      expect(result.status).toBe("error");
+      expect(result.message).toBe("Assistant action could not be completed.");
+      expect(consoleError).toHaveBeenCalledOnce();
+      const [, details] = consoleError.mock.calls[0];
+      expect(details).toMatchObject({
+        operation: "assistantAction",
+        authenticatedUserPresent: true,
+        actionName: "natural_language_quick_add",
+        toolName: null,
+        transactionType: null,
+        errorCode: "PGRST204",
+        errorMessage: "Could not find the 'item_name' column of 'transactions' in the schema cache",
+      });
+      expect(JSON.stringify(details)).not.toContain("private rent note");
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("logs runtime-log insert failures without failing the assistant action", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const transactionService = {
+      createTransaction: vi.fn(),
+      updateTransaction: vi.fn(),
+      deleteTransaction: vi.fn(),
+      recategorizeTransaction: vi.fn(),
+      listTransactions: vi.fn(),
+    };
+    const runtimeLogPayload: AiActionLogInsert = {
+      user_id: "user-1",
+      tool_name: "create_transaction",
+      raw_payload: {
+        toolName: "create_transaction",
+        input: {
+          transactionType: "income",
+          amountMinor: 7000,
+        },
+      },
+      validated_payload: null,
+      policy_outcome: "allowed",
+      result_summary: "Executed create_transaction successfully.",
+      error_code: null,
+    };
+
+    requireAuthenticatedSession.mockResolvedValue({
+      user: {
+        id: "user-1",
+      },
+    });
+    createSupabaseTransactionService.mockResolvedValue(transactionService);
+    insert.mockResolvedValueOnce({
+      error: Object.assign(new Error("violates row-level security policy for table \"ai_action_logs\""), {
+        code: "42501",
+      }),
+    });
+    runAssistantCommand.mockImplementationOnce(async ({ persistRuntimeLog }) => {
+      await persistRuntimeLog(runtimeLogPayload);
+
+      return {
+        status: "success",
+        message: "Saved income.",
+        reviewState: "reviewed",
+        latestTransaction: null,
+        recentItems: [],
+      };
+    });
+
+    try {
+      const { assistantAction } = await import("@/lib/actions/assistant");
+      const formData = new FormData();
+      formData.set("toolName", "create_transaction");
+      formData.set("transactionType", "income");
+      formData.set("amount", "70");
+
+      const result = await assistantAction(
+        {
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        },
+        formData,
+      );
+
+      expect(result.status).toBe("success");
+      expect(consoleError).toHaveBeenCalledWith("[assistant-action-error]", {
+        operation: "assistantRuntimeLogInsert",
+        authenticatedUserPresent: true,
+        actionName: null,
+        toolName: "create_transaction",
+        transactionType: null,
+        errorCode: "42501",
+        errorMessage: "violates row-level security policy for table \"ai_action_logs\"",
+        errorName: "Error",
+        table: "ai_action_logs",
+        functionName: null,
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
 });

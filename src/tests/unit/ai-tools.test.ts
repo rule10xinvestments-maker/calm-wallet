@@ -472,31 +472,51 @@ describe("AI tool executor", () => {
   });
 
   it("returns a generic execution failure message without leaking internals", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const transactions = makeTransactionServices();
-    vi.mocked(transactions.createTransaction).mockRejectedValueOnce(new Error("database exploded"));
-
-    const result = await executeAiTool({
-      context: { userId: "user-1", isAuthenticated: true },
-      request: {
-        toolName: "create_transaction",
-        input: {
-          transactionType: "expense",
-          amountMinor: 4200,
-          currency: "USD",
-          occurredAt: "2026-04-21T00:00:00.000Z",
-          source: "manual",
-        },
-      },
-      services: { transactions },
+    const databaseError = Object.assign(new Error("relation \"public.transactions\" does not exist"), {
+      code: "42P01",
     });
+    vi.mocked(transactions.createTransaction).mockRejectedValueOnce(databaseError);
 
-    expect(result.result.ok).toBe(false);
-    if (!result.result.ok) {
-      expect(result.result.error.code).toBe("tool_execution_failed");
-      expect(result.result.error.message).toBe("Assistant action could not be completed.");
+    try {
+      const result = await executeAiTool({
+        context: { userId: "user-1", isAuthenticated: true },
+        request: {
+          toolName: "create_transaction",
+          input: {
+            transactionType: "expense",
+            amountMinor: 4200,
+            currency: "USD",
+            occurredAt: "2026-04-21T00:00:00.000Z",
+            source: "manual",
+          },
+        },
+        services: { transactions },
+      });
+
+      expect(result.result.ok).toBe(false);
+      if (!result.result.ok) {
+        expect(result.result.error.code).toBe("tool_execution_failed");
+        expect(result.result.error.message).toBe("Assistant action could not be completed.");
+      }
+      expect(result.runtimeLog?.policy_outcome).toBe("invalid");
+      expect(result.runtimeLog?.error_code).toBe("tool_execution_failed");
+      expect(consoleError).toHaveBeenCalledWith("[assistant-action-error]", {
+        operation: "executeAiTool",
+        authenticatedUserPresent: true,
+        actionName: null,
+        toolName: "create_transaction",
+        transactionType: "expense",
+        errorCode: "42P01",
+        errorMessage: "relation \"public.transactions\" does not exist",
+        errorName: "Error",
+        table: "transactions",
+        functionName: null,
+      });
+    } finally {
+      consoleError.mockRestore();
     }
-    expect(result.runtimeLog?.policy_outcome).toBe("invalid");
-    expect(result.runtimeLog?.error_code).toBe("tool_execution_failed");
   });
 });
 
