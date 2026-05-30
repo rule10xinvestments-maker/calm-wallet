@@ -248,7 +248,7 @@ function SpendingMixSummaryChart({
   }
 
   return (
-    <div className="grid gap-4 rounded-lg border border-slate-100 bg-slate-50/70 p-3 md:grid-cols-[180px_minmax(24rem,1fr)] md:items-center">
+    <div className="space-y-4 rounded-lg border border-slate-100 bg-slate-50/70 p-3">
       <div className="relative mx-auto aspect-square w-full max-w-[180px]" aria-label={`${segment === "income" ? "Income" : "Expenses"} category share chart`} role="img">
         <div className="absolute inset-x-[19%] bottom-[10%] h-7 rounded-full bg-slate-300/40 blur-md" />
         <svg className="relative h-full w-full drop-shadow-sm" viewBox="0 0 120 120">
@@ -293,12 +293,12 @@ function SpendingMixSummaryChart({
           </text>
         </svg>
       </div>
-      <div className="min-w-0 space-y-2 md:min-w-[24rem]" aria-label={`${segment === "income" ? "Income" : "Expenses"} category legend`}>
+      <div className="min-w-0 space-y-2" aria-label={`${segment === "income" ? "Income" : "Expenses"} category legend`}>
         {chart.items.map((item) => (
-          <div key={item.key} className="grid grid-cols-[auto_minmax(8rem,1fr)] items-start gap-x-2 gap-y-1 rounded-md bg-white px-2.5 py-2 shadow-sm sm:grid-cols-[auto_minmax(14rem,1fr)_auto] sm:items-center">
+          <div key={item.key} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-md bg-white px-2.5 py-2 shadow-sm sm:items-center">
             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
             <span className="min-w-0 text-sm font-medium leading-5 text-slate-800">{item.label}</span>
-            <span className="col-start-2 whitespace-nowrap text-xs font-semibold text-slate-600 sm:col-start-auto">
+            <span className="whitespace-nowrap text-xs font-semibold text-slate-600">
               {item.amountDisplay} - {item.percent}%
             </span>
           </div>

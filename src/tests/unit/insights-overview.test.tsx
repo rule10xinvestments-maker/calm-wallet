@@ -204,7 +204,8 @@ describe("insights overview", () => {
     expect(screen.getAllByText("Dining").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Transport").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Expenses category legend").querySelector(".truncate")).not.toBeInTheDocument();
-    expect(container.querySelector(".md\\:min-w-\\[24rem\\]")).toBeInTheDocument();
+    expect(container.querySelector(".md\\:min-w-\\[24rem\\]")).not.toBeInTheDocument();
+    expect(container.querySelector(".md\\:grid-cols-\\[180px_minmax\\(24rem\\2c 1fr\\)\\]")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Dining category icon" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Transport category icon" })).toBeInTheDocument();
     expect(screen.getByText("$34")).toBeInTheDocument();
