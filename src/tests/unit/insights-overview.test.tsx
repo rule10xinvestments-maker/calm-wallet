@@ -166,9 +166,21 @@ describe("insights overview", () => {
   });
 
   it("renders category mix bars with percentages while keeping category rows", () => {
-    renderInsights(
+    const { container } = renderInsights(
       makeInsightsData({
         categoryBreakdown: [
+          makeCategory({
+            label: "Needs category",
+            amountMinor: 5200,
+            amountDisplay: "$52",
+            transactionCount: 3,
+          }),
+          makeCategory({
+            label: "Housing",
+            amountMinor: 4000,
+            amountDisplay: "$40",
+            transactionCount: 1,
+          }),
           makeCategory({
             label: "Dining",
             amountMinor: 3400,
@@ -176,7 +188,7 @@ describe("insights overview", () => {
             transactionCount: 1,
           }),
           makeCategory({
-            label: "Travel",
+            label: "Transport",
             amountMinor: 3000,
             amountDisplay: "$30",
             transactionCount: 1,
@@ -187,18 +199,22 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("img", { name: "Expenses category share chart" })).toBeInTheDocument();
     expect(screen.queryByText("Tracked")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Needs category").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Housing").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Dining").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Travel").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Transport").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Expenses category legend").querySelector(".truncate")).not.toBeInTheDocument();
+    expect(container.querySelector(".md\\:min-w-\\[24rem\\]")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Dining category icon" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Travel category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Transport category icon" })).toBeInTheDocument();
     expect(screen.getByText("$34")).toBeInTheDocument();
     expect(screen.getAllByText("$30").length).toBeGreaterThan(0);
-    expect(screen.getByText("53%")).toBeInTheDocument();
-    expect(screen.getByText("47%")).toBeInTheDocument();
-    expect(screen.getByText("$34 - 53%")).toBeInTheDocument();
-    expect(screen.getByText("$30 - 47%")).toBeInTheDocument();
-    expect(screen.getByRole("meter", { name: "Dining spending share 53%" })).toBeInTheDocument();
-    expect(screen.getByRole("meter", { name: "Travel spending share 47%" })).toBeInTheDocument();
+    expect(screen.getByText("$52 - 33%")).toBeInTheDocument();
+    expect(screen.getByText("$40 - 26%")).toBeInTheDocument();
+    expect(screen.getByText("$34 - 22%")).toBeInTheDocument();
+    expect(screen.getByText("$30 - 19%")).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Dining spending share 22%" })).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Transport spending share 19%" })).toBeInTheDocument();
   });
 
   it("defaults to expenses and expands recent entries inline", () => {
