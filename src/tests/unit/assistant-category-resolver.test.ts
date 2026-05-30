@@ -51,6 +51,8 @@ describe("controlled category resolver", () => {
 
   it("maps common Romanian grocery phrases to Groceries", () => {
     for (const phrase of [
+      "chifla",
+      "chifle",
       "cartofi",
       "apa",
       "ap\u0103",
@@ -62,6 +64,9 @@ describe("controlled category resolver", () => {
       "bidoane ap\u0103",
       "paine",
       "p\u00e2ine",
+      "franzela",
+      "covrig",
+      "covrigi",
       "lapte",
       "oua",
       "ou\u0103",
@@ -69,14 +74,22 @@ describe("controlled category resolver", () => {
       "pui",
       "peste",
       "pe\u0219te",
+      "salam",
+      "sunca",
+      "\u0219unc\u0103",
       "legume",
       "fructe",
       "mere",
       "banane",
       "rosii",
       "ro\u0219ii",
+      "ceapa",
+      "ceap\u0103",
+      "usturoi",
       "branza",
       "br\u00e2nz\u0103",
+      "cascaval",
+      "ca\u0219caval",
       "iaurt",
       "bere",
       "cola",
@@ -137,6 +150,24 @@ describe("controlled category resolver", () => {
       "condimente",
       "cereale",
       "unt",
+      "detergent",
+      "sapun",
+      "s\u0103pun",
+      "sampon",
+      "\u0219ampon",
+      "hartie",
+      "h\u00e2rtie",
+      "servetele",
+      "\u0219erve\u021bele",
+      "kaufland",
+      "lidl",
+      "carrefour",
+      "mega image",
+      "profi",
+      "auchan",
+      "penny",
+      "selgros",
+      "cora",
     ]) {
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
         expect.objectContaining({ confidence: "clear", reviewRecommendation: "reviewed", categoryId: "cat-groceries" }),
@@ -147,6 +178,7 @@ describe("controlled category resolver", () => {
   it("maps dining phrases to Dining and lets dining context override bere", () => {
     for (const phrase of [
       "restaurant",
+      "terasa",
       "cafe",
       "cafenea",
       "coffee",
@@ -157,11 +189,21 @@ describe("controlled category resolver", () => {
       "pr\u00e2nz",
       "cina",
       "cin\u0103",
+      "mic dejun",
       "pizza",
       "shaorma",
       "kebab",
       "burger",
       "hotdog",
+      "fast food",
+      "delivery",
+      "glovo",
+      "tazz",
+      "bolt food",
+      "kfc",
+      "mcdonalds",
+      "subway",
+      "starbucks",
       "bere la restaurant",
       "bere bar",
     ]) {
@@ -180,7 +222,7 @@ describe("controlled category resolver", () => {
   });
 
   it("maps transport, income, health, personal, shopping, and entertainment aliases", () => {
-    for (const phrase of ["taxi", "uber", "bolt", "bus", "autobuz", "metro", "metrou", "train", "tren", "tram", "tramvai", "transport", "carburant", "benzina", "benzin\u0103", "motorina", "motorin\u0103", "combustibil", "fuel", "gas station", "petrol", "diesel", "parking", "toll", "car wash", "car repair", "peco", "parcare", "taxa drum", "tax\u0103 drum", "spalatorie auto", "sp\u0103l\u0103torie auto", "reparatie masina", "repara\u021bie ma\u0219in\u0103", "service auto"]) {
+    for (const phrase of ["taxi", "uber", "bolt", "bus", "autobuz", "metro", "metrou", "train", "tren", "tram", "tramvai", "transport", "bilet", "ticket", "carburant", "benzina", "benzin\u0103", "motorina", "motorin\u0103", "combustibil", "fuel", "gas station", "petrol", "diesel", "parking", "toll", "car wash", "car repair", "peco", "parcare", "rovinieta", "taxa drum", "tax\u0103 drum", "spalatorie auto", "sp\u0103l\u0103torie auto", "reparatie masina", "repara\u021bie ma\u0219in\u0103", "service auto"]) {
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
         expect.objectContaining({ confidence: "clear", categoryId: "cat-transport" }),
       );
@@ -198,7 +240,7 @@ describe("controlled category resolver", () => {
       );
     }
 
-    for (const phrase of ["pharmacy", "farmacie", "medicine", "medication", "medicamente", "doctor", "medic", "dentist", "stomatolog", "hospital", "spital", "clinic", "clinica", "clinic\u0103", "vitamins", "vitamine"]) {
+    for (const phrase of ["pharmacy", "farmacie", "medicine", "medication", "medicamente", "doctor", "medic", "dentist", "stomatolog", "analize", "consultatie", "consulta\u021bie", "tratament", "treatment", "hospital", "spital", "clinic", "clinica", "clinic\u0103", "vitamins", "vitamine"]) {
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
         expect.objectContaining({ confidence: "clear", categoryId: "cat-health" }),
       );
@@ -213,6 +255,8 @@ describe("controlled category resolver", () => {
     for (const phrase of [
       "clothes",
       "haine",
+      "tricou",
+      "pantaloni",
       "shoes",
       "incaltaminte",
       "\u00eenc\u0103l\u021b\u0103minte",
@@ -256,7 +300,7 @@ describe("controlled category resolver", () => {
       );
     }
 
-    for (const phrase of ["movie", "movies", "cinema", "concert", "games", "gaming", "jocuri", "netflix", "spotify", "subscription", "streaming", "event", "abonament", "eveniment"]) {
+    for (const phrase of ["movie", "movies", "cinema", "concert", "games", "gaming", "jocuri", "netflix", "spotify", "youtube premium", "chatgpt", "openai", "icloud", "google one", "microsoft", "notion", "canva", "adobe", "subscription", "streaming", "event", "abonament", "eveniment"]) {
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
         expect.objectContaining({ confidence: "clear", categoryId: "cat-entertainment" }),
       );

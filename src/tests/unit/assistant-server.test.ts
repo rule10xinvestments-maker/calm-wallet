@@ -837,7 +837,7 @@ describe("assistant server integration", () => {
       }),
     );
     expect(result.status).toBe("success");
-    expect(result.message).toBe("Saved €30.00 as Needs Review.");
+    expect(result.message).toBe("Saved €30.00 to tracked items.");
   });
 
   it("creates multiple amount-first quick-add transactions with per-item currencies", async () => {
@@ -1002,6 +1002,9 @@ describe("assistant server integration", () => {
 
   it.each([
     ["cola 60", "cola", "USD", 6000],
+    ["2ron chifla", "chifla", "RON", 200],
+    ["4ron cola", "cola", "RON", 400],
+    ["30ron kaufland", "kaufland", "RON", 3000],
     ["60 lei cola", "cola", "RON", 6000],
     ["coca cola 60", "coca cola", "USD", 6000],
     ["suc cola 60", "suc cola", "USD", 6000],
@@ -1036,6 +1039,100 @@ describe("assistant server integration", () => {
     });
     expect(result.status).toBe("success");
     expect(result.message).toContain("to tracked items");
+  });
+
+  it.each([
+    ["20ron shaorma", "shaorma", 2000, "33333333-3333-3333-3333-333333333333"],
+    ["14ron taxi", "taxi", 1400, "77777777-7777-7777-7777-777777777777"],
+    ["300ron chirie", "chirie", 30000, "11111111-aaaa-aaaa-aaaa-111111111111"],
+    ["25ron farmacie", "farmacie", 2500, "88888888-8888-8888-8888-888888888888"],
+    ["50ron tricou", "tricou", 5000, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
+    ["20eur chatgpt", "chatgpt", 2000, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"],
+  ])("categorizes common consumer quick-add vocabulary: %s", async (text, merchant, amountMinor, categoryId) => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text,
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor,
+        itemName: merchant,
+        merchant: null,
+        categoryId,
+      }),
+      { actorType: "ai" },
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toMatchObject({
+      reviewState: "needs_attention",
+    });
+    expect(result.status).toBe("success");
+  });
+
+  it("keeps multi-entry quick-add categorization independent per item", async () => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "4ron cola 2ron chifla",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 400,
+        currency: "RON",
+        itemName: "cola",
+        categoryId: "44444444-4444-4444-4444-444444444444",
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 200,
+        currency: "RON",
+        itemName: "chifla",
+        categoryId: "44444444-4444-4444-4444-444444444444",
+      }),
+    );
+    expect(result.status).toBe("success");
+    expect(result.message).toContain("Saved 2 items:");
+  });
+
+  it("keeps digital and grocery multi-entry quick-add categories separate", async () => {
+    const services = makeTransactionServices();
+
+    await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "20eur chatgpt 30ron kaufland",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 2000,
+        currency: "EUR",
+        itemName: "chatgpt",
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 3000,
+        currency: "RON",
+        itemName: "kaufland",
+        categoryId: "44444444-4444-4444-4444-444444444444",
+      }),
+    );
   });
 
   it.each([
