@@ -1,13 +1,19 @@
+export type NaturalLanguageCreateTransactionIntent = {
+  kind: "create_transaction";
+  transactionType: "expense" | "income";
+  amount: string;
+  currency?: string;
+  merchant?: string;
+  note?: string;
+  reviewState?: "needs_attention";
+  uncertaintyReason?: string;
+};
+
 export type NaturalLanguageAssistantIntent =
+  | NaturalLanguageCreateTransactionIntent
   | {
-      kind: "create_transaction";
-      transactionType: "expense" | "income";
-      amount: string;
-      currency?: string;
-      merchant?: string;
-      note?: string;
-      reviewState?: "needs_attention";
-      uncertaintyReason?: string;
+      kind: "create_transactions";
+      entries: NaturalLanguageCreateTransactionIntent[];
     }
   | {
       kind: "list_recent";
@@ -76,11 +82,13 @@ export type NaturalLanguageCorrectionTarget =
 
 const amountSource = "(\\d+(?:,\\d{3})*(?:\\.\\d{1,2})?|\\.\\d{1,2})";
 const supportedCurrencyTokens = new Map<string, string>([
+  ["$", "USD"],
   ["USD", "USD"],
   ["DOLLAR", "USD"],
   ["DOLLARS", "USD"],
   ["DOLAR", "USD"],
   ["DOLARI", "USD"],
+  ["€", "EUR"],
   ["EUR", "EUR"],
   ["EURO", "EUR"],
   ["EUROS", "EUR"],
@@ -97,8 +105,18 @@ const supportedCurrencyTokenSource = Array.from(supportedCurrencyTokens.keys())
   .sort((a, b) => b.length - a.length)
   .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");
-const amountPattern = new RegExp(`\\$?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?`, "i");
-const signedAmountPattern = new RegExp(`(^|\\s)([+-])\\s*\\$?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?(?=\\s|$)`, "i");
+const amountPattern = new RegExp(
+  `(^|\\s)(?:(${supportedCurrencyTokenSource})\\s*)?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?(?=\\s|$)`,
+  "i",
+);
+const signedAmountPattern = new RegExp(
+  `(^|\\s)([+-])\\s*(?:(${supportedCurrencyTokenSource})\\s*)?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?(?=\\s|$)`,
+  "i",
+);
+const multiAmountPattern = new RegExp(
+  `(^|[\\s,;])([+-])?\\s*(?:(${supportedCurrencyTokenSource})\\s*)?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?(?=[\\s,;.!?]|$)`,
+  "gi",
+);
 
 function normalizeInput(input: string) {
   return input.trim().replace(/\s+/g, " ");
@@ -122,8 +140,20 @@ function extractCurrencyToken(input: string) {
   };
 }
 
+function stripCurrencyTokens(input: string) {
+  return input
+    .split(" ")
+    .filter((part) => {
+      const normalized = part.replace(/[.,;:!?]+$/g, "").toUpperCase();
+      return !supportedCurrencyTokens.has(normalized);
+    })
+    .join(" ")
+    .trim();
+}
+
 function cleanMerchant(value: string) {
   const cleaned = value
+    .replace(/^[+-]\s*/, "")
     .replace(/^(?:on|for|at|from)\s+/i, "")
     .replace(/^(?:o|un|una|niste|niște|a|an|some)\s+/i, "")
     .replace(/^(?:o|un|unii|niste|niște)\s+/i, "")
@@ -206,13 +236,13 @@ function stripAmount(input: string, amountMatch: RegExpMatchArray) {
 function extractAmount(input: string) {
   const signedAmountMatch = input.match(signedAmountPattern);
 
-  if (signedAmountMatch?.[2] && signedAmountMatch[3]) {
+  if (signedAmountMatch?.[2] && signedAmountMatch[4]) {
     const signStart = (signedAmountMatch.index ?? 0) + (signedAmountMatch[1]?.length ?? 0);
     const signEnd = (signedAmountMatch.index ?? 0) + signedAmountMatch[0].length;
-    const currencyToken = signedAmountMatch[4]?.toUpperCase();
+    const currencyToken = (signedAmountMatch[3] ?? signedAmountMatch[5])?.toUpperCase();
 
     return {
-      amount: signedAmountMatch[3],
+      amount: signedAmountMatch[4],
       currency: currencyToken ? supportedCurrencyTokens.get(currencyToken) : undefined,
       text: `${input.slice(0, signStart)} ${input.slice(signEnd)}`.trim().replace(/\s+/g, " "),
       transactionType: signedAmountMatch[2] === "+" ? ("income" as const) : ("expense" as const),
@@ -221,16 +251,84 @@ function extractAmount(input: string) {
 
   const amountMatch = input.match(amountPattern);
 
-  if (!amountMatch?.[1]) {
+  if (!amountMatch?.[3]) {
     return null;
   }
 
   return {
-    amount: amountMatch[1],
-    currency: amountMatch[2] ? supportedCurrencyTokens.get(amountMatch[2].toUpperCase()) : undefined,
+    amount: amountMatch[3],
+    currency: (amountMatch[2] ?? amountMatch[4])
+      ? supportedCurrencyTokens.get((amountMatch[2] ?? amountMatch[4] ?? "").toUpperCase())
+      : undefined,
     text: stripAmount(input, amountMatch).replace(/\s+/g, " "),
     transactionType: undefined,
   };
+}
+
+function findAmountOccurrences(input: string) {
+  const matches: Array<{
+    tokenStart: number;
+    tokenEnd: number;
+  }> = [];
+
+  multiAmountPattern.lastIndex = 0;
+
+  for (const match of input.matchAll(multiAmountPattern)) {
+    const matchStart = match.index ?? 0;
+    const prefixLength = match[1]?.length ?? 0;
+    const tokenStart = matchStart + prefixLength;
+    const tokenEnd = matchStart + match[0].length;
+
+    matches.push({
+      tokenStart,
+      tokenEnd,
+    });
+  }
+
+  return matches;
+}
+
+function cleanMultiEntryPart(value: string) {
+  return value
+    .replace(/^[\s,;:]+|[\s,;:]+$/g, "")
+    .replace(/^(?:and|si|și)\s+/i, "")
+    .replace(/\s+(?:and|si|și)$/i, "")
+    .trim();
+}
+
+function maybeParseMultiCreateIntent(input: string): NaturalLanguageAssistantIntent | null {
+  const occurrences = findAmountOccurrences(input);
+
+  if (occurrences.length < 2) {
+    return null;
+  }
+
+  const firstPrefix = cleanMultiEntryPart(input.slice(0, occurrences[0]?.tokenStart ?? 0));
+  const labelBeforeAmount = Boolean(firstPrefix);
+  const entries: NaturalLanguageCreateTransactionIntent[] = [];
+
+  for (let index = 0; index < occurrences.length; index += 1) {
+    const occurrence = occurrences[index]!;
+    const previous = occurrences[index - 1];
+    const next = occurrences[index + 1];
+    const amountToken = input.slice(occurrence.tokenStart, occurrence.tokenEnd).trim();
+    const label = labelBeforeAmount
+      ? cleanMultiEntryPart(input.slice(previous ? previous.tokenEnd : 0, occurrence.tokenStart))
+      : cleanMultiEntryPart(input.slice(occurrence.tokenEnd, next ? next.tokenStart : input.length));
+    const segment = labelBeforeAmount ? `${label} ${amountToken}`.trim() : `${amountToken} ${label}`.trim();
+    const parsed = parseNaturalLanguageAssistantInput(segment);
+
+    if (parsed.kind === "create_transaction") {
+      entries.push(parsed);
+    }
+  }
+
+  return entries.length > 1
+    ? {
+        kind: "create_transactions",
+        entries,
+      }
+    : null;
 }
 
 function cleanTargetReference(value: string) {
@@ -455,6 +553,12 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
     };
   }
 
+  const multiCreateIntent = maybeParseMultiCreateIntent(input);
+
+  if (multiCreateIntent) {
+    return multiCreateIntent;
+  }
+
   const amountResult = extractAmount(input);
 
   if (!amountResult) {
@@ -475,7 +579,7 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
   const amount = amountResult.amount;
   const withoutAmount = amountResult.text;
   const currencyResult = extractCurrencyToken(withoutAmount);
-  const cleanTextWithoutAmount = currencyResult.text;
+  const cleanTextWithoutAmount = stripCurrencyTokens(currencyResult.text);
   const currency = amountResult.currency ?? currencyResult.currency;
 
   if (amountResult.transactionType) {

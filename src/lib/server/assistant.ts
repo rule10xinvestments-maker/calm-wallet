@@ -9,6 +9,7 @@ import {
 } from "@/domain/assistant/category-resolver";
 import {
   parseNaturalLanguageAssistantInput,
+  type NaturalLanguageCreateTransactionIntent,
   type NaturalLanguageCorrectionTarget,
   type NaturalLanguageAssistantIntent,
 } from "@/domain/assistant/natural-language-parser";
@@ -76,6 +77,10 @@ export type AssistantActionState = {
 
 type ResolvedCreateTransactionIntent = Extract<NaturalLanguageAssistantIntent, { kind: "create_transaction" }> & {
   categoryResolution?: CategoryResolutionResult;
+};
+
+type ResolvedCreateTransactionsIntent = Extract<NaturalLanguageAssistantIntent, { kind: "create_transactions" }> & {
+  entries: ResolvedCreateTransactionIntent[];
 };
 
 type AssistantTransactionService = Pick<
@@ -729,6 +734,100 @@ function mapNaturalLanguageIntentToAssistantInput(
   return null;
 }
 
+async function resolveCreateTransactionIntent(args: {
+  userId: string;
+  intent: NaturalLanguageCreateTransactionIntent;
+  categoryOptions?: ControlledCategory[];
+  categoryMemoryService?: Pick<CategoryMemoryService, "findCategoryMemoryMatch">;
+}) {
+  const memoryMatch = args.categoryMemoryService
+    ? await args.categoryMemoryService.findCategoryMemoryMatch(args.userId, {
+        merchant: undefined,
+        description: args.intent.note,
+        transactionType: args.intent.transactionType,
+      })
+    : null;
+  const categoryResolution =
+    memoryMatch?.strength === "strong"
+      ? {
+          confidence: "clear" as const,
+          reviewRecommendation: "reviewed" as const,
+          categoryId: memoryMatch.category.id,
+          categorySlug: memoryMatch.category.slug,
+          categoryLabel: memoryMatch.category.label,
+          matchedAlias: "category memory",
+        }
+      : resolveControlledCategory({
+          phrase: [args.intent.merchant, args.intent.note].filter(Boolean).join(" "),
+          transactionType: args.intent.transactionType,
+          categories: args.categoryOptions ?? [],
+        });
+
+  return {
+    ...args.intent,
+    categoryResolution,
+    ...(categoryResolution.confidence === "clear"
+      ? {
+          reviewState: undefined,
+          uncertaintyReason: undefined,
+        }
+      : {}),
+  };
+}
+
+async function runResolvedCreateIntent(args: {
+  userId: string;
+  intent: ResolvedCreateTransactionIntent;
+  transactionService: AssistantTransactionService;
+  persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
+}) {
+  const assistantInput = mapNaturalLanguageIntentToAssistantInput(args.intent);
+
+  if (!assistantInput) {
+    return {
+      ...initialAssistantActionState,
+      status: "error" as const,
+      message: "That assistant action is not available yet.",
+    };
+  }
+
+  return runAssistantCommand({
+    userId: args.userId,
+    input: assistantInput,
+    transactionService: args.transactionService,
+    persistRuntimeLog: args.persistRuntimeLog,
+  });
+}
+
+function summarizeMultiCreateResults(results: AssistantActionState[]) {
+  const successes = results.filter((result) => result.status === "success" && result.latestTransaction);
+  const failures = results.filter((result) => result.status !== "success");
+
+  if (!successes.length) {
+    return {
+      ...initialAssistantActionState,
+      status: "error" as const,
+      message: failures[0]?.message ?? "Assistant action could not be completed.",
+    };
+  }
+
+  const lines = successes.map((result) => {
+    const transaction = result.latestTransaction!;
+    const title = transaction.itemName || transaction.merchant || "item";
+    return `- ${title} - ${formatMoney(transaction.amountMinor, transaction.currency)}`;
+  });
+
+  return {
+    ...initialAssistantActionState,
+    status: failures.length ? ("error" as const) : ("success" as const),
+    message: failures.length
+      ? `Saved ${successes.length} item${successes.length === 1 ? "" : "s"}, but ${failures.length} could not be saved.`
+      : `Saved ${successes.length} items:\n${lines.join("\n")}`,
+    reviewState: successes.at(-1)?.reviewState ?? null,
+    latestTransaction: successes.at(-1)?.latestTransaction ?? null,
+  };
+}
+
 export async function runNaturalLanguageAssistantCommand(args: {
   userId: string;
   text: string;
@@ -737,7 +836,8 @@ export async function runNaturalLanguageAssistantCommand(args: {
   categoryMemoryService?: Pick<CategoryMemoryService, "findCategoryMemoryMatch">;
   persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
 }): Promise<AssistantActionState> {
-  let intent: NaturalLanguageAssistantIntent | ResolvedCreateTransactionIntent = parseNaturalLanguageAssistantInput(args.text);
+  let intent: NaturalLanguageAssistantIntent | ResolvedCreateTransactionIntent | ResolvedCreateTransactionsIntent =
+    parseNaturalLanguageAssistantInput(args.text);
 
   if (intent.kind === "clarification_needed" || intent.kind === "unsupported") {
     return {
@@ -891,39 +991,39 @@ export async function runNaturalLanguageAssistantCommand(args: {
   }
 
   if (intent.kind === "create_transaction") {
-    const memoryMatch = args.categoryMemoryService
-      ? await args.categoryMemoryService.findCategoryMemoryMatch(args.userId, {
-          merchant: undefined,
-          description: intent.note,
-          transactionType: intent.transactionType,
-        })
-      : null;
-    const categoryResolution =
-      memoryMatch?.strength === "strong"
-        ? {
-            confidence: "clear" as const,
-            reviewRecommendation: "reviewed" as const,
-            categoryId: memoryMatch.category.id,
-            categorySlug: memoryMatch.category.slug,
-            categoryLabel: memoryMatch.category.label,
-            matchedAlias: "category memory",
-          }
-        : resolveControlledCategory({
-      phrase: [intent.merchant, intent.note].filter(Boolean).join(" "),
-      transactionType: intent.transactionType,
-      categories: args.categoryOptions ?? [],
-          });
+    intent = await resolveCreateTransactionIntent({
+      userId: args.userId,
+      intent,
+      categoryOptions: args.categoryOptions,
+      categoryMemoryService: args.categoryMemoryService,
+    });
+  }
 
-    intent = {
-      ...intent,
-      categoryResolution,
-      ...(categoryResolution.confidence === "clear"
-        ? {
-            reviewState: undefined,
-            uncertaintyReason: undefined,
-          }
-        : {}),
-    };
+  if (intent.kind === "create_transactions") {
+    const resolvedEntries = await Promise.all(
+      intent.entries.map((entry) =>
+        resolveCreateTransactionIntent({
+          userId: args.userId,
+          intent: entry,
+          categoryOptions: args.categoryOptions,
+          categoryMemoryService: args.categoryMemoryService,
+        }),
+      ),
+    );
+    const results: AssistantActionState[] = [];
+
+    for (const entry of resolvedEntries) {
+      const result = await runResolvedCreateIntent({
+        userId: args.userId,
+        intent: entry,
+        transactionService: args.transactionService,
+        persistRuntimeLog: args.persistRuntimeLog,
+      });
+
+      results.push(result);
+    }
+
+    return summarizeMultiCreateResults(results);
   }
 
   if (intent.kind === "answer_financial_question" && intent.questionKind === "category_spending_total") {

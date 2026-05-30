@@ -809,6 +809,164 @@ describe("assistant server integration", () => {
     expect(result.status).toBe("success");
   });
 
+  it("creates attached-currency signed expenses with clean item names and original currency", async () => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "-30eur chatgpt",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: 3000,
+        currency: "EUR",
+        itemName: "chatgpt",
+        merchant: null,
+      }),
+      { actorType: "ai" },
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toEqual(
+      expect.objectContaining({
+        currency: "USD",
+        itemName: expect.stringContaining("€"),
+      }),
+    );
+    expect(result.status).toBe("success");
+    expect(result.message).toBe("Saved €30.00 as Needs Review.");
+  });
+
+  it("creates multiple amount-first quick-add transactions with per-item currencies", async () => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "20eur sub 30ron kaufland",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: 2000,
+        currency: "EUR",
+        itemName: "sub",
+        merchant: null,
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: 3000,
+        currency: "RON",
+        itemName: "kaufland",
+        merchant: null,
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1].itemName).not.toMatch(/\d|eur|ron|usd|lei/i);
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1].itemName).not.toMatch(/\d|eur|ron|usd|lei/i);
+    expect(result.status).toBe("success");
+    expect(result.message).toContain("Saved 2 items:");
+    expect(result.message).toContain("sub");
+    expect(result.message).toContain("kaufland");
+  });
+
+  it("creates multiple label-first quick-add transactions without leaking amount tokens into titles", async () => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "sub 20eur kaufland 30ron",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 2000,
+        currency: "EUR",
+        itemName: "sub",
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 3000,
+        currency: "RON",
+        itemName: "kaufland",
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1].itemName).not.toMatch(/\d|eur|ron|usd|lei/i);
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1].itemName).not.toMatch(/\d|eur|ron|usd|lei/i);
+    expect(result.status).toBe("success");
+  });
+
+  it("creates separated multi-entry quick-add transactions", async () => {
+    const services = makeTransactionServices();
+
+    await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "20 eur sub, 30 ron kaufland",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 2000,
+        currency: "EUR",
+        itemName: "sub",
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 3000,
+        currency: "RON",
+        itemName: "kaufland",
+      }),
+    );
+  });
+
+  it("creates mixed income and expense entries from one quick-add message", async () => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "+1200ron salary -20ron lunch",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        transactionType: "income",
+        amountMinor: 120000,
+        currency: "RON",
+        itemName: "salary",
+        categoryId: "55555555-5555-5555-5555-555555555555",
+      }),
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: 2000,
+        currency: "RON",
+        itemName: "lunch",
+        categoryId: "33333333-3333-3333-3333-333333333333",
+      }),
+    );
+    expect(result.status).toBe("success");
+    expect(result.message).toContain("Saved 2 items:");
+  });
+
   it("saves a clear natural-language expense with the resolved controlled category id", async () => {
     const services = makeTransactionServices();
 

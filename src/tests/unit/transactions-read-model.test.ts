@@ -81,6 +81,25 @@ describe("transactions read model", () => {
     expect(items[0]?.amountDisplay).toBe("+€5.00");
   });
 
+  it("keeps attached-currency expense rows displayed in the original currency", () => {
+    const items = mapTransactionsToListItems([
+      makeTransaction({
+        itemName: "chatgpt",
+        merchant: null,
+        transactionType: "expense",
+        amountMinor: 3000,
+        currency: "EUR",
+      }),
+    ], {});
+
+    expect(items[0]).toMatchObject({
+      title: "chatgpt",
+      itemName: "chatgpt",
+      merchant: null,
+      amountDisplay: "-\u20ac30.00",
+    });
+  });
+
   it("builds lightweight tracked insights", () => {
     const data = buildInsightsData(
       [

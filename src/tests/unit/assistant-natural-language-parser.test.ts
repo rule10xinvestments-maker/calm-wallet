@@ -127,6 +127,62 @@ describe("natural-language assistant parser", () => {
       currency: "RON",
       merchant: "salariu",
     });
+
+    expect(parseNaturalLanguageAssistantInput("-30eur chatgpt")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "EUR",
+      merchant: "chatgpt",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("-30 eur chatgpt")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "EUR",
+      merchant: "chatgpt",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("chatgpt -30eur")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "EUR",
+      merchant: "chatgpt",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("chatgpt -30 eur")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "EUR",
+      merchant: "chatgpt",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("+30eur refund")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "30",
+      currency: "EUR",
+      merchant: "refund",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("salary +1200eur")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "1200",
+      currency: "EUR",
+      merchant: "salary",
+    });
   });
 
   it("consumes currency tokens without keeping them in the merchant label", () => {
@@ -158,6 +214,152 @@ describe("natural-language assistant parser", () => {
       merchant: "hotdog",
       reviewState: "needs_attention",
       uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("30eur chatgpt")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "EUR",
+      merchant: "chatgpt",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("30 eur chatgpt")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "EUR",
+      merchant: "chatgpt",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("30usd coffee")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "USD",
+      merchant: "coffee",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("-30usd coffee")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "USD",
+      merchant: "coffee",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("-30€ chatgpt")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "EUR",
+      merchant: "chatgpt",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+  });
+
+  it("splits multiple amount/currency groups into separate create intents", () => {
+    expect(parseNaturalLanguageAssistantInput("20eur sub 30ron kaufland")).toEqual({
+      kind: "create_transactions",
+      entries: [
+        {
+          kind: "create_transaction",
+          transactionType: "expense",
+          amount: "20",
+          currency: "EUR",
+          merchant: "sub",
+          reviewState: "needs_attention",
+          uncertaintyReason: "Category needs review.",
+        },
+        {
+          kind: "create_transaction",
+          transactionType: "expense",
+          amount: "30",
+          currency: "RON",
+          merchant: "kaufland",
+          reviewState: "needs_attention",
+          uncertaintyReason: "Category needs review.",
+        },
+      ],
+    });
+
+    expect(parseNaturalLanguageAssistantInput("sub 20eur kaufland 30ron")).toEqual({
+      kind: "create_transactions",
+      entries: [
+        {
+          kind: "create_transaction",
+          transactionType: "expense",
+          amount: "20",
+          currency: "EUR",
+          merchant: "sub",
+          reviewState: "needs_attention",
+          uncertaintyReason: "Category needs review.",
+        },
+        {
+          kind: "create_transaction",
+          transactionType: "expense",
+          amount: "30",
+          currency: "RON",
+          merchant: "kaufland",
+          reviewState: "needs_attention",
+          uncertaintyReason: "Category needs review.",
+        },
+      ],
+    });
+
+    expect(parseNaturalLanguageAssistantInput("20 eur sub, 30 ron kaufland")).toEqual({
+      kind: "create_transactions",
+      entries: [
+        {
+          kind: "create_transaction",
+          transactionType: "expense",
+          amount: "20",
+          currency: "EUR",
+          merchant: "sub",
+          reviewState: "needs_attention",
+          uncertaintyReason: "Category needs review.",
+        },
+        {
+          kind: "create_transaction",
+          transactionType: "expense",
+          amount: "30",
+          currency: "RON",
+          merchant: "kaufland",
+          reviewState: "needs_attention",
+          uncertaintyReason: "Category needs review.",
+        },
+      ],
+    });
+
+    expect(parseNaturalLanguageAssistantInput("+1200ron salary -20ron lunch")).toEqual({
+      kind: "create_transactions",
+      entries: [
+        {
+          kind: "create_transaction",
+          transactionType: "income",
+          amount: "1200",
+          currency: "RON",
+          merchant: "salary",
+        },
+        {
+          kind: "create_transaction",
+          transactionType: "expense",
+          amount: "20",
+          currency: "RON",
+          merchant: "lunch",
+          reviewState: "needs_attention",
+          uncertaintyReason: "Category needs review.",
+        },
+      ],
     });
   });
 
@@ -320,6 +522,46 @@ describe("natural-language assistant parser", () => {
       amount: "15",
       currency: "RON",
       merchant: "bere",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("30ron rosii")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "RON",
+      merchant: "rosii",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("-30ron rosii")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "RON",
+      merchant: "rosii",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("30 lei rosii")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "RON",
+      merchant: "rosii",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("-30 lei rosii")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "30",
+      currency: "RON",
+      merchant: "rosii",
       reviewState: "needs_attention",
       uncertaintyReason: "Category needs review.",
     });
