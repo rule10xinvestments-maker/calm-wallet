@@ -157,16 +157,16 @@ describe("insights overview", () => {
     expect(screen.getByText("Spending mix")).toBeInTheDocument();
     expect(screen.getAllByText("Groceries").length).toBeGreaterThan(0);
     expect(screen.getByRole("img", { name: "Expenses category share chart" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Expenses category legend")).toBeInTheDocument();
-    expect(screen.getByText("$12 - 100%")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Groceries category icon" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Expenses category legend")).not.toBeInTheDocument();
+    expect(screen.queryByText("$12 - 100%")).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Groceries chart color and category icon" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Groceries spending share 100%" })).toBeInTheDocument();
     expect(screen.getByText("Largest recent expenses")).toBeInTheDocument();
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
   it("renders category mix bars with percentages while keeping category rows", () => {
-    const { container } = renderInsights(
+    renderInsights(
       makeInsightsData({
         categoryBreakdown: [
           makeCategory({
@@ -203,17 +203,18 @@ describe("insights overview", () => {
     expect(screen.getAllByText("Housing").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Dining").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Transport").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Expenses category legend").querySelector(".truncate")).not.toBeInTheDocument();
-    expect(container.querySelector(".md\\:min-w-\\[24rem\\]")).not.toBeInTheDocument();
-    expect(container.querySelector(".md\\:grid-cols-\\[180px_minmax\\(24rem\\2c 1fr\\)\\]")).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Dining category icon" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Transport category icon" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Expenses category legend")).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Needs category chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Housing chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Dining chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Transport chart color and category icon" })).toBeInTheDocument();
     expect(screen.getByText("$34")).toBeInTheDocument();
     expect(screen.getAllByText("$30").length).toBeGreaterThan(0);
-    expect(screen.getByText("$52 - 33%")).toBeInTheDocument();
-    expect(screen.getByText("$40 - 26%")).toBeInTheDocument();
-    expect(screen.getByText("$34 - 22%")).toBeInTheDocument();
-    expect(screen.getByText("$30 - 19%")).toBeInTheDocument();
+    expect(screen.queryByText("$52 - 33%")).not.toBeInTheDocument();
+    expect(screen.getByText("$52")).toBeInTheDocument();
+    expect(screen.getByText("$40")).toBeInTheDocument();
+    expect(screen.getByText("33%")).toBeInTheDocument();
+    expect(screen.getByText("26%")).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Dining spending share 22%" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Transport spending share 19%" })).toBeInTheDocument();
   });
@@ -261,10 +262,10 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("img", { name: "Income category share chart" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Income category legend")).toBeInTheDocument();
-    expect(screen.getByText("$50 - 100%")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Income category legend")).not.toBeInTheDocument();
+    expect(screen.queryByText("$50 - 100%")).not.toBeInTheDocument();
     expect(screen.getAllByText("Salary").length).toBeGreaterThan(0);
-    expect(screen.getByRole("img", { name: "Salary category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Salary chart color and category icon" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Salary income share 100%" })).toBeInTheDocument();
     expect(screen.getByText("1 entry")).toBeInTheDocument();
 
@@ -295,7 +296,7 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getByRole("img", { name: "Personal category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Personal chart color and category icon" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Personal spending share 100%" })).toBeInTheDocument();
   });
 
@@ -336,7 +337,7 @@ describe("insights overview", () => {
 
     expect(screen.queryByText(/2 tracked transactions need review/)).not.toBeInTheDocument();
     expect(screen.getAllByText("Needs category").length).toBeGreaterThan(0);
-    expect(screen.getByRole("img", { name: "Needs category category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Needs category chart color and category icon" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review");
   });
 

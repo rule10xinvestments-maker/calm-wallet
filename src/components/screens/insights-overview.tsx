@@ -293,17 +293,6 @@ function SpendingMixSummaryChart({
           </text>
         </svg>
       </div>
-      <div className="min-w-0 space-y-2" aria-label={`${segment === "income" ? "Income" : "Expenses"} category legend`}>
-        {chart.items.map((item) => (
-          <div key={item.key} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 rounded-md bg-white px-2.5 py-2 shadow-sm sm:items-center">
-            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="min-w-0 text-sm font-medium leading-5 text-slate-800">{item.label}</span>
-            <span className="whitespace-nowrap text-xs font-semibold text-slate-600">
-              {item.amountDisplay} - {item.percent}%
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -330,17 +319,19 @@ function SpendingMixRows({
 
   return (
     <>
-      {items.map((item) => {
+      {items.map((item, index) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
         const CategoryIcon = getSpendingCategoryIcon(item.label);
         const isExpanded = expandedKey === item.key;
+        const chartColor = spendingMixChartColors[index % spendingMixChartColors.length]!;
 
         return (
           <div key={item.key} className="grid grid-cols-[2rem_1fr] gap-3 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
             <div
-              aria-label={`${item.label} category icon`}
-              className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-700"
+              aria-label={`${item.label} chart color and category icon`}
+              className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full border"
               role="img"
+              style={{ backgroundColor: `${chartColor}1A`, borderColor: `${chartColor}33`, color: chartColor }}
             >
               <CategoryIcon aria-hidden="true" className="h-4 w-4" />
             </div>
@@ -387,9 +378,9 @@ function SpendingMixRows({
                   aria-valuemax={100}
                   aria-valuemin={0}
                   aria-valuenow={percent}
-                  className="h-full rounded-full bg-sky-600"
+                  className="h-full rounded-full"
                   role="meter"
-                  style={{ width: `${percent}%` }}
+                  style={{ backgroundColor: chartColor, width: `${percent}%` }}
                 />
               </div>
               {isExpanded ? (
