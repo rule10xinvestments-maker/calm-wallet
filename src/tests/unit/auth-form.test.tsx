@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthForm } from "@/components/auth/auth-form";
 import { initialAuthFormState, type AuthFormState } from "@/lib/auth/form-state";
 import { signUpSchema } from "@/lib/auth/validation";
@@ -9,6 +9,29 @@ vi.mock("next/navigation", () => ({
     replace: vi.fn(),
   }),
 }));
+
+function setDisplayMode(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
+}
+
+function setNavigatorValue(name: "maxTouchPoints" | "platform" | "standalone" | "userAgent", value: boolean | number | string | undefined) {
+  Object.defineProperty(window.navigator, name, {
+    configurable: true,
+    value,
+  });
+}
 
 function renderSignUp(
   action = vi.fn(async () => initialAuthFormState),
@@ -50,6 +73,18 @@ function renderSignIn(
 }
 
 describe("auth form", () => {
+  beforeEach(() => {
+    setDisplayMode(false);
+    setNavigatorValue("standalone", false);
+    setNavigatorValue("userAgent", "Mozilla/5.0");
+    setNavigatorValue("platform", "Win32");
+    setNavigatorValue("maxTouchPoints", 0);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders Google sign-in without removing email and password auth", () => {
     renderSignIn(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined));
 
@@ -125,6 +160,50 @@ describe("auth form", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Hide confirm password" }));
     expect(screen.getByLabelText("Confirm password")).toHaveAttribute("type", "password");
+  });
+
+  it("shows the PWA install button when the browser install prompt is available", async () => {
+    const prompt = vi.fn(async () => undefined);
+    const userChoice = Promise.resolve({ outcome: "accepted" as const, platform: "web" });
+    const installEvent = new Event("beforeinstallprompt") as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: "accepted"; platform: string }>;
+    };
+    installEvent.prompt = prompt;
+    installEvent.userChoice = userChoice;
+
+    renderSignIn();
+    act(() => {
+      window.dispatchEvent(installEvent);
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Download app" }));
+
+    await waitFor(() => expect(prompt).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("button", { name: "Download app" })).not.toBeInTheDocument();
+  });
+
+  it("shows concise iOS home-screen guidance when the native prompt is unavailable", async () => {
+    setNavigatorValue(
+      "userAgent",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    );
+    setNavigatorValue("platform", "iPhone");
+    setNavigatorValue("maxTouchPoints", 5);
+
+    renderSignIn();
+
+    expect(await screen.findByText("Install Calm Ledger on your home screen.")).toBeInTheDocument();
+    expect(screen.getByText("Use Share → Add to Home Screen.")).toBeInTheDocument();
+  });
+
+  it("hides PWA install affordances when already running standalone", () => {
+    setDisplayMode(true);
+
+    renderSignIn();
+
+    expect(screen.queryByRole("button", { name: "Download app" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Install Calm Ledger on your home screen.")).not.toBeInTheDocument();
   });
 });
 

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PwaInstallButton } from "@/components/pwa-install-button";
 import { type AuthFormState, initialAuthFormState } from "@/lib/auth/form-state";
 
 type AuthFormProps = {
@@ -213,6 +214,7 @@ export function AuthForm({
             {alternateLabel}
           </Link>
         </p>
+        <PwaInstallButton />
       </CardContent>
     </Card>
   );
