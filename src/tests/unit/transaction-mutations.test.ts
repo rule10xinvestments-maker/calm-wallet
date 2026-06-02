@@ -140,6 +140,8 @@ describe("transaction mutation helpers", () => {
     const services = makeMutationServices();
     const formData = new FormData();
     formData.set("transactionId", "txn-1");
+    formData.set("amount", "34.56");
+    formData.set("currency", "eur");
     formData.set("itemName", "Market");
     formData.set("merchant", "Updated Market");
     formData.set("note", "Updated");
@@ -158,6 +160,8 @@ describe("transaction mutation helpers", () => {
       "user-1",
       "txn-1",
       expect.objectContaining({
+        amountMinor: 3456,
+        currency: "EUR",
         itemName: "Market",
         merchant: "Updated Market",
         note: "Updated",
@@ -168,5 +172,29 @@ describe("transaction mutation helpers", () => {
     );
     expect(result.status).toBe("success");
     expect(result.message).toBe("Changes saved.");
+  });
+
+  it("rejects non-positive transaction detail amounts", async () => {
+    const services = makeMutationServices();
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("amount", "0");
+    formData.set("currency", "USD");
+    formData.set("itemName", "Market");
+    formData.set("merchant", "Updated Market");
+    formData.set("note", "Updated");
+    formData.set("occurredAt", "2026-04-21");
+    formData.set("categoryId", "");
+    formData.set("reviewState", "reviewed");
+    formData.set("uncertaintyReason", "");
+
+    await expect(
+      executeUpdateTransaction({
+        userId: "user-1",
+        formData,
+        transactionService: services,
+      }),
+    ).rejects.toThrow("Enter a numeric amount greater than 0.");
+    expect(services.updateTransaction).not.toHaveBeenCalled();
   });
 });

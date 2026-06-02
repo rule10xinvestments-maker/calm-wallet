@@ -40,6 +40,33 @@ function toIsoDateTime(value: FormDataEntryValue | null) {
   return date.toISOString();
 }
 
+function toAmountMinor(value: FormDataEntryValue | null) {
+  const raw = toRequiredString(value, "Amount");
+  const normalized = raw.replace(/,/g, "").trim();
+
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
+    throw new Error("Enter a numeric amount greater than 0.");
+  }
+
+  const amount = Number(normalized);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Enter a numeric amount greater than 0.");
+  }
+
+  return Math.round(amount * 100);
+}
+
+function toCurrency(value: FormDataEntryValue | null) {
+  const currency = toRequiredString(value, "Currency").toUpperCase();
+
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    throw new Error("Currency must be a 3-letter code.");
+  }
+
+  return currency;
+}
+
 export async function executeRecategorizeTransaction(args: {
   userId: string;
   transactionId: string;
@@ -120,6 +147,8 @@ export async function executeUpdateTransaction(args: {
   transactionService: Pick<TransactionService, "updateTransaction">;
 }): Promise<TransactionMutationState> {
   const transactionId = toRequiredString(args.formData.get("transactionId"), "Transaction");
+  const amountMinor = toAmountMinor(args.formData.get("amount"));
+  const currency = toCurrency(args.formData.get("currency"));
   const itemName = toNullableString(args.formData.get("itemName"));
   const merchant = toNullableString(args.formData.get("merchant"));
   const note = toNullableString(args.formData.get("note"));
@@ -132,6 +161,8 @@ export async function executeUpdateTransaction(args: {
     args.userId,
     transactionId,
     {
+      amountMinor,
+      currency,
       merchant,
       itemName,
       note,

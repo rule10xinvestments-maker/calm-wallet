@@ -38,6 +38,24 @@ const REVIEW_STATE_OPTIONS: Array<{ label: string; value: TransactionListItem["r
   { label: "Needs review", value: "needs_attention" },
 ];
 
+const CURRENCY_OPTIONS = ["USD", "EUR", "RON", "GBP"] as const;
+
+function formatAmountInput(amountMinor: number) {
+  return (amountMinor / 100).toFixed(2);
+}
+
+function formatMoney(amountMinor: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(amountMinor / 100);
+}
+
+function formatSignedAmount(amountMinor: number, currency: string, tone: TransactionListItem["amountTone"]) {
+  const formatted = formatMoney(amountMinor, currency);
+  return tone === "income" ? `+${formatted}` : `-${formatted}`;
+}
+
 function ActionMessage({ state }: { state: TransactionMutationState }) {
   if (state.status === "idle" || !state.message) {
     return null;
@@ -148,6 +166,9 @@ export function TransactionItemCard({
   const displayItem = optimisticItem ?? item;
   const CategoryIcon = getCategoryIcon(displayItem);
   const needsReview = displayItem.reviewLabel !== "Reviewed";
+  const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
+    ? CURRENCY_OPTIONS
+    : ([displayItem.currency, ...CURRENCY_OPTIONS] as const);
 
   useEffect(() => {
     if (recategorizeState.status === "success" || updateState.status === "success" || deleteState.status === "success") {
@@ -183,6 +204,10 @@ export function TransactionItemCard({
 
   function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
     const formData = new FormData(event.currentTarget);
+    const amountValue = String(formData.get("amount") ?? "").trim();
+    const parsedAmount = Number(amountValue.replace(/,/g, ""));
+    const amountMinor = Number.isFinite(parsedAmount) && parsedAmount > 0 ? Math.round(parsedAmount * 100) : displayItem.amountMinor;
+    const currency = String(formData.get("currency") ?? displayItem.currency).trim().toUpperCase() || displayItem.currency;
     const itemName = String(formData.get("itemName") ?? "").trim() || null;
     const merchant = String(formData.get("merchant") ?? "").trim() || null;
     const note = String(formData.get("note") ?? "").trim() || null;
@@ -194,6 +219,9 @@ export function TransactionItemCard({
 
     const nextItem: TransactionListItem = {
       ...displayItem,
+      amountMinor,
+      amountDisplay: formatSignedAmount(amountMinor, currency, displayItem.amountTone),
+      currency,
       title: itemName || displayItem.title || "Unnamed transaction",
       subtitle: new Date(occurredAt).toLocaleDateString("en-US", {
         month: "short",
@@ -290,6 +318,8 @@ export function TransactionItemCard({
             {displayItem.reviewState !== "reviewed" ? (
               <form action={updateFormAction}>
                 <input name="transactionId" type="hidden" value={item.id} />
+                <input name="amount" type="hidden" value={formatAmountInput(displayItem.amountMinor)} />
+                <input name="currency" type="hidden" value={displayItem.currency} />
                 <input name="itemName" type="hidden" value={displayItem.itemName ?? displayItem.title} />
                 <input name="merchant" type="hidden" value={displayItem.merchant ?? ""} />
                 <input name="note" type="hidden" value={displayItem.note ?? ""} />
@@ -331,6 +361,36 @@ export function TransactionItemCard({
               onSubmit={handleDetailsSubmit}
             >
               <input name="transactionId" type="hidden" value={item.id} />
+              <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
+                <label className="grid gap-1">
+                  <span className="text-xs font-medium text-slate-600">Amount</span>
+                  <input
+                    className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                    defaultValue={formatAmountInput(displayItem.amountMinor)}
+                    inputMode="decimal"
+                    min="0.01"
+                    name="amount"
+                    pattern="\\d+(\\.\\d{1,2})?"
+                    required
+                    step="0.01"
+                    type="number"
+                  />
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-xs font-medium text-slate-600">Currency</span>
+                  <select
+                    className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                    defaultValue={displayItem.currency}
+                    name="currency"
+                  >
+                    {currencyOptions.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <label className="grid gap-1">
                 <span className="text-xs font-medium text-slate-600">Item name</span>
                 <input

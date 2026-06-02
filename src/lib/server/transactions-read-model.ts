@@ -12,8 +12,10 @@ export type TransactionListItem = {
   id: string;
   title: string;
   subtitle: string;
+  amountMinor: number;
   amountDisplay: string;
   amountTone: "income" | "expense";
+  currency: string;
   reviewLabel: string;
   categoryLabel: string;
   itemName: string | null;
@@ -271,8 +273,10 @@ export function mapTransactionsToListItems(
         month: "short",
         day: "numeric",
       }),
+      amountMinor: transaction.amountMinor,
       amountDisplay: formatSignedMoney(transaction.amountMinor, transaction.currency || currencyFallback, transaction.transactionType),
       amountTone: transaction.transactionType,
+      currency: transaction.currency || currencyFallback,
       reviewLabel: reviewMeta.label,
       categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
       itemName: transaction.itemName,
