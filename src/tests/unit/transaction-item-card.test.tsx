@@ -1,16 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
-
-const refresh = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    refresh,
-  }),
-}));
 
 const initialState: TransactionMutationState = {
   status: "idle",
@@ -48,14 +40,16 @@ function renderCard(args: {
   item?: TransactionListItem;
   recategorizeAction?: (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
   updateAction?: (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
+  deleteAction?: (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
 } = {}) {
   const recategorizeAction = args.recategorizeAction ?? vi.fn(async () => initialState);
   const updateAction = args.updateAction ?? vi.fn(async () => initialState);
+  const deleteAction = args.deleteAction ?? vi.fn(async () => initialState);
 
   render(
     <TransactionItemCard
       categories={categories}
-      deleteAction={vi.fn(async () => initialState)}
+      deleteAction={deleteAction}
       initialState={initialState}
       item={args.item ?? makeItem()}
       recategorizeAction={recategorizeAction}
@@ -63,14 +57,10 @@ function renderCard(args: {
     />,
   );
 
-  return { recategorizeAction, updateAction };
+  return { deleteAction, recategorizeAction, updateAction };
 }
 
 describe("transaction item card", () => {
-  beforeEach(() => {
-    refresh.mockClear();
-  });
-
   it("renders a compact collapsed transaction row with a category icon by default", () => {
     renderCard();
 
@@ -176,7 +166,8 @@ describe("transaction item card", () => {
     expect(formData.get("transactionId")).toBe("txn-1");
     expect(formData.get("categoryId")).toBe("cat-travel");
     expect(await screen.findByText("Category saved.")).toBeInTheDocument();
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(screen.getByText("Travel · May 5")).toBeInTheDocument();
+    expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
 
   });
 
@@ -223,10 +214,26 @@ describe("transaction item card", () => {
     expect(screen.getByText("Dining · May 27")).toBeInTheDocument();
     expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
     expect(screen.queryByText("Category needs review.")).not.toBeInTheDocument();
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
     expect(screen.getByLabelText("Note")).toHaveValue("receipt checked");
+  });
+
+  it("removes a deleted row after server confirmation without a route refresh", async () => {
+    const deleteAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Transaction removed from your tracked items.",
+    }));
+    renderCard({ deleteAction });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(deleteAction).toHaveBeenCalledOnce());
+    const [, formData] = deleteAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+
+    expect(formData.get("transactionId")).toBe("txn-1");
+    await waitFor(() => expect(screen.queryByText("hotdog")).not.toBeInTheDocument());
   });
 
   it("keeps the collapsed title as the item name after editing merchant only", async () => {

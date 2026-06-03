@@ -9,15 +9,10 @@ export type AuthSessionResult = {
 
 export const getAuthSession = cache(async (): Promise<AuthSessionResult> => {
   const supabase = await createSupabaseServerClient();
-  const [
-    {
-      data: { user },
-      error: userError,
-    },
-    {
-      data: { session },
-    },
-  ] = await Promise.all([supabase.auth.getUser(), supabase.auth.getSession()]);
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
   if (userError) {
     return {
@@ -27,7 +22,7 @@ export const getAuthSession = cache(async (): Promise<AuthSessionResult> => {
   }
 
   return {
-    session: user ? session : null,
+    session: null,
     user: user ?? null,
   };
 });

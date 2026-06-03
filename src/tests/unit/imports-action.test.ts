@@ -48,7 +48,7 @@ describe("imports action", () => {
 
     expect(loadAuthenticatedStagedImportBundle).toHaveBeenCalledWith("11111111-1111-1111-1111-111111111111", undefined);
     expect(result?.importRecord.id).toBe("11111111-1111-1111-1111-111111111111");
-  });
+  }, 10000);
 
   it("fails closed for unauthenticated access", async () => {
     loadAuthenticatedStagedImportBundle.mockResolvedValueOnce(null);

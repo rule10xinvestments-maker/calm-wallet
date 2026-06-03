@@ -1,8 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { useFormStatus } from "react-dom";
-import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   Car,
@@ -152,13 +151,17 @@ export function TransactionItemCard({
   deleteAction,
   initialState,
 }: TransactionItemCardProps) {
-  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
+  const [pendingRecategorizedItem, setPendingRecategorizedItem] = useState<TransactionListItem | null>(null);
   const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
+  const [isDeleted, setIsDeleted] = useState(false);
   const pendingDetailsItemRef = useRef<TransactionListItem | null>(null);
+  const pendingRecategorizedItemRef = useRef<TransactionListItem | null>(null);
+  const previousRecategorizeItemRef = useRef<TransactionListItem | null>(null);
   const previousItemRef = useRef(item);
   const [recategorizeState, recategorizeFormAction] = useActionState(recategorizeAction, initialState);
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
@@ -171,10 +174,25 @@ export function TransactionItemCard({
     : ([displayItem.currency, ...CURRENCY_OPTIONS] as const);
 
   useEffect(() => {
-    if (recategorizeState.status === "success" || updateState.status === "success" || deleteState.status === "success") {
-      router.refresh();
+    if (recategorizeState.status === "success") {
+      const completedItem = pendingRecategorizedItemRef.current ?? pendingRecategorizedItem;
+
+      if (completedItem) {
+        setOptimisticItem(completedItem);
+      }
+
+      pendingRecategorizedItemRef.current = null;
+      previousRecategorizeItemRef.current = null;
+      setPendingRecategorizedItem(null);
     }
-  }, [deleteState.status, recategorizeState.status, router, updateState.status]);
+
+    if (recategorizeState.status === "error") {
+      pendingRecategorizedItemRef.current = null;
+      setOptimisticItem(previousRecategorizeItemRef.current);
+      previousRecategorizeItemRef.current = null;
+      setPendingRecategorizedItem(null);
+    }
+  }, [pendingRecategorizedItem, recategorizeState.status]);
 
   useEffect(() => {
     if (updateState.status === "success" && submittedUpdateIntent === "details") {
@@ -193,14 +211,82 @@ export function TransactionItemCard({
       pendingDetailsItemRef.current = null;
       setPendingDetailsItem(null);
     }
-  }, [pendingDetailsItem, submittedUpdateIntent, updateState.status]);
+
+    if (updateState.status === "success" && submittedUpdateIntent === "mark-reviewed") {
+      setOptimisticItem((current) => ({
+        ...(current ?? displayItem),
+        reviewState: "reviewed",
+        reviewLabel: "Reviewed",
+        uncertaintyReason: null,
+      }));
+    }
+  }, [displayItem, pendingDetailsItem, submittedUpdateIntent, updateState.status]);
 
   useEffect(() => {
     if (previousItemRef.current !== item) {
       previousItemRef.current = item;
       setOptimisticItem(null);
+      setIsDeleted(false);
+      setSelectedCategoryId(item.categoryId ?? "");
     }
   }, [item]);
+
+  useEffect(() => {
+    if (deleteState.status === "success") {
+      setIsDeleted(true);
+    }
+  }, [deleteState.status]);
+
+  function buildRecategorizedItem(categoryIdValue: string) {
+    const categoryId = categoryIdValue.trim() || null;
+    const categoryLabel = categoryId ? categories.find((category) => category.id === categoryId)?.label ?? displayItem.categoryLabel : "Uncategorized";
+
+    return {
+      ...displayItem,
+      categoryId,
+      categoryLabel,
+      ...(categoryId
+        ? {
+            reviewState: "reviewed" as const,
+            reviewLabel: "Reviewed",
+            uncertaintyReason: null,
+          }
+        : {}),
+    };
+  }
+
+  function prepareRecategorizedItem(categoryIdValue: string, applyOptimistic: boolean) {
+    const nextItem = buildRecategorizedItem(categoryIdValue);
+
+    pendingRecategorizedItemRef.current = nextItem;
+    setPendingRecategorizedItem(nextItem);
+
+    if (applyOptimistic) {
+      previousRecategorizeItemRef.current = optimisticItem;
+      setOptimisticItem(nextItem);
+    }
+  }
+
+  function handleCategoryChange(categoryIdValue: string) {
+    setSelectedCategoryId(categoryIdValue);
+    prepareRecategorizedItem(categoryIdValue, false);
+  }
+
+  function handleRecategorizeSubmit(event: FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget);
+    prepareRecategorizedItem(String(formData.get("categoryId") ?? selectedCategoryId), true);
+  }
+
+  function handleRecategorizeClick(event: MouseEvent<HTMLButtonElement>) {
+    const form = event.currentTarget.form;
+
+    if (!form) {
+      return;
+    }
+
+    const formData = new FormData(form);
+    prepareRecategorizedItem(String(formData.get("categoryId") ?? selectedCategoryId), true);
+  }
 
   function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
     const formData = new FormData(event.currentTarget);
@@ -241,6 +327,10 @@ export function TransactionItemCard({
     pendingDetailsItemRef.current = nextItem;
     setSubmittedUpdateIntent("details");
     setPendingDetailsItem(nextItem);
+  }
+
+  if (isDeleted) {
+    return null;
   }
 
   return (
@@ -286,12 +376,13 @@ export function TransactionItemCard({
 
       {isExpanded ? (
         <div className="mt-3 grid gap-3 border-t border-slate-200 pt-3">
-          <form action={recategorizeFormAction} className="flex gap-2">
+          <form action={recategorizeFormAction} className="flex gap-2" onSubmit={handleRecategorizeSubmit}>
             <input name="transactionId" type="hidden" value={item.id} />
             <select
               className="min-h-10 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-              defaultValue={displayItem.categoryId ?? ""}
+              value={selectedCategoryId}
               name="categoryId"
+              onChange={(event) => handleCategoryChange(event.currentTarget.value)}
             >
               <option value="">Uncategorized</option>
               {categories.map((category) => (
@@ -300,7 +391,11 @@ export function TransactionItemCard({
                 </option>
               ))}
             </select>
-            <button className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700" type="submit">
+            <button
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+              onClick={handleRecategorizeClick}
+              type="submit"
+            >
               Save
             </button>
           </form>
