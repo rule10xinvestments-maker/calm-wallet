@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { InsightsOverview } from "@/components/screens/insights-overview";
+import { buildSpendingMixDonutSegments, InsightsOverview } from "@/components/screens/insights-overview";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 
@@ -217,6 +217,40 @@ describe("insights overview", () => {
     expect(screen.getByText("26%")).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Dining spending share 22%" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Transport spending share 19%" })).toBeInTheDocument();
+  });
+
+  it("renders multi-category donuts as rounded arc paths for smoother small slices", () => {
+    const { container } = renderInsights(
+      makeInsightsData({
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 8800, amountDisplay: "$88" }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1100, amountDisplay: "$11" }),
+          makeCategory({ key: "coffee", label: "Coffee", amountMinor: 100, amountDisplay: "$1" }),
+        ],
+      }),
+    );
+
+    const slicePaths = container.querySelectorAll("path[stroke-linecap='round'][stroke-linejoin='round']");
+
+    expect(slicePaths).toHaveLength(3);
+    expect(container.querySelector("svg[shape-rendering='geometricPrecision']")).toBeInTheDocument();
+    expect(container.querySelector("[stroke-dasharray]")).not.toBeInTheDocument();
+  });
+
+  it("keeps tiny nonzero donut slices above the minimum visual angle", () => {
+    const segments = buildSpendingMixDonutSegments(
+      [
+        { ...makeCategory({ key: "housing", label: "Housing", amountMinor: 8800 }), color: "#0ea5e9", percent: 88 },
+        { ...makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1100 }), color: "#10b981", percent: 11 },
+        { ...makeCategory({ key: "coffee", label: "Coffee", amountMinor: 100 }), color: "#f59e0b", percent: 1 },
+      ],
+      10000,
+    );
+
+    expect(segments).toHaveLength(3);
+    expect(segments[2]!.endAngle - segments[2]!.startAngle).toBeGreaterThanOrEqual(7);
+    expect(segments[2]!.arcPath).toMatch(/^M /);
+    expect(segments[2]!.arcPath).toContain(" A 42 42 ");
   });
 
   it("defaults to expenses and expands recent entries inline", () => {

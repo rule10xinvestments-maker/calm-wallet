@@ -231,6 +231,87 @@ function buildSpendingMixChartItems(items: SpendingMixCategoryItem[]) {
   };
 }
 
+type SpendingMixChartItem = ReturnType<typeof buildSpendingMixChartItems>["items"][number];
+
+export type SpendingMixDonutSegment = SpendingMixChartItem & {
+  startAngle: number;
+  endAngle: number;
+  arcPath: string;
+};
+
+const donutCenter = { x: 60, y: 58 };
+const donutRadius = 42;
+const donutGapDegrees = 2.4;
+const donutMinimumSliceDegrees = 7;
+
+function formatSvgNumber(value: number) {
+  return Number(value.toFixed(3));
+}
+
+function getDonutPoint(angleDegrees: number) {
+  const angleRadians = (angleDegrees * Math.PI) / 180;
+
+  return {
+    x: formatSvgNumber(donutCenter.x + donutRadius * Math.cos(angleRadians)),
+    y: formatSvgNumber(donutCenter.y + donutRadius * Math.sin(angleRadians)),
+  };
+}
+
+function getDonutArcPath(startAngle: number, endAngle: number) {
+  const start = getDonutPoint(startAngle);
+  const end = getDonutPoint(endAngle);
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+
+  return `M ${start.x} ${start.y} A ${donutRadius} ${donutRadius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
+}
+
+function normalizeDonutAngles(items: SpendingMixChartItem[], total: number) {
+  const positiveItems = items.filter((item) => Math.max(item.amountMinor, 0) > 0);
+  const gap = positiveItems.length > 1 ? donutGapDegrees : 0;
+  const availableDegrees = 360 - positiveItems.length * gap;
+  const minimumDegrees =
+    positiveItems.length > 1 ? Math.min(donutMinimumSliceDegrees, availableDegrees / positiveItems.length) : availableDegrees;
+  const rawAngles = positiveItems.map((item) => (Math.max(item.amountMinor, 0) / total) * availableDegrees);
+  const deficit = rawAngles.reduce((sum, angle) => sum + Math.max(minimumDegrees - angle, 0), 0);
+  const adjustable = rawAngles.reduce((sum, angle) => sum + Math.max(angle - minimumDegrees, 0), 0);
+
+  return rawAngles.map((angle) => {
+    if (angle < minimumDegrees) {
+      return minimumDegrees;
+    }
+
+    if (deficit <= 0 || adjustable <= 0) {
+      return angle;
+    }
+
+    return angle - deficit * ((angle - minimumDegrees) / adjustable);
+  });
+}
+
+export function buildSpendingMixDonutSegments(items: SpendingMixChartItem[], total: number): SpendingMixDonutSegment[] {
+  if (!items.length || total <= 0) {
+    return [];
+  }
+
+  const positiveItems = items.filter((item) => Math.max(item.amountMinor, 0) > 0);
+  const gap = positiveItems.length > 1 ? donutGapDegrees : 0;
+  const angles = normalizeDonutAngles(positiveItems, total);
+  let cursor = -90 + gap / 2;
+
+  return positiveItems.map((item, index) => {
+    const startAngle = cursor;
+    const endAngle = cursor + angles[index]!;
+    cursor = endAngle + gap;
+
+    return {
+      ...item,
+      startAngle,
+      endAngle,
+      arcPath: getDonutArcPath(startAngle, endAngle),
+    };
+  });
+}
+
 function SpendingMixSummaryChart({
   items,
   segment,
@@ -239,9 +320,7 @@ function SpendingMixSummaryChart({
   segment: SpendingMixSegment;
 }) {
   const chart = buildSpendingMixChartItems(items);
-  const radius = 42;
-  const circumference = 2 * Math.PI * radius;
-  let cumulative = 0;
+  const donutSegments = buildSpendingMixDonutSegments(chart.items, chart.total);
 
   if (!chart.items.length || chart.total <= 0) {
     return null;
@@ -251,7 +330,7 @@ function SpendingMixSummaryChart({
     <div className="space-y-4 rounded-lg border border-slate-100 bg-slate-50/70 p-3">
       <div className="relative mx-auto aspect-square w-full max-w-[180px]" aria-label={`${segment === "income" ? "Income" : "Expenses"} category share chart`} role="img">
         <div className="absolute inset-x-[19%] bottom-[10%] h-7 rounded-full bg-slate-300/40 blur-md" />
-        <svg className="relative h-full w-full drop-shadow-sm" viewBox="0 0 120 120">
+        <svg className="relative h-full w-full drop-shadow-sm" shapeRendering="geometricPrecision" viewBox="0 0 120 120">
           <defs>
             <linearGradient id={`spending-mix-highlight-${segment}`} x1="25%" x2="75%" y1="10%" y2="90%">
               <stop offset="0%" stopColor="white" stopOpacity="0.72" />
@@ -260,29 +339,32 @@ function SpendingMixSummaryChart({
             </linearGradient>
           </defs>
           <ellipse cx="60" cy="67" fill="#cbd5e1" opacity="0.5" rx="43" ry="38" />
-          <circle cx="60" cy="58" fill="none" r={radius} stroke="#e2e8f0" strokeWidth="16" />
-          {chart.items.map((item) => {
-            const segmentLength = (Math.max(item.amountMinor, 0) / chart.total) * circumference;
-            const dashOffset = -cumulative;
-            cumulative += segmentLength;
-
-            return (
-              <circle
+          <circle cx="60" cy="58" fill="none" r={donutRadius} stroke="#e2e8f0" strokeWidth="16" />
+          {donutSegments.length === 1 ? (
+            <circle
+              aria-label={`${donutSegments[0]!.label} ${segment === "income" ? "income" : "spending"} chart slice ${donutSegments[0]!.percent}%`}
+              cx="60"
+              cy="58"
+              fill="none"
+              r={donutRadius}
+              stroke={donutSegments[0]!.color}
+              strokeLinejoin="round"
+              strokeWidth="16"
+            />
+          ) : (
+            donutSegments.map((item) => (
+              <path
                 key={item.key}
                 aria-label={`${item.label} ${segment === "income" ? "income" : "spending"} chart slice ${item.percent}%`}
-                cx="60"
-                cy="58"
+                d={item.arcPath}
                 fill="none"
-                r={radius}
                 stroke={item.color}
-                strokeDasharray={`${segmentLength} ${circumference - segmentLength}`}
-                strokeDashoffset={dashOffset}
                 strokeLinecap="round"
+                strokeLinejoin="round"
                 strokeWidth="16"
-                style={{ transform: "rotate(-90deg)", transformOrigin: "60px 58px" }}
               />
-            );
-          })}
+            ))
+          )}
           <circle cx="60" cy="58" fill="none" r="33" stroke={`url(#spending-mix-highlight-${segment})`} strokeWidth="2" />
           <circle cx="60" cy="58" fill="#f8fafc" r="27" />
           <text className="fill-slate-900 text-[13px] font-semibold" textAnchor="middle" x="60" y="56">
