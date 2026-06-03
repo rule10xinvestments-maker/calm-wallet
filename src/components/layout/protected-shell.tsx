@@ -1,5 +1,6 @@
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { PwaInstallHeaderIcon } from "@/components/pwa-install-button";
 import type { signOutAction } from "@/lib/auth/actions";
 
 type ProtectedShellProps = {
@@ -17,7 +18,10 @@ export function ProtectedShell({ children, accountHint, onSignOut }: ProtectedSh
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Your money, one clear view.</h1>
           <p className="mt-2 text-xs leading-5 text-slate-500">Signed in as {accountHint}</p>
         </div>
-        <SignOutButton action={onSignOut} />
+        <div className="flex shrink-0 items-center gap-2">
+          <PwaInstallHeaderIcon />
+          <SignOutButton action={onSignOut} />
+        </div>
       </div>
       <main className="flex-1">{children}</main>
       <BottomNav />
