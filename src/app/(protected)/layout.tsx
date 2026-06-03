@@ -9,7 +9,12 @@ type ProtectedLayoutProps = {
 };
 
 export default async function ProtectedLayout({ children }: ProtectedLayoutProps) {
-  await requireAuthenticatedSession();
+  const auth = await requireAuthenticatedSession();
+  const accountHint = auth.user?.email ?? `account ${auth.user?.id.slice(0, 8) ?? "unknown"}`;
 
-  return <ProtectedShell onSignOut={signOutAction}>{children}</ProtectedShell>;
+  return (
+    <ProtectedShell accountHint={accountHint} onSignOut={signOutAction}>
+      {children}
+    </ProtectedShell>
+  );
 }

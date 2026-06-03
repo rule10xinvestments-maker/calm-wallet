@@ -50,6 +50,22 @@ describe("transactions read model", () => {
     expect(filterTransactionsForView(transactions, "expenses")).toHaveLength(2);
     expect(filterTransactionsForView(transactions, "income")).toHaveLength(1);
     expect(filterTransactionsForView(transactions, "needs-review")).toHaveLength(1);
+    expect(transactions).toHaveLength(3);
+  });
+
+  it("filters views without clearing or mutating the source transaction list", () => {
+    const transactions = [
+      makeTransaction({ id: "expense-1", transactionType: "expense" }),
+      makeTransaction({ id: "income-1", transactionType: "income", amountMinor: 5000 }),
+      makeTransaction({ id: "review-1", reviewState: "needs_attention" }),
+    ];
+
+    const income = filterTransactionsForView(transactions, "income");
+    const needsReview = filterTransactionsForView(transactions, "needs-review");
+
+    expect(income.map((transaction) => transaction.id)).toEqual(["income-1"]);
+    expect(needsReview.map((transaction) => transaction.id)).toEqual(["review-1"]);
+    expect(transactions.map((transaction) => transaction.id)).toEqual(["expense-1", "income-1", "review-1"]);
   });
 
   it("maps real list items calmly for the transactions page", () => {

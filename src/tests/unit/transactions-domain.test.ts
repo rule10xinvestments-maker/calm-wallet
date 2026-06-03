@@ -225,6 +225,46 @@ describe("transaction service", () => {
     );
   });
 
+  it("updates amount and currency without soft-deleting or changing review filters", async () => {
+    const updateTransaction = vi.fn(async (_userId, transactionId, updates) => ({
+      data: makeTransactionRow({
+        id: transactionId,
+        amount_minor: updates.amount_minor ?? 1250,
+        currency: updates.currency ?? "USD",
+        review_state: updates.review_state ?? "reviewed",
+        deleted_at: updates.deleted_at === undefined ? null : updates.deleted_at,
+      }),
+      error: null,
+    }));
+    const adapter = makeAdapter({ updateTransaction });
+    const service = createTransactionService(adapter);
+
+    const result = await service.updateTransaction(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+      {
+        amountMinor: 3456,
+        currency: "EUR",
+      },
+    );
+
+    expect(updateTransaction).toHaveBeenCalledWith(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+      expect.objectContaining({
+        amount_minor: 3456,
+        currency: "EUR",
+        review_state: "reviewed",
+      }),
+    );
+    const [, , updates] = updateTransaction.mock.calls[0] as Parameters<TransactionServiceAdapter["updateTransaction"]>;
+    expect(updates).not.toHaveProperty("deleted_at");
+    expect(result.transaction.amountMinor).toBe(3456);
+    expect(result.transaction.currency).toBe("EUR");
+    expect(result.transaction.deletedAt).toBeNull();
+    expect(result.transaction.reviewState).toBe("reviewed");
+  });
+
   it("soft deletes instead of hard deleting", async () => {
     const updateTransaction = vi.fn(async (_userId, transactionId, updates) => ({
       data: makeTransactionRow({
@@ -385,6 +425,10 @@ describe("transaction service", () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(listTransactions).toHaveBeenCalled();
+    expect(listTransactions).toHaveBeenCalledWith("22222222-2222-2222-2222-222222222222", {
+      includeDeleted: false,
+      limit: 10,
+      transactionType: "expense",
+    });
   });
 });

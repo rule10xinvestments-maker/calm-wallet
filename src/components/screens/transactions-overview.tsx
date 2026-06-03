@@ -392,7 +392,7 @@ export function TransactionsOverview({
             <div className="rounded-2xl bg-slate-50 px-4 py-6 text-sm text-slate-500">
               {query
                 ? "No tracked transactions match that search."
-                : "No tracked transactions match this view yet."}
+                : "No transactions found for this signed-in account."}
             </div>
           )}
         </CardContent>

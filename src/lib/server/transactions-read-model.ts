@@ -950,6 +950,11 @@ export async function loadTransactionsPageData(args: {
   ]);
 
   const filtered = filterTransactionsForView(transactions, args.view, args.query);
+  console.info("transactions:list-load", {
+    hasAuthenticatedUser: Boolean(args.userId),
+    loadedCount: transactions.length,
+    visibleCount: filtered.length,
+  });
 
   return {
     view: args.view,

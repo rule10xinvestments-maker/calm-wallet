@@ -130,6 +130,19 @@ describe("transactions overview", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows account-scoped empty state copy when Activity has no rows", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    expect(screen.getByText("No transactions found for this signed-in account.")).toBeInTheDocument();
+  });
+
   it("renders a clean no-candidate summary in staged import details", () => {
     render(
       <TransactionsOverview
