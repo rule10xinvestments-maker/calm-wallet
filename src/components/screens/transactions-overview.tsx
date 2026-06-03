@@ -77,6 +77,7 @@ type TransactionsOverviewProps = {
   initialActionState: TransactionMutationState;
   reviewAction: ImportReviewActionHandler;
   initialReviewActionState: ImportCandidateReviewDecisionActionState;
+  loadError?: boolean;
 };
 
 function ReviewActionMessage({ state }: { state: ImportCandidateReviewDecisionActionState }) {
@@ -337,6 +338,7 @@ export function TransactionsOverview({
   initialActionState,
   reviewAction,
   initialReviewActionState,
+  loadError = false,
 }: TransactionsOverviewProps) {
   return (
     <section className="space-y-4">
@@ -345,6 +347,14 @@ export function TransactionsOverview({
         title="Recent money movement"
         description="Review your tracked items, with quick visibility into expenses, income, and anything that needs attention."
       />
+      {loadError ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Latest data could not load</CardTitle>
+            <CardDescription>Try again from the bottom navigation. No financial details were changed.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {tabs.map((tab) => (
           <Link

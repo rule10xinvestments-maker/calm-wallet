@@ -2,6 +2,8 @@ import { InsightsOverview } from "@/components/screens/insights-overview";
 import { deleteMonthlyCategoryBudgetAction, upsertMonthlyCategoryBudgetAction } from "@/lib/actions/budgets";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { loadInsightsPageData } from "@/lib/server/transactions-read-model";
+import { getFallbackInsightsData, logProtectedRouteLoadFailure } from "@/lib/server/protected-route-fallbacks";
+import { redirect } from "next/navigation";
 
 type InsightsPageProps = {
   searchParams?: Promise<{
@@ -19,17 +21,26 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
   const user = auth.user;
 
   if (!user) {
-    throw new Error("Authenticated user is required.");
+    redirect("/sign-in");
   }
 
   const resolvedSearchParams = (await searchParams) ?? {};
-  const data = await loadInsightsPageData(user.id, normalizeRequestedCurrency(resolvedSearchParams.currency));
+  let loadError = false;
+  let data: Awaited<ReturnType<typeof loadInsightsPageData>> = getFallbackInsightsData();
+
+  try {
+    data = await loadInsightsPageData(user.id, normalizeRequestedCurrency(resolvedSearchParams.currency));
+  } catch (error) {
+    loadError = true;
+    logProtectedRouteLoadFailure("insights", error);
+  }
 
   return (
     <InsightsOverview
       data={data}
       deleteBudgetAction={deleteMonthlyCategoryBudgetAction}
       upsertBudgetAction={upsertMonthlyCategoryBudgetAction}
+      loadError={loadError}
     />
   );
 }

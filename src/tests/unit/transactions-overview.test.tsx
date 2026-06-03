@@ -88,6 +88,22 @@ function makeOverviewProps() {
 }
 
 describe("transactions overview", () => {
+  it("renders safe load-error copy with the account-scoped empty state", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[]}
+        loadError
+        stagedImportDetails={{}}
+        stagedImports={[]}
+      />,
+    );
+
+    expect(screen.getByText("Latest data could not load")).toBeInTheDocument();
+    expect(screen.getByText("Try again from the bottom navigation. No financial details were changed.")).toBeInTheDocument();
+    expect(screen.getByText("No transactions found for this signed-in account.")).toBeInTheDocument();
+  });
+
   it("renders pending candidates as reviewable work", () => {
     render(<TransactionsOverview {...makeOverviewProps()} />);
 

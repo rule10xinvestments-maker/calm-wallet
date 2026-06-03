@@ -41,6 +41,24 @@ const recentTransaction: Transaction = {
 };
 
 describe("assistant overview", () => {
+  it("renders safe load-error copy without financial details", () => {
+    render(
+      <AssistantOverview
+        action={noopAssistantAction}
+        categoryOptions={[]}
+        initialState={initialAssistantActionState}
+        loadError
+        notificationPreferences={notificationPreferences}
+        notificationPreferencesAction={noopNotificationAction}
+        recentTransactions={[]}
+      />,
+    );
+
+    expect(screen.getByText("Latest data could not load")).toBeInTheDocument();
+    expect(screen.getByText("Try again from the bottom navigation. No financial details were changed.")).toBeInTheDocument();
+    expect(screen.getByText("Quick add")).toBeInTheDocument();
+  });
+
   it("collapses notification preferences without adding another primary page surface", () => {
     render(
       <AssistantOverview

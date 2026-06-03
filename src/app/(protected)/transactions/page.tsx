@@ -13,6 +13,11 @@ import { loadStagedImportList } from "@/lib/server/imports-list";
 import { loadStagedImportReviewProgress } from "@/lib/server/imports-review-progress";
 import { loadTransactionsPageData, type TransactionsView } from "@/lib/server/transactions-read-model";
 import type { StagedImportCandidateItem } from "@/lib/server/imports-read-model";
+import {
+  getFallbackTransactionsPageData,
+  logProtectedRouteLoadFailure,
+} from "@/lib/server/protected-route-fallbacks";
+import { redirect } from "next/navigation";
 
 type TransactionsPageProps = {
   searchParams?: Promise<{
@@ -68,25 +73,43 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   const user = auth.user;
 
   if (!user) {
-    throw new Error("Authenticated user is required.");
+    redirect("/sign-in");
   }
 
   const resolvedSearchParams = (await searchParams) ?? {};
   const view = (resolvedSearchParams.view as TransactionsView) || "all";
-  const [data, stagedImports] = await Promise.all([
-    loadTransactionsPageData({
-      userId: user.id,
-      view: ["all", "expenses", "income", "needs-review"].includes(view) ? view : "all",
-      query: resolvedSearchParams.q,
-    }),
-    loadStagedImportList(),
-  ]);
-  const stagedImportBundles = await Promise.all(
-    (stagedImports ?? []).map((item) => loadAuthenticatedStagedImportBundle(item.importRecordId)),
-  );
-  const stagedImportProgress = await Promise.all(
-    (stagedImports ?? []).map((item) => loadStagedImportReviewProgress(item.importRecordId)),
-  );
+  const safeView = ["all", "expenses", "income", "needs-review"].includes(view) ? view : "all";
+  let loadError = false;
+  let data: Awaited<ReturnType<typeof loadTransactionsPageData>> = getFallbackTransactionsPageData({
+    view: safeView,
+    query: resolvedSearchParams.q,
+  });
+  let stagedImports: Awaited<ReturnType<typeof loadStagedImportList>> = [];
+  let stagedImportBundles: Awaited<ReturnType<typeof loadAuthenticatedStagedImportBundle>>[] = [];
+  let stagedImportProgress: Awaited<ReturnType<typeof loadStagedImportReviewProgress>>[] = [];
+
+  try {
+    [data, stagedImports] = await Promise.all([
+      loadTransactionsPageData({
+        userId: user.id,
+        view: safeView,
+        query: resolvedSearchParams.q,
+      }),
+      loadStagedImportList(),
+    ]);
+    stagedImportBundles = await Promise.all(
+      (stagedImports ?? []).map((item) => loadAuthenticatedStagedImportBundle(item.importRecordId)),
+    );
+    stagedImportProgress = await Promise.all(
+      (stagedImports ?? []).map((item) => loadStagedImportReviewProgress(item.importRecordId)),
+    );
+  } catch (error) {
+    loadError = true;
+    stagedImports = [];
+    stagedImportBundles = [];
+    stagedImportProgress = [];
+    logProtectedRouteLoadFailure("transactions", error);
+  }
   const stagedImportDetails = Object.fromEntries(
     (stagedImports ?? []).map((item, index) => [
       item.importRecordId,
@@ -134,6 +157,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       stagedImportDetails={stagedImportDetails}
       stagedImports={stagedImports ?? []}
       updateAction={updateTransactionAction}
+      loadError={loadError}
     />
   );
 }

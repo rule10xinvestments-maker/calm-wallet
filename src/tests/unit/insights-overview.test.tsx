@@ -131,17 +131,26 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
 
 const noopBudgetAction = async () => initialBudgetActionState;
 
-function renderInsights(data: InsightsData) {
+function renderInsights(data: InsightsData, options: { loadError?: boolean } = {}) {
   return render(
     <InsightsOverview
       data={data}
       deleteBudgetAction={noopBudgetAction}
+      loadError={options.loadError}
       upsertBudgetAction={noopBudgetAction}
     />,
   );
 }
 
 describe("insights overview", () => {
+  it("renders safe load-error copy while keeping the page recoverable", () => {
+    renderInsights(makeInsightsData({ categoryBreakdown: [], trackedTransactionCount: 0 }), { loadError: true });
+
+    expect(screen.getByText("Latest data could not load")).toBeInTheDocument();
+    expect(screen.getByText("Try again from the bottom navigation. No financial details were changed.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing tracked yet")).toBeInTheDocument();
+  });
+
   it("renders monthly clarity with tracked balance wording", () => {
     renderInsights(makeInsightsData());
 

@@ -20,6 +20,7 @@ type AssistantOverviewProps = {
   notificationPreferencesAction: NotificationPreferencesActionHandler;
   categoryOptions: ControlledCategoryOption[];
   recentTransactions: Transaction[];
+  loadError?: boolean;
 };
 
 export function AssistantOverview({
@@ -29,6 +30,7 @@ export function AssistantOverview({
   notificationPreferences,
   notificationPreferencesAction,
   recentTransactions,
+  loadError = false,
 }: AssistantOverviewProps) {
   const recentItems = mapTransactionsToAssistantItems(recentTransactions);
 
@@ -39,6 +41,14 @@ export function AssistantOverview({
         title="Track money in one sentence"
         description="Write what you spent or earned. Calm Ledger saves it quickly, and you can fix details anytime."
       />
+      {loadError ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Latest data could not load</CardTitle>
+            <CardDescription>Try again from the bottom navigation. No financial details were changed.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Quick add</CardTitle>

@@ -41,6 +41,7 @@ type InsightsOverviewProps = {
   data: InsightsData;
   upsertBudgetAction: (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
   deleteBudgetAction: (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
+  loadError?: boolean;
 };
 
 function formatMoney(amountMinor: number, currency: string) {
@@ -565,7 +566,7 @@ function BudgetRemoveButton({
   );
 }
 
-export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction }: InsightsOverviewProps) {
+export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction, loadError = false }: InsightsOverviewProps) {
   const [spendingMixSegment, setSpendingMixSegment] = useState<SpendingMixSegment>("expenses");
   const hasTrackedData = data.trackedTransactionCount > 0;
   const hasCurrentMonthData = data.currentMonthTransactionCount > 0;
@@ -579,6 +580,14 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction 
         title="Monthly clarity"
         description="Tracked transactions only. Not a bank balance, forecast, or account statement."
       />
+      {loadError ? (
+        <Card className="rounded-lg">
+          <CardHeader>
+            <CardTitle>Latest data could not load</CardTitle>
+            <CardDescription>Try again from the bottom navigation. No financial details were changed.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
 
       {!hasTrackedData ? (
         <Card className="rounded-lg">
