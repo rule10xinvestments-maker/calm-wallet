@@ -77,7 +77,7 @@ describe("assistant overview", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Quick add")).toBeInTheDocument();
     expect(screen.getByText("Type what happened. We'll organize it.")).toBeInTheDocument();
-    expect(screen.getByText('Examples: "Coffee 12", "Groceries 85", "Salary 1200".')).toBeInTheDocument();
+    expect(screen.getByText('Examples: "Coffee 12", "Groceries 85".')).toBeInTheDocument();
     expect(screen.queryByText(/narrow, trusted path/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/approved tracked-item actions/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Attach receipt or CSV" })).toBeInTheDocument();
