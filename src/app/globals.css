@@ -35,42 +35,47 @@ a {
 }
 
 .app-entry-loader {
+  position: relative;
   display: flex;
   min-height: 100svh;
   width: 100%;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.75rem;
   overflow: hidden;
   padding: 2rem 1.5rem;
+  background: #f8fafc;
   color: hsl(var(--foreground));
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.app-entry-loader__lockup {
-  display: flex;
-  width: min(22rem, 100%);
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-  animation: calm-wallet-fade-up 720ms ease-out both;
-}
-
 .app-entry-loader__mark {
-  display: grid;
+  display: flex;
   height: 8rem;
   width: 8rem;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
   border-radius: 2rem;
-  background: hsl(var(--background));
   box-shadow: 0 22px 54px -34px rgba(15, 23, 42, 0.5);
 }
 
 .app-entry-loader__mark img {
   height: 100%;
   width: 100%;
+}
+
+.app-entry-loader__reveal {
+  position: absolute;
+  top: calc(50% + 6.5rem);
+  left: 50%;
+  display: flex;
+  width: min(22rem, 100%);
+  transform: translateX(-50%);
+  flex-direction: column;
+  align-items: center;
+  gap: 1.45rem;
+  padding: 0 1.5rem;
+  animation: calm-wallet-fade-in 680ms ease-out 180ms both;
 }
 
 .app-entry-loader__brand {
@@ -91,7 +96,7 @@ a {
 }
 
 .app-entry-loader__maker {
-  margin: 0.75rem 0 0;
+  margin: 0.65rem 0 0;
   font-size: clamp(1.125rem, 5vw, 1.75rem);
   font-weight: 600;
   line-height: 1.2;
@@ -108,14 +113,12 @@ a {
   max-width: 20rem;
   font-size: clamp(0.95rem, 4vw, 1.125rem);
   line-height: 1.5;
-  animation: calm-wallet-fade-up 720ms ease-out 120ms both;
 }
 
 .app-entry-loader__status {
   font-size: 0.95rem;
   font-weight: 600;
   color: rgb(3 105 161);
-  animation: calm-wallet-fade-up 720ms ease-out 220ms both;
 }
 
 .app-entry-loader__progress {
@@ -127,7 +130,6 @@ a {
   border-radius: 999px;
   background: rgba(14, 165, 233, 0.16);
   box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.12);
-  animation: calm-wallet-fade-up 720ms ease-out 180ms both;
 }
 
 .app-entry-loader__progress span {
@@ -139,14 +141,12 @@ a {
   animation: calm-wallet-shimmer 1.45s ease-in-out infinite;
 }
 
-@keyframes calm-wallet-fade-up {
+@keyframes calm-wallet-fade-in {
   from {
     opacity: 0;
-    transform: translateY(0.5rem);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -160,10 +160,7 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-entry-loader__lockup,
-  .app-entry-loader__tagline,
-  .app-entry-loader__progress,
-  .app-entry-loader__status,
+  .app-entry-loader__reveal,
   .app-entry-loader__progress span {
     animation: none;
   }
@@ -171,5 +168,17 @@ a {
   .app-entry-loader__progress span {
     width: 100%;
     opacity: 0.55;
+  }
+}
+
+@media (max-height: 740px) {
+  .app-entry-loader__reveal {
+    gap: 1rem;
+    top: calc(50% + 5.75rem);
+  }
+
+  .app-entry-loader__mark {
+    height: 7rem;
+    width: 7rem;
   }
 }
