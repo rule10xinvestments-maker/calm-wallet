@@ -8,15 +8,17 @@ vi.mock("next/image", () => ({
 }));
 
 describe("loading screen", () => {
-  it("renders the Calm Wallet startup brand lockup without fake progress", () => {
+  it("renders the compact Calm Wallet loader without the branded startup splash", () => {
     const { container } = render(<Loading />);
 
-    expect(screen.getByRole("status", { name: "Calm Wallet is opening" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Calm Wallet")).toBeInTheDocument();
-    expect(screen.getByText("by xThinker")).toBeInTheDocument();
-    expect(screen.getByText("Track money. Understand more. Live calm.")).toBeInTheDocument();
-    expect(screen.getByText("Opening Calm Wallet...")).toBeInTheDocument();
-    expect(container.querySelector("img")).toHaveAttribute("src", "/icons/calm-wallet-maskable-512.png");
+    expect(screen.getByRole("status", { name: "Loading Calm Wallet" })).toBeInTheDocument();
+    expect(screen.getByText("Calm Wallet")).toBeInTheDocument();
+    expect(container.querySelector("img")).toHaveAttribute("src", "/icons/calm-wallet-icon-512.png");
+    expect(container.querySelector(".protected-route-loader__mark")).toBeInTheDocument();
+    expect(container.querySelectorAll(".protected-route-loader__lines span")).toHaveLength(3);
+    expect(screen.queryByText("by xThinker")).not.toBeInTheDocument();
+    expect(screen.queryByText("Track money. Understand more. Live calm.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Opening Calm Wallet...")).not.toBeInTheDocument();
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
   });
 });
