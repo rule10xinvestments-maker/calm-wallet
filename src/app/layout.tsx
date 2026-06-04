@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { PwaInstallProvider } from "@/components/pwa-install-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,7 +32,9 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <PwaInstallProvider>{children}</PwaInstallProvider>
+      </body>
     </html>
   );
 }

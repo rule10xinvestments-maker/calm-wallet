@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedShell } from "@/components/layout/protected-shell";
+import { PwaInstallProvider } from "@/components/pwa-install-context";
 
 function setDisplayMode(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -27,9 +28,11 @@ function setNavigatorValue(name: "maxTouchPoints" | "platform" | "standalone" | 
 
 function renderProtectedShell() {
   return render(
-    <ProtectedShell accountHint="paul@example.com" onSignOut={vi.fn(async () => undefined)}>
-      <div>Assistant content</div>
-    </ProtectedShell>,
+    <PwaInstallProvider>
+      <ProtectedShell accountHint="paul@example.com" onSignOut={vi.fn(async () => undefined)}>
+        <div>Assistant content</div>
+      </ProtectedShell>
+    </PwaInstallProvider>,
   );
 }
 
@@ -46,7 +49,13 @@ describe("protected shell PWA install affordance", () => {
     vi.restoreAllMocks();
   });
 
-  it("opens the native install prompt from the authenticated header icon", async () => {
+  it("opens the native install prompt from the authenticated header icon on Android Chrome", async () => {
+    setNavigatorValue(
+      "userAgent",
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
+    );
+    setNavigatorValue("platform", "Linux armv8l");
+    setNavigatorValue("maxTouchPoints", 5);
     const prompt = vi.fn(async () => undefined);
     const installEvent = new Event("beforeinstallprompt") as Event & {
       prompt: () => Promise<void>;
@@ -63,10 +72,31 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Install Calm Wallet" }));
 
     await waitFor(() => expect(prompt).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Use Share \u2192 Add to Home Screen.")).not.toBeInTheDocument();
   });
 
-  it("shows calm home-screen guidance on mobile browsers without the native prompt", async () => {
+  it("shows Android Chrome guidance without the native prompt", async () => {
+    setNavigatorValue(
+      "userAgent",
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
+    );
+    setNavigatorValue("platform", "Linux armv8l");
+    setNavigatorValue("maxTouchPoints", 5);
+
+    renderProtectedShell();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Install Calm Wallet" }));
+
+    expect(screen.getByText("Open Chrome menu \u22ee \u2192 Install app.")).toBeInTheDocument();
+    expect(screen.queryByText("Use Share \u2192 Add to Home Screen.")).not.toBeInTheDocument();
+  });
+
+  it("shows iOS Share guidance without the native prompt", async () => {
+    setNavigatorValue(
+      "userAgent",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    );
+    setNavigatorValue("platform", "iPhone");
     setNavigatorValue("maxTouchPoints", 5);
 
     renderProtectedShell();

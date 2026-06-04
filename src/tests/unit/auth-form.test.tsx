@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthForm } from "@/components/auth/auth-form";
+import { PwaInstallProvider } from "@/components/pwa-install-context";
 import { initialAuthFormState, type AuthFormState } from "@/lib/auth/form-state";
 import { signUpSchema } from "@/lib/auth/validation";
 
@@ -38,16 +39,18 @@ function renderSignUp(
   googleAction?: (formData: FormData) => Promise<void>,
 ) {
   render(
-    <AuthForm
-      action={action}
-      alternateHref="/sign-in"
-      alternateLabel="Already have an account?"
-      description="Start with a simple spending home designed for calm daily check-ins."
-      googleAction={googleAction}
-      includeFullName
-      submitLabel="Sign up"
-      title="Create your notebook"
-    />,
+    <PwaInstallProvider>
+      <AuthForm
+        action={action}
+        alternateHref="/sign-in"
+        alternateLabel="Already have an account?"
+        description="Start with a simple spending home designed for calm daily check-ins."
+        googleAction={googleAction}
+        includeFullName
+        submitLabel="Sign up"
+        title="Create your notebook"
+      />
+    </PwaInstallProvider>,
   );
 
   return action;
@@ -58,15 +61,17 @@ function renderSignIn(
   googleAction?: (formData: FormData) => Promise<void>,
 ) {
   render(
-    <AuthForm
-      action={action}
-      alternateHref="/sign-up"
-      alternateLabel="Create an account"
-      description="Review your spending, ask quick budget questions, and keep your plan in view."
-      googleAction={googleAction}
-      submitLabel="Sign in"
-      title="Welcome back"
-    />,
+    <PwaInstallProvider>
+      <AuthForm
+        action={action}
+        alternateHref="/sign-up"
+        alternateLabel="Create an account"
+        description="Review your spending, ask quick budget questions, and keep your plan in view."
+        googleAction={googleAction}
+        submitLabel="Sign in"
+        title="Welcome back"
+      />
+    </PwaInstallProvider>,
   );
 
   return action;
@@ -194,7 +199,22 @@ describe("auth form", () => {
     renderSignIn();
 
     expect(await screen.findByText("Install Calm Wallet on your home screen.")).toBeInTheDocument();
-    expect(screen.getByText("Use Share → Add to Home Screen.")).toBeInTheDocument();
+    expect(screen.getByText("Use Share \u2192 Add to Home Screen.")).toBeInTheDocument();
+  });
+
+  it("shows Android Chrome install guidance when the native prompt is unavailable", async () => {
+    setNavigatorValue(
+      "userAgent",
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
+    );
+    setNavigatorValue("platform", "Linux armv8l");
+    setNavigatorValue("maxTouchPoints", 5);
+
+    renderSignIn();
+
+    expect(await screen.findByText("Install Calm Wallet on your home screen.")).toBeInTheDocument();
+    expect(screen.getByText("Open Chrome menu \u22ee \u2192 Install app.")).toBeInTheDocument();
+    expect(screen.queryByText(/Use Share/)).not.toBeInTheDocument();
   });
 
   it("hides PWA install affordances when already running standalone", () => {
