@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   Car,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -17,6 +18,7 @@ import {
   Utensils,
   User,
   Wallet,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { ScreenHeader } from "@/components/shared/screen-header";
@@ -27,6 +29,7 @@ import type { InsightsData } from "@/lib/server/transactions-read-model";
 type SpendingMixSegment = "expenses" | "income";
 
 type SpendingMixCategoryItem = InsightsData["categoryBreakdown"][number];
+type MonthPickerMonth = InsightsData["monthPickerYears"][number]["months"][number];
 
 const spendingMixChartColors = [
   "#0ea5e9",
@@ -181,39 +184,148 @@ function buildInsightsHref(data: InsightsData, updates: { month?: string; curren
   return `/insights?${params.toString()}`;
 }
 
+export function getMonthStatusClass(month: MonthPickerMonth) {
+  if (!month.hasActivity) {
+    return "border-slate-200 bg-slate-50 text-slate-400";
+  }
+
+  if (month.status === "net-positive") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+
+  if (month.status === "spend-heavy") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  return "border-slate-200 bg-white text-slate-800";
+}
+
+function getMonthStatusDotClass(month: MonthPickerMonth) {
+  if (!month.hasActivity) {
+    return "bg-slate-300";
+  }
+
+  if (month.status === "net-positive") {
+    return "bg-emerald-500";
+  }
+
+  if (month.status === "spend-heavy") {
+    return "bg-amber-500";
+  }
+
+  return "bg-slate-500";
+}
+
+function MonthPickerSheet({
+  data,
+  onClose,
+}: {
+  data: InsightsData;
+  onClose: () => void;
+}) {
+  return (
+    <div aria-modal="true" className="fixed inset-0 z-50 flex items-end bg-slate-950/30 px-3 pb-3 sm:items-center sm:justify-center sm:p-4" role="dialog">
+      <button aria-label="Close month picker" className="absolute inset-0 h-full w-full cursor-default" onClick={onClose} type="button" />
+      <div className="relative max-h-[82vh] w-full overflow-hidden rounded-lg bg-white shadow-xl sm:max-w-lg">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Choose month</p>
+            <p className="text-xs leading-5 text-slate-500">
+              Tracked activity markers use {data.displayCurrency}
+              {data.hasConvertedCurrencies ? " approximate" : ""} month totals.
+            </p>
+          </div>
+          <button
+            aria-label="Close month picker"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[64vh] space-y-5 overflow-y-auto p-4">
+          {data.monthPickerYears.map((year) => (
+            <section key={year.year} className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase text-slate-500">{year.year}</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {year.months.map((month) => {
+                  const isSelected = month.month === data.selectedMonth;
+
+                  return (
+                    <Link
+                      key={month.month}
+                      aria-current={isSelected ? "date" : undefined}
+                      aria-label={`${month.month}${month.hasActivity ? " tracked activity" : " no tracked activity"}${month.isApproximate ? " approximate" : ""}`}
+                      className={`min-h-12 rounded-lg border px-3 py-2 text-left text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                        isSelected ? "ring-2 ring-sky-500 ring-offset-1" : ""
+                      } ${getMonthStatusClass(month)}`}
+                      href={buildInsightsHref(data, { month: month.month })}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span>{month.label}</span>
+                        <span className={`h-2 w-2 rounded-full ${getMonthStatusDotClass(month)}`} />
+                      </span>
+                      <span className="mt-1 block text-[11px] font-normal opacity-75">
+                        {month.hasActivity ? `Tracked${month.isApproximate ? ", approx" : ""}` : "No activity"}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MonthNavigator({ data }: { data: InsightsData }) {
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const canGoNext = data.selectedMonth < data.currentMonth;
 
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2">
-      <Link
-        aria-label={`View ${data.previousMonth}`}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-        href={buildInsightsHref(data, { month: data.previousMonth })}
-      >
-        <ChevronLeft aria-hidden="true" className="h-5 w-5" />
-      </Link>
-      <div className="min-w-0 text-center">
-        <p className="truncate text-sm font-semibold text-slate-900">{data.monthLabel}</p>
-        <p className="text-xs text-slate-500">Monthly tracked activity</p>
-      </div>
-      {canGoNext ? (
+    <>
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2">
         <Link
-          aria-label={`View ${data.nextMonth}`}
+          aria-label={`View ${data.previousMonth}`}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          href={buildInsightsHref(data, { month: data.nextMonth })}
+          href={buildInsightsHref(data, { month: data.previousMonth })}
         >
-          <ChevronRight aria-hidden="true" className="h-5 w-5" />
+          <ChevronLeft aria-hidden="true" className="h-5 w-5" />
         </Link>
-      ) : (
-        <span
-          aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-300"
+        <button
+          aria-expanded={isPickerOpen}
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-center hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          onClick={() => setIsPickerOpen(true)}
+          type="button"
         >
-          <ChevronRight className="h-5 w-5" />
-        </span>
-      )}
-    </div>
+          <CalendarDays aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-500" />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-slate-900">{data.monthLabel}</span>
+            <span className="block text-xs text-slate-500">Monthly tracked activity</span>
+          </span>
+        </button>
+        {canGoNext ? (
+          <Link
+            aria-label={`View ${data.nextMonth}`}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            href={buildInsightsHref(data, { month: data.nextMonth })}
+          >
+            <ChevronRight aria-hidden="true" className="h-5 w-5" />
+          </Link>
+        ) : (
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-300"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </span>
+        )}
+      </div>
+      {isPickerOpen ? <MonthPickerSheet data={data} onClose={() => setIsPickerOpen(false)} /> : null}
+    </>
   );
 }
 

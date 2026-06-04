@@ -7,6 +7,7 @@ import {
   filterTransactionsForView,
   getReviewStateMeta,
   mapTransactionsToListItems,
+  resolveInsightsMonthStatus,
 } from "@/lib/server/transactions-read-model";
 import type { Transaction } from "@/domain/transactions/types";
 
@@ -444,6 +445,60 @@ describe("transactions read model", () => {
     expect(data.latestActivityMonthLabel).toBe("April 2026");
     expect(data.hasHistoricalActivity).toBe(true);
     expect(data.isSelectedMonthCurrent).toBe(true);
+  });
+
+  it("builds month picker years with tracked activity status", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "feb-income",
+          transactionType: "income",
+          amountMinor: 8000,
+          occurredAt: "2026-02-15T00:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "apr-expense",
+          transactionType: "expense",
+          amountMinor: 4200,
+          occurredAt: "2026-04-15T00:00:00.000Z",
+        }),
+      ],
+      {},
+      "USD",
+      new Date("2026-06-04T00:00:00.000Z"),
+    );
+
+    expect(data.monthPickerYears).toEqual([
+      {
+        year: "2026",
+        months: [
+          expect.objectContaining({ month: "2026-06", hasActivity: false, status: "none" }),
+          expect.objectContaining({ month: "2026-05", hasActivity: false, status: "none" }),
+          expect.objectContaining({ month: "2026-04", hasActivity: true, status: "spend-heavy" }),
+          expect.objectContaining({ month: "2026-03", hasActivity: false, status: "none" }),
+          expect.objectContaining({ month: "2026-02", hasActivity: true, status: "net-positive" }),
+        ],
+      },
+    ]);
+  });
+
+  it("keeps month status classification stable", () => {
+    expect(resolveInsightsMonthStatus({ transactionCount: 0, incomeMinor: 0, expenseMinor: 0 })).toEqual({
+      status: "none",
+      isApproximate: false,
+    });
+    expect(resolveInsightsMonthStatus({ transactionCount: 1, incomeMinor: 1000, expenseMinor: 400 })).toEqual({
+      status: "net-positive",
+      isApproximate: false,
+    });
+    expect(resolveInsightsMonthStatus({ transactionCount: 1, incomeMinor: 400, expenseMinor: 1000, hasMissingRates: true })).toEqual({
+      status: "spend-heavy",
+      isApproximate: true,
+    });
+    expect(resolveInsightsMonthStatus({ transactionCount: 2, incomeMinor: 1000, expenseMinor: 1000 })).toEqual({
+      status: "activity",
+      isApproximate: false,
+    });
   });
 
   it("builds empty monthly clarity insights without bank-balance claims", () => {

@@ -65,6 +65,20 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
     latestActivityMonthLabel: null,
     isSelectedMonthCurrent: true,
     hasHistoricalActivity: false,
+    monthPickerYears: [
+      {
+        year: month.slice(0, 4),
+        months: [
+          {
+            month,
+            label: now.toLocaleDateString("en-US", { month: "short" }),
+            hasActivity: false,
+            status: "none",
+            isApproximate: false,
+          },
+        ],
+      },
+    ],
     trackedTransactionCount: 0,
     currentMonthTransactionCount: 0,
     needsReviewCount: 0,

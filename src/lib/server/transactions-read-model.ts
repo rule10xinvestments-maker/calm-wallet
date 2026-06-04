@@ -63,6 +63,7 @@ export type InsightsData = {
   latestActivityMonthLabel: string | null;
   isSelectedMonthCurrent: boolean;
   hasHistoricalActivity: boolean;
+  monthPickerYears: InsightsMonthPickerYear[];
   trackedTransactionCount: number;
   currentMonthTransactionCount: number;
   needsReviewCount: number;
@@ -97,6 +98,21 @@ export type InsightsData = {
     currency: string;
   }>;
 };
+
+export type InsightsMonthPickerYear = {
+  year: string;
+  months: InsightsMonthPickerMonth[];
+};
+
+export type InsightsMonthPickerMonth = {
+  month: string;
+  label: string;
+  hasActivity: boolean;
+  status: InsightsMonthStatus;
+  isApproximate: boolean;
+};
+
+export type InsightsMonthStatus = "none" | "activity" | "net-positive" | "spend-heavy";
 
 export type InsightsCategoryBreakdownItem = {
   key: string;
@@ -383,6 +399,100 @@ function resolveLatestActivityMonth(transactions: Transaction[]) {
   return parseMonthKey(new Date(latest.occurredAt).toISOString().slice(0, 7), new Date(latest.occurredAt));
 }
 
+export function resolveInsightsMonthStatus(args: {
+  transactionCount: number;
+  incomeMinor: number;
+  expenseMinor: number;
+  hasMissingRates?: boolean;
+}): { status: InsightsMonthStatus; isApproximate: boolean } {
+  if (args.transactionCount <= 0) {
+    return {
+      status: "none",
+      isApproximate: false,
+    };
+  }
+
+  if (args.incomeMinor > args.expenseMinor) {
+    return {
+      status: "net-positive",
+      isApproximate: Boolean(args.hasMissingRates),
+    };
+  }
+
+  if (args.expenseMinor > args.incomeMinor) {
+    return {
+      status: "spend-heavy",
+      isApproximate: Boolean(args.hasMissingRates),
+    };
+  }
+
+  return {
+    status: "activity",
+    isApproximate: Boolean(args.hasMissingRates),
+  };
+}
+
+function buildMonthRange(activeTransactions: Transaction[], currentMonthDate: Date) {
+  const earliest = activeTransactions
+    .map((transaction) => parseMonthKey(transaction.occurredAt.slice(0, 7), currentMonthDate))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+  const start = earliest ?? currentMonthDate;
+  const months: Date[] = [];
+
+  for (let cursor = start; cursor <= currentMonthDate; cursor = shiftMonth(cursor, 1)) {
+    months.push(cursor);
+  }
+
+  return months;
+}
+
+function buildInsightsMonthPickerYears(args: {
+  activeTransactions: Transaction[];
+  currentMonthDate: Date;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}) {
+  const months = buildMonthRange(args.activeTransactions, args.currentMonthDate);
+  const years = new Map<string, InsightsMonthPickerMonth[]>();
+
+  for (const monthDate of months) {
+    const monthStart = monthDate;
+    const monthEnd = shiftMonth(monthStart, 1);
+    const monthTransactions = args.activeTransactions.filter((transaction) => {
+      const occurredAt = new Date(transaction.occurredAt);
+      return occurredAt >= monthStart && occurredAt < monthEnd;
+    });
+    const convertedBreakdowns = buildConvertedBreakdowns({
+      originalCurrencyBreakdowns: sumBreakdowns(monthTransactions),
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const status = resolveInsightsMonthStatus({
+      transactionCount: monthTransactions.length,
+      incomeMinor: convertedBreakdowns.reduce((sum, breakdown) => sum + (breakdown.incomeDisplayMinor ?? 0), 0),
+      expenseMinor: convertedBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0),
+      hasMissingRates: convertedBreakdowns.some((breakdown) => breakdown.netDisplayMinor === null),
+    });
+    const year = String(monthDate.getUTCFullYear());
+    const item: InsightsMonthPickerMonth = {
+      month: toMonthKey(monthDate),
+      label: monthDate.toLocaleDateString("en-US", { month: "short" }),
+      hasActivity: monthTransactions.length > 0,
+      status: status.status,
+      isApproximate: status.isApproximate,
+    };
+
+    years.set(year, [...(years.get(year) ?? []), item]);
+  }
+
+  return Array.from(years.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([year, yearMonths]) => ({
+      year,
+      months: yearMonths.sort((a, b) => b.month.localeCompare(a.month)),
+    }));
+}
+
 function dominantCurrency(transactions: Transaction[]) {
   if (!transactions.length) {
     return null;
@@ -613,6 +723,12 @@ export function buildInsightsData(
   });
   const availableDisplayCurrencies = buildAvailableDisplayCurrencies(activeTransactions, displayCurrency);
   const rateLookup = createEurRateLookup(fxRates);
+  const monthPickerYears = buildInsightsMonthPickerYears({
+    activeTransactions,
+    currentMonthDate,
+    displayCurrency,
+    rateLookup,
+  });
 
   const currentMonthTransactions = activeTransactions.filter((transaction) => {
     const occurredAt = new Date(transaction.occurredAt);
@@ -791,6 +907,7 @@ export function buildInsightsData(
     latestActivityMonthLabel: latestActivityMonthDate ? formatMonthLabel(latestActivityMonthDate) : null,
     isSelectedMonthCurrent: selectedMonthKey === currentMonthKey,
     hasHistoricalActivity: activeTransactions.some((transaction) => transaction.occurredAt.slice(0, 7) < currentMonthKey),
+    monthPickerYears,
     trackedTransactionCount: activeTransactions.length,
     currentMonthTransactionCount: currentMonthTransactions.length,
     needsReviewCount: activeTransactions.filter((transaction) => isReviewStateNeedingReview(transaction.reviewState)).length,

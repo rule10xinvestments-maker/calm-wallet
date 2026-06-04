@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { buildSpendingMixDonutSegments, InsightsOverview } from "@/components/screens/insights-overview";
+import { buildSpendingMixDonutSegments, getMonthStatusClass, InsightsOverview } from "@/components/screens/insights-overview";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 
@@ -92,6 +92,27 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
     latestActivityMonthLabel: "April 2026",
     isSelectedMonthCurrent: true,
     hasHistoricalActivity: false,
+    monthPickerYears: [
+      {
+        year: "2026",
+        months: [
+          {
+            month: "2026-04",
+            label: "Apr",
+            hasActivity: true,
+            status: "net-positive",
+            isApproximate: false,
+          },
+          {
+            month: "2026-03",
+            label: "Mar",
+            hasActivity: false,
+            status: "none",
+            isApproximate: false,
+          },
+        ],
+      },
+    ],
     trackedTransactionCount: 3,
     currentMonthTransactionCount: 3,
     needsReviewCount: 0,
@@ -175,6 +196,95 @@ describe("insights overview", () => {
     expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&currency=USD");
     expect(screen.queryByLabelText("View 2026-05")).not.toBeInTheDocument();
     expect(screen.getByText("Tracked balance")).toBeInTheDocument();
+  });
+
+  it("opens a compact month picker grouped by year", () => {
+    renderInsights(makeInsightsData());
+
+    fireEvent.click(screen.getByRole("button", { name: /April 2026/ }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Choose month")).toBeInTheDocument();
+    expect(screen.getByText("2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "2026-04 tracked activity" })).toBeInTheDocument();
+  });
+
+  it("selects a month through the picker while preserving display currency", () => {
+    renderInsights(
+      makeInsightsData({
+        displayCurrency: "RON",
+        currency: "RON",
+        availableDisplayCurrencies: ["RON", "USD"],
+        selectedMonth: "2026-04",
+        monthPickerYears: [
+          {
+            year: "2026",
+            months: [
+              {
+                month: "2026-04",
+                label: "Apr",
+                hasActivity: true,
+                status: "net-positive",
+                isApproximate: true,
+              },
+              {
+                month: "2026-02",
+                label: "Feb",
+                hasActivity: true,
+                status: "spend-heavy",
+                isApproximate: false,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /April 2026/ }));
+
+    expect(screen.getByRole("link", { name: "2026-02 tracked activity" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-02&currency=RON",
+    );
+  });
+
+  it("marks months with activity and no-activity styling", () => {
+    renderInsights(makeInsightsData());
+
+    fireEvent.click(screen.getByRole("button", { name: /April 2026/ }));
+
+    expect(screen.getByRole("link", { name: "2026-04 tracked activity" })).toHaveTextContent("Tracked");
+    expect(screen.getByRole("link", { name: "2026-03 no tracked activity" })).toHaveTextContent("No activity");
+  });
+
+  it("keeps month status styling logic stable", () => {
+    expect(
+      getMonthStatusClass({
+        month: "2026-01",
+        label: "Jan",
+        hasActivity: false,
+        status: "none",
+        isApproximate: false,
+      }),
+    ).toContain("text-slate-400");
+    expect(
+      getMonthStatusClass({
+        month: "2026-02",
+        label: "Feb",
+        hasActivity: true,
+        status: "net-positive",
+        isApproximate: false,
+      }),
+    ).toContain("text-emerald-800");
+    expect(
+      getMonthStatusClass({
+        month: "2026-03",
+        label: "Mar",
+        hasActivity: true,
+        status: "spend-heavy",
+        isApproximate: false,
+      }),
+    ).toContain("text-amber-800");
   });
 
   it("shows a latest active month CTA when the current month is empty but older activity exists", () => {
