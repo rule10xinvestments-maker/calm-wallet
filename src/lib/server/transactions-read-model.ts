@@ -55,6 +55,14 @@ export type InsightsData = {
   hasConvertedCurrencies: boolean;
   hasMissingRates: boolean;
   monthLabel: string;
+  selectedMonth: string;
+  currentMonth: string;
+  previousMonth: string;
+  nextMonth: string;
+  latestActivityMonth: string | null;
+  latestActivityMonthLabel: string | null;
+  isSelectedMonthCurrent: boolean;
+  hasHistoricalActivity: boolean;
   trackedTransactionCount: number;
   currentMonthTransactionCount: number;
   needsReviewCount: number;
@@ -295,9 +303,9 @@ function normalizeCurrency(currency: string | null | undefined, fallback = "USD"
   return normalized && /^[A-Z]{3}$/.test(normalized) ? normalized : fallback;
 }
 
-function resolveDominantCurrency(transactions: Transaction[], fallbackCurrency: string, now: Date) {
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+function resolveDominantCurrency(transactions: Transaction[], fallbackCurrency: string, monthDate: Date) {
+  const monthStart = new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth(), 1));
+  const monthEnd = new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 1));
   const currentMonthTransactions = transactions.filter((transaction) => {
     const occurredAt = new Date(transaction.occurredAt);
     return occurredAt >= monthStart && occurredAt < monthEnd;
@@ -329,6 +337,50 @@ function buildAvailableDisplayCurrencies(transactions: Transaction[], displayCur
   }
 
   return Array.from(currencies).sort((a, b) => a.localeCompare(b));
+}
+
+function toMonthKey(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function toMonthStartValue(date: Date) {
+  return `${toMonthKey(date)}-01`;
+}
+
+function parseMonthKey(month: string | null | undefined, fallback: Date) {
+  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+    return new Date(Date.UTC(fallback.getUTCFullYear(), fallback.getUTCMonth(), 1));
+  }
+
+  const [yearPart, monthPart] = month.split("-");
+  const year = Number(yearPart);
+  const monthIndex = Number(monthPart) - 1;
+
+  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    return new Date(Date.UTC(fallback.getUTCFullYear(), fallback.getUTCMonth(), 1));
+  }
+
+  return new Date(Date.UTC(year, monthIndex, 1));
+}
+
+function shiftMonth(date: Date, offset: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + offset, 1));
+}
+
+function formatMonthLabel(date: Date) {
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function resolveLatestActivityMonth(transactions: Transaction[]) {
+  const latest = transactions
+    .filter((transaction) => !transaction.deletedAt)
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())[0];
+
+  if (!latest) {
+    return null;
+  }
+
+  return parseMonthKey(new Date(latest.occurredAt).toISOString().slice(0, 7), new Date(latest.occurredAt));
 }
 
 function dominantCurrency(transactions: Transaction[]) {
@@ -542,15 +594,21 @@ export function buildInsightsData(
   budgetCategoryOptions: Array<{ id: string; label: string }> = [],
   fxRates: FxRate[] = [],
   requestedDisplayCurrency?: string | null,
+  selectedMonth?: string | null,
 ): InsightsData {
   const activeTransactions = transactions.filter((transaction) => !transaction.deletedAt);
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  const monthStartValue = monthStart.toISOString().slice(0, 10);
+  const currentMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const monthStart = parseMonthKey(selectedMonth, now);
+  const monthEnd = shiftMonth(monthStart, 1);
+  const monthStartValue = toMonthStartValue(monthStart);
+  const selectedMonthKey = toMonthKey(monthStart);
+  const currentMonthKey = toMonthKey(currentMonthDate);
+  const latestActivityMonthDate = resolveLatestActivityMonth(activeTransactions);
+  const latestActivityMonth = latestActivityMonthDate ? toMonthKey(latestActivityMonthDate) : null;
   const displayCurrency = resolveInsightsDisplayCurrency({
     transactions: activeTransactions,
     fallbackCurrency: currency,
-    now,
+    now: monthStart,
     requestedDisplayCurrency,
   });
   const availableDisplayCurrencies = buildAvailableDisplayCurrencies(activeTransactions, displayCurrency);
@@ -724,7 +782,15 @@ export function buildInsightsData(
     rateSource: rateMeta?.source ?? null,
     hasConvertedCurrencies,
     hasMissingRates,
-    monthLabel: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    monthLabel: formatMonthLabel(monthStart),
+    selectedMonth: selectedMonthKey,
+    currentMonth: currentMonthKey,
+    previousMonth: toMonthKey(shiftMonth(monthStart, -1)),
+    nextMonth: toMonthKey(shiftMonth(monthStart, 1)),
+    latestActivityMonth,
+    latestActivityMonthLabel: latestActivityMonthDate ? formatMonthLabel(latestActivityMonthDate) : null,
+    isSelectedMonthCurrent: selectedMonthKey === currentMonthKey,
+    hasHistoricalActivity: activeTransactions.some((transaction) => transaction.occurredAt.slice(0, 7) < currentMonthKey),
     trackedTransactionCount: activeTransactions.length,
     currentMonthTransactionCount: currentMonthTransactions.length,
     needsReviewCount: activeTransactions.filter((transaction) => isReviewStateNeedingReview(transaction.reviewState)).length,
@@ -965,11 +1031,12 @@ export async function loadTransactionsPageData(args: {
   };
 }
 
-export async function loadInsightsPageData(userId: string, requestedDisplayCurrency?: string | null) {
+export async function loadInsightsPageData(userId: string, requestedDisplayCurrency?: string | null, selectedMonth?: string | null) {
   const service = await createSupabaseTransactionService();
   const budgetService = await createSupabaseBudgetService();
   const now = new Date();
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  const selectedMonthDate = parseMonthKey(selectedMonth, now);
+  const monthStart = toMonthStartValue(selectedMonthDate);
   const [transactions, categoryLabels, currency, controlledCategories, budgets] = await Promise.all([
     service.listTransactions(userId, {
       includeDeleted: false,
@@ -1005,5 +1072,6 @@ export async function loadInsightsPageData(userId: string, requestedDisplayCurre
     })),
     fxRates,
     requestedDisplayCurrency,
+    toMonthKey(selectedMonthDate),
   );
 }

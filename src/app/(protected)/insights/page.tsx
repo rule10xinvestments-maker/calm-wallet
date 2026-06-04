@@ -8,12 +8,17 @@ import { redirect } from "next/navigation";
 type InsightsPageProps = {
   searchParams?: Promise<{
     currency?: string;
+    month?: string;
   }>;
 };
 
 function normalizeRequestedCurrency(currency: string | undefined) {
   const normalized = currency?.trim().toUpperCase();
   return normalized && /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
+function normalizeRequestedMonth(month: string | undefined) {
+  return month && /^\d{4}-\d{2}$/.test(month) ? month : null;
 }
 
 export default async function InsightsPage({ searchParams }: InsightsPageProps) {
@@ -29,7 +34,11 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
   let data: Awaited<ReturnType<typeof loadInsightsPageData>> = getFallbackInsightsData();
 
   try {
-    data = await loadInsightsPageData(user.id, normalizeRequestedCurrency(resolvedSearchParams.currency));
+    data = await loadInsightsPageData(
+      user.id,
+      normalizeRequestedCurrency(resolvedSearchParams.currency),
+      normalizeRequestedMonth(resolvedSearchParams.month),
+    );
   } catch (error) {
     loadError = true;
     logProtectedRouteLoadFailure("insights", error);

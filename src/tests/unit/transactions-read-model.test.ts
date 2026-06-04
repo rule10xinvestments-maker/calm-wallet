@@ -388,6 +388,64 @@ describe("transactions read model", () => {
     expect(data.largestRecentExpenses[0]?.title).toBe("Rent");
   });
 
+  it("scopes monthly insight totals to the selected historical month without mutating transactions", () => {
+    const aprilExpense = makeTransaction({
+      id: "april-expense",
+      transactionType: "expense",
+      amountMinor: 4200,
+      categoryId: "food",
+      occurredAt: "2026-04-10T00:00:00.000Z",
+    });
+    const juneIncome = makeTransaction({
+      id: "june-income",
+      transactionType: "income",
+      amountMinor: 9000,
+      categoryId: "salary",
+      occurredAt: "2026-06-10T00:00:00.000Z",
+    });
+
+    const data = buildInsightsData(
+      [aprilExpense, juneIncome],
+      { food: "Groceries", salary: "Salary" },
+      "USD",
+      new Date("2026-06-04T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+    );
+
+    expect(data.monthLabel).toBe("April 2026");
+    expect(data.selectedMonth).toBe("2026-04");
+    expect(data.currentMonth).toBe("2026-06");
+    expect(data.currentMonthTransactionCount).toBe(1);
+    expect(data.monthlyIncomeDisplayMinor).toBe(0);
+    expect(data.monthlyExpenseDisplayMinor).toBe(4200);
+    expect(data.trackedBalanceDisplayMinor).toBe(4800);
+    expect(data.categoryBreakdown[0]).toMatchObject({ label: "Groceries", amountMinor: 4200 });
+    expect(aprilExpense.occurredAt).toBe("2026-04-10T00:00:00.000Z");
+  });
+
+  it("identifies the latest activity month when the current month has no transactions", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "march", occurredAt: "2026-03-15T00:00:00.000Z" }),
+        makeTransaction({ id: "april", occurredAt: "2026-04-20T00:00:00.000Z" }),
+      ],
+      {},
+      "USD",
+      new Date("2026-06-04T00:00:00.000Z"),
+    );
+
+    expect(data.monthLabel).toBe("June 2026");
+    expect(data.currentMonthTransactionCount).toBe(0);
+    expect(data.latestActivityMonth).toBe("2026-04");
+    expect(data.latestActivityMonthLabel).toBe("April 2026");
+    expect(data.hasHistoricalActivity).toBe(true);
+    expect(data.isSelectedMonthCurrent).toBe(true);
+  });
+
   it("builds empty monthly clarity insights without bank-balance claims", () => {
     const data = buildInsightsData([], {}, "USD", new Date("2026-04-21T00:00:00.000Z"));
 

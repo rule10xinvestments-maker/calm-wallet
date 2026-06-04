@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   Car,
+  ChevronLeft,
+  ChevronRight,
   CircleHelp,
   HeartPulse,
   ReceiptText,
@@ -152,13 +154,65 @@ function CurrencySwitcher({ data }: { data: InsightsData }) {
               className={`rounded-full px-2.5 py-1 font-semibold ${
                 active ? "bg-sky-600 text-white" : "text-sky-700 hover:bg-sky-50"
               }`}
-              href={`/insights?currency=${encodeURIComponent(currency)}`}
+              href={buildInsightsHref(data, { currency })}
             >
               {currency}
             </Link>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function buildInsightsHref(data: InsightsData, updates: { month?: string; currency?: string }) {
+  const params = new URLSearchParams();
+  const month = updates.month ?? data.selectedMonth;
+  const currency = updates.currency ?? data.displayCurrency;
+
+  if (month) {
+    params.set("month", month);
+  }
+
+  if (currency) {
+    params.set("currency", currency);
+  }
+
+  return `/insights?${params.toString()}`;
+}
+
+function MonthNavigator({ data }: { data: InsightsData }) {
+  const canGoNext = data.selectedMonth < data.currentMonth;
+
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2">
+      <Link
+        aria-label={`View ${data.previousMonth}`}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+        href={buildInsightsHref(data, { month: data.previousMonth })}
+      >
+        <ChevronLeft aria-hidden="true" className="h-5 w-5" />
+      </Link>
+      <div className="min-w-0 text-center">
+        <p className="truncate text-sm font-semibold text-slate-900">{data.monthLabel}</p>
+        <p className="text-xs text-slate-500">Monthly tracked activity</p>
+      </div>
+      {canGoNext ? (
+        <Link
+          aria-label={`View ${data.nextMonth}`}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          href={buildInsightsHref(data, { month: data.nextMonth })}
+        >
+          <ChevronRight aria-hidden="true" className="h-5 w-5" />
+        </Link>
+      ) : (
+        <span
+          aria-hidden="true"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-300"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </span>
+      )}
     </div>
   );
 }
@@ -580,6 +634,7 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
         title="Monthly clarity"
         description="Tracked transactions only. Not a bank balance, forecast, or account statement."
       />
+      <MonthNavigator data={data} />
       {loadError ? (
         <Card className="rounded-lg">
           <CardHeader>
@@ -629,8 +684,18 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
       </div>
 
       {hasTrackedData && !hasCurrentMonthData ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
-          You have tracked history, but no transactions in {data.monthLabel} yet.
+        <div className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
+          <p>
+            You have tracked history, but no transactions in {data.monthLabel} yet.
+          </p>
+          {data.isSelectedMonthCurrent && data.hasHistoricalActivity && data.latestActivityMonth ? (
+            <Link
+              className="inline-flex min-h-10 items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white"
+              href={buildInsightsHref(data, { month: data.latestActivityMonth })}
+            >
+              View latest month with activity
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

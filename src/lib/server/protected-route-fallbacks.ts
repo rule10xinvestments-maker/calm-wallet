@@ -34,6 +34,10 @@ export function getFallbackTransactionsPageData(args: { view: TransactionsView; 
 
 export function getFallbackInsightsData(now = new Date()): InsightsData {
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  const month = monthStart.slice(0, 7);
+  const previousMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const nextMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const formatMonth = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 
   return {
     trackedBalanceMinor: 0,
@@ -53,6 +57,14 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
     hasConvertedCurrencies: false,
     hasMissingRates: false,
     monthLabel: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    selectedMonth: month,
+    currentMonth: month,
+    previousMonth: formatMonth(previousMonthDate),
+    nextMonth: formatMonth(nextMonthDate),
+    latestActivityMonth: null,
+    latestActivityMonthLabel: null,
+    isSelectedMonthCurrent: true,
+    hasHistoricalActivity: false,
     trackedTransactionCount: 0,
     currentMonthTransactionCount: 0,
     needsReviewCount: 0,

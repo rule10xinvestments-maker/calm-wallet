@@ -43,4 +43,14 @@ describe("insights page read model server loader", () => {
       monthStart: expect.stringMatching(/^\d{4}-\d{2}-01$/),
     });
   });
+
+  it("loads monthly budgets for the requested insights month", async () => {
+    const { loadInsightsPageData } = await import("@/lib/server/transactions-read-model");
+
+    await loadInsightsPageData("user-1", null, "2026-04");
+
+    expect(listMonthlyCategoryBudgets).toHaveBeenCalledWith("user-1", {
+      monthStart: "2026-04-01",
+    });
+  });
 });

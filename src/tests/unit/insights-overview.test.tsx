@@ -84,6 +84,14 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
     hasConvertedCurrencies: false,
     hasMissingRates: false,
     monthLabel: "April 2026",
+    selectedMonth: "2026-04",
+    currentMonth: "2026-04",
+    previousMonth: "2026-03",
+    nextMonth: "2026-05",
+    latestActivityMonth: "2026-04",
+    latestActivityMonthLabel: "April 2026",
+    isSelectedMonthCurrent: true,
+    hasHistoricalActivity: false,
     trackedTransactionCount: 3,
     currentMonthTransactionCount: 3,
     needsReviewCount: 0,
@@ -158,6 +166,42 @@ describe("insights overview", () => {
     expect(screen.getByText("Tracked balance")).toBeInTheDocument();
     expect(screen.getByText("$30")).toBeInTheDocument();
     expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
+  });
+
+  it("renders month navigation links without changing tracked balance wording", () => {
+    renderInsights(makeInsightsData());
+
+    expect(screen.getAllByText("April 2026").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&currency=USD");
+    expect(screen.queryByLabelText("View 2026-05")).not.toBeInTheDocument();
+    expect(screen.getByText("Tracked balance")).toBeInTheDocument();
+  });
+
+  it("shows a latest active month CTA when the current month is empty but older activity exists", () => {
+    renderInsights(
+      makeInsightsData({
+        monthLabel: "June 2026",
+        selectedMonth: "2026-06",
+        currentMonth: "2026-06",
+        previousMonth: "2026-05",
+        nextMonth: "2026-07",
+        latestActivityMonth: "2026-04",
+        latestActivityMonthLabel: "April 2026",
+        isSelectedMonthCurrent: true,
+        hasHistoricalActivity: true,
+        currentMonthTransactionCount: 0,
+        monthlyIncomeDisplayMinor: 0,
+        monthlyExpenseDisplayMinor: 0,
+        categoryBreakdown: [],
+        incomeCategoryBreakdown: [],
+      }),
+    );
+
+    expect(screen.getByText("You have tracked history, but no transactions in June 2026 yet.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View latest month with activity" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-04&currency=USD",
+    );
   });
 
   it("renders category breakdown and largest recent expenses", () => {
@@ -474,8 +518,8 @@ describe("insights overview", () => {
     expect(screen.queryByText("Approximate total")).not.toBeInTheDocument();
     expect(screen.queryByText("Original entries stay unchanged")).not.toBeInTheDocument();
     expect(screen.getByText("View totals as:")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "EUR" })).toHaveAttribute("href", "/insights?currency=EUR");
-    expect(screen.getByRole("link", { name: "RON" })).toHaveAttribute("href", "/insights?currency=RON");
+    expect(screen.getByRole("link", { name: "EUR" })).toHaveAttribute("href", "/insights?month=2026-04&currency=EUR");
+    expect(screen.getByRole("link", { name: "RON" })).toHaveAttribute("href", "/insights?month=2026-04&currency=RON");
   });
 
   it("does not render the old kept separate copy", () => {
