@@ -76,9 +76,8 @@ describe("assistant overview", () => {
       screen.getByText("Write what you spent or earned. Calm Wallet saves it quickly, and you can fix details anytime."),
     ).toBeInTheDocument();
     expect(screen.getByText("Quick add")).toBeInTheDocument();
-    expect(
-      screen.getByText('Try simple notes like "Spent $18 on groceries", "Taxi 14 yesterday", or "Got salary 1200".'),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Just type what happened. Calm Wallet will do the rest.")).toBeInTheDocument();
+    expect(screen.getByText('Examples: "Coffee 12", "Groceries 85", or "Salary 1200".')).toBeInTheDocument();
     expect(screen.queryByText(/narrow, trusted path/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/approved tracked-item actions/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Attach receipt or CSV" })).toBeInTheDocument();

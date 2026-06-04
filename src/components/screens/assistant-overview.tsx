@@ -53,7 +53,8 @@ export function AssistantOverview({
         <CardHeader>
           <CardTitle>Quick add</CardTitle>
           <CardDescription>
-            {'Try simple notes like "Spent $18 on groceries", "Taxi 14 yesterday", or "Got salary 1200".'}
+            <span className="block">Just type what happened. Calm Wallet will do the rest.</span>
+            <span className="block">{'Examples: "Coffee 12", "Groceries 85", or "Salary 1200".'}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
