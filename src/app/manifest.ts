@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Calm Ledger",
-    short_name: "Calm Ledger",
+    name: "Calm Wallet",
+    short_name: "Calm Wallet",
     description: "A calm AI notebook for tracking expenses and income.",
     start_url: "/assistant",
     scope: "/",

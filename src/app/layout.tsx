@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  applicationName: "Calm Ledger",
-  title: "Calm Ledger",
+  applicationName: "Calm Wallet",
+  title: "Calm Wallet",
   description: "A calm AI notebook for tracking expenses and income.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Calm Ledger",
+    title: "Calm Wallet",
   },
   icons: {
     icon: [

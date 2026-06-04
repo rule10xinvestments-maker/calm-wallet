@@ -14,7 +14,7 @@ export function ProtectedShell({ children, accountHint, onSignOut }: ProtectedSh
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-sky-700">Calm Ledger</p>
+          <p className="text-sm font-medium text-sky-700">Calm Wallet</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Your money, one clear view.</h1>
           <p className="mt-2 text-xs leading-5 text-slate-500">Signed in as {accountHint}</p>
         </div>

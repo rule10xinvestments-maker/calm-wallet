@@ -193,7 +193,7 @@ describe("auth form", () => {
 
     renderSignIn();
 
-    expect(await screen.findByText("Install Calm Ledger on your home screen.")).toBeInTheDocument();
+    expect(await screen.findByText("Install Calm Wallet on your home screen.")).toBeInTheDocument();
     expect(screen.getByText("Use Share → Add to Home Screen.")).toBeInTheDocument();
   });
 
@@ -203,7 +203,7 @@ describe("auth form", () => {
     renderSignIn();
 
     expect(screen.queryByRole("button", { name: "Download app" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Install Calm Ledger on your home screen.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Install Calm Wallet on your home screen.")).not.toBeInTheDocument();
   });
 });
 

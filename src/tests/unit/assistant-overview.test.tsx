@@ -73,7 +73,7 @@ describe("assistant overview", () => {
 
     expect(screen.getByText("Track money in one sentence")).toBeInTheDocument();
     expect(
-      screen.getByText("Write what you spent or earned. Calm Ledger saves it quickly, and you can fix details anytime."),
+      screen.getByText("Write what you spent or earned. Calm Wallet saves it quickly, and you can fix details anytime."),
     ).toBeInTheDocument();
     expect(screen.getByText("Quick add")).toBeInTheDocument();
     expect(

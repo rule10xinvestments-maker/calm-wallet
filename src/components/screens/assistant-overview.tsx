@@ -39,7 +39,7 @@ export function AssistantOverview({
       <ScreenHeader
         eyebrow="Assistant"
         title="Track money in one sentence"
-        description="Write what you spent or earned. Calm Ledger saves it quickly, and you can fix details anytime."
+        description="Write what you spent or earned. Calm Wallet saves it quickly, and you can fix details anytime."
       />
       {loadError ? (
         <Card>

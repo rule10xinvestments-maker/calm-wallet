@@ -19,7 +19,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
   return (
     <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
       <div className="space-y-2">
-        <p className="text-sm font-medium text-sky-700">Calm Ledger</p>
+        <p className="text-sm font-medium text-sky-700">Calm Wallet</p>
         <h2 className="text-xl font-semibold text-slate-900">We could not load this view.</h2>
         <p className="text-sm leading-6 text-slate-500">
           Your data was not changed. Try again, or return home and reopen the view.

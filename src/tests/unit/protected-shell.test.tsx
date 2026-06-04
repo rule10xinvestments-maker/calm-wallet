@@ -60,10 +60,10 @@ describe("protected shell PWA install affordance", () => {
       window.dispatchEvent(installEvent);
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Install Calm Ledger" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Install Calm Wallet" }));
 
     await waitFor(() => expect(prompt).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("button", { name: "Install Calm Ledger" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
   });
 
   it("shows calm home-screen guidance on mobile browsers without the native prompt", async () => {
@@ -71,7 +71,7 @@ describe("protected shell PWA install affordance", () => {
 
     renderProtectedShell();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Install Calm Ledger" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Install Calm Wallet" }));
 
     expect(screen.getByText("Use Share \u2192 Add to Home Screen.")).toBeInTheDocument();
   });
@@ -81,6 +81,6 @@ describe("protected shell PWA install affordance", () => {
 
     renderProtectedShell();
 
-    expect(screen.queryByRole("button", { name: "Install Calm Ledger" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
   });
 });

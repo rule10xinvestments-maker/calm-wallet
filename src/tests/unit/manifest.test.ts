@@ -7,8 +7,8 @@ describe("PWA manifest", () => {
 
     expect(result).toEqual({
       id: "/",
-      name: "Calm Ledger",
-      short_name: "Calm Ledger",
+      name: "Calm Wallet",
+      short_name: "Calm Wallet",
       description: "A calm AI notebook for tracking expenses and income.",
       start_url: "/assistant",
       scope: "/",

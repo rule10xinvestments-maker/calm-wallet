@@ -124,7 +124,7 @@ export function PwaInstallButton() {
         <Button className="w-full" onClick={handleInstallClick}>
           Download app
         </Button>
-        <p className="mt-2 text-center text-sm text-sky-800">Install Calm Ledger on your home screen.</p>
+        <p className="mt-2 text-center text-sm text-sky-800">Install Calm Wallet on your home screen.</p>
       </div>
     );
   }
@@ -132,7 +132,7 @@ export function PwaInstallButton() {
   if (showIosGuidance) {
     return (
       <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
-        <p className="text-sm font-medium text-slate-700">Install Calm Ledger on your home screen.</p>
+        <p className="text-sm font-medium text-slate-700">Install Calm Wallet on your home screen.</p>
         <p className="mt-1 text-sm text-slate-500">{"Use Share \u2192 Add to Home Screen."}</p>
       </div>
     );
@@ -164,7 +164,7 @@ export function PwaInstallHeaderIcon({ className }: { className?: string }) {
     <div className={cn("relative", className)}>
       <button
         aria-expanded={helperOpen}
-        aria-label="Install Calm Ledger"
+        aria-label="Install Calm Wallet"
         className="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-500 transition hover:bg-white hover:text-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         onClick={handleClick}
         type="button"
