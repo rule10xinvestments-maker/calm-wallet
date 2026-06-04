@@ -213,8 +213,9 @@ describe("auth form", () => {
     renderSignIn();
 
     expect(await screen.findByText("Install Calm Wallet on your home screen.")).toBeInTheDocument();
-    expect(screen.getByText("Tap \u22ee in Chrome, then Install app.")).toBeInTheDocument();
-    expect(screen.getByText("Chrome controls this prompt.")).toBeInTheDocument();
+    expect(screen.getByText("Open Chrome menu \u2192 Add to Home screen.")).toBeInTheDocument();
+    expect(screen.getByText("Choose Install app if you see it.")).toBeInTheDocument();
+    expect(screen.queryByText("Chrome controls this prompt.")).not.toBeInTheDocument();
     expect(screen.queryByText(/Use Share/)).not.toBeInTheDocument();
   });
 

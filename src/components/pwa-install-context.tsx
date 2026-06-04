@@ -239,8 +239,8 @@ export function usePwaInstallState() {
 export function getInstallGuidanceText(guidance: InstallGuidance) {
   if (guidance === "android-chrome") {
     return {
-      detail: "Chrome controls this prompt.",
-      title: "Tap \u22ee in Chrome, then Install app.",
+      detail: "Choose Install app if you see it.",
+      title: "Open Chrome menu \u2192 Add to Home screen.",
     };
   }
 
