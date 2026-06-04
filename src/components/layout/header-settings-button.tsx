@@ -33,7 +33,10 @@ export function HeaderSettingsButton({
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 top-12 z-20 w-72 max-w-[calc(100vw-2rem)] space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+        <div
+          className="fixed inset-x-4 top-24 z-20 w-auto max-w-none space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-80 sm:max-w-[calc(100vw-2rem)]"
+          data-testid="header-settings-panel"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-900">Settings</p>

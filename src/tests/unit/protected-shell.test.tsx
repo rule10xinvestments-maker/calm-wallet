@@ -79,9 +79,16 @@ describe("protected shell PWA install affordance", () => {
 
     fireEvent.click(settingsButton);
 
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    expect(settingsPanel).toHaveClass("fixed");
+    expect(settingsPanel).toHaveClass("inset-x-4");
+    expect(settingsPanel).toHaveClass("w-auto");
+    expect(settingsPanel).toHaveClass("sm:absolute");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
     expect(screen.getByText("Daily logging reminder")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save notification preferences" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
