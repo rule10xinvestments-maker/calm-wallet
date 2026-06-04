@@ -14,19 +14,19 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait-primary",
     icons: [
       {
-        src: "/icons/calm-ledger-icon-192.png",
+        src: "/icons/calm-wallet-icon-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/calm-ledger-icon-512.png",
+        src: "/icons/calm-wallet-icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/calm-ledger-maskable-512.png",
+        src: "/icons/calm-wallet-maskable-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

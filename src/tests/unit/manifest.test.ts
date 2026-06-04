@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import manifest from "@/app/manifest";
 
@@ -18,19 +20,19 @@ describe("PWA manifest", () => {
       orientation: "portrait-primary",
       icons: [
         {
-          src: "/icons/calm-ledger-icon-192.png",
+          src: "/icons/calm-wallet-icon-192.png",
           sizes: "192x192",
           type: "image/png",
           purpose: "any",
         },
         {
-          src: "/icons/calm-ledger-icon-512.png",
+          src: "/icons/calm-wallet-icon-512.png",
           sizes: "512x512",
           type: "image/png",
           purpose: "any",
         },
         {
-          src: "/icons/calm-ledger-maskable-512.png",
+          src: "/icons/calm-wallet-maskable-512.png",
           sizes: "512x512",
           type: "image/png",
           purpose: "maskable",
@@ -40,5 +42,18 @@ describe("PWA manifest", () => {
 
     expect(result).not.toHaveProperty("related_applications");
     expect(result).not.toHaveProperty("prefer_related_applications");
+  });
+
+  it("references icon files that exist in public", () => {
+    const result = manifest();
+
+    expect(result.icons).toBeDefined();
+    for (const icon of result.icons ?? []) {
+      if (typeof icon === "string") {
+        continue;
+      }
+
+      expect(existsSync(join(process.cwd(), "public", icon.src))).toBe(true);
+    }
   });
 });
