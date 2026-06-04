@@ -1,15 +1,29 @@
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { HeaderSettingsButton } from "@/components/layout/header-settings-button";
 import { PwaInstallHeaderIcon } from "@/components/pwa-install-button";
 import type { signOutAction } from "@/lib/auth/actions";
+import type { NotificationPreferences } from "@/domain/notifications/types";
+import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 
 type ProtectedShellProps = {
   children: React.ReactNode;
   accountHint: string;
   onSignOut: typeof signOutAction;
+  notificationPreferences: NotificationPreferences;
+  notificationPreferencesAction: (
+    state: NotificationPreferencesActionState,
+    formData: FormData,
+  ) => Promise<NotificationPreferencesActionState>;
 };
 
-export function ProtectedShell({ children, accountHint, onSignOut }: ProtectedShellProps) {
+export function ProtectedShell({
+  children,
+  accountHint,
+  onSignOut,
+  notificationPreferences,
+  notificationPreferencesAction,
+}: ProtectedShellProps) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-6">
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -23,6 +37,10 @@ export function ProtectedShell({ children, accountHint, onSignOut }: ProtectedSh
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <PwaInstallHeaderIcon />
+          <HeaderSettingsButton
+            notificationPreferences={notificationPreferences}
+            notificationPreferencesAction={notificationPreferencesAction}
+          />
           <SignOutButton action={onSignOut} />
         </div>
       </div>

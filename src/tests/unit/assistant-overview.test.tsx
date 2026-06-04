@@ -2,22 +2,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { AssistantOverview } from "@/components/screens/assistant-overview";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
-import { initialNotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { Transaction } from "@/domain/transactions/types";
 
 const noopAssistantAction = async () => initialAssistantActionState;
-const noopNotificationAction = async () => initialNotificationPreferencesActionState;
-
-const notificationPreferences = {
-  userId: "user-1",
-  dailyReminderEnabled: false,
-  monthlyReviewEnabled: true,
-  overspendingEnabled: true,
-  unusualSpendingEnabled: true,
-  savingsOpportunitiesEnabled: true,
-  createdAt: "2026-05-03T00:00:00.000Z",
-  updatedAt: "2026-05-03T00:00:00.000Z",
-};
 
 const recentTransaction: Transaction = {
   id: "transaction-1",
@@ -48,8 +35,6 @@ describe("assistant overview", () => {
         categoryOptions={[]}
         initialState={initialAssistantActionState}
         loadError
-        notificationPreferences={notificationPreferences}
-        notificationPreferencesAction={noopNotificationAction}
         recentTransactions={[]}
       />,
     );
@@ -59,14 +44,12 @@ describe("assistant overview", () => {
     expect(screen.getByText("Quick add")).toBeInTheDocument();
   });
 
-  it("collapses notification preferences without adding another primary page surface", () => {
+  it("renders the compact assistant action row without adding another primary page surface", () => {
     render(
       <AssistantOverview
         action={noopAssistantAction}
         categoryOptions={[]}
         initialState={initialAssistantActionState}
-        notificationPreferences={notificationPreferences}
-        notificationPreferencesAction={noopNotificationAction}
         recentTransactions={[]}
       />,
     );
@@ -83,21 +66,21 @@ describe("assistant overview", () => {
     expect(screen.getByRole("button", { name: "Receipt" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Statement" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Light reminders are optional, calm, and user-controlled.")).not.toBeInTheDocument();
     expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
     expect(screen.queryByText("Monthly tracked review")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(screen.getByRole("button", { name: "Manual" }));
 
     expect(screen.getByText("Add manually")).toBeInTheDocument();
-    expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
-    expect(screen.getByText("Daily logging reminder")).toBeInTheDocument();
-    expect(screen.getByText("Monthly tracked review")).toBeInTheDocument();
+    expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
+    expect(screen.queryByText("Monthly tracked review")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
+    expect(screen.queryByText("Add manually")).not.toBeInTheDocument();
     expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
   });
 
@@ -107,8 +90,6 @@ describe("assistant overview", () => {
         action={noopAssistantAction}
         categoryOptions={[]}
         initialState={initialAssistantActionState}
-        notificationPreferences={notificationPreferences}
-        notificationPreferencesAction={noopNotificationAction}
         recentTransactions={[recentTransaction]}
       />,
     );

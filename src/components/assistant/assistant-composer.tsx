@@ -1,10 +1,8 @@
 "use client";
 
 import { useActionState, useState, type FormEvent } from "react";
-import { FileSpreadsheet, History, MoreHorizontal, Receipt } from "lucide-react";
+import { FileSpreadsheet, History, Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
-import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import {
   completeStagedImportUploadAction,
@@ -21,19 +19,12 @@ import {
 import { uploadStagedImportFile } from "@/lib/imports/browser-upload";
 import { CSV_IMPORT_MAX_BYTES } from "@/lib/imports/storage";
 import type { AssistantActionState } from "@/lib/server/assistant";
-import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
-type NotificationPreferencesActionHandler = (
-  state: NotificationPreferencesActionState,
-  formData: FormData,
-) => Promise<NotificationPreferencesActionState>;
 
 type AssistantComposerProps = {
   action: AssistantActionHandler;
   initialState: AssistantActionState;
-  notificationPreferences?: NotificationPreferences;
-  notificationPreferencesAction?: NotificationPreferencesActionHandler;
   recentItems?: AssistantActionState["recentItems"];
   categoryOptions?: ControlledCategoryOption[];
 };
@@ -45,7 +36,7 @@ type UploadFlowState = {
   filename: string | null;
 };
 
-type ActionPanel = "receipt" | "statement" | "recent" | "more";
+type ActionPanel = "receipt" | "statement" | "recent" | "manual";
 
 const initialUploadFlowState: UploadFlowState = {
   status: "idle",
@@ -74,14 +65,12 @@ const actionPanelItems: Array<{
   { id: "receipt", label: "Receipt", Icon: Receipt },
   { id: "statement", label: "Statement", Icon: FileSpreadsheet },
   { id: "recent", label: "Recent", Icon: History },
-  { id: "more", label: "More", Icon: MoreHorizontal },
+  { id: "manual", label: "Manual", Icon: Plus },
 ];
 
 export function AssistantComposer({
   action,
   initialState,
-  notificationPreferences,
-  notificationPreferencesAction,
   recentItems = [],
   categoryOptions = [],
 }: AssistantComposerProps) {
@@ -95,7 +84,6 @@ export function AssistantComposer({
   const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const [selectedTargetTransactionId, setSelectedTargetTransactionId] = useState("");
   const [selectedManualCategoryId, setSelectedManualCategoryId] = useState("");
-  const canEditNotificationPreferences = Boolean(notificationPreferences && notificationPreferencesAction);
   const manualTargetItems = recentItems.length ? recentItems : state.recentItems;
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
   const selectedTargetItem = manualTargetItems.find((item) => item.id === selectedTargetTransactionId) ?? null;
@@ -107,7 +95,7 @@ export function AssistantComposer({
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
-  const isMorePanelOpen = openPanel === "more";
+  const isManualPanelOpen = openPanel === "manual";
 
   function togglePanel(panel: ActionPanel) {
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
@@ -479,12 +467,12 @@ export function AssistantComposer({
         </div>
       ) : null}
 
-      {isMorePanelOpen ? (
+      {isManualPanelOpen ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">More</p>
-              <p className="text-xs text-slate-500">Manual entry and optional preferences live here for now.</p>
+              <p className="text-sm font-medium text-slate-900">Manual</p>
+              <p className="text-xs text-slate-500">Use this when the message box is not precise enough.</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
@@ -497,7 +485,6 @@ export function AssistantComposer({
           <div className="space-y-3 rounded-2xl bg-white p-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-900">Add manually</p>
-              <p className="text-xs text-slate-500">Use this when the message box is not precise enough.</p>
             </div>
 
           <form action={formAction} className="space-y-3">
@@ -729,18 +716,6 @@ export function AssistantComposer({
         </Button>
           </form>
           </div>
-          {canEditNotificationPreferences ? (
-            <div className="space-y-3 rounded-2xl bg-white p-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-900">Notification preferences</p>
-                <p className="text-xs text-slate-500">Light reminders are optional, calm, and user-controlled.</p>
-              </div>
-              <NotificationPreferencesCard
-                action={notificationPreferencesAction!}
-                preferences={notificationPreferences!}
-              />
-            </div>
-          ) : null}
         </div>
       ) : null}
 

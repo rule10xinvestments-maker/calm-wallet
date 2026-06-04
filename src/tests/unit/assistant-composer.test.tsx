@@ -58,7 +58,7 @@ function openImportUpload() {
 }
 
 function openManualEntry() {
-  fireEvent.click(screen.getByRole("button", { name: "More" }));
+  fireEvent.click(screen.getByRole("button", { name: "Manual" }));
 }
 
 describe("assistant composer", () => {
@@ -79,7 +79,8 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Receipt" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Statement" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
     expect(screen.queryByText("Manual entry")).not.toBeInTheDocument();
@@ -400,7 +401,8 @@ describe("assistant composer", () => {
     renderComposer();
 
     openManualEntry();
-    expect(screen.getByRole("button", { name: "More" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByText("Manual").length).toBeGreaterThan(0);
     expect(screen.getByText("Add manually")).toBeInTheDocument();
     expect(screen.getByLabelText("Action")).toHaveValue("create_transaction");
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
@@ -410,7 +412,7 @@ describe("assistant composer", () => {
 
     expect(screen.queryByText("Add manually")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "More" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("prepares manual create transaction fields after opening manual entry", () => {

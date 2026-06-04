@@ -2,6 +2,20 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedShell } from "@/components/layout/protected-shell";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
+import { initialNotificationPreferencesActionState } from "@/lib/actions/notifications-state";
+
+const notificationPreferences = {
+  userId: "user-1",
+  dailyReminderEnabled: false,
+  monthlyReviewEnabled: true,
+  overspendingEnabled: true,
+  unusualSpendingEnabled: true,
+  savingsOpportunitiesEnabled: true,
+  createdAt: "2026-05-03T00:00:00.000Z",
+  updatedAt: "2026-05-03T00:00:00.000Z",
+};
+
+const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
 
 function setDisplayMode(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -29,7 +43,12 @@ function setNavigatorValue(name: "maxTouchPoints" | "platform" | "standalone" | 
 function renderProtectedShell() {
   return render(
     <PwaInstallProvider>
-      <ProtectedShell accountHint="paul@example.com" onSignOut={vi.fn(async () => undefined)}>
+      <ProtectedShell
+        accountHint="paul@example.com"
+        notificationPreferences={notificationPreferences}
+        notificationPreferencesAction={updateNotificationPreferencesAction}
+        onSignOut={vi.fn(async () => undefined)}
+      >
         <div>Assistant content</div>
       </ProtectedShell>
     </PwaInstallProvider>,
@@ -47,6 +66,27 @@ describe("protected shell PWA install affordance", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("keeps settings beside sign out and preserves sign-out accessibility", () => {
+    renderProtectedShell();
+
+    const settingsButton = screen.getByRole("button", { name: "Settings" });
+    const signOutButton = screen.getByRole("button", { name: "Sign out" });
+
+    expect(settingsButton).toHaveAttribute("aria-expanded", "false");
+    expect(signOutButton.querySelector("svg")).not.toBeNull();
+
+    fireEvent.click(settingsButton);
+
+    expect(settingsButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
+    expect(screen.getByText("Daily logging reminder")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(settingsButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
   });
 
   it("opens the native install prompt from the authenticated header icon on Android Chrome", async () => {

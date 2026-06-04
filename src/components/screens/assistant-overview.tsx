@@ -3,21 +3,13 @@ import { ScreenHeader } from "@/components/shared/screen-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { mapTransactionsToAssistantItems, type AssistantActionState } from "@/lib/server/assistant";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
-import type { NotificationPreferences } from "@/domain/notifications/types";
-import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { Transaction } from "@/domain/transactions/types";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
-type NotificationPreferencesActionHandler = (
-  state: NotificationPreferencesActionState,
-  formData: FormData,
-) => Promise<NotificationPreferencesActionState>;
 
 type AssistantOverviewProps = {
   action: AssistantActionHandler;
   initialState: AssistantActionState;
-  notificationPreferences: NotificationPreferences;
-  notificationPreferencesAction: NotificationPreferencesActionHandler;
   categoryOptions: ControlledCategoryOption[];
   recentTransactions: Transaction[];
   loadError?: boolean;
@@ -27,8 +19,6 @@ export function AssistantOverview({
   action,
   initialState,
   categoryOptions,
-  notificationPreferences,
-  notificationPreferencesAction,
   recentTransactions,
   loadError = false,
 }: AssistantOverviewProps) {
@@ -62,8 +52,6 @@ export function AssistantOverview({
             action={action}
             categoryOptions={categoryOptions}
             initialState={initialState}
-            notificationPreferences={notificationPreferences}
-            notificationPreferencesAction={notificationPreferencesAction}
             recentItems={recentItems}
           />
         </CardContent>
