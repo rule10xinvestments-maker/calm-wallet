@@ -17,6 +17,7 @@ type PwaInstallContextValue = {
 };
 
 const PwaInstallContext = createContext<PwaInstallContextValue | null>(null);
+const isDevelopment = process.env.NODE_ENV === "development";
 
 function isStandaloneDisplay() {
   if (typeof window === "undefined") {
@@ -56,6 +57,75 @@ function getInstallGuidance(): InstallGuidance {
   return null;
 }
 
+function getPlatformCategory() {
+  if (typeof window === "undefined") {
+    return "unknown";
+  }
+
+  const userAgent = window.navigator.userAgent;
+
+  if (/Android/.test(userAgent) && /Chrome/.test(userAgent) && !/Edg|OPR|SamsungBrowser/.test(userAgent)) {
+    return "android-chrome";
+  }
+
+  if (/iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+    return "ios";
+  }
+
+  if (/Android/.test(userAgent)) {
+    return "android-other";
+  }
+
+  return "desktop-or-other";
+}
+
+function logInstallDiagnostics(snapshot: Record<string, unknown>) {
+  if (!isDevelopment) {
+    return;
+  }
+
+  console.info("[pwa-install-diagnostics]", snapshot);
+}
+
+async function loadManifestDiagnostics() {
+  try {
+    const response = await fetch("/manifest.webmanifest", { cache: "no-store" });
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+    };
+  } catch (error) {
+    return {
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    };
+  }
+}
+
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator) || !window.isSecureContext) {
+    return {
+      registered: false,
+      reason: "unsupported-or-insecure-context",
+    };
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+
+    return {
+      registered: true,
+      scope: registration.scope,
+    };
+  } catch (error) {
+    return {
+      registered: false,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    };
+  }
+}
+
 export function PwaInstallProvider({ children }: { children: React.ReactNode }) {
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const [canPrompt, setCanPrompt] = useState(false);
@@ -63,31 +133,68 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    let beforeInstallPromptFired = false;
+    let appInstalledFired = false;
+    let isMounted = true;
+    let serviceWorkerRegistrationStatus: Record<string, unknown> | null = null;
+
+    async function writeDiagnostics(reason: string) {
+      if (!isDevelopment || !isMounted) {
+        return;
+      }
+
+      logInstallDiagnostics({
+        reason,
+        serviceWorkerPresent: "serviceWorker" in navigator,
+        serviceWorkerRegistration: serviceWorkerRegistrationStatus,
+        manifest: await loadManifestDiagnostics(),
+        displayModeStandalone: typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches,
+        beforeinstallpromptFired: beforeInstallPromptFired,
+        appinstalledFired: appInstalledFired,
+        userAgent: window.navigator.userAgent,
+        platform: window.navigator.platform,
+        platformCategory: getPlatformCategory(),
+        standaloneDetected: isStandaloneDisplay(),
+      });
+    }
+
+    void registerServiceWorker().then((status) => {
+      serviceWorkerRegistrationStatus = status;
+      void writeDiagnostics("service-worker-registration");
+    });
+
     if (isStandaloneDisplay()) {
       setIsStandalone(true);
+      void writeDiagnostics("standalone-detected");
       return;
     }
 
     setGuidance(getInstallGuidance());
+    void writeDiagnostics("mounted");
 
     function handleBeforeInstallPrompt(event: Event) {
+      beforeInstallPromptFired = true;
       event.preventDefault();
       deferredPromptRef.current = event as BeforeInstallPromptEvent;
       setCanPrompt(true);
       setGuidance(null);
+      void writeDiagnostics("beforeinstallprompt");
     }
 
     function handleAppInstalled() {
+      appInstalledFired = true;
       deferredPromptRef.current = null;
       setCanPrompt(false);
       setGuidance(null);
       setIsStandalone(true);
+      void writeDiagnostics("appinstalled");
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
+      isMounted = false;
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
