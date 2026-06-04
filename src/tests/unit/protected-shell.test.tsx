@@ -87,7 +87,8 @@ describe("protected shell PWA install affordance", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Install Calm Wallet" }));
 
-    expect(screen.getByText("Open Chrome menu \u22ee \u2192 Install app.")).toBeInTheDocument();
+    expect(screen.getByText("Tap \u22ee in Chrome, then Install app.")).toBeInTheDocument();
+    expect(screen.getByText("Chrome controls this prompt.")).toBeInTheDocument();
     expect(screen.queryByText("Use Share \u2192 Add to Home Screen.")).not.toBeInTheDocument();
   });
 

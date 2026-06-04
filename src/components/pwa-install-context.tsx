@@ -238,15 +238,24 @@ export function usePwaInstallState() {
 
 export function getInstallGuidanceText(guidance: InstallGuidance) {
   if (guidance === "android-chrome") {
-    return "Open Chrome menu \u22ee \u2192 Install app.";
+    return {
+      detail: "Chrome controls this prompt.",
+      title: "Tap \u22ee in Chrome, then Install app.",
+    };
   }
 
   if (guidance === "ios-safari") {
-    return "Use Share \u2192 Add to Home Screen.";
+    return {
+      detail: null,
+      title: "Use Share \u2192 Add to Home Screen.",
+    };
   }
 
   if (guidance === "mobile-browser") {
-    return "Open your browser menu to install the app.";
+    return {
+      detail: null,
+      title: "Open your browser menu to install the app.",
+    };
   }
 
   return null;

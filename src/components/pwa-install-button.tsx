@@ -33,7 +33,8 @@ export function PwaInstallButton() {
     return (
       <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
         <p className="text-sm font-medium text-slate-700">Install Calm Wallet on your home screen.</p>
-        <p className="mt-1 text-sm text-slate-500">{guidanceText}</p>
+        <p className="mt-1 text-sm text-slate-500">{guidanceText.title}</p>
+        {guidanceText.detail ? <p className="mt-1 text-xs text-slate-400">{guidanceText.detail}</p> : null}
       </div>
     );
   }
@@ -74,7 +75,8 @@ export function PwaInstallHeaderIcon({ className }: { className?: string }) {
       </button>
       {helperOpen && guidanceText ? (
         <div className="absolute right-0 top-12 z-20 w-48 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-600 shadow-calm">
-          {guidanceText}
+          <p>{guidanceText.title}</p>
+          {guidanceText.detail ? <p className="mt-1 text-slate-400">{guidanceText.detail}</p> : null}
         </div>
       ) : null}
     </div>
