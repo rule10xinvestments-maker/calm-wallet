@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, type FormEvent } from "react";
+import { FileSpreadsheet, History, MoreHorizontal, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
 import type { NotificationPreferences } from "@/domain/notifications/types";
@@ -44,6 +45,8 @@ type UploadFlowState = {
   filename: string | null;
 };
 
+type ActionPanel = "receipt" | "statement" | "recent" | "more";
+
 const initialUploadFlowState: UploadFlowState = {
   status: "idle",
   message: null,
@@ -63,6 +66,17 @@ function fileMatchesImportType(importType: "receipt_image" | "csv_import", file:
   return file.name.toLowerCase().endsWith(".csv") && safeCsvMimeTypes.has(file.type);
 }
 
+const actionPanelItems: Array<{
+  id: ActionPanel;
+  label: string;
+  Icon: typeof Receipt;
+}> = [
+  { id: "receipt", label: "Receipt", Icon: Receipt },
+  { id: "statement", label: "Statement", Icon: FileSpreadsheet },
+  { id: "recent", label: "Recent", Icon: History },
+  { id: "more", label: "More", Icon: MoreHorizontal },
+];
+
 export function AssistantComposer({
   action,
   initialState,
@@ -78,10 +92,7 @@ export function AssistantComposer({
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
-  const [isImportUploadOpen, setIsImportUploadOpen] = useState(false);
-  const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
-  const [isNotificationPreferencesOpen, setIsNotificationPreferencesOpen] = useState(false);
-  const [isRecentOpen, setIsRecentOpen] = useState(false);
+  const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const [selectedTargetTransactionId, setSelectedTargetTransactionId] = useState("");
   const [selectedManualCategoryId, setSelectedManualCategoryId] = useState("");
   const canEditNotificationPreferences = Boolean(notificationPreferences && notificationPreferencesAction);
@@ -93,6 +104,19 @@ export function AssistantComposer({
     selectedAction === "delete_transaction" ||
     selectedAction === "recategorize_transaction";
   const canSubmitManualAction = !selectedActionTargetsExistingItem || Boolean(selectedTargetTransactionId);
+  const isReceiptPanelOpen = openPanel === "receipt";
+  const isStatementPanelOpen = openPanel === "statement";
+  const isRecentOpen = openPanel === "recent";
+  const isMorePanelOpen = openPanel === "more";
+
+  function togglePanel(panel: ActionPanel) {
+    setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
+  }
+
+  function chooseImportFile(importType: "receipt_image" | "csv_import", file: File | null) {
+    setSelectedImportType(importType);
+    setSelectedFile(file);
+  }
 
   async function handleImportUploadSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -264,45 +288,69 @@ export function AssistantComposer({
         </Button>
       </form>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <button
-          aria-expanded={isImportUploadOpen}
-          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          onClick={() => setIsImportUploadOpen((value) => !value)}
-          type="button"
-        >
-          Attach receipt or CSV
-        </button>
-        <button
-          aria-expanded={isManualEntryOpen}
-          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          onClick={() => setIsManualEntryOpen((value) => !value)}
-          type="button"
-        >
-          Add manually
-        </button>
-        {canEditNotificationPreferences ? (
-          <button
-            aria-expanded={isNotificationPreferencesOpen}
-            className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            onClick={() => setIsNotificationPreferencesOpen((value) => !value)}
-            type="button"
-          >
-            Notification preferences
-          </button>
-        ) : null}
+      <div className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-50 p-1">
+        {actionPanelItems.map(({ id, label, Icon }) => {
+          const isOpen = openPanel === id;
+
+          if (id === "recent") {
+            return (
+              <form action={formAction} key={id}>
+                <input name="toolName" type="hidden" value="list_transactions" />
+                <button
+                  aria-expanded={isOpen}
+                  className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium transition ${
+                    isOpen ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:bg-white/80"
+                  }`}
+                  disabled={isPending}
+                  onClick={(event) => {
+                    if (isOpen) {
+                      event.preventDefault();
+                      setOpenPanel(null);
+                      return;
+                    }
+
+                    if (visibleRecentItems.length) {
+                      event.preventDefault();
+                    }
+
+                    setOpenPanel("recent");
+                  }}
+                  type="submit"
+                >
+                  <Icon aria-hidden="true" className="size-5" strokeWidth={2} />
+                  <span>{label}</span>
+                </button>
+              </form>
+            );
+          }
+
+          return (
+            <button
+              aria-expanded={isOpen}
+              className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium transition ${
+                isOpen ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:bg-white/80"
+              }`}
+              key={id}
+              onClick={() => togglePanel(id)}
+              type="button"
+            >
+              <Icon aria-hidden="true" className="size-5" strokeWidth={2} />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {isImportUploadOpen ? (
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      {isReceiptPanelOpen ? (
+        <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Staged import upload</p>
-              <p className="text-xs text-slate-500">Upload one receipt image or CSV file into private staged storage only.</p>
+              <p className="text-sm font-medium text-slate-900">Receipt import</p>
+              <p className="text-xs text-slate-500">Add one receipt image into private staged storage.</p>
             </div>
             <button
-              className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
-              onClick={() => setIsImportUploadOpen(false)}
+              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              onClick={() => setOpenPanel(null)}
               type="button"
             >
               Close
@@ -333,50 +381,124 @@ export function AssistantComposer({
 
           <form className="space-y-3" onSubmit={handleImportUploadSubmit}>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Import type</span>
-              <select
-                aria-label="Import type"
-                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
-                onChange={(event) => setSelectedImportType(event.target.value as "receipt_image" | "csv_import")}
-                value={selectedImportType}
-              >
-                <option value="receipt_image">Receipt image</option>
-                <option value="csv_import">CSV import</option>
-              </select>
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">File</span>
+              <span className="text-sm font-medium text-slate-700">Take photo</span>
               <input
-                accept={selectedImportType === "receipt_image" ? "image/*" : ".csv,text/csv"}
+                accept="image/*"
                 className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                capture="environment"
+                onChange={(event) => chooseImportFile("receipt_image", event.target.files?.[0] ?? null)}
                 type="file"
               />
             </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Upload image</span>
+              <input
+                accept="image/*"
+                aria-label="File"
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                onChange={(event) => chooseImportFile("receipt_image", event.target.files?.[0] ?? null)}
+                type="file"
+              />
+            </label>
+            <button
+              className="min-h-11 w-full rounded-2xl bg-white px-4 py-2 text-left text-sm font-medium text-slate-400"
+              disabled
+              type="button"
+            >
+              Upload PDF receipt
+            </button>
 
             <Button className="w-full" disabled={uploadState.status === "uploading"} type="submit">
-              {uploadState.status === "uploading" ? "Uploading..." : "Upload staged import"}
+              {uploadState.status === "uploading" ? "Uploading..." : "Upload receipt"}
             </Button>
           </form>
         </div>
       ) : null}
 
-      {isManualEntryOpen ? (
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      {isStatementPanelOpen ? (
+        <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Manual entry</p>
-              <p className="text-xs text-slate-500">Use this when the message box is not precise enough.</p>
+              <p className="text-sm font-medium text-slate-900">Statement import</p>
+              <p className="text-xs text-slate-500">Import a CSV statement into private staged review.</p>
             </div>
             <button
-              className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
-              onClick={() => setIsManualEntryOpen(false)}
+              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              onClick={() => setOpenPanel(null)}
               type="button"
             >
               Close
             </button>
           </div>
+
+          {uploadState.message ? (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm ${
+                uploadState.status === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : uploadState.status === "success"
+                    ? "border-sky-200 bg-sky-50 text-sky-700"
+                    : "border-amber-200 bg-amber-50 text-amber-700"
+              }`}
+            >
+              <p className="font-medium">{uploadState.message}</p>
+              {uploadState.status === "success" && uploadState.importType && uploadState.filename ? (
+                <p className="mt-1 text-xs text-slate-600">
+                  Uploaded {uploadState.filename} as {uploadState.importType}.
+                </p>
+              ) : null}
+              {uploadState.status === "error" && uploadState.filename ? (
+                <p className="mt-1 text-xs text-slate-600">File: {uploadState.filename}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <form className="space-y-3" onSubmit={handleImportUploadSubmit}>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Import CSV statement</span>
+              <input
+                accept=".csv,text/csv"
+                aria-label="File"
+                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                onChange={(event) => chooseImportFile("csv_import", event.target.files?.[0] ?? null)}
+                type="file"
+              />
+            </label>
+            <button
+              className="min-h-11 w-full rounded-2xl bg-white px-4 py-2 text-left text-sm font-medium text-slate-400"
+              disabled
+              type="button"
+            >
+              Import PDF statement
+            </button>
+
+            <Button className="w-full" disabled={uploadState.status === "uploading"} type="submit">
+              {uploadState.status === "uploading" ? "Uploading..." : "Import CSV statement"}
+            </Button>
+          </form>
+        </div>
+      ) : null}
+
+      {isMorePanelOpen ? (
+        <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-900">More</p>
+              <p className="text-xs text-slate-500">Manual entry and optional preferences live here for now.</p>
+            </div>
+            <button
+              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              onClick={() => setOpenPanel(null)}
+              type="button"
+            >
+              Close
+            </button>
+          </div>
+          <div className="space-y-3 rounded-2xl bg-white p-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-900">Add manually</p>
+              <p className="text-xs text-slate-500">Use this when the message box is not precise enough.</p>
+            </div>
 
           <form action={formAction} className="space-y-3">
             <input name="toolName" type="hidden" value={selectedAction} />
@@ -606,57 +728,21 @@ export function AssistantComposer({
                     : "Run summary"}
         </Button>
           </form>
-        </div>
-      ) : null}
-
-      {canEditNotificationPreferences ? (
-        isNotificationPreferencesOpen ? (
-          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-start justify-between gap-3">
+          </div>
+          {canEditNotificationPreferences ? (
+            <div className="space-y-3 rounded-2xl bg-white p-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-slate-900">Notification preferences</p>
                 <p className="text-xs text-slate-500">Light reminders are optional, calm, and user-controlled.</p>
               </div>
-              <button
-                className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
-                onClick={() => setIsNotificationPreferencesOpen(false)}
-                type="button"
-              >
-                Close
-              </button>
+              <NotificationPreferencesCard
+                action={notificationPreferencesAction!}
+                preferences={notificationPreferences!}
+              />
             </div>
-            <NotificationPreferencesCard
-              action={notificationPreferencesAction!}
-              preferences={notificationPreferences!}
-            />
-          </div>
-        ) : null
+          ) : null}
+        </div>
       ) : null}
-
-      <form action={formAction}>
-        <input name="toolName" type="hidden" value="list_transactions" />
-        <button
-          aria-expanded={isRecentOpen}
-          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          disabled={isPending}
-          onClick={(event) => {
-            if (isRecentOpen) {
-              event.preventDefault();
-              setIsRecentOpen(false);
-              return;
-            }
-
-            if (visibleRecentItems.length) {
-              event.preventDefault();
-            }
-
-            setIsRecentOpen(true);
-          }}
-          type="submit"
-        >
-          {isRecentOpen ? "Hide recent" : "Show recent"}
-        </button>
-      </form>
 
       {isRecentOpen && visibleRecentItems.length ? (
         <div className="space-y-2">

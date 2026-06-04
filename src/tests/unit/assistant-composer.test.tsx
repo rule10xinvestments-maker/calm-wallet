@@ -54,11 +54,11 @@ function renderComposer(
 }
 
 function openImportUpload() {
-  fireEvent.click(screen.getByRole("button", { name: "Attach receipt or CSV" }));
+  fireEvent.click(screen.getByRole("button", { name: "Receipt" }));
 }
 
 function openManualEntry() {
-  fireEvent.click(screen.getByRole("button", { name: "Add manually" }));
+  fireEvent.click(screen.getByRole("button", { name: "More" }));
 }
 
 describe("assistant composer", () => {
@@ -76,10 +76,12 @@ describe("assistant composer", () => {
     expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Required transaction id")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("From")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Attach receipt or CSV" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add manually" })).toBeInTheDocument();
-    expect(screen.queryByText("Staged import upload")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Import type")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Receipt" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Statement" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
+    expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
+    expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
     expect(screen.queryByText("Manual entry")).not.toBeInTheDocument();
   });
 
@@ -139,7 +141,7 @@ describe("assistant composer", () => {
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-04-30" } });
 
     const forms = container.querySelectorAll("form");
-    const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"]'));
+    const form = Array.from(forms).find((candidate) => candidate.querySelector('select[name="assistantActionSelection"]'));
     expect(form).not.toBeUndefined();
 
     const formData = new FormData(form!);
@@ -148,7 +150,7 @@ describe("assistant composer", () => {
     expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("occurredFrom")).toBe("2026-04-01");
     expect(formData.get("occurredTo")).toBe("2026-04-30");
-    expect(screen.getByRole("button", { name: "Show recent" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
   });
 
   it("toggles latest results open and closed from the recent button", () => {
@@ -168,21 +170,53 @@ describe("assistant composer", () => {
       ],
     });
 
-    expect(screen.getByRole("button", { name: "Show recent" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Recent items")).not.toBeInTheDocument();
     expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Show recent" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recent" }));
 
-    expect(screen.getByRole("button", { name: "Hide recent" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Recent items")).toBeInTheDocument();
     expect(screen.getByText("Coffee")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Hide recent" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recent" }));
 
-    expect(screen.getByRole("button", { name: "Show recent" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Recent items")).not.toBeInTheDocument();
     expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
+  });
+
+  it("keeps only one assistant action panel open at a time", () => {
+    renderComposer(undefined, [
+      {
+        id: "transaction-1",
+        title: "Coffee",
+        subtitle: "Dining - May 29",
+        amountDisplay: "$5.00",
+        needsReview: false,
+      },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Receipt" }));
+    expect(screen.getByText("Receipt import")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Receipt" })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Statement" }));
+    expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
+    expect(screen.getByText("Statement import")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Receipt" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Statement" })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Recent" }));
+    expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
+    expect(screen.getByText("Recent items")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Statement" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Recent" }));
+    expect(screen.queryByText("Recent items")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("uses a recent-item picker for delete and submits the selected internal id", async () => {
@@ -366,16 +400,17 @@ describe("assistant composer", () => {
     renderComposer();
 
     openManualEntry();
-    expect(screen.getByText("Manual entry")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Add manually")).toBeInTheDocument();
     expect(screen.getByLabelText("Action")).toHaveValue("create_transaction");
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save item" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(screen.queryByText("Manual entry")).not.toBeInTheDocument();
+    expect(screen.queryByText("Add manually")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add manually" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "More" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("prepares manual create transaction fields after opening manual entry", () => {
@@ -387,7 +422,7 @@ describe("assistant composer", () => {
     fireEvent.change(screen.getByPlaceholderText("Optional note"), { target: { value: "Lunch" } });
 
     const forms = container.querySelectorAll("form");
-    const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"]'));
+    const form = Array.from(forms).find((candidate) => candidate.querySelector('select[name="assistantActionSelection"]'));
     expect(form).not.toBeUndefined();
 
     const formData = new FormData(form!);
@@ -399,30 +434,36 @@ describe("assistant composer", () => {
     expect(formData.get("note")).toBe("Lunch");
   });
 
-  it("shows only the supported staged import types", () => {
+  it("splits receipt and statement import controls into their action panels", () => {
     renderComposer();
     openImportUpload();
 
-    const importType = screen.getByLabelText("Import type");
+    expect(screen.getByText("Receipt import")).toBeInTheDocument();
+    expect(screen.getByLabelText("Take photo")).toBeInTheDocument();
+    expect(screen.getByLabelText("Upload image")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload PDF receipt" })).toBeDisabled();
+    expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
 
-    expect(importType).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Receipt image" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "CSV import" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "PDF import" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Statement" }));
+
+    expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
+    expect(screen.getByText("Statement import")).toBeInTheDocument();
+    expect(screen.getByLabelText("Import CSV statement")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import PDF statement" })).toBeDisabled();
   });
 
   it("collapses staged import controls after opening them", () => {
     renderComposer();
 
     openImportUpload();
-    expect(screen.getByText("Staged import upload")).toBeInTheDocument();
+    expect(screen.getByText("Receipt import")).toBeInTheDocument();
     expect(screen.getByLabelText("File")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(screen.queryByText("Staged import upload")).not.toBeInTheDocument();
+    expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("File")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Attach receipt or CSV" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Receipt" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("reaches success through the staged upload flow with a bounded uploading state", async () => {
@@ -482,7 +523,7 @@ describe("assistant composer", () => {
     const file = new File(["receipt"], "receipt.jpg", { type: "image/jpeg" });
 
     fireEvent.change(fileInput, { target: { files: [file] } });
-    fireEvent.click(screen.getByRole("button", { name: "Upload staged import" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload receipt" }));
 
     expect(await screen.findByText("Uploading staged import...")).toBeInTheDocument();
 
@@ -508,18 +549,19 @@ describe("assistant composer", () => {
     const fileInput = screen.getByLabelText("File");
     const pdfFile = new File(["pdf"], "receipt.pdf", { type: "application/pdf" });
     fireEvent.change(fileInput, { target: { files: [pdfFile] } });
-    fireEvent.click(screen.getByRole("button", { name: "Upload staged import" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload receipt" }));
 
     expect(await screen.findByText("Choose an image file for receipt image imports.")).toBeInTheDocument();
     expect(await screen.findByText("File: receipt.pdf")).toBeInTheDocument();
     expect(createStagedImportIntakeAction).not.toHaveBeenCalled();
     expect(uploadStagedImportFile).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("Import type"), { target: { value: "csv_import" } });
+    fireEvent.click(screen.getByRole("button", { name: "Statement" }));
 
     const file = new File(["not-csv"], "receipt.jpg", { type: "image/jpeg" });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-    fireEvent.click(screen.getByRole("button", { name: "Upload staged import" }));
+    const statementFileInput = screen.getByLabelText("File");
+    fireEvent.change(statementFileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "Import CSV statement" }));
 
     expect(await screen.findByText("Choose a CSV file for CSV imports.")).toBeInTheDocument();
     expect(await screen.findByText("File: receipt.jpg")).toBeInTheDocument();
@@ -547,8 +589,8 @@ describe("assistant composer", () => {
     });
 
     const csvFile = new File(["date,amount"], "statement.csv", { type: "text/csv" });
-    fireEvent.change(fileInput, { target: { files: [csvFile] } });
-    fireEvent.click(screen.getByRole("button", { name: "Upload staged import" }));
+    fireEvent.change(statementFileInput, { target: { files: [csvFile] } });
+    fireEvent.click(screen.getByRole("button", { name: "Import CSV statement" }));
 
     await waitFor(() => {
       expect(screen.getByText("CSV import staged 1 review candidate.")).toBeInTheDocument();

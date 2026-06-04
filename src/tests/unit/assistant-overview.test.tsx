@@ -80,15 +80,17 @@ describe("assistant overview", () => {
     expect(screen.getByText('Examples: "Coffee 12", "Groceries 85".')).toBeInTheDocument();
     expect(screen.queryByText(/narrow, trusted path/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/approved tracked-item actions/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Attach receipt or CSV" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add manually" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Notification preferences" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Receipt" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Statement" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
     expect(screen.queryByText("Light reminders are optional, calm, and user-controlled.")).not.toBeInTheDocument();
     expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
     expect(screen.queryByText("Monthly tracked review")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Notification preferences" }));
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
 
+    expect(screen.getByText("Add manually")).toBeInTheDocument();
     expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
     expect(screen.getByText("Daily logging reminder")).toBeInTheDocument();
     expect(screen.getByText("Monthly tracked review")).toBeInTheDocument();
@@ -115,17 +117,17 @@ describe("assistant overview", () => {
     expect(screen.queryByText("Your latest saved entries, straight from tracked data.")).not.toBeInTheDocument();
     expect(screen.queryByText("Recent items")).not.toBeInTheDocument();
     expect(screen.queryByText("paine")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Show recent" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Recent" })).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Show recent" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recent" }));
 
-    expect(screen.getByRole("button", { name: "Hide recent" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByText("Recent items")).toHaveLength(1);
     expect(screen.getByText("paine")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Hide recent" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recent" }));
 
-    expect(screen.getByRole("button", { name: "Show recent" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Recent items")).not.toBeInTheDocument();
     expect(screen.queryByText("paine")).not.toBeInTheDocument();
   });
