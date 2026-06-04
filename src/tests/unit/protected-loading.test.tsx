@@ -15,7 +15,7 @@ describe("protected route loading", () => {
     expect(screen.getByRole("status", { name: "Loading page" })).toBeInTheDocument();
     expect(screen.getByText("Loading page...")).toHaveClass("sr-only");
     expect(screen.getByText("Calm Wallet")).toBeInTheDocument();
-    expect(container.querySelector("img")).toHaveAttribute("src", "/icons/calm-wallet-maskable-512.png");
+    expect(container.querySelector("img")).toHaveAttribute("src", "/icons/calm-wallet-icon-512.png");
     expect(container.querySelector(".protected-route-loader__mark")).toBeInTheDocument();
     expect(container.querySelectorAll(".protected-route-loader__lines span")).toHaveLength(3);
     expect(screen.queryByText("Opening Calm Wallet...")).not.toBeInTheDocument();

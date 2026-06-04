@@ -9,7 +9,7 @@ export default function ProtectedLoading() {
       aria-label="Loading page"
     >
       <div className="protected-route-loader__mark" aria-hidden="true">
-        <Image src="/icons/calm-wallet-maskable-512.png" alt="" width={112} height={112} priority />
+        <Image src="/icons/calm-wallet-icon-512.png" alt="" width={112} height={112} priority />
       </div>
       <div className="protected-route-loader__copy">
         <p>Calm Wallet</p>
