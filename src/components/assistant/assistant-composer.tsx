@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { FileSpreadsheet, History, Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
@@ -84,6 +84,9 @@ export function AssistantComposer({
   const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const [selectedTargetTransactionId, setSelectedTargetTransactionId] = useState("");
   const [selectedManualCategoryId, setSelectedManualCategoryId] = useState("");
+  const [lastManualAction, setLastManualAction] = useState<typeof selectedAction | null>(null);
+  const manualActionSelectRef = useRef<HTMLSelectElement | null>(null);
+  const manualSummaryResultRef = useRef<HTMLDivElement | null>(null);
   const manualTargetItems = recentItems.length ? recentItems : state.recentItems;
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
   const selectedTargetItem = manualTargetItems.find((item) => item.id === selectedTargetTransactionId) ?? null;
@@ -96,6 +99,25 @@ export function AssistantComposer({
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
   const isManualPanelOpen = openPanel === "manual";
+  const shouldShowManualSummaryResult =
+    isManualPanelOpen &&
+    selectedAction === "summarize_spending" &&
+    lastManualAction === "summarize_spending" &&
+    state.status === "success" &&
+    Boolean(state.message);
+
+  useEffect(() => {
+    if (!shouldShowManualSummaryResult) {
+      return;
+    }
+
+    if (manualActionSelectRef.current && manualActionSelectRef.current.value !== selectedAction) {
+      manualActionSelectRef.current.value = selectedAction;
+    }
+
+    manualSummaryResultRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    manualSummaryResultRef.current?.focus({ preventScroll: true });
+  }, [selectedAction, shouldShowManualSummaryResult, state.message]);
 
   function togglePanel(panel: ActionPanel) {
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
@@ -261,7 +283,13 @@ export function AssistantComposer({
         </div>
       ) : null}
 
-      <form action={formAction} className="space-y-3">
+      <form
+        action={(formData) => {
+          setLastManualAction(null);
+          return formAction(formData);
+        }}
+        className="space-y-3"
+      >
         <label className="block space-y-2">
           <span className="text-sm font-medium text-slate-700">Message</span>
           <textarea
@@ -282,7 +310,13 @@ export function AssistantComposer({
 
           if (id === "recent") {
             return (
-              <form action={formAction} key={id}>
+              <form
+                action={(formData) => {
+                  setLastManualAction(null);
+                  return formAction(formData);
+                }}
+                key={id}
+              >
                 <input name="toolName" type="hidden" value="list_transactions" />
                 <button
                   aria-expanded={isOpen}
@@ -487,7 +521,13 @@ export function AssistantComposer({
               <p className="text-sm font-medium text-slate-900">Add manually</p>
             </div>
 
-          <form action={formAction} className="space-y-3">
+          <form
+            action={(formData) => {
+              setLastManualAction(selectedAction);
+              return formAction(formData);
+            }}
+            className="space-y-3"
+          >
             <input name="toolName" type="hidden" value={selectedAction} />
             <input name="currency" type="hidden" value="USD" />
 
@@ -502,6 +542,7 @@ export function AssistantComposer({
               setSelectedTargetTransactionId("");
               setSelectedManualCategoryId("");
             }}
+            ref={manualActionSelectRef}
             value={selectedAction}
           >
             <option value="create_transaction">Create transaction</option>
@@ -714,6 +755,18 @@ export function AssistantComposer({
                     ? "Update selected item category"
                     : "Run summary"}
         </Button>
+        {shouldShowManualSummaryResult ? (
+          <div
+            aria-live="polite"
+            className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800"
+            ref={manualSummaryResultRef}
+            role="status"
+            tabIndex={-1}
+          >
+            <p className="font-medium">Summary ready</p>
+            <p className="mt-1 text-xs leading-5 text-slate-700">{state.message}</p>
+          </div>
+        ) : null}
           </form>
           </div>
         </div>
