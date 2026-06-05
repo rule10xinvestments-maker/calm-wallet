@@ -406,28 +406,66 @@ function ChartModeControls({ data }: { data: InsightsData }) {
 }
 
 function TimeframeTrendChart({ data }: { data: InsightsData }) {
-  const max = Math.max(...data.timeframeMonths.map((month) => month.cumulativeExpenseMinor), 1);
-  const points = data.timeframeMonths.map((month, index) => {
-    const x = data.timeframeMonths.length <= 1 ? 50 : (index / (data.timeframeMonths.length - 1)) * 100;
-    const y = 100 - (month.cumulativeExpenseMinor / max) * 86;
+  const monthsWithSpending = data.timeframeMonths.filter((month) => month.expenseMinor > 0);
 
-    return `${Number(x.toFixed(2))},${Number(y.toFixed(2))}`;
-  });
+  if (monthsWithSpending.length < 2) {
+    return (
+      <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
+        Track transactions across multiple months to see spending trends.
+      </p>
+    );
+  }
+
+  const chartMonths = data.timeframeMonths;
+  const max = Math.max(...chartMonths.map((month) => month.cumulativeExpenseMinor), 1);
+  const pointForMonth = (month: InsightsData["timeframeMonths"][number], index: number) => {
+    const x = chartMonths.length <= 1 ? 50 : 8 + (index / (chartMonths.length - 1)) * 84;
+    const y = 96 - (month.cumulativeExpenseMinor / max) * 80;
+
+    return {
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2)),
+    };
+  };
+  const points = chartMonths.map(pointForMonth);
+  const labelStep = chartMonths.length <= 6 ? 1 : Math.ceil(chartMonths.length / 6);
 
   return (
     <div aria-label="Cumulative tracked spending trend" className="space-y-3" role="img">
-      <svg className="h-40 w-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 110">
-        <polyline fill="none" points={points.join(" ")} stroke="#0284c7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
-        {data.timeframeMonths.map((month, index) => {
-          const x = data.timeframeMonths.length <= 1 ? 50 : (index / (data.timeframeMonths.length - 1)) * 100;
-          const y = 100 - (month.cumulativeExpenseMinor / max) * 86;
+      <svg className="h-32 w-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 104">
+        <polyline
+          fill="none"
+          points={points.map((point) => `${point.x},${point.y}`).join(" ")}
+          stroke="#0284c7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="3"
+        />
+        {chartMonths.map((month, index) => {
+          const point = points[index]!;
 
-          return <circle cx={x} cy={y} fill="#0284c7" key={month.month} r="2.4" />;
+          return (
+            <circle
+              aria-label={`${month.label} cumulative tracked spending ${month.cumulativeExpenseDisplay}`}
+              cx={point.x}
+              cy={point.y}
+              fill="#0284c7"
+              key={month.month}
+              r="3"
+            />
+          );
         })}
       </svg>
-      <div className="grid grid-cols-[1fr_auto] gap-3 text-xs text-slate-500">
-        <span>{data.timeframeMonths[0]?.label ?? data.timeframeStartMonth}</span>
-        <span>{data.timeframeMonths[data.timeframeMonths.length - 1]?.label ?? data.timeframeEndMonth}</span>
+      <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+        {chartMonths.map((month, index) => {
+          const showLabel = index === 0 || index === chartMonths.length - 1 || index % labelStep === 0;
+
+          return (
+            <span className="min-w-0 whitespace-nowrap text-center" key={month.month}>
+              {showLabel ? month.label : ""}
+            </span>
+          );
+        })}
       </div>
     </div>
   );

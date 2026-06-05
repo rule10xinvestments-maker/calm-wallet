@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { buildSpendingMixDonutSegments, getMonthStatusClass, InsightsOverview } from "@/components/screens/insights-overview";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
@@ -262,6 +262,123 @@ describe("insights overview", () => {
       "href",
       "/insights?month=2026-04&timeframe=6M&chart=mix&currency=EUR",
     );
+  });
+
+  it("shows an educational trend empty state when only one spending month exists", () => {
+    renderInsights(makeInsightsData({ selectedChartMode: "trend", selectedTimeframe: "1M" }));
+
+    expect(screen.getByText("Track transactions across multiple months to see spending trends.")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Cumulative tracked spending trend" })).not.toBeInTheDocument();
+  });
+
+  it("renders a readable trend chart when two spending months exist", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        selectedTimeframe: "3M",
+        timeframeMonths: [
+          {
+            month: "2026-03",
+            label: "Mar",
+            expenseMinor: 500,
+            expenseDisplay: "$5",
+            cumulativeExpenseMinor: 500,
+            cumulativeExpenseDisplay: "$5",
+            transactionCount: 1,
+          },
+          {
+            month: "2026-04",
+            label: "Apr",
+            expenseMinor: 1200,
+            expenseDisplay: "$12",
+            cumulativeExpenseMinor: 1700,
+            cumulativeExpenseDisplay: "$17",
+            transactionCount: 1,
+          },
+        ],
+      }),
+    );
+
+    const chart = screen.getByRole("img", { name: "Cumulative tracked spending trend" });
+
+    expect(chart).toBeInTheDocument();
+    expect(within(chart).getByText("Mar")).toBeInTheDocument();
+    expect(within(chart).getByText("Apr")).toBeInTheDocument();
+    expect(screen.getByLabelText("Mar cumulative tracked spending $5")).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr cumulative tracked spending $17")).toBeInTheDocument();
+    expect(screen.queryByText("Track transactions across multiple months to see spending trends.")).not.toBeInTheDocument();
+  });
+
+  it("renders multi-month trend labels once without duplicate endpoints", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        selectedTimeframe: "6M",
+        timeframeMonths: [
+          {
+            month: "2025-11",
+            label: "Nov",
+            expenseMinor: 500,
+            expenseDisplay: "$5",
+            cumulativeExpenseMinor: 500,
+            cumulativeExpenseDisplay: "$5",
+            transactionCount: 1,
+          },
+          {
+            month: "2025-12",
+            label: "Dec",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            cumulativeExpenseMinor: 500,
+            cumulativeExpenseDisplay: "$5",
+            transactionCount: 0,
+          },
+          {
+            month: "2026-01",
+            label: "Jan",
+            expenseMinor: 300,
+            expenseDisplay: "$3",
+            cumulativeExpenseMinor: 800,
+            cumulativeExpenseDisplay: "$8",
+            transactionCount: 1,
+          },
+          {
+            month: "2026-02",
+            label: "Feb",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            cumulativeExpenseMinor: 800,
+            cumulativeExpenseDisplay: "$8",
+            transactionCount: 0,
+          },
+          {
+            month: "2026-03",
+            label: "Mar",
+            expenseMinor: 700,
+            expenseDisplay: "$7",
+            cumulativeExpenseMinor: 1500,
+            cumulativeExpenseDisplay: "$15",
+            transactionCount: 1,
+          },
+          {
+            month: "2026-04",
+            label: "Apr",
+            expenseMinor: 1200,
+            expenseDisplay: "$12",
+            cumulativeExpenseMinor: 2700,
+            cumulativeExpenseDisplay: "$27",
+            transactionCount: 1,
+          },
+        ],
+      }),
+    );
+
+    const chart = screen.getByRole("img", { name: "Cumulative tracked spending trend" });
+
+    expect(within(chart).getByText("Nov")).toBeInTheDocument();
+    expect(within(chart).getByText("Apr")).toBeInTheDocument();
+    expect(within(chart).getAllByText("Nov")).toHaveLength(1);
+    expect(within(chart).getAllByText("Apr")).toHaveLength(1);
   });
 
   it("renders 1M bars as readable spending-day rows and hides zero-spend days", () => {
