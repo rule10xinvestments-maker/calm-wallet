@@ -264,7 +264,7 @@ describe("insights overview", () => {
     );
   });
 
-  it("renders 1M bars as daily tracked spending buckets", () => {
+  it("renders 1M bars as readable spending-day rows and hides zero-spend days", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "bars",
@@ -291,8 +291,38 @@ describe("insights overview", () => {
     );
 
     expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
-    expect(screen.getByLabelText("1 tracked spending $0")).toBeInTheDocument();
-    expect(screen.getByLabelText("2 tracked spending $12")).toBeInTheDocument();
+    expect(screen.getByText("Showing days with tracked spending.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Apr 1 tracked spending $0")).not.toBeInTheDocument();
+    expect(screen.getByText("Apr 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr 2 tracked spending $12")).toBeInTheDocument();
+    expect(screen.getAllByText("$12").length).toBeGreaterThan(0);
+  });
+
+  it("renders a calm empty state when 1M bars have no spending days", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        timeframeExpenseDisplay: "$0",
+        timeframeExpenseDisplayMinor: 0,
+        timeframeTransactionCount: 0,
+        timeframeBars: [
+          {
+            key: "2026-04-01",
+            label: "1",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            transactionCount: 0,
+            granularity: "day",
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
+    expect(screen.getByText("Showing days with tracked spending.")).toBeInTheDocument();
+    expect(screen.getByText("No tracked spending days in this timeframe yet.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Apr 1 tracked spending $0")).not.toBeInTheDocument();
   });
 
   it("renders 6M bars as monthly tracked spending buckets", () => {

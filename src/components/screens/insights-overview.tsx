@@ -433,19 +433,74 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   );
 }
 
+function formatSpendingDayLabel(bar: InsightsData["timeframeBars"][number]) {
+  const date = new Date(`${bar.key}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    return bar.label;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 function TimeframeBarsChart({ data }: { data: InsightsData }) {
   const max = Math.max(...data.timeframeBars.map((bar) => bar.amountMinor), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
 
+  if (granularity === "day") {
+    const spendingDays = data.timeframeBars.filter((bar) => bar.amountMinor > 0);
+    const dayMax = Math.max(...spendingDays.map((bar) => bar.amountMinor), 1);
+
+    if (!spendingDays.length) {
+      return (
+        <div className="space-y-3" aria-label="Tracked spending by day" role="img">
+          <p className="text-xs leading-5 text-slate-500">Showing days with tracked spending.</p>
+          <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
+            No tracked spending days in this timeframe yet.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3" aria-label="Tracked spending by day" role="img">
+        <p className="text-xs leading-5 text-slate-500">Showing days with tracked spending.</p>
+        <div className="space-y-2">
+          {spendingDays.map((bar) => {
+            const width = `${Math.max(10, Math.round((bar.amountMinor / dayMax) * 100))}%`;
+            const label = formatSpendingDayLabel(bar);
+
+            return (
+              <div className="grid grid-cols-[3.25rem_1fr_auto] items-center gap-2" key={bar.key}>
+                <span className="whitespace-nowrap text-xs font-medium text-slate-600">{label}</span>
+                <div className="h-8 overflow-hidden rounded-lg bg-slate-50">
+                  <div
+                    aria-label={`${label} tracked spending ${bar.amountDisplay}`}
+                    className="h-full rounded-lg bg-sky-500"
+                    style={{ width }}
+                  />
+                </div>
+                <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{bar.amountDisplay}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`grid min-h-44 items-end gap-1.5 ${granularity === "day" ? "grid-cols-[repeat(auto-fit,minmax(0.5rem,1fr))]" : "grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] gap-2"}`}
-      aria-label={granularity === "day" ? "Tracked spending by day" : "Tracked spending by month"}
+      className="grid min-h-44 grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] items-end gap-2"
+      aria-label="Tracked spending by month"
       role="img"
     >
-      {data.timeframeBars.map((bar, index) => {
+      {data.timeframeBars.map((bar) => {
         const height = bar.amountMinor > 0 ? Math.max(8, Math.round((bar.amountMinor / max) * 128)) : 2;
-        const showLabel = granularity === "month" || index === 0 || index === data.timeframeBars.length - 1 || Number(bar.label) % 5 === 0;
 
         return (
           <div className="flex min-w-0 flex-col items-center gap-2" key={bar.key}>
@@ -456,7 +511,7 @@ function TimeframeBarsChart({ data }: { data: InsightsData }) {
                 style={{ height }}
               />
             </div>
-            <span className="h-4 max-w-full truncate text-[10px] font-medium text-slate-500">{showLabel ? bar.label : ""}</span>
+            <span className="h-4 max-w-full truncate text-[10px] font-medium text-slate-500">{bar.label}</span>
           </div>
         );
       })}
