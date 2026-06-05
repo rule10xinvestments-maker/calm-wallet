@@ -78,6 +78,16 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
         transactionCount: 0,
       },
     ],
+    timeframeBars: [
+      {
+        key: monthStart,
+        label: "1",
+        amountMinor: 0,
+        amountDisplay: "$0",
+        transactionCount: 0,
+        granularity: "day",
+      },
+    ],
     timeframeCategoryBreakdown: [],
     currentMonth: month,
     previousMonth: formatMonth(previousMonthDate),

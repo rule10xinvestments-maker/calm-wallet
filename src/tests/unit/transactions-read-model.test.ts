@@ -459,6 +459,70 @@ describe("transactions read model", () => {
       ["2026-03", 0, 2000],
       ["2026-04", 3000, 5000],
     ]);
+    expect(data.timeframeBars.map((bar) => [bar.key, bar.amountMinor, bar.granularity])).toEqual([
+      ["2026-02", 2000, "month"],
+      ["2026-03", 0, "month"],
+      ["2026-04", 3000, "month"],
+    ]);
+  });
+
+  it("builds daily bar buckets for 1M including zero-spend days", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "apr-02", amountMinor: 1200, occurredAt: "2026-04-02T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-30", amountMinor: 3000, occurredAt: "2026-04-30T10:00:00.000Z" }),
+      ],
+      {},
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "1M",
+      "bars",
+    );
+
+    expect(data.timeframeBars).toHaveLength(30);
+    expect(data.timeframeBars[0]).toMatchObject({ key: "2026-04-01", label: "1", amountMinor: 0, granularity: "day" });
+    expect(data.timeframeBars[1]).toMatchObject({ key: "2026-04-02", label: "2", amountMinor: 1200, granularity: "day" });
+    expect(data.timeframeBars[14]).toMatchObject({ key: "2026-04-15", amountMinor: 0, granularity: "day" });
+    expect(data.timeframeBars[29]).toMatchObject({ key: "2026-04-30", label: "30", amountMinor: 3000, granularity: "day" });
+  });
+
+  it("keeps 6M and 1Y bar buckets monthly", () => {
+    const sixMonth = buildInsightsData(
+      [makeTransaction({ id: "apr", amountMinor: 1200, occurredAt: "2026-04-02T10:00:00.000Z" })],
+      {},
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "6M",
+      "bars",
+    );
+    const oneYear = buildInsightsData(
+      [makeTransaction({ id: "apr", amountMinor: 1200, occurredAt: "2026-04-02T10:00:00.000Z" })],
+      {},
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "1Y",
+      "bars",
+    );
+
+    expect(sixMonth.timeframeBars).toHaveLength(6);
+    expect(sixMonth.timeframeBars.every((bar) => bar.granularity === "month")).toBe(true);
+    expect(oneYear.timeframeBars).toHaveLength(12);
+    expect(oneYear.timeframeBars.every((bar) => bar.granularity === "month")).toBe(true);
   });
 
   it("builds All timeframe category totals across tracked expense history", () => {

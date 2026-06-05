@@ -68,6 +68,7 @@ export type InsightsData = {
   timeframeExpenseDisplay: string;
   timeframeTransactionCount: number;
   timeframeMonths: InsightsTimeframeMonth[];
+  timeframeBars: InsightsTimeframeBar[];
   timeframeCategoryBreakdown: InsightsCategoryBreakdownItem[];
   currentMonth: string;
   previousMonth: string;
@@ -135,6 +136,15 @@ export type InsightsTimeframeMonth = {
   cumulativeExpenseMinor: number;
   cumulativeExpenseDisplay: string;
   transactionCount: number;
+};
+
+export type InsightsTimeframeBar = {
+  key: string;
+  label: string;
+  amountMinor: number;
+  amountDisplay: string;
+  transactionCount: number;
+  granularity: "day" | "month";
 };
 
 export type InsightsCategoryBreakdownItem = {
@@ -523,6 +533,78 @@ function buildInsightsTimeframeMonths(args: {
       transactionCount: transactions.length,
     };
   });
+}
+
+function toDayKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function shiftDay(date: Date, offset: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + offset));
+}
+
+function buildInsightsTimeframeDailyBars(args: {
+  transactions: Transaction[];
+  monthStart: Date;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}) {
+  const monthEnd = shiftMonth(args.monthStart, 1);
+  const bars: InsightsTimeframeBar[] = [];
+
+  for (let cursor = args.monthStart; cursor < monthEnd; cursor = shiftDay(cursor, 1)) {
+    const dayStart = cursor;
+    const dayEnd = shiftDay(dayStart, 1);
+    const transactions = args.transactions.filter((transaction) => {
+      const occurredAt = new Date(transaction.occurredAt);
+      return transaction.transactionType === "expense" && occurredAt >= dayStart && occurredAt < dayEnd;
+    });
+    const convertedBreakdowns = buildConvertedBreakdowns({
+      originalCurrencyBreakdowns: sumBreakdowns(transactions),
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const amountMinor = convertedBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0);
+
+    bars.push({
+      key: toDayKey(dayStart),
+      label: String(dayStart.getUTCDate()),
+      amountMinor,
+      amountDisplay: formatInsightsMoney(amountMinor, args.displayCurrency),
+      transactionCount: transactions.length,
+      granularity: "day",
+    });
+  }
+
+  return bars;
+}
+
+function buildInsightsTimeframeBars(args: {
+  timeframe: InsightsTimeframePreset;
+  transactions: Transaction[];
+  startMonth: Date;
+  endMonth: Date;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+  months: InsightsTimeframeMonth[];
+}) {
+  if (args.timeframe === "1M") {
+    return buildInsightsTimeframeDailyBars({
+      transactions: args.transactions,
+      monthStart: args.startMonth,
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+  }
+
+  return args.months.map((month) => ({
+    key: month.month,
+    label: month.label,
+    amountMinor: month.expenseMinor,
+    amountDisplay: month.expenseDisplay,
+    transactionCount: month.transactionCount,
+    granularity: "month" as const,
+  }));
 }
 
 export function resolveInsightsMonthStatus(args: {
@@ -986,6 +1068,15 @@ export function buildInsightsData(
     displayCurrency,
     rateLookup,
   });
+  const timeframeBars = buildInsightsTimeframeBars({
+    timeframe: selectedTimeframe,
+    transactions: timeframeTransactions,
+    startMonth: timeframeStartMonthDate,
+    endMonth: timeframeEndMonthDate,
+    displayCurrency,
+    rateLookup,
+    months: timeframeMonths,
+  });
   const timeframeExpenseDisplayMinor = timeframeMonths.reduce((sum, month) => sum + month.expenseMinor, 0);
   const timeframeTransactionCount = timeframeTransactions.filter(
     (transaction) => transaction.transactionType === "expense",
@@ -1076,6 +1167,7 @@ export function buildInsightsData(
     timeframeExpenseDisplay: formatInsightsMoney(timeframeExpenseDisplayMinor, displayCurrency),
     timeframeTransactionCount,
     timeframeMonths,
+    timeframeBars,
     timeframeCategoryBreakdown,
     currentMonth: currentMonthKey,
     previousMonth: toMonthKey(shiftMonth(monthStart, -1)),

@@ -105,6 +105,24 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
         transactionCount: 2,
       },
     ],
+    timeframeBars: [
+      {
+        key: "2026-04-01",
+        label: "1",
+        amountMinor: 0,
+        amountDisplay: "$0",
+        transactionCount: 0,
+        granularity: "day",
+      },
+      {
+        key: "2026-04-10",
+        label: "10",
+        amountMinor: 2000,
+        amountDisplay: "$20",
+        transactionCount: 2,
+        granularity: "day",
+      },
+    ],
     timeframeCategoryBreakdown: [makeCategory({ transactionCount: 2 })],
     currentMonth: "2026-04",
     previousMonth: "2026-03",
@@ -244,6 +262,68 @@ describe("insights overview", () => {
       "href",
       "/insights?month=2026-04&timeframe=6M&chart=mix&currency=EUR",
     );
+  });
+
+  it("renders 1M bars as daily tracked spending buckets", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        timeframeBars: [
+          {
+            key: "2026-04-01",
+            label: "1",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            transactionCount: 0,
+            granularity: "day",
+          },
+          {
+            key: "2026-04-02",
+            label: "2",
+            amountMinor: 1200,
+            amountDisplay: "$12",
+            transactionCount: 1,
+            granularity: "day",
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
+    expect(screen.getByLabelText("1 tracked spending $0")).toBeInTheDocument();
+    expect(screen.getByLabelText("2 tracked spending $12")).toBeInTheDocument();
+  });
+
+  it("renders 6M bars as monthly tracked spending buckets", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "6M",
+        timeframeBars: [
+          {
+            key: "2026-03",
+            label: "Mar",
+            amountMinor: 500,
+            amountDisplay: "$5",
+            transactionCount: 1,
+            granularity: "month",
+          },
+          {
+            key: "2026-04",
+            label: "Apr",
+            amountMinor: 1200,
+            amountDisplay: "$12",
+            transactionCount: 1,
+            granularity: "month",
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "Tracked spending by month" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Mar tracked spending $5")).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr tracked spending $12")).toBeInTheDocument();
   });
 
   it("shows timeframe category totals with percentage and transaction count", () => {

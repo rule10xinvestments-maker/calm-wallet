@@ -434,23 +434,29 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
 }
 
 function TimeframeBarsChart({ data }: { data: InsightsData }) {
-  const max = Math.max(...data.timeframeMonths.map((month) => month.expenseMinor), 1);
+  const max = Math.max(...data.timeframeBars.map((bar) => bar.amountMinor), 1);
+  const granularity = data.timeframeBars[0]?.granularity ?? "month";
 
   return (
-    <div className="grid min-h-44 grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] items-end gap-2" aria-label="Tracked spending by month" role="img">
-      {data.timeframeMonths.map((month) => {
-        const height = Math.max(8, Math.round((month.expenseMinor / max) * 128));
+    <div
+      className={`grid min-h-44 items-end gap-1.5 ${granularity === "day" ? "grid-cols-[repeat(auto-fit,minmax(0.5rem,1fr))]" : "grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] gap-2"}`}
+      aria-label={granularity === "day" ? "Tracked spending by day" : "Tracked spending by month"}
+      role="img"
+    >
+      {data.timeframeBars.map((bar, index) => {
+        const height = bar.amountMinor > 0 ? Math.max(8, Math.round((bar.amountMinor / max) * 128)) : 2;
+        const showLabel = granularity === "month" || index === 0 || index === data.timeframeBars.length - 1 || Number(bar.label) % 5 === 0;
 
         return (
-          <div className="flex min-w-0 flex-col items-center gap-2" key={month.month}>
+          <div className="flex min-w-0 flex-col items-center gap-2" key={bar.key}>
             <div className="flex h-32 w-full items-end rounded-md bg-slate-50 px-1">
               <div
-                aria-label={`${month.label} tracked spending ${month.expenseDisplay}`}
+                aria-label={`${bar.label} tracked spending ${bar.amountDisplay}`}
                 className="w-full rounded-md bg-sky-500"
                 style={{ height }}
               />
             </div>
-            <span className="max-w-full truncate text-[11px] font-medium text-slate-500">{month.label}</span>
+            <span className="h-4 max-w-full truncate text-[10px] font-medium text-slate-500">{showLabel ? bar.label : ""}</span>
           </div>
         );
       })}
