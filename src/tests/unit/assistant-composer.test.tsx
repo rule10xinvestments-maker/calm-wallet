@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
 import type { AssistantActionState } from "@/lib/server/assistant";
@@ -64,6 +64,10 @@ function openManualEntry() {
 describe("assistant composer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
   });
 
   it("shows only the minimal create fields by default", () => {
@@ -152,6 +156,57 @@ describe("assistant composer", () => {
     expect(formData.get("occurredFrom")).toBe("2026-04-01");
     expect(formData.get("occurredTo")).toBe("2026-04-30");
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
+  });
+
+  it("renders summary feedback inline in Manual after Run summary succeeds", async () => {
+    const action = vi.fn(
+      async (state: AssistantActionState, formData: FormData): Promise<AssistantActionState> => {
+        void state;
+        expect(formData.get("toolName")).toBe("summarize_spending");
+
+        return {
+          status: "success",
+          message: "Tracked spending is RON 10.00 across 3 transactions.",
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        };
+      },
+    );
+
+    renderComposer(undefined, [], action);
+    openManualEntry();
+    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "summarize_spending" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run summary" }));
+
+    const localStatus = await screen.findByRole("status");
+
+    expect(within(localStatus).getByText("Summary ready")).toBeInTheDocument();
+    expect(within(localStatus).getByText("Tracked spending is RON 10.00 across 3 transactions.")).toBeInTheDocument();
+    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("keeps the summary visible locally so Quick add is not the only result surface", async () => {
+    const summary = "Tracked spending is RON 10.00 across 3 transactions.";
+    const action = vi.fn(
+      async (): Promise<AssistantActionState> => ({
+        status: "success",
+        message: summary,
+        reviewState: null,
+        latestTransaction: null,
+        recentItems: [],
+      }),
+    );
+
+    renderComposer(undefined, [], action);
+    openManualEntry();
+    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "summarize_spending" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run summary" }));
+
+    const localStatus = await screen.findByRole("status");
+
+    expect(within(localStatus).getByText("Summary ready")).toBeInTheDocument();
+    expect(screen.getAllByText(summary)).toHaveLength(2);
   });
 
   it("toggles latest results open and closed from the recent button", () => {
