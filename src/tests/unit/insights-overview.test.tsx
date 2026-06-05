@@ -209,6 +209,21 @@ describe("insights overview", () => {
     expect(screen.getByRole("link", { name: "2026-04 tracked activity" })).toBeInTheDocument();
   });
 
+  it("keeps the month picker fixed above mobile navigation with internal scrolling", () => {
+    renderInsights(makeInsightsData());
+
+    fireEvent.click(screen.getByRole("button", { name: /April 2026/ }));
+
+    const dialog = screen.getByRole("dialog");
+    const sheet = dialog.querySelector(".max-h-\\[80dvh\\]");
+    const scrollRegion = dialog.querySelector(".overflow-y-auto");
+
+    expect(dialog).toHaveClass("fixed", "inset-0", "z-[80]");
+    expect(dialog.className).toContain("pb-[calc(6.5rem+env(safe-area-inset-bottom))]");
+    expect(sheet).toHaveClass("max-w-[26rem]", "flex-col", "overflow-hidden");
+    expect(scrollRegion).toBeInTheDocument();
+  });
+
   it("selects a month through the picker while preserving display currency", () => {
     renderInsights(
       makeInsightsData({

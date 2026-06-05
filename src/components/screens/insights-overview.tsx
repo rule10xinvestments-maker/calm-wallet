@@ -224,10 +224,14 @@ function MonthPickerSheet({
   onClose: () => void;
 }) {
   return (
-    <div aria-modal="true" className="fixed inset-0 z-50 flex items-end bg-slate-950/30 px-3 pb-3 sm:items-center sm:justify-center sm:p-4" role="dialog">
+    <div
+      aria-modal="true"
+      className="fixed inset-0 z-[80] flex items-end bg-slate-950/30 px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:items-center sm:justify-center sm:p-4"
+      role="dialog"
+    >
       <button aria-label="Close month picker" className="absolute inset-0 h-full w-full cursor-default" onClick={onClose} type="button" />
-      <div className="relative max-h-[82vh] w-full overflow-hidden rounded-lg bg-white shadow-xl sm:max-w-lg">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4">
+      <div className="relative flex max-h-[80dvh] w-full max-w-[26rem] flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-slate-100 p-4">
           <div>
             <p className="text-sm font-semibold text-slate-900">Choose month</p>
             <p className="text-xs leading-5 text-slate-500">
@@ -244,7 +248,7 @@ function MonthPickerSheet({
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
-        <div className="max-h-[64vh] space-y-5 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           {data.monthPickerYears.map((year) => (
             <section key={year.year} className="space-y-2">
               <h3 className="text-xs font-semibold uppercase text-slate-500">{year.year}</h3>
