@@ -7,6 +7,8 @@ import type { Budget } from "@/domain/budgets/types";
 import type { ReviewState, Transaction } from "@/domain/transactions/types";
 
 export type TransactionsView = "all" | "expenses" | "income" | "needs-review";
+export type InsightsTimeframePreset = "1M" | "3M" | "6M" | "1Y" | "All";
+export type InsightsChartMode = "trend" | "bars" | "mix";
 
 export type TransactionListItem = {
   id: string;
@@ -56,6 +58,17 @@ export type InsightsData = {
   hasMissingRates: boolean;
   monthLabel: string;
   selectedMonth: string;
+  selectedTimeframe: InsightsTimeframePreset;
+  selectedChartMode: InsightsChartMode;
+  timeframePresets: InsightsTimeframePreset[];
+  timeframeLabel: string;
+  timeframeStartMonth: string;
+  timeframeEndMonth: string;
+  timeframeExpenseDisplayMinor: number;
+  timeframeExpenseDisplay: string;
+  timeframeTransactionCount: number;
+  timeframeMonths: InsightsTimeframeMonth[];
+  timeframeCategoryBreakdown: InsightsCategoryBreakdownItem[];
   currentMonth: string;
   previousMonth: string;
   nextMonth: string;
@@ -113,6 +126,16 @@ export type InsightsMonthPickerMonth = {
 };
 
 export type InsightsMonthStatus = "none" | "activity" | "net-positive" | "spend-heavy";
+
+export type InsightsTimeframeMonth = {
+  month: string;
+  label: string;
+  expenseMinor: number;
+  expenseDisplay: string;
+  cumulativeExpenseMinor: number;
+  cumulativeExpenseDisplay: string;
+  transactionCount: number;
+};
 
 export type InsightsCategoryBreakdownItem = {
   key: string;
@@ -397,6 +420,109 @@ function resolveLatestActivityMonth(transactions: Transaction[]) {
   }
 
   return parseMonthKey(new Date(latest.occurredAt).toISOString().slice(0, 7), new Date(latest.occurredAt));
+}
+
+const insightsTimeframePresets: InsightsTimeframePreset[] = ["1M", "3M", "6M", "1Y", "All"];
+
+export function normalizeInsightsTimeframe(timeframe: string | null | undefined): InsightsTimeframePreset {
+  return insightsTimeframePresets.includes(timeframe as InsightsTimeframePreset)
+    ? (timeframe as InsightsTimeframePreset)
+    : "1M";
+}
+
+export function normalizeInsightsChartMode(chart: string | null | undefined): InsightsChartMode {
+  return chart === "bars" || chart === "mix" || chart === "trend" ? chart : "trend";
+}
+
+function getTimeframeMonthCount(timeframe: InsightsTimeframePreset) {
+  if (timeframe === "3M") {
+    return 3;
+  }
+
+  if (timeframe === "6M") {
+    return 6;
+  }
+
+  if (timeframe === "1Y") {
+    return 12;
+  }
+
+  return 1;
+}
+
+function resolveTimeframeStartMonth(args: {
+  timeframe: InsightsTimeframePreset;
+  selectedMonthDate: Date;
+  activeTransactions: Transaction[];
+}) {
+  if (args.timeframe !== "All") {
+    return shiftMonth(args.selectedMonthDate, -(getTimeframeMonthCount(args.timeframe) - 1));
+  }
+
+  const earliest = args.activeTransactions
+    .map((transaction) => parseMonthKey(transaction.occurredAt.slice(0, 7), args.selectedMonthDate))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  return earliest ?? args.selectedMonthDate;
+}
+
+function resolveTimeframeEndMonth(args: {
+  timeframe: InsightsTimeframePreset;
+  selectedMonthDate: Date;
+  activeTransactions: Transaction[];
+}) {
+  if (args.timeframe !== "All") {
+    return args.selectedMonthDate;
+  }
+
+  return resolveLatestActivityMonth(args.activeTransactions) ?? args.selectedMonthDate;
+}
+
+function buildTimeframeMonthDates(startMonth: Date, endMonth: Date) {
+  const months: Date[] = [];
+
+  for (let cursor = startMonth; cursor <= endMonth; cursor = shiftMonth(cursor, 1)) {
+    months.push(cursor);
+  }
+
+  return months;
+}
+
+function buildInsightsTimeframeMonths(args: {
+  transactions: Transaction[];
+  startMonth: Date;
+  endMonth: Date;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}) {
+  const months = buildTimeframeMonthDates(args.startMonth, args.endMonth);
+  let cumulativeExpenseMinor = 0;
+
+  return months.map((monthDate) => {
+    const monthStart = monthDate;
+    const monthEnd = shiftMonth(monthStart, 1);
+    const transactions = args.transactions.filter((transaction) => {
+      const occurredAt = new Date(transaction.occurredAt);
+      return transaction.transactionType === "expense" && occurredAt >= monthStart && occurredAt < monthEnd;
+    });
+    const convertedBreakdowns = buildConvertedBreakdowns({
+      originalCurrencyBreakdowns: sumBreakdowns(transactions),
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const expenseMinor = convertedBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0);
+    cumulativeExpenseMinor += expenseMinor;
+
+    return {
+      month: toMonthKey(monthDate),
+      label: monthDate.toLocaleDateString("en-US", { month: "short", year: months.length > 6 ? "2-digit" : undefined }),
+      expenseMinor,
+      expenseDisplay: formatInsightsMoney(expenseMinor, args.displayCurrency),
+      cumulativeExpenseMinor,
+      cumulativeExpenseDisplay: formatInsightsMoney(cumulativeExpenseMinor, args.displayCurrency),
+      transactionCount: transactions.length,
+    };
+  });
 }
 
 export function resolveInsightsMonthStatus(args: {
@@ -705,8 +831,12 @@ export function buildInsightsData(
   fxRates: FxRate[] = [],
   requestedDisplayCurrency?: string | null,
   selectedMonth?: string | null,
+  requestedTimeframe?: string | null,
+  requestedChartMode?: string | null,
 ): InsightsData {
   const activeTransactions = transactions.filter((transaction) => !transaction.deletedAt);
+  const selectedTimeframe = normalizeInsightsTimeframe(requestedTimeframe);
+  const selectedChartMode = normalizeInsightsChartMode(requestedChartMode);
   const currentMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const monthStart = parseMonthKey(selectedMonth, now);
   const monthEnd = shiftMonth(monthStart, 1);
@@ -729,10 +859,25 @@ export function buildInsightsData(
     displayCurrency,
     rateLookup,
   });
+  const timeframeStartMonthDate = resolveTimeframeStartMonth({
+    timeframe: selectedTimeframe,
+    selectedMonthDate: monthStart,
+    activeTransactions,
+  });
+  const timeframeEndMonthDate = resolveTimeframeEndMonth({
+    timeframe: selectedTimeframe,
+    selectedMonthDate: monthStart,
+    activeTransactions,
+  });
+  const timeframeEnd = shiftMonth(timeframeEndMonthDate, 1);
 
   const currentMonthTransactions = activeTransactions.filter((transaction) => {
     const occurredAt = new Date(transaction.occurredAt);
     return occurredAt >= monthStart && occurredAt < monthEnd;
+  });
+  const timeframeTransactions = activeTransactions.filter((transaction) => {
+    const occurredAt = new Date(transaction.occurredAt);
+    return occurredAt >= timeframeStartMonthDate && occurredAt < timeframeEnd;
   });
 
   const originalCurrencyBreakdowns = sumBreakdowns(activeTransactions);
@@ -827,6 +972,24 @@ export function buildInsightsData(
     displayCurrency,
     rateLookup,
   });
+  const timeframeMonths = buildInsightsTimeframeMonths({
+    transactions: timeframeTransactions,
+    startMonth: timeframeStartMonthDate,
+    endMonth: timeframeEndMonthDate,
+    displayCurrency,
+    rateLookup,
+  });
+  const timeframeCategoryBreakdown = buildInsightsCategoryBreakdown({
+    transactions: timeframeTransactions,
+    transactionType: "expense",
+    categoryLabels,
+    displayCurrency,
+    rateLookup,
+  });
+  const timeframeExpenseDisplayMinor = timeframeMonths.reduce((sum, month) => sum + month.expenseMinor, 0);
+  const timeframeTransactionCount = timeframeTransactions.filter(
+    (transaction) => transaction.transactionType === "expense",
+  ).length;
 
   const largestRecentExpenses = activeTransactions
     .filter((transaction) => transaction.transactionType === "expense")
@@ -900,6 +1063,20 @@ export function buildInsightsData(
     hasMissingRates,
     monthLabel: formatMonthLabel(monthStart),
     selectedMonth: selectedMonthKey,
+    selectedTimeframe,
+    selectedChartMode,
+    timeframePresets: insightsTimeframePresets,
+    timeframeLabel:
+      selectedTimeframe === "All"
+        ? `${formatMonthLabel(timeframeStartMonthDate)} to ${formatMonthLabel(timeframeEndMonthDate)}`
+        : `${selectedTimeframe} ending ${formatMonthLabel(timeframeEndMonthDate)}`,
+    timeframeStartMonth: toMonthKey(timeframeStartMonthDate),
+    timeframeEndMonth: toMonthKey(timeframeEndMonthDate),
+    timeframeExpenseDisplayMinor,
+    timeframeExpenseDisplay: formatInsightsMoney(timeframeExpenseDisplayMinor, displayCurrency),
+    timeframeTransactionCount,
+    timeframeMonths,
+    timeframeCategoryBreakdown,
     currentMonth: currentMonthKey,
     previousMonth: toMonthKey(shiftMonth(monthStart, -1)),
     nextMonth: toMonthKey(shiftMonth(monthStart, 1)),
@@ -1148,7 +1325,13 @@ export async function loadTransactionsPageData(args: {
   };
 }
 
-export async function loadInsightsPageData(userId: string, requestedDisplayCurrency?: string | null, selectedMonth?: string | null) {
+export async function loadInsightsPageData(
+  userId: string,
+  requestedDisplayCurrency?: string | null,
+  selectedMonth?: string | null,
+  requestedTimeframe?: string | null,
+  requestedChartMode?: string | null,
+) {
   const service = await createSupabaseTransactionService();
   const budgetService = await createSupabaseBudgetService();
   const now = new Date();
@@ -1190,5 +1373,7 @@ export async function loadInsightsPageData(userId: string, requestedDisplayCurre
     fxRates,
     requestedDisplayCurrency,
     toMonthKey(selectedMonthDate),
+    requestedTimeframe,
+    requestedChartMode,
   );
 }

@@ -85,6 +85,27 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
     hasMissingRates: false,
     monthLabel: "April 2026",
     selectedMonth: "2026-04",
+    selectedTimeframe: "1M",
+    selectedChartMode: "trend",
+    timeframePresets: ["1M", "3M", "6M", "1Y", "All"],
+    timeframeLabel: "1M ending April 2026",
+    timeframeStartMonth: "2026-04",
+    timeframeEndMonth: "2026-04",
+    timeframeExpenseDisplayMinor: 2000,
+    timeframeExpenseDisplay: "$20",
+    timeframeTransactionCount: 2,
+    timeframeMonths: [
+      {
+        month: "2026-04",
+        label: "Apr",
+        expenseMinor: 2000,
+        expenseDisplay: "$20",
+        cumulativeExpenseMinor: 2000,
+        cumulativeExpenseDisplay: "$20",
+        transactionCount: 2,
+      },
+    ],
+    timeframeCategoryBreakdown: [makeCategory({ transactionCount: 2 })],
     currentMonth: "2026-04",
     previousMonth: "2026-03",
     nextMonth: "2026-05",
@@ -193,9 +214,54 @@ describe("insights overview", () => {
     renderInsights(makeInsightsData());
 
     expect(screen.getAllByText("April 2026").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&currency=USD");
+    expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&timeframe=1M&chart=trend&currency=USD");
     expect(screen.queryByLabelText("View 2026-05")).not.toBeInTheDocument();
     expect(screen.getByText("Tracked balance")).toBeInTheDocument();
+  });
+
+  it("renders timeframe presets and preserves currency in timeframe URLs", () => {
+    renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["RON", "USD"] }));
+
+    expect(screen.getByText("Tracked spending only. Not a bank statement.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "3M" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-04&timeframe=3M&chart=trend&currency=RON",
+    );
+    expect(screen.getByRole("link", { name: "All" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-04&timeframe=All&chart=trend&currency=RON",
+    );
+  });
+
+  it("renders chart mode links and preserves timeframe and currency", () => {
+    renderInsights(makeInsightsData({ selectedTimeframe: "6M", displayCurrency: "EUR", availableDisplayCurrencies: ["EUR", "RON"] }));
+
+    expect(screen.getByRole("link", { name: "Bars" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-04&timeframe=6M&chart=bars&currency=EUR",
+    );
+    expect(screen.getByRole("link", { name: "Mix" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-04&timeframe=6M&chart=mix&currency=EUR",
+    );
+  });
+
+  it("shows timeframe category totals with percentage and transaction count", () => {
+    renderInsights(
+      makeInsightsData({
+        timeframeExpenseDisplay: "$100",
+        timeframeExpenseDisplayMinor: 10000,
+        timeframeTransactionCount: 4,
+        timeframeCategoryBreakdown: [
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 7500, amountDisplay: "$75", transactionCount: 3 }),
+          makeCategory({ key: "dining", label: "Dining", amountMinor: 2500, amountDisplay: "$25", transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    expect(screen.getByText("$100 across 4 tracked transactions")).toBeInTheDocument();
+    expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
+    expect(screen.getByText("25% of spending - 1 transaction")).toBeInTheDocument();
   });
 
   it("opens a compact month picker grouped by year", () => {
@@ -259,7 +325,7 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("link", { name: "2026-02 tracked activity" })).toHaveAttribute(
       "href",
-      "/insights?month=2026-02&currency=RON",
+      "/insights?month=2026-02&timeframe=1M&chart=trend&currency=RON",
     );
   });
 
@@ -325,7 +391,7 @@ describe("insights overview", () => {
     expect(screen.getByText("You have tracked history, but no transactions in June 2026 yet.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View latest month with activity" })).toHaveAttribute(
       "href",
-      "/insights?month=2026-04&currency=USD",
+      "/insights?month=2026-04&timeframe=1M&chart=trend&currency=USD",
     );
   });
 
@@ -643,8 +709,8 @@ describe("insights overview", () => {
     expect(screen.queryByText("Approximate total")).not.toBeInTheDocument();
     expect(screen.queryByText("Original entries stay unchanged")).not.toBeInTheDocument();
     expect(screen.getByText("View totals as:")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "EUR" })).toHaveAttribute("href", "/insights?month=2026-04&currency=EUR");
-    expect(screen.getByRole("link", { name: "RON" })).toHaveAttribute("href", "/insights?month=2026-04&currency=RON");
+    expect(screen.getByRole("link", { name: "EUR" })).toHaveAttribute("href", "/insights?month=2026-04&timeframe=1M&chart=trend&currency=EUR");
+    expect(screen.getByRole("link", { name: "RON" })).toHaveAttribute("href", "/insights?month=2026-04&timeframe=1M&chart=trend&currency=RON");
   });
 
   it("does not render the old kept separate copy", () => {

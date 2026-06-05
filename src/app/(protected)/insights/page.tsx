@@ -1,7 +1,7 @@
 import { InsightsOverview } from "@/components/screens/insights-overview";
 import { deleteMonthlyCategoryBudgetAction, upsertMonthlyCategoryBudgetAction } from "@/lib/actions/budgets";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
-import { loadInsightsPageData } from "@/lib/server/transactions-read-model";
+import { loadInsightsPageData, normalizeInsightsChartMode, normalizeInsightsTimeframe } from "@/lib/server/transactions-read-model";
 import { getFallbackInsightsData, logProtectedRouteLoadFailure } from "@/lib/server/protected-route-fallbacks";
 import { redirect } from "next/navigation";
 
@@ -9,6 +9,8 @@ type InsightsPageProps = {
   searchParams?: Promise<{
     currency?: string;
     month?: string;
+    timeframe?: string;
+    chart?: string;
   }>;
 };
 
@@ -38,6 +40,8 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
       user.id,
       normalizeRequestedCurrency(resolvedSearchParams.currency),
       normalizeRequestedMonth(resolvedSearchParams.month),
+      normalizeInsightsTimeframe(resolvedSearchParams.timeframe),
+      normalizeInsightsChartMode(resolvedSearchParams.chart),
     );
   } catch (error) {
     loadError = true;

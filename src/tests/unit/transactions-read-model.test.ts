@@ -428,6 +428,68 @@ describe("transactions read model", () => {
     expect(aprilExpense.occurredAt).toBe("2026-04-10T00:00:00.000Z");
   });
 
+  it("builds timeframe spending months and cumulative trend totals", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "jan", amountMinor: 1000, occurredAt: "2026-01-10T00:00:00.000Z" }),
+        makeTransaction({ id: "feb", amountMinor: 2000, occurredAt: "2026-02-10T00:00:00.000Z" }),
+        makeTransaction({ id: "mar-income", transactionType: "income", amountMinor: 9000, occurredAt: "2026-03-10T00:00:00.000Z" }),
+        makeTransaction({ id: "apr", amountMinor: 3000, occurredAt: "2026-04-10T00:00:00.000Z" }),
+      ],
+      {},
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "3M",
+      "bars",
+    );
+
+    expect(data.selectedTimeframe).toBe("3M");
+    expect(data.selectedChartMode).toBe("bars");
+    expect(data.timeframeStartMonth).toBe("2026-02");
+    expect(data.timeframeEndMonth).toBe("2026-04");
+    expect(data.timeframeExpenseDisplayMinor).toBe(5000);
+    expect(data.timeframeTransactionCount).toBe(2);
+    expect(data.timeframeMonths.map((month) => [month.month, month.expenseMinor, month.cumulativeExpenseMinor])).toEqual([
+      ["2026-02", 2000, 2000],
+      ["2026-03", 0, 2000],
+      ["2026-04", 3000, 5000],
+    ]);
+  });
+
+  it("builds All timeframe category totals across tracked expense history", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "groceries-jan", amountMinor: 1000, categoryId: "food", occurredAt: "2026-01-10T00:00:00.000Z" }),
+        makeTransaction({ id: "groceries-apr", amountMinor: 2000, categoryId: "food", occurredAt: "2026-04-10T00:00:00.000Z" }),
+        makeTransaction({ id: "dining", amountMinor: 1000, categoryId: "dining", occurredAt: "2026-03-10T00:00:00.000Z" }),
+        makeTransaction({ id: "salary", transactionType: "income", amountMinor: 9000, categoryId: "salary", occurredAt: "2026-02-10T00:00:00.000Z" }),
+      ],
+      { food: "Groceries", dining: "Dining", salary: "Salary" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "All",
+      "mix",
+    );
+
+    expect(data.timeframeStartMonth).toBe("2026-01");
+    expect(data.timeframeEndMonth).toBe("2026-04");
+    expect(data.timeframeExpenseDisplayMinor).toBe(4000);
+    expect(data.timeframeCategoryBreakdown).toEqual([
+      expect.objectContaining({ label: "Groceries", amountMinor: 3000, transactionCount: 2 }),
+      expect.objectContaining({ label: "Dining", amountMinor: 1000, transactionCount: 1 }),
+    ]);
+  });
+
   it("identifies the latest activity month when the current month has no transactions", () => {
     const data = buildInsightsData(
       [

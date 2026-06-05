@@ -30,6 +30,7 @@ type SpendingMixSegment = "expenses" | "income";
 
 type SpendingMixCategoryItem = InsightsData["categoryBreakdown"][number];
 type MonthPickerMonth = InsightsData["monthPickerYears"][number]["months"][number];
+type ChartMode = InsightsData["selectedChartMode"];
 
 const spendingMixChartColors = [
   "#0ea5e9",
@@ -168,13 +169,26 @@ function CurrencySwitcher({ data }: { data: InsightsData }) {
   );
 }
 
-function buildInsightsHref(data: InsightsData, updates: { month?: string; currency?: string }) {
+function buildInsightsHref(
+  data: InsightsData,
+  updates: { month?: string; currency?: string; timeframe?: InsightsData["selectedTimeframe"]; chart?: ChartMode },
+) {
   const params = new URLSearchParams();
   const month = updates.month ?? data.selectedMonth;
   const currency = updates.currency ?? data.displayCurrency;
+  const timeframe = updates.timeframe ?? data.selectedTimeframe;
+  const chart = updates.chart ?? data.selectedChartMode;
 
   if (month) {
     params.set("month", month);
+  }
+
+  if (timeframe) {
+    params.set("timeframe", timeframe);
+  }
+
+  if (chart) {
+    params.set("chart", chart);
   }
 
   if (currency) {
@@ -330,6 +344,177 @@ function MonthNavigator({ data }: { data: InsightsData }) {
       </div>
       {isPickerOpen ? <MonthPickerSheet data={data} onClose={() => setIsPickerOpen(false)} /> : null}
     </>
+  );
+}
+
+function TimeframeControls({ data }: { data: InsightsData }) {
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+      <div className="flex flex-wrap gap-1">
+        {data.timeframePresets.map((timeframe) => {
+          const active = timeframe === data.selectedTimeframe;
+
+          return (
+            <Link
+              aria-current={active ? "true" : undefined}
+              className={`min-h-9 rounded-lg px-3 py-2 text-sm font-semibold ${
+                active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+              }`}
+              href={buildInsightsHref(data, { timeframe })}
+              key={timeframe}
+            >
+              {timeframe}
+            </Link>
+          );
+        })}
+      </div>
+      <p className="text-xs leading-5 text-slate-500">
+        {data.timeframeLabel}. Tracked spending only. Not a bank statement.
+        {data.hasConvertedCurrencies ? " Converted totals are approximate." : null}
+      </p>
+    </div>
+  );
+}
+
+function ChartModeControls({ data }: { data: InsightsData }) {
+  const modes: Array<{ mode: ChartMode; label: string }> = [
+    { mode: "trend", label: "Trend" },
+    { mode: "bars", label: "Bars" },
+    { mode: "mix", label: "Mix" },
+  ];
+
+  return (
+    <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+      {modes.map(({ mode, label }) => {
+        const active = mode === data.selectedChartMode;
+
+        return (
+          <Link
+            aria-current={active ? "true" : undefined}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              active ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            }`}
+            href={buildInsightsHref(data, { chart: mode })}
+            key={mode}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function TimeframeTrendChart({ data }: { data: InsightsData }) {
+  const max = Math.max(...data.timeframeMonths.map((month) => month.cumulativeExpenseMinor), 1);
+  const points = data.timeframeMonths.map((month, index) => {
+    const x = data.timeframeMonths.length <= 1 ? 50 : (index / (data.timeframeMonths.length - 1)) * 100;
+    const y = 100 - (month.cumulativeExpenseMinor / max) * 86;
+
+    return `${Number(x.toFixed(2))},${Number(y.toFixed(2))}`;
+  });
+
+  return (
+    <div aria-label="Cumulative tracked spending trend" className="space-y-3" role="img">
+      <svg className="h-40 w-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 110">
+        <polyline fill="none" points={points.join(" ")} stroke="#0284c7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+        {data.timeframeMonths.map((month, index) => {
+          const x = data.timeframeMonths.length <= 1 ? 50 : (index / (data.timeframeMonths.length - 1)) * 100;
+          const y = 100 - (month.cumulativeExpenseMinor / max) * 86;
+
+          return <circle cx={x} cy={y} fill="#0284c7" key={month.month} r="2.4" />;
+        })}
+      </svg>
+      <div className="grid grid-cols-[1fr_auto] gap-3 text-xs text-slate-500">
+        <span>{data.timeframeMonths[0]?.label ?? data.timeframeStartMonth}</span>
+        <span>{data.timeframeMonths[data.timeframeMonths.length - 1]?.label ?? data.timeframeEndMonth}</span>
+      </div>
+    </div>
+  );
+}
+
+function TimeframeBarsChart({ data }: { data: InsightsData }) {
+  const max = Math.max(...data.timeframeMonths.map((month) => month.expenseMinor), 1);
+
+  return (
+    <div className="grid min-h-44 grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] items-end gap-2" aria-label="Tracked spending by month" role="img">
+      {data.timeframeMonths.map((month) => {
+        const height = Math.max(8, Math.round((month.expenseMinor / max) * 128));
+
+        return (
+          <div className="flex min-w-0 flex-col items-center gap-2" key={month.month}>
+            <div className="flex h-32 w-full items-end rounded-md bg-slate-50 px-1">
+              <div
+                aria-label={`${month.label} tracked spending ${month.expenseDisplay}`}
+                className="w-full rounded-md bg-sky-500"
+                style={{ height }}
+              />
+            </div>
+            <span className="max-w-full truncate text-[11px] font-medium text-slate-500">{month.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TimeframeMixChart({ data }: { data: InsightsData }) {
+  return <SpendingMixSummaryChart items={data.timeframeCategoryBreakdown} segment="expenses" />;
+}
+
+function TimeframeCategoryBreakdown({ data }: { data: InsightsData }) {
+  const total = data.timeframeCategoryBreakdown.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
+
+  if (!data.timeframeCategoryBreakdown.length) {
+    return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked spending in this timeframe yet.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {data.timeframeCategoryBreakdown.map((item) => {
+        const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
+
+        return (
+          <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
+              <p className="text-xs text-slate-500">
+                {percent}% of spending - {item.transactionCount} {item.transactionCount === 1 ? "transaction" : "transactions"}
+              </p>
+            </div>
+            <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TimeframeInsightsCard({ data }: { data: InsightsData }) {
+  return (
+    <Card className="rounded-lg">
+      <CardHeader>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-lg">Tracked spending view</CardTitle>
+            <CardDescription>
+              {data.timeframeExpenseDisplay} across {data.timeframeTransactionCount} tracked {data.timeframeTransactionCount === 1 ? "transaction" : "transactions"}
+              {data.hasConvertedCurrencies ? " - approximate" : null}
+            </CardDescription>
+          </div>
+          <ChartModeControls data={data} />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {data.selectedChartMode === "trend" ? <TimeframeTrendChart data={data} /> : null}
+        {data.selectedChartMode === "bars" ? <TimeframeBarsChart data={data} /> : null}
+        {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} /> : null}
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
+          <TimeframeCategoryBreakdown data={data} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -748,9 +933,10 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
       <ScreenHeader
         eyebrow="Insights"
         title="Monthly clarity"
-        description="Tracked transactions only. Not a bank balance, forecast, or account statement."
+        description="Tracked spending only. Not a bank statement."
       />
       <MonthNavigator data={data} />
+      <TimeframeControls data={data} />
       {loadError ? (
         <Card className="rounded-lg">
           <CardHeader>
@@ -798,6 +984,8 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
           tone="expense"
         />
       </div>
+
+      <TimeframeInsightsCard data={data} />
 
       {hasTrackedData && !hasCurrentMonthData ? (
         <div className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-600">

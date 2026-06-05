@@ -53,4 +53,17 @@ describe("insights page read model server loader", () => {
       monthStart: "2026-04-01",
     });
   });
+
+  it("accepts timeframe and chart URL params without changing monthly budget scope", async () => {
+    const { loadInsightsPageData } = await import("@/lib/server/transactions-read-model");
+
+    const data = await loadInsightsPageData("user-1", "RON", "2026-04", "6M", "mix");
+
+    expect(data.selectedTimeframe).toBe("6M");
+    expect(data.selectedChartMode).toBe("mix");
+    expect(data.displayCurrency).toBe("RON");
+    expect(listMonthlyCategoryBudgets).toHaveBeenCalledWith("user-1", {
+      monthStart: "2026-04-01",
+    });
+  });
 });
