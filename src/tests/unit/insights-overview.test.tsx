@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { buildSpendingMixDonutSegments, getMonthStatusClass, InsightsOverview } from "@/components/screens/insights-overview";
+import {
+  buildSpendingMixDonutSegments,
+  getMonthStatusClass,
+  InsightsOverview,
+} from "@/components/screens/insights-overview";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 
@@ -121,6 +125,38 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
         amountDisplay: "$20",
         transactionCount: 2,
         granularity: "day",
+      },
+    ],
+    selectedMonthTrendDays: [
+      {
+        key: "2026-04-01",
+        label: "1",
+        incomeMinor: 5000,
+        incomeDisplay: "$50",
+        expenseMinor: 0,
+        expenseDisplay: "$0",
+        cumulativeIncomeMinor: 5000,
+        cumulativeIncomeDisplay: "$50",
+        cumulativeExpenseMinor: 0,
+        cumulativeExpenseDisplay: "$0",
+        netMinor: 5000,
+        netDisplay: "$50",
+        transactionCount: 0,
+      },
+      {
+        key: "2026-04-10",
+        label: "10",
+        incomeMinor: 0,
+        incomeDisplay: "$0",
+        expenseMinor: 2000,
+        expenseDisplay: "$20",
+        cumulativeIncomeMinor: 5000,
+        cumulativeIncomeDisplay: "$50",
+        cumulativeExpenseMinor: 2000,
+        cumulativeExpenseDisplay: "$20",
+        netMinor: 3000,
+        netDisplay: "$30",
+        transactionCount: 2,
       },
     ],
     timeframeCategoryBreakdown: [makeCategory({ transactionCount: 2 })],
@@ -264,121 +300,213 @@ describe("insights overview", () => {
     );
   });
 
-  it("shows an educational trend empty state when only one spending month exists", () => {
-    renderInsights(makeInsightsData({ selectedChartMode: "trend", selectedTimeframe: "1M" }));
-
-    expect(screen.getByText("Track transactions across multiple months to see spending trends.")).toBeInTheDocument();
-    expect(screen.queryByRole("img", { name: "Cumulative tracked spending trend" })).not.toBeInTheDocument();
-  });
-
-  it("renders a readable trend chart when two spending months exist", () => {
-    renderInsights(
-      makeInsightsData({
-        selectedChartMode: "trend",
-        selectedTimeframe: "3M",
-        timeframeMonths: [
-          {
-            month: "2026-03",
-            label: "Mar",
-            expenseMinor: 500,
-            expenseDisplay: "$5",
-            cumulativeExpenseMinor: 500,
-            cumulativeExpenseDisplay: "$5",
-            transactionCount: 1,
-          },
-          {
-            month: "2026-04",
-            label: "Apr",
-            expenseMinor: 1200,
-            expenseDisplay: "$12",
-            cumulativeExpenseMinor: 1700,
-            cumulativeExpenseDisplay: "$17",
-            transactionCount: 1,
-          },
-        ],
-      }),
-    );
-
-    const chart = screen.getByRole("img", { name: "Cumulative tracked spending trend" });
-
-    expect(chart).toBeInTheDocument();
-    expect(within(chart).getByText("Mar")).toBeInTheDocument();
-    expect(within(chart).getByText("Apr")).toBeInTheDocument();
-    expect(screen.getByLabelText("Mar cumulative tracked spending $5")).toBeInTheDocument();
-    expect(screen.getByLabelText("Apr cumulative tracked spending $17")).toBeInTheDocument();
-    expect(screen.queryByText("Track transactions across multiple months to see spending trends.")).not.toBeInTheDocument();
-  });
-
-  it("renders multi-month trend labels once without duplicate endpoints", () => {
+  it("renders selected-month income and spending trend without default day labels", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "trend",
         selectedTimeframe: "6M",
-        timeframeMonths: [
+        selectedMonthTrendDays: [
           {
-            month: "2025-11",
-            label: "Nov",
+            key: "2026-04-01",
+            label: "1",
+            incomeMinor: 5000,
+            incomeDisplay: "$50",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            cumulativeIncomeMinor: 5000,
+            cumulativeIncomeDisplay: "$50",
+            cumulativeExpenseMinor: 0,
+            cumulativeExpenseDisplay: "$0",
+            netMinor: 5000,
+            netDisplay: "$50",
+            transactionCount: 0,
+          },
+          {
+            key: "2026-04-02",
+            label: "2",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
             expenseMinor: 500,
             expenseDisplay: "$5",
+            cumulativeIncomeMinor: 5000,
+            cumulativeIncomeDisplay: "$50",
             cumulativeExpenseMinor: 500,
             cumulativeExpenseDisplay: "$5",
+            netMinor: 4500,
+            netDisplay: "$45",
             transactionCount: 1,
           },
           {
-            month: "2025-12",
-            label: "Dec",
-            expenseMinor: 0,
-            expenseDisplay: "$0",
-            cumulativeExpenseMinor: 500,
-            cumulativeExpenseDisplay: "$5",
-            transactionCount: 0,
-          },
-          {
-            month: "2026-01",
-            label: "Jan",
-            expenseMinor: 300,
-            expenseDisplay: "$3",
-            cumulativeExpenseMinor: 800,
-            cumulativeExpenseDisplay: "$8",
-            transactionCount: 1,
-          },
-          {
-            month: "2026-02",
-            label: "Feb",
-            expenseMinor: 0,
-            expenseDisplay: "$0",
-            cumulativeExpenseMinor: 800,
-            cumulativeExpenseDisplay: "$8",
-            transactionCount: 0,
-          },
-          {
-            month: "2026-03",
-            label: "Mar",
-            expenseMinor: 700,
-            expenseDisplay: "$7",
-            cumulativeExpenseMinor: 1500,
-            cumulativeExpenseDisplay: "$15",
-            transactionCount: 1,
-          },
-          {
-            month: "2026-04",
-            label: "Apr",
+            key: "2026-04-03",
+            label: "3",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
             expenseMinor: 1200,
             expenseDisplay: "$12",
-            cumulativeExpenseMinor: 2700,
-            cumulativeExpenseDisplay: "$27",
+            cumulativeIncomeMinor: 5000,
+            cumulativeIncomeDisplay: "$50",
+            cumulativeExpenseMinor: 1700,
+            cumulativeExpenseDisplay: "$17",
+            netMinor: 3300,
+            netDisplay: "$33",
             transactionCount: 1,
           },
         ],
       }),
     );
 
-    const chart = screen.getByRole("img", { name: "Cumulative tracked spending trend" });
+    const chart = screen.getByRole("img", { name: "Selected month income and spending trend" });
 
-    expect(within(chart).getByText("Nov")).toBeInTheDocument();
-    expect(within(chart).getByText("Apr")).toBeInTheDocument();
-    expect(within(chart).getAllByText("Nov")).toHaveLength(1);
-    expect(within(chart).getAllByText("Apr")).toHaveLength(1);
+    expect(chart).toBeInTheDocument();
+    expect(within(chart).getByText("Income $50")).toBeInTheDocument();
+    expect(within(chart).getByText("Spending $17")).toBeInTheDocument();
+    expect(within(chart).getByText("Apr 1")).toBeInTheDocument();
+    expect(within(chart).getByText("Apr 3")).toBeInTheDocument();
+    expect(within(chart).queryByText("Apr 2")).not.toBeInTheDocument();
+    expect(chart.querySelectorAll("circle")).toHaveLength(0);
+    expect(screen.getByLabelText("Cumulative income line")).toHaveClass("stroke-emerald-600");
+    expect(screen.getByLabelText("Cumulative spending line")).toHaveClass("stroke-rose-600");
+  });
+
+  it("shows income and spending tooltip content on interaction", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        selectedMonthTrendDays: [
+          {
+            key: "2026-04-01",
+            label: "1",
+            incomeMinor: 5000,
+            incomeDisplay: "$50",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            cumulativeIncomeMinor: 5000,
+            cumulativeIncomeDisplay: "$50",
+            cumulativeExpenseMinor: 0,
+            cumulativeExpenseDisplay: "$0",
+            netMinor: 5000,
+            netDisplay: "$50",
+            transactionCount: 0,
+          },
+          {
+            key: "2026-04-15",
+            label: "15",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
+            expenseMinor: 1200,
+            expenseDisplay: "$12",
+            cumulativeIncomeMinor: 5000,
+            cumulativeIncomeDisplay: "$50",
+            cumulativeExpenseMinor: 1200,
+            cumulativeExpenseDisplay: "$12",
+            netMinor: 3800,
+            netDisplay: "$38",
+            transactionCount: 1,
+          },
+        ],
+      }),
+    );
+
+    const point = screen.getByLabelText("Apr 15 trend point, income $50, spending $12, net $38");
+
+    fireEvent.pointerDown(point);
+
+    expect(screen.getAllByText("Apr 15").length).toBeGreaterThan(0);
+    expect(screen.getByText("Income: $50")).toBeInTheDocument();
+    expect(screen.getByText("Spending: $12")).toBeInTheDocument();
+    expect(screen.getByText("Net: +$38")).toBeInTheDocument();
+    expect(screen.queryByText("No transactions tracked for this month yet.")).not.toBeInTheDocument();
+  });
+
+  it("renders spending-only trend with a calm no-income note", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        selectedMonthTrendDays: [
+          {
+            key: "2026-04-01",
+            label: "1",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
+            expenseMinor: 1200,
+            expenseDisplay: "$12",
+            cumulativeIncomeMinor: 0,
+            cumulativeIncomeDisplay: "$0",
+            cumulativeExpenseMinor: 1200,
+            cumulativeExpenseDisplay: "$12",
+            netMinor: -1200,
+            netDisplay: "-$12",
+            transactionCount: 0,
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "Selected month income and spending trend" })).toBeInTheDocument();
+    expect(screen.getByText("No income tracked this month yet.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cumulative income line")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Cumulative spending line")).toBeInTheDocument();
+  });
+
+  it("renders income-only trend with a calm no-spending note", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        selectedMonthTrendDays: [
+          {
+            key: "2026-04-01",
+            label: "1",
+            incomeMinor: 5000,
+            incomeDisplay: "$50",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            cumulativeIncomeMinor: 5000,
+            cumulativeIncomeDisplay: "$50",
+            cumulativeExpenseMinor: 0,
+            cumulativeExpenseDisplay: "$0",
+            netMinor: 5000,
+            netDisplay: "$50",
+            transactionCount: 0,
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "Selected month income and spending trend" })).toBeInTheDocument();
+    expect(screen.getByText("No spending tracked this month yet.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cumulative income line")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cumulative spending line")).not.toBeInTheDocument();
+  });
+
+  it("shows a calm empty state when selected month has no trend transactions", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        timeframeExpenseDisplay: "$0",
+        timeframeExpenseDisplayMinor: 0,
+        timeframeTransactionCount: 0,
+        selectedMonthTrendDays: [
+          {
+            key: "2026-04-01",
+            label: "1",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            cumulativeIncomeMinor: 0,
+            cumulativeIncomeDisplay: "$0",
+            cumulativeExpenseMinor: 0,
+            cumulativeExpenseDisplay: "$0",
+            netMinor: 0,
+            netDisplay: "$0",
+            transactionCount: 0,
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByText("No transactions tracked for this month yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Selected month income and spending trend" })).not.toBeInTheDocument();
   });
 
   it("renders 1M bars as readable spending-day rows and hides zero-spend days", () => {
@@ -701,7 +829,8 @@ describe("insights overview", () => {
       }),
     );
 
-    const slicePaths = container.querySelectorAll("path[stroke-linecap='round'][stroke-linejoin='round']");
+    const donut = screen.getByRole("img", { name: "Expenses category share chart" });
+    const slicePaths = donut.querySelectorAll("path[stroke-linecap='round'][stroke-linejoin='round']");
 
     expect(slicePaths).toHaveLength(3);
     expect(container.querySelector("svg[shape-rendering='geometricPrecision']")).toBeInTheDocument();

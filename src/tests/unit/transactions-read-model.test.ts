@@ -525,6 +525,56 @@ describe("transactions read model", () => {
     expect(oneYear.timeframeBars.every((bar) => bar.granularity === "month")).toBe(true);
   });
 
+  it("builds selected-month daily income, spending, and net trend buckets independently of timeframe bars", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "mar", amountMinor: 900, occurredAt: "2026-03-10T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-02-income", transactionType: "income", amountMinor: 5000, occurredAt: "2026-04-02T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-03-expense", amountMinor: 1200, occurredAt: "2026-04-03T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-15-income", transactionType: "income", amountMinor: 1000, occurredAt: "2026-04-15T09:00:00.000Z" }),
+        makeTransaction({ id: "apr-15-expense", amountMinor: 3000, occurredAt: "2026-04-15T10:00:00.000Z" }),
+      ],
+      {},
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "6M",
+      "trend",
+    );
+
+    expect(data.timeframeBars.every((bar) => bar.granularity === "month")).toBe(true);
+    expect(data.selectedMonthTrendDays).toHaveLength(30);
+    expect(data.selectedMonthTrendDays[1]).toMatchObject({
+      key: "2026-04-02",
+      incomeMinor: 5000,
+      expenseMinor: 0,
+      cumulativeIncomeMinor: 5000,
+      cumulativeExpenseMinor: 0,
+      netMinor: 5000,
+    });
+    expect(data.selectedMonthTrendDays[2]).toMatchObject({
+      key: "2026-04-03",
+      incomeMinor: 0,
+      expenseMinor: 1200,
+      cumulativeIncomeMinor: 5000,
+      cumulativeExpenseMinor: 1200,
+      netMinor: 3800,
+    });
+    expect(data.selectedMonthTrendDays[14]).toMatchObject({
+      key: "2026-04-15",
+      incomeMinor: 1000,
+      expenseMinor: 3000,
+      cumulativeIncomeMinor: 6000,
+      cumulativeExpenseMinor: 4200,
+      netMinor: 1800,
+    });
+    expect(data.selectedMonthTrendDays.some((day) => day.key === "2026-03-10")).toBe(false);
+  });
+
   it("builds All timeframe category totals across tracked expense history", () => {
     const data = buildInsightsData(
       [

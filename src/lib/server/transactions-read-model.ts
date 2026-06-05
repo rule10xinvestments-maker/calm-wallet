@@ -69,6 +69,7 @@ export type InsightsData = {
   timeframeTransactionCount: number;
   timeframeMonths: InsightsTimeframeMonth[];
   timeframeBars: InsightsTimeframeBar[];
+  selectedMonthTrendDays: InsightsMonthTrendDay[];
   timeframeCategoryBreakdown: InsightsCategoryBreakdownItem[];
   currentMonth: string;
   previousMonth: string;
@@ -145,6 +146,22 @@ export type InsightsTimeframeBar = {
   amountDisplay: string;
   transactionCount: number;
   granularity: "day" | "month";
+};
+
+export type InsightsMonthTrendDay = {
+  key: string;
+  label: string;
+  incomeMinor: number;
+  incomeDisplay: string;
+  expenseMinor: number;
+  expenseDisplay: string;
+  cumulativeIncomeMinor: number;
+  cumulativeIncomeDisplay: string;
+  cumulativeExpenseMinor: number;
+  cumulativeExpenseDisplay: string;
+  netMinor: number;
+  netDisplay: string;
+  transactionCount: number;
 };
 
 export type InsightsCategoryBreakdownItem = {
@@ -577,6 +594,57 @@ function buildInsightsTimeframeDailyBars(args: {
   }
 
   return bars;
+}
+
+function buildInsightsSelectedMonthTrendDays(args: {
+  transactions: Transaction[];
+  monthStart: Date;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}) {
+  const monthEnd = shiftMonth(args.monthStart, 1);
+  const days: InsightsMonthTrendDay[] = [];
+  let cumulativeIncomeMinor = 0;
+  let cumulativeExpenseMinor = 0;
+
+  for (let cursor = args.monthStart; cursor < monthEnd; cursor = shiftDay(cursor, 1)) {
+    const dayStart = cursor;
+    const dayEnd = shiftDay(dayStart, 1);
+    const transactions = args.transactions.filter((transaction) => {
+      const occurredAt = new Date(transaction.occurredAt);
+      return occurredAt >= dayStart && occurredAt < dayEnd;
+    });
+    const convertedBreakdowns = buildConvertedBreakdowns({
+      originalCurrencyBreakdowns: sumBreakdowns(transactions),
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const incomeMinor = convertedBreakdowns.reduce((sum, breakdown) => sum + (breakdown.incomeDisplayMinor ?? 0), 0);
+    const expenseMinor = convertedBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0);
+
+    cumulativeIncomeMinor += incomeMinor;
+    cumulativeExpenseMinor += expenseMinor;
+
+    const netMinor = cumulativeIncomeMinor - cumulativeExpenseMinor;
+
+    days.push({
+      key: toDayKey(dayStart),
+      label: String(dayStart.getUTCDate()),
+      incomeMinor,
+      incomeDisplay: formatInsightsMoney(incomeMinor, args.displayCurrency),
+      expenseMinor,
+      expenseDisplay: formatInsightsMoney(expenseMinor, args.displayCurrency),
+      cumulativeIncomeMinor,
+      cumulativeIncomeDisplay: formatInsightsMoney(cumulativeIncomeMinor, args.displayCurrency),
+      cumulativeExpenseMinor,
+      cumulativeExpenseDisplay: formatInsightsMoney(cumulativeExpenseMinor, args.displayCurrency),
+      netMinor,
+      netDisplay: formatInsightsMoney(netMinor, args.displayCurrency),
+      transactionCount: transactions.length,
+    });
+  }
+
+  return days;
 }
 
 function buildInsightsTimeframeBars(args: {
@@ -1077,6 +1145,12 @@ export function buildInsightsData(
     rateLookup,
     months: timeframeMonths,
   });
+  const selectedMonthTrendDays = buildInsightsSelectedMonthTrendDays({
+    transactions: activeTransactions,
+    monthStart,
+    displayCurrency,
+    rateLookup,
+  });
   const timeframeExpenseDisplayMinor = timeframeMonths.reduce((sum, month) => sum + month.expenseMinor, 0);
   const timeframeTransactionCount = timeframeTransactions.filter(
     (transaction) => transaction.transactionType === "expense",
@@ -1168,6 +1242,7 @@ export function buildInsightsData(
     timeframeTransactionCount,
     timeframeMonths,
     timeframeBars,
+    selectedMonthTrendDays,
     timeframeCategoryBreakdown,
     currentMonth: currentMonthKey,
     previousMonth: toMonthKey(shiftMonth(monthStart, -1)),

@@ -405,73 +405,7 @@ function ChartModeControls({ data }: { data: InsightsData }) {
   );
 }
 
-function TimeframeTrendChart({ data }: { data: InsightsData }) {
-  const monthsWithSpending = data.timeframeMonths.filter((month) => month.expenseMinor > 0);
-
-  if (monthsWithSpending.length < 2) {
-    return (
-      <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
-        Track transactions across multiple months to see spending trends.
-      </p>
-    );
-  }
-
-  const chartMonths = data.timeframeMonths;
-  const max = Math.max(...chartMonths.map((month) => month.cumulativeExpenseMinor), 1);
-  const pointForMonth = (month: InsightsData["timeframeMonths"][number], index: number) => {
-    const x = chartMonths.length <= 1 ? 50 : 8 + (index / (chartMonths.length - 1)) * 84;
-    const y = 96 - (month.cumulativeExpenseMinor / max) * 80;
-
-    return {
-      x: Number(x.toFixed(2)),
-      y: Number(y.toFixed(2)),
-    };
-  };
-  const points = chartMonths.map(pointForMonth);
-  const labelStep = chartMonths.length <= 6 ? 1 : Math.ceil(chartMonths.length / 6);
-
-  return (
-    <div aria-label="Cumulative tracked spending trend" className="space-y-3" role="img">
-      <svg className="h-32 w-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 104">
-        <polyline
-          fill="none"
-          points={points.map((point) => `${point.x},${point.y}`).join(" ")}
-          stroke="#0284c7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="3"
-        />
-        {chartMonths.map((month, index) => {
-          const point = points[index]!;
-
-          return (
-            <circle
-              aria-label={`${month.label} cumulative tracked spending ${month.cumulativeExpenseDisplay}`}
-              cx={point.x}
-              cy={point.y}
-              fill="#0284c7"
-              key={month.month}
-              r="3"
-            />
-          );
-        })}
-      </svg>
-      <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-        {chartMonths.map((month, index) => {
-          const showLabel = index === 0 || index === chartMonths.length - 1 || index % labelStep === 0;
-
-          return (
-            <span className="min-w-0 whitespace-nowrap text-center" key={month.month}>
-              {showLabel ? month.label : ""}
-            </span>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function formatSpendingDayLabel(bar: InsightsData["timeframeBars"][number]) {
+function formatSpendingDayLabel(bar: { key: string; label: string }) {
   const date = new Date(`${bar.key}T00:00:00.000Z`);
 
   if (Number.isNaN(date.getTime())) {
@@ -483,6 +417,153 @@ function formatSpendingDayLabel(bar: InsightsData["timeframeBars"][number]) {
     month: "short",
     timeZone: "UTC",
   }).format(date);
+}
+
+function buildSmoothTrendPath(points: Array<{ x: number; y: number }>) {
+  if (!points.length) {
+    return "";
+  }
+
+  if (points.length === 1) {
+    return `M ${points[0]!.x} ${points[0]!.y}`;
+  }
+
+  const commands = [`M ${points[0]!.x} ${points[0]!.y}`];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]!;
+    const current = points[index]!;
+    const midX = Number(((previous.x + current.x) / 2).toFixed(2));
+    const midY = Number(((previous.y + current.y) / 2).toFixed(2));
+
+    commands.push(`Q ${previous.x} ${previous.y} ${midX} ${midY}`);
+  }
+
+  const last = points[points.length - 1]!;
+  commands.push(`T ${last.x} ${last.y}`);
+
+  return commands.join(" ");
+}
+
+function TimeframeTrendChart({ data }: { data: InsightsData }) {
+  const days = data.selectedMonthTrendDays;
+  const hasIncome = days.some((day) => day.cumulativeIncomeMinor > 0);
+  const hasSpending = days.some((day) => day.cumulativeExpenseMinor > 0);
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+
+  if (!hasIncome && !hasSpending) {
+    return (
+      <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
+        No transactions tracked for this month yet.
+      </p>
+    );
+  }
+
+  const max = Math.max(...days.map((day) => Math.max(day.cumulativeIncomeMinor, day.cumulativeExpenseMinor)), 1);
+  const yForValue = (value: number) => Number((86 - (value / max) * 68).toFixed(2));
+  const xForIndex = (index: number) => Number((days.length <= 1 ? 50 : 4 + (index / (days.length - 1)) * 92).toFixed(2));
+  const incomePoints = days.map((day, index) => ({ x: xForIndex(index), y: yForValue(day.cumulativeIncomeMinor) }));
+  const spendingPoints = days.map((day, index) => ({ x: xForIndex(index), y: yForValue(day.cumulativeExpenseMinor) }));
+  const incomePath = buildSmoothTrendPath(incomePoints);
+  const spendingPath = buildSmoothTrendPath(spendingPoints);
+  const firstDay = days[0];
+  const lastDay = days[days.length - 1];
+  const lastTrendDay = lastDay ?? days[0];
+  const selectedDay = selectedDayIndex === null ? null : days[selectedDayIndex] ?? null;
+  const selectedX = selectedDayIndex === null ? 50 : xForIndex(selectedDayIndex);
+  const tooltipLeft = Math.min(74, Math.max(6, selectedX));
+  const tooltipTranslate = selectedX > 74 ? "-100%" : selectedX < 26 ? "0" : "-50%";
+  const note = !hasIncome ? "No income tracked this month yet." : !hasSpending ? "No spending tracked this month yet." : null;
+  const netPrefix = selectedDay?.netMinor && selectedDay.netMinor > 0 ? "+" : "";
+  const netTone = selectedDay?.netMinor && selectedDay.netMinor < 0 ? "text-rose-600" : "text-emerald-700";
+
+  return (
+    <div aria-label="Selected month income and spending trend" className="relative space-y-3" role="img">
+      <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+        <span className="font-semibold text-emerald-700">
+          Income {lastTrendDay ? `${getApproxPrefix(data, lastTrendDay.cumulativeIncomeMinor)}${lastTrendDay.cumulativeIncomeDisplay}` : ""}
+        </span>
+        <span className="font-semibold text-rose-700">
+          Spending {lastTrendDay ? `${getApproxPrefix(data, lastTrendDay.cumulativeExpenseMinor)}${lastTrendDay.cumulativeExpenseDisplay}` : ""}
+        </span>
+      </div>
+      {note ? <p className="text-xs leading-5 text-slate-500">{note}</p> : null}
+      {selectedDay ? (
+        <div
+          className="pointer-events-none absolute top-7 z-10 w-48 rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs shadow-lg"
+          style={{ left: `${tooltipLeft}%`, transform: `translateX(${tooltipTranslate})` }}
+        >
+          <p className="font-semibold text-slate-900">{formatSpendingDayLabel(selectedDay)}</p>
+          <p className="text-emerald-700">Income: {getApproxPrefix(data, selectedDay.cumulativeIncomeMinor)}{selectedDay.cumulativeIncomeDisplay}</p>
+          <p className="text-rose-700">Spending: {getApproxPrefix(data, selectedDay.cumulativeExpenseMinor)}{selectedDay.cumulativeExpenseDisplay}</p>
+          <p className={netTone}>Net: {netPrefix}{getApproxPrefix(data, Math.abs(selectedDay.netMinor))}{selectedDay.netDisplay}</p>
+        </div>
+      ) : null}
+      <svg className="h-36 w-full touch-pan-y overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 104">
+        <path aria-hidden="true" className="stroke-slate-100" d="M 4 86 H 96" fill="none" strokeWidth="0.8" />
+        {hasIncome && hasSpending ? (
+          <path
+            aria-hidden="true"
+            className={lastTrendDay && lastTrendDay.netMinor >= 0 ? "fill-emerald-50/70" : "fill-rose-50/70"}
+            d={`${incomePath} L 96 ${spendingPoints[spendingPoints.length - 1]!.y} ${spendingPath.replace(/^M [^Q]+/, "")} Z`}
+            opacity="0.55"
+          />
+        ) : null}
+        {hasIncome ? (
+          <path aria-label="Cumulative income line" className="stroke-emerald-600" d={incomePath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        ) : null}
+        {hasSpending ? (
+          <path aria-label="Cumulative spending line" className="stroke-rose-600" d={spendingPath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        ) : null}
+        {selectedDayIndex !== null ? (
+          <line
+            aria-hidden="true"
+            className="stroke-slate-300"
+            strokeDasharray="2 2"
+            strokeWidth="0.6"
+            x1={selectedX}
+            x2={selectedX}
+            y1="12"
+            y2="92"
+          />
+        ) : null}
+        {selectedDayIndex !== null && selectedDay ? (
+          <>
+            {hasIncome ? (
+              <circle aria-hidden="true" className="fill-white stroke-emerald-600" cx={selectedX} cy={yForValue(selectedDay.cumulativeIncomeMinor)} r="1.7" strokeWidth="0.8" />
+            ) : null}
+            {hasSpending ? (
+              <circle aria-hidden="true" className="fill-white stroke-rose-600" cx={selectedX} cy={yForValue(selectedDay.cumulativeExpenseMinor)} r="1.7" strokeWidth="0.8" />
+            ) : null}
+          </>
+        ) : null}
+        {days.map((day, index) => {
+          const x = xForIndex(index);
+          const hitWidth = Math.max(3, 100 / days.length);
+
+          return (
+            <g key={day.key}>
+              <rect
+                aria-label={`${formatSpendingDayLabel(day)} trend point, income ${day.cumulativeIncomeDisplay}, spending ${day.cumulativeExpenseDisplay}, net ${day.netDisplay}`}
+                className="cursor-crosshair fill-transparent"
+                height="104"
+                onPointerDown={() => setSelectedDayIndex(index)}
+                onPointerEnter={() => setSelectedDayIndex(index)}
+                onPointerMove={() => setSelectedDayIndex(index)}
+                width={hitWidth}
+                x={x - hitWidth / 2}
+                y="0"
+              />
+            </g>
+          );
+        })}
+      </svg>
+      <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+        <span className="whitespace-nowrap">{firstDay ? formatSpendingDayLabel(firstDay) : data.monthLabel}</span>
+        <span className="whitespace-nowrap">{lastDay ? formatSpendingDayLabel(lastDay) : data.monthLabel}</span>
+      </div>
+    </div>
+  );
 }
 
 function TimeframeBarsChart({ data }: { data: InsightsData }) {
