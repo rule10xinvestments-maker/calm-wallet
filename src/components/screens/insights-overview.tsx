@@ -430,19 +430,41 @@ function buildSmoothTrendPath(points: Array<{ x: number; y: number }>) {
 
   const commands = [`M ${points[0]!.x} ${points[0]!.y}`];
 
-  for (let index = 1; index < points.length; index += 1) {
-    const previous = points[index - 1]!;
-    const current = points[index]!;
-    const midX = Number(((previous.x + current.x) / 2).toFixed(2));
-    const midY = Number(((previous.y + current.y) / 2).toFixed(2));
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[index - 1] ?? points[index]!;
+    const p1 = points[index]!;
+    const p2 = points[index + 1]!;
+    const p3 = points[index + 2] ?? p2;
+    const cp1X = Number((p1.x + (p2.x - p0.x) / 6).toFixed(2));
+    const cp1Y = Number((p1.y + (p2.y - p0.y) / 6).toFixed(2));
+    const cp2X = Number((p2.x - (p3.x - p1.x) / 6).toFixed(2));
+    const cp2Y = Number((p2.y - (p3.y - p1.y) / 6).toFixed(2));
 
-    commands.push(`Q ${previous.x} ${previous.y} ${midX} ${midY}`);
+    commands.push(`C ${cp1X} ${cp1Y} ${cp2X} ${cp2Y} ${p2.x} ${p2.y}`);
   }
 
-  const last = points[points.length - 1]!;
-  commands.push(`T ${last.x} ${last.y}`);
-
   return commands.join(" ");
+}
+
+function buildTrendAreaPath(points: Array<{ x: number; y: number }>, baselineY: number) {
+  if (!points.length) {
+    return "";
+  }
+
+  const first = points[0]!;
+  const last = points[points.length - 1]!;
+
+  return `${buildSmoothTrendPath(points)} L ${last.x} ${baselineY} L ${first.x} ${baselineY} Z`;
+}
+
+function formatTrendNetDisplay(data: InsightsData, netMinor: number) {
+  if (netMinor === 0) {
+    return `${getApproxPrefix(data, 0)}${formatMoney(0, data.displayCurrency)}`;
+  }
+
+  const sign = netMinor > 0 ? "+" : "-";
+
+  return `${sign} ${getApproxPrefix(data, Math.abs(netMinor))}${formatMoney(Math.abs(netMinor), data.displayCurrency)}`;
 }
 
 function TimeframeTrendChart({ data }: { data: InsightsData }) {
@@ -466,6 +488,9 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const spendingPoints = days.map((day, index) => ({ x: xForIndex(index), y: yForValue(day.cumulativeExpenseMinor) }));
   const incomePath = buildSmoothTrendPath(incomePoints);
   const spendingPath = buildSmoothTrendPath(spendingPoints);
+  const baselineY = 90;
+  const incomeAreaPath = buildTrendAreaPath(incomePoints, baselineY);
+  const spendingAreaPath = buildTrendAreaPath(spendingPoints, baselineY);
   const firstDay = days[0];
   const lastDay = days[days.length - 1];
   const lastTrendDay = lastDay ?? days[0];
@@ -474,8 +499,9 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const tooltipLeft = Math.min(74, Math.max(6, selectedX));
   const tooltipTranslate = selectedX > 74 ? "-100%" : selectedX < 26 ? "0" : "-50%";
   const note = !hasIncome ? "No income tracked this month yet." : !hasSpending ? "No spending tracked this month yet." : null;
-  const netPrefix = selectedDay?.netMinor && selectedDay.netMinor > 0 ? "+" : "";
   const netTone = selectedDay?.netMinor && selectedDay.netMinor < 0 ? "text-rose-600" : "text-emerald-700";
+  const finalNetMinor = lastTrendDay?.netMinor ?? 0;
+  const finalNetTone = finalNetMinor < 0 ? "border-rose-100 bg-rose-50 text-rose-700" : "border-emerald-100 bg-emerald-50 text-emerald-700";
 
   return (
     <div aria-label="Selected month income and spending trend" className="relative space-y-3" role="img">
@@ -496,24 +522,43 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
           <p className="font-semibold text-slate-900">{formatSpendingDayLabel(selectedDay)}</p>
           <p className="text-emerald-700">Income: {getApproxPrefix(data, selectedDay.cumulativeIncomeMinor)}{selectedDay.cumulativeIncomeDisplay}</p>
           <p className="text-rose-700">Spending: {getApproxPrefix(data, selectedDay.cumulativeExpenseMinor)}{selectedDay.cumulativeExpenseDisplay}</p>
-          <p className={netTone}>Net: {netPrefix}{getApproxPrefix(data, Math.abs(selectedDay.netMinor))}{selectedDay.netDisplay}</p>
+          <p className={netTone}>Net: {formatTrendNetDisplay(data, selectedDay.netMinor)}</p>
         </div>
       ) : null}
+      <div className="relative">
+        <div
+          aria-label={`Month net ${formatTrendNetDisplay(data, finalNetMinor)}`}
+          className={`absolute right-0 top-1 z-10 rounded-full border px-2.5 py-1 text-xs font-semibold shadow-sm ${finalNetTone}`}
+        >
+          {formatTrendNetDisplay(data, finalNetMinor)}
+        </div>
       <svg className="h-36 w-full touch-pan-y overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 104">
-        <path aria-hidden="true" className="stroke-slate-100" d="M 4 86 H 96" fill="none" strokeWidth="0.8" />
-        {hasIncome && hasSpending ? (
-          <path
-            aria-hidden="true"
-            className={lastTrendDay && lastTrendDay.netMinor >= 0 ? "fill-emerald-50/70" : "fill-rose-50/70"}
-            d={`${incomePath} L 96 ${spendingPoints[spendingPoints.length - 1]!.y} ${spendingPath.replace(/^M [^Q]+/, "")} Z`}
-            opacity="0.55"
-          />
-        ) : null}
+        <defs>
+          <linearGradient id="income-trend-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#10b981" stopOpacity="0.16" />
+            <stop offset="78%" stopColor="#10b981" stopOpacity="0.03" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="spending-trend-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#e11d48" stopOpacity="0.14" />
+            <stop offset="78%" stopColor="#e11d48" stopOpacity="0.025" />
+            <stop offset="100%" stopColor="#e11d48" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path aria-hidden="true" className="stroke-slate-200" d="M 4 90 H 96" fill="none" strokeLinecap="round" strokeWidth="0.7" />
+        {hasIncome ? <path aria-label="Cumulative income area" d={incomeAreaPath} fill="url(#income-trend-fill)" /> : null}
+        {hasSpending ? <path aria-label="Cumulative spending area" d={spendingAreaPath} fill="url(#spending-trend-fill)" /> : null}
         {hasIncome ? (
-          <path aria-label="Cumulative income line" className="stroke-emerald-600" d={incomePath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+          <>
+            <path aria-hidden="true" className="stroke-emerald-200" d={incomePath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" opacity="0.5" />
+            <path aria-label="Cumulative income line" className="stroke-emerald-600" d={incomePath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.15" />
+          </>
         ) : null}
         {hasSpending ? (
-          <path aria-label="Cumulative spending line" className="stroke-rose-600" d={spendingPath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+          <>
+            <path aria-hidden="true" className="stroke-rose-200" d={spendingPath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" opacity="0.48" />
+            <path aria-label="Cumulative spending line" className="stroke-rose-600" d={spendingPath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.15" />
+          </>
         ) : null}
         {selectedDayIndex !== null ? (
           <line
@@ -558,6 +603,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
           );
         })}
       </svg>
+      </div>
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
         <span className="whitespace-nowrap">{firstDay ? formatSpendingDayLabel(firstDay) : data.monthLabel}</span>
         <span className="whitespace-nowrap">{lastDay ? formatSpendingDayLabel(lastDay) : data.monthLabel}</span>

@@ -366,6 +366,9 @@ describe("insights overview", () => {
     expect(chart.querySelectorAll("circle")).toHaveLength(0);
     expect(screen.getByLabelText("Cumulative income line")).toHaveClass("stroke-emerald-600");
     expect(screen.getByLabelText("Cumulative spending line")).toHaveClass("stroke-rose-600");
+    expect(screen.getByLabelText("Cumulative income area")).toHaveAttribute("fill", "url(#income-trend-fill)");
+    expect(screen.getByLabelText("Cumulative spending area")).toHaveAttribute("fill", "url(#spending-trend-fill)");
+    expect(screen.getByLabelText("Month net + $33")).toHaveClass("bg-emerald-50");
   });
 
   it("shows income and spending tooltip content on interaction", () => {
@@ -414,7 +417,7 @@ describe("insights overview", () => {
     expect(screen.getAllByText("Apr 15").length).toBeGreaterThan(0);
     expect(screen.getByText("Income: $50")).toBeInTheDocument();
     expect(screen.getByText("Spending: $12")).toBeInTheDocument();
-    expect(screen.getByText("Net: +$38")).toBeInTheDocument();
+    expect(screen.getByText("Net: + $38")).toBeInTheDocument();
     expect(screen.queryByText("No transactions tracked for this month yet.")).not.toBeInTheDocument();
   });
 
@@ -446,6 +449,7 @@ describe("insights overview", () => {
     expect(screen.getByText("No income tracked this month yet.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Cumulative income line")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Cumulative spending line")).toBeInTheDocument();
+    expect(screen.getByLabelText("Month net - $12")).toHaveClass("bg-rose-50");
   });
 
   it("renders income-only trend with a calm no-spending note", () => {
