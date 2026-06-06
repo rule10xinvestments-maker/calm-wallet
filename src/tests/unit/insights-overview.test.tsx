@@ -324,14 +324,19 @@ describe("insights overview", () => {
   it("renders chart mode links and preserves timeframe and currency", () => {
     renderInsights(makeInsightsData({ selectedTimeframe: "6M", displayCurrency: "EUR", availableDisplayCurrencies: ["EUR", "RON"] }));
 
-    expect(screen.getByRole("link", { name: "Bars" })).toHaveAttribute(
+    const barsLink = screen.getByRole("link", { name: "Bars" });
+    const mixLink = screen.getByRole("link", { name: "Mix" });
+
+    expect(barsLink).toHaveAttribute(
       "href",
       "/insights?month=2026-04&timeframe=6M&chart=bars&currency=EUR",
     );
-    expect(screen.getByRole("link", { name: "Mix" })).toHaveAttribute(
+    expect(mixLink).toHaveAttribute(
       "href",
       "/insights?month=2026-04&timeframe=6M&chart=mix&currency=EUR",
     );
+    expect(barsLink).toHaveAttribute("data-scroll-preserve", "true");
+    expect(mixLink).toHaveAttribute("data-scroll-preserve", "true");
   });
 
   it("renders selected-month income and spending trend without default day labels", () => {

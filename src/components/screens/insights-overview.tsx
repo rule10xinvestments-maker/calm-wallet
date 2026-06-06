@@ -306,8 +306,10 @@ function ChartModeControls({ data }: { data: InsightsData }) {
             className={`rounded-md px-3 py-1.5 text-sm font-medium ${
               active ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
             }`}
+            data-scroll-preserve="true"
             href={buildInsightsHref(data, { chart: mode })}
             key={mode}
+            scroll={false}
           >
             {label}
           </Link>
