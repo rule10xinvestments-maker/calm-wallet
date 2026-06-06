@@ -255,13 +255,38 @@ describe("insights overview", () => {
     expect(screen.getByText("Nothing tracked yet")).toBeInTheDocument();
   });
 
-  it("renders monthly clarity with tracked balance wording", () => {
+  it("renders monthly clarity with compact snapshot wording", () => {
     renderInsights(makeInsightsData());
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
 
     expect(screen.getByText("Monthly clarity")).toBeInTheDocument();
-    expect(screen.getByText("Tracked balance")).toBeInTheDocument();
-    expect(screen.getByText("$30")).toBeInTheDocument();
+    expect(within(snapshot).getByText("Monthly snapshot")).toBeInTheDocument();
+    expect(within(snapshot).getByText("Tracked balance")).toBeInTheDocument();
+    expect(within(snapshot).getByText("$30")).toBeInTheDocument();
+    expect(within(snapshot).getByText("Income")).toBeInTheDocument();
+    expect(within(snapshot).getByText("Spending")).toBeInTheDocument();
+    expect(within(snapshot).getByText("3 tracked transactions")).toBeInTheDocument();
     expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the sticky compact control bar with month, timeframe, and currency controls", () => {
+    renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["EUR", "RON", "USD"] }));
+
+    const monthButton = screen.getByRole("button", { name: "Choose month, current April 2026" });
+    const controlBar = monthButton.closest(".sticky");
+
+    expect(controlBar).toHaveClass("sticky", "top-2", "z-40");
+    expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&timeframe=1M&chart=trend&currency=RON");
+    expect(within(controlBar as HTMLElement).getAllByText("1M").length).toBeGreaterThan(0);
+    expect(within(controlBar as HTMLElement).getAllByText("RON").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "3M" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-04&timeframe=3M&chart=trend&currency=RON",
+    );
+    expect(screen.getByRole("link", { name: "EUR" })).toHaveAttribute(
+      "href",
+      "/insights?month=2026-04&timeframe=1M&chart=trend&currency=EUR",
+    );
   });
 
   it("renders month navigation links without changing tracked balance wording", () => {
@@ -285,6 +310,15 @@ describe("insights overview", () => {
       "href",
       "/insights?month=2026-04&timeframe=All&chart=trend&currency=RON",
     );
+  });
+
+  it("keeps the chart section directly after the monthly snapshot", () => {
+    const { container } = renderInsights(makeInsightsData());
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+    const chart = screen.getByTestId("timeframe-insights-card");
+    const cards = Array.from(container.querySelectorAll("[data-testid='monthly-snapshot-card'], [data-testid='timeframe-insights-card']"));
+
+    expect(cards).toEqual([snapshot, chart]);
   });
 
   it("renders chart mode links and preserves timeframe and currency", () => {

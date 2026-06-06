@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   Car,
@@ -59,85 +58,8 @@ function formatMoney(amountMinor: number, currency: string) {
   }).format(amountMinor / 100);
 }
 
-function StatPanel(props: {
-  label: string;
-  value: string;
-  detail: ReactNode;
-  aside?: ReactNode;
-  tone?: "neutral" | "income" | "expense";
-  className?: string;
-}) {
-  const valueTone =
-    props.tone === "income" ? "text-emerald-700" : props.tone === "expense" ? "text-rose-700" : "text-slate-900";
-
-  return (
-    <Card className={`rounded-lg ${props.className ?? ""}`}>
-      <CardHeader className="p-4 pb-2">
-        <CardDescription>{props.label}</CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <div className={props.aside ? "flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between" : "space-y-1"}>
-          <div className="min-w-0 space-y-1">
-            <p className={`whitespace-nowrap text-2xl font-semibold ${valueTone}`}>{props.value}</p>
-            <p className="text-xs leading-5 text-slate-500">{props.detail}</p>
-          </div>
-          {props.aside ? <div className="w-full shrink-0 lg:w-auto lg:max-w-[14rem]">{props.aside}</div> : null}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function getApproxPrefix(data: InsightsData, amountMinor: number) {
   return data.hasConvertedCurrencies && amountMinor !== 0 ? "≈ " : "";
-}
-
-function ConversionDetail({ data, kind }: { data: InsightsData; kind: "balance" | "income" | "expense" }) {
-  const converted = data.convertedCurrencyBreakdowns.filter((breakdown) => breakdown.currency !== data.displayCurrency);
-  const included = converted.filter((breakdown) => {
-    if (kind === "income") {
-      return breakdown.incomeMinor > 0 && breakdown.incomeDisplayMinor !== null;
-    }
-
-    if (kind === "expense") {
-      return breakdown.expenseMinor > 0 && breakdown.expenseDisplayMinor !== null;
-    }
-
-    return breakdown.netMinor !== 0 && breakdown.netDisplayMinor !== null;
-  });
-  const missing = converted.filter((breakdown) => {
-    if (kind === "income") {
-      return breakdown.incomeMinor > 0 && breakdown.incomeDisplayMinor === null;
-    }
-
-    if (kind === "expense") {
-      return breakdown.expenseMinor > 0 && breakdown.expenseDisplayMinor === null;
-    }
-
-    return breakdown.netMinor !== 0 && breakdown.netDisplayMinor === null;
-  });
-
-  if (included.length) {
-    const first = included[0];
-    const sourceMinor =
-      kind === "income" ? first.incomeMinor : kind === "expense" ? first.expenseMinor : Math.abs(first.netMinor);
-    const originalDisplay =
-      sourceMinor > 0 ? formatMoney(sourceMinor, first.currency) : first.currency;
-
-    return (
-      <>
-        {included.length === 1
-          ? `Includes ${originalDisplay} converted`
-          : `Includes ${included.map((item) => item.currency).join(", ")} converted`}
-      </>
-    );
-  }
-
-  if (missing.length) {
-    return <>Some currencies need a rate before they can be included in converted totals.</>;
-  }
-
-  return null;
 }
 
 function CurrencySwitcher({ data }: { data: InsightsData }) {
@@ -146,25 +68,24 @@ function CurrencySwitcher({ data }: { data: InsightsData }) {
   }
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-      <span className="font-medium text-slate-700">View totals as:</span>
-      <div className="flex flex-wrap gap-1">
-        {data.availableDisplayCurrencies.map((currency) => {
-          const active = currency === data.displayCurrency;
+    <div aria-label="Display currency" className="flex flex-wrap items-center gap-1 text-xs">
+      <span className="sr-only">View totals as:</span>
+      {data.availableDisplayCurrencies.map((currency) => {
+        const active = currency === data.displayCurrency;
 
-          return (
-            <Link
-              key={currency}
-              className={`rounded-full px-2.5 py-1 font-semibold ${
-                active ? "bg-sky-600 text-white" : "text-sky-700 hover:bg-sky-50"
-              }`}
-              href={buildInsightsHref(data, { currency })}
-            >
-              {currency}
-            </Link>
-          );
-        })}
-      </div>
+        return (
+          <Link
+            key={currency}
+            aria-current={active ? "true" : undefined}
+            className={`rounded-full border px-2.5 py-1 font-semibold ${
+              active ? "border-sky-600 bg-sky-600 text-white" : "border-slate-200 bg-white text-sky-700 hover:bg-sky-50"
+            }`}
+            href={buildInsightsHref(data, { currency })}
+          >
+            {currency}
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -299,80 +220,71 @@ function MonthPickerSheet({
   );
 }
 
-function MonthNavigator({ data }: { data: InsightsData }) {
+function InsightsControlBar({ data }: { data: InsightsData }) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const canGoNext = data.selectedMonth < data.currentMonth;
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2">
-        <Link
-          aria-label={`View ${data.previousMonth}`}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          href={buildInsightsHref(data, { month: data.previousMonth })}
-        >
-          <ChevronLeft aria-hidden="true" className="h-5 w-5" />
-        </Link>
-        <button
-          aria-expanded={isPickerOpen}
-          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-center hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          onClick={() => setIsPickerOpen(true)}
-          type="button"
-        >
-          <CalendarDays aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-500" />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-slate-900">{data.monthLabel}</span>
-            <span className="block text-xs text-slate-500">Monthly tracked activity</span>
-          </span>
-        </button>
-        {canGoNext ? (
+      <div className="sticky top-2 z-40 space-y-2 rounded-lg border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+        <div className="flex items-center gap-1">
           <Link
-            aria-label={`View ${data.nextMonth}`}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            href={buildInsightsHref(data, { month: data.nextMonth })}
+            aria-label={`View ${data.previousMonth}`}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            href={buildInsightsHref(data, { month: data.previousMonth })}
           >
-            <ChevronRight aria-hidden="true" className="h-5 w-5" />
+            <ChevronLeft aria-hidden="true" className="h-4 w-4" />
           </Link>
-        ) : (
-          <span
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-300"
+          <button
+            aria-expanded={isPickerOpen}
+            aria-label={`Choose month, current ${data.monthLabel}`}
+            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-center hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            onClick={() => setIsPickerOpen(true)}
+            type="button"
           >
-            <ChevronRight className="h-5 w-5" />
-          </span>
-        )}
+            <CalendarDays aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+            <span className="truncate text-sm font-semibold text-slate-900">{data.monthLabel}</span>
+          </button>
+          {canGoNext ? (
+            <Link
+              aria-label={`View ${data.nextMonth}`}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              href={buildInsightsHref(data, { month: data.nextMonth })}
+            >
+              <ChevronRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+          ) : (
+            <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300">
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          )}
+          <span className="ml-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{data.selectedTimeframe}</span>
+          <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700">{data.displayCurrency}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <div aria-label="Timeframe" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+            {data.timeframePresets.map((timeframe) => {
+              const active = timeframe === data.selectedTimeframe;
+
+              return (
+                <Link
+                  aria-current={active ? "true" : undefined}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                  href={buildInsightsHref(data, { timeframe })}
+                  key={timeframe}
+                >
+                  {timeframe}
+                </Link>
+              );
+            })}
+          </div>
+          <CurrencySwitcher data={data} />
+        </div>
       </div>
       {isPickerOpen ? <MonthPickerSheet data={data} onClose={() => setIsPickerOpen(false)} /> : null}
     </>
-  );
-}
-
-function TimeframeControls({ data }: { data: InsightsData }) {
-  return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
-      <div className="flex flex-wrap gap-1">
-        {data.timeframePresets.map((timeframe) => {
-          const active = timeframe === data.selectedTimeframe;
-
-          return (
-            <Link
-              aria-current={active ? "true" : undefined}
-              className={`min-h-9 rounded-lg px-3 py-2 text-sm font-semibold ${
-                active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
-              }`}
-              href={buildInsightsHref(data, { timeframe })}
-              key={timeframe}
-            >
-              {timeframe}
-            </Link>
-          );
-        })}
-      </div>
-      <p className="text-xs leading-5 text-slate-500">
-        {data.timeframeLabel}. Tracked spending only. Not a bank statement.
-        {data.hasConvertedCurrencies ? " Converted totals are approximate." : null}
-      </p>
-    </div>
   );
 }
 
@@ -716,9 +628,83 @@ function TimeframeCategoryBreakdown({ data }: { data: InsightsData }) {
   );
 }
 
+function getMonthlySnapshotConversionNote(data: InsightsData) {
+  const converted = data.convertedCurrencyBreakdowns.filter((breakdown) => breakdown.currency !== data.displayCurrency);
+  const parts: string[] = [];
+
+  converted.forEach((breakdown) => {
+    if (breakdown.incomeMinor > 0 && breakdown.incomeDisplayMinor !== null) {
+      parts.push(`${formatMoney(breakdown.incomeMinor, breakdown.currency)} converted income`);
+    }
+
+    if (breakdown.expenseMinor > 0 && breakdown.expenseDisplayMinor !== null) {
+      parts.push(`${formatMoney(breakdown.expenseMinor, breakdown.currency)} converted spending`);
+    }
+  });
+
+  if (parts.length) {
+    return `Includes ${parts.join(" / ")}`;
+  }
+
+  if (converted.some((breakdown) => breakdown.incomeDisplayMinor === null || breakdown.expenseDisplayMinor === null || breakdown.netDisplayMinor === null)) {
+    return "Some currencies need a rate before they can be included.";
+  }
+
+  return null;
+}
+
+function MonthlySnapshotCard({ data }: { data: InsightsData }) {
+  const conversionNote = getMonthlySnapshotConversionNote(data);
+
+  return (
+    <Card className="rounded-lg" data-testid="monthly-snapshot-card">
+      <CardHeader className="p-4 pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg">Monthly snapshot</CardTitle>
+            <CardDescription>{data.monthLabel}</CardDescription>
+          </div>
+          <span className="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">{data.displayCurrency}</span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 p-4 pt-0">
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-slate-500">Tracked balance</p>
+          <p className="whitespace-nowrap text-2xl font-semibold text-slate-900">
+            {getApproxPrefix(data, data.trackedBalanceDisplayMinor)}
+            {formatMoney(data.trackedBalanceDisplayMinor, data.displayCurrency)}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-emerald-50 px-3 py-2">
+            <p className="text-[11px] font-medium text-emerald-700">Income</p>
+            <p className="whitespace-nowrap text-sm font-semibold text-emerald-800">
+              {getApproxPrefix(data, data.monthlyIncomeDisplayMinor)}
+              {formatMoney(data.monthlyIncomeDisplayMinor, data.displayCurrency)}
+            </p>
+          </div>
+          <div className="rounded-lg bg-rose-50 px-3 py-2">
+            <p className="text-[11px] font-medium text-rose-700">Spending</p>
+            <p className="whitespace-nowrap text-sm font-semibold text-rose-800">
+              {getApproxPrefix(data, data.monthlyExpenseDisplayMinor)}
+              {formatMoney(data.monthlyExpenseDisplayMinor, data.displayCurrency)}
+            </p>
+          </div>
+        </div>
+        <div className="text-xs leading-5 text-slate-500">
+          <p>
+            {data.trackedTransactionCount} tracked {data.trackedTransactionCount === 1 ? "transaction" : "transactions"}
+          </p>
+          {conversionNote ? <p>{conversionNote}</p> : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TimeframeInsightsCard({ data }: { data: InsightsData }) {
   return (
-    <Card className="rounded-lg">
+    <Card className="rounded-lg" data-testid="timeframe-insights-card">
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -741,16 +727,6 @@ function TimeframeInsightsCard({ data }: { data: InsightsData }) {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function StatDetail({ data, kind, fallback }: { data: InsightsData; kind: "balance" | "income" | "expense"; fallback: string }) {
-  return (
-    <>
-      {fallback}
-      <br />
-      <ConversionDetail data={data} kind={kind} />
-    </>
   );
 }
 
@@ -1161,8 +1137,7 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
         title="Monthly clarity"
         description="Tracked spending only. Not a bank statement."
       />
-      <MonthNavigator data={data} />
-      <TimeframeControls data={data} />
+      <InsightsControlBar data={data} />
       {loadError ? (
         <Card className="rounded-lg">
           <CardHeader>
@@ -1183,35 +1158,14 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
         </Card>
       ) : null}
 
+      <MonthlySnapshotCard data={data} />
+      <TimeframeInsightsCard data={data} />
+
       {data.hasMissingRates ? (
         <p className="text-xs leading-5 text-slate-500">
           Some currencies need a rate before they can be included in converted totals.
         </p>
       ) : null}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <StatPanel
-          className="sm:col-span-2"
-          label="Tracked balance"
-          value={`${getApproxPrefix(data, data.trackedBalanceDisplayMinor)}${formatMoney(data.trackedBalanceDisplayMinor, data.displayCurrency)}`}
-          detail={<StatDetail data={data} fallback={`${data.trackedTransactionCount} tracked transactions`} kind="balance" />}
-          aside={<CurrencySwitcher data={data} />}
-        />
-        <StatPanel
-          label="Monthly income"
-          value={`${getApproxPrefix(data, data.monthlyIncomeDisplayMinor)}${formatMoney(data.monthlyIncomeDisplayMinor, data.displayCurrency)}`}
-          detail={<StatDetail data={data} fallback={data.monthLabel} kind="income" />}
-          tone="income"
-        />
-        <StatPanel
-          label="Monthly spending"
-          value={`${getApproxPrefix(data, data.monthlyExpenseDisplayMinor)}${formatMoney(data.monthlyExpenseDisplayMinor, data.displayCurrency)}`}
-          detail={<StatDetail data={data} fallback={data.monthLabel} kind="expense" />}
-          tone="expense"
-        />
-      </div>
-
-      <TimeframeInsightsCard data={data} />
 
       {hasTrackedData && !hasCurrentMonthData ? (
         <div className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
