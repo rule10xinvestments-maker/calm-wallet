@@ -699,14 +699,14 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getByLabelText("Apr 2 Groceries spending $8")).toHaveStyle({ backgroundColor: "#0ea5e9" });
-    expect(screen.getByLabelText("Apr 2 Dining spending $4")).toHaveStyle({ backgroundColor: "#10b981" });
+    expect(screen.getByLabelText("Apr 2 Groceries spending $8")).toHaveStyle({ backgroundColor: "#f97316" });
+    expect(screen.getByLabelText("Apr 2 Dining spending $4")).toHaveStyle({ backgroundColor: "#ec4899" });
     const legend = screen.getByLabelText("Expenses category icon legend");
 
     expect(within(legend).queryByText("Groceries")).not.toBeInTheDocument();
     expect(within(legend).queryByText("Dining")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("img", { name: "Groceries chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
-    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#10b981" });
+    expect(screen.getAllByRole("img", { name: "Groceries chart color and category icon" })[0]).toHaveStyle({ color: "#f97316" });
+    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#ec4899" });
   });
 
   it("renders a calm empty state when 1M bars have no spending days", () => {
@@ -832,8 +832,8 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getByRole("img", { name: "Needs category chart color and category icon" })).toHaveStyle({ color: "#0ea5e9" });
-    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#10b981" });
+    expect(screen.getAllByRole("img", { name: "Needs category chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
+    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#ec4899" });
     expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review");
     expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
     expect(screen.getByText("$75")).toBeInTheDocument();
@@ -882,6 +882,19 @@ describe("insights overview", () => {
     expectCategoryIcon("Transport", "lucide-car");
     expectCategoryIcon("Travel", "lucide-plane");
     expectCategoryIcon("Groceries", "lucide-shopping-basket");
+
+    const legend = screen.getByLabelText("Expenses category icon legend");
+
+    expect(within(legend).getByRole("img", { name: "Transfers chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: "Needs category chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
+    expect(screen.getAllByRole("img", { name: "Housing chart color and category icon" })[0]).toHaveStyle({ color: "#10b981" });
+    expect(screen.getAllByRole("img", { name: "Transfers chart color and category icon" })[0]).toHaveStyle({ color: "#f59e0b" });
+    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#ec4899" });
+    expect(screen.getAllByRole("img", { name: "Transport chart color and category icon" })[0]).toHaveStyle({ color: "#8b5cf6" });
+    expect(screen.getAllByRole("img", { name: "Travel chart color and category icon" })[0]).toHaveStyle({ color: "#14b8a6" });
+    expect(screen.getAllByRole("img", { name: "Groceries chart color and category icon" })[0]).toHaveStyle({ color: "#f97316" });
+    expect(screen.getAllByRole("img", { name: "Transfers chart color and category icon" })[0]).not.toHaveStyle({ color: "#f97316" });
+    expect(screen.getAllByRole("img", { name: "Housing chart color and category icon" })[0]).not.toHaveStyle({ color: "#14b8a6" });
   });
 
   it("opens a compact month picker grouped by year", () => {
@@ -1104,6 +1117,10 @@ describe("insights overview", () => {
     expectCategoryIcon("Transfers", "lucide-arrow-left-right");
     expectCategoryIcon("Transport", "lucide-car");
     expectCategoryIcon("Travel", "lucide-plane");
+    expect(screen.getByRole("img", { name: "Housing chart color and category icon" })).toHaveStyle({ color: "#10b981" });
+    expect(screen.getByRole("img", { name: "Transfers chart color and category icon" })).toHaveStyle({ color: "#f59e0b" });
+    expect(screen.getByRole("img", { name: "Transport chart color and category icon" })).toHaveStyle({ color: "#8b5cf6" });
+    expect(screen.getByRole("img", { name: "Travel chart color and category icon" })).toHaveStyle({ color: "#14b8a6" });
   });
 
   it("renders multi-category donuts as rounded arc paths for smoother small slices", () => {

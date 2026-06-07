@@ -45,6 +45,24 @@ const spendingMixChartColors = [
   "#64748b",
 ];
 
+const spendingCategoryColorByLabel: Array<{ pattern: string; color: string }> = [
+  { pattern: "needs", color: "#0ea5e9" },
+  { pattern: "uncategorized", color: "#0ea5e9" },
+  { pattern: "housing", color: "#10b981" },
+  { pattern: "home", color: "#10b981" },
+  { pattern: "rent", color: "#10b981" },
+  { pattern: "transfer", color: "#f59e0b" },
+  { pattern: "dining", color: "#ec4899" },
+  { pattern: "food", color: "#ec4899" },
+  { pattern: "transport", color: "#8b5cf6" },
+  { pattern: "taxi", color: "#8b5cf6" },
+  { pattern: "car", color: "#8b5cf6" },
+  { pattern: "travel", color: "#14b8a6" },
+  { pattern: "flight", color: "#14b8a6" },
+  { pattern: "plane", color: "#14b8a6" },
+  { pattern: "grocer", color: "#f97316" },
+];
+
 const incomeCategoryChartColors = [
   "#059669",
   "#14b8a6",
@@ -555,6 +573,13 @@ function CategoryColorIcon({ label, color, className = "" }: { label: string; co
   );
 }
 
+function getSpendingCategoryColor(item: { label: string }, index: number) {
+  const normalizedLabel = item.label.toLowerCase();
+  const matched = spendingCategoryColorByLabel.find((entry) => normalizedLabel.includes(entry.pattern));
+
+  return matched?.color ?? spendingMixChartColors[index % spendingMixChartColors.length]!;
+}
+
 function TimeframeBarsChart({ data }: { data: InsightsData }) {
   const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
   const isIncome = barsSegment === "income";
@@ -562,7 +587,7 @@ function TimeframeBarsChart({ data }: { data: InsightsData }) {
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
   const categoryItems = isIncome ? data.incomeCategoryBreakdown : data.categoryBreakdown;
   const palette = isIncome ? incomeCategoryChartColors : spendingMixChartColors;
-  const categoryColorMap = new Map(categoryItems.map((item, index) => [item.key, palette[index % palette.length]!]));
+  const categoryColorMap = new Map(categoryItems.map((item, index) => [item.key, isIncome ? palette[index % palette.length]! : getSpendingCategoryColor(item, index)]));
   const activeBars = data.timeframeBars.filter((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor) > 0);
   const getSegmentColor = (key: string, index: number) => categoryColorMap.get(key) ?? palette[index % palette.length]!;
   const activeLegendItems = Array.from(
@@ -600,7 +625,7 @@ function TimeframeBarsChart({ data }: { data: InsightsData }) {
 
   const legend = activeLegendItems.length ? (
     <div aria-label={`${isIncome ? "Income" : "Expenses"} category icon legend`} className="flex gap-2 overflow-x-auto pb-1">
-      {activeLegendItems.slice(0, 6).map((item) => (
+      {activeLegendItems.map((item) => (
         <CategoryColorIcon className="shrink-0" color={item.color} key={item.key} label={item.label} />
       ))}
     </div>
@@ -769,7 +794,7 @@ function TimeframeCategoryBreakdown({ data, showIcons = false }: { data: Insight
     <div className="space-y-3">
       {data.timeframeCategoryBreakdown.map((item, index) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
-        const chartColor = spendingMixChartColors[index % spendingMixChartColors.length]!;
+        const chartColor = getSpendingCategoryColor(item, index);
 
         return (
           <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
@@ -971,7 +996,7 @@ function buildSpendingMixChartItems(items: SpendingMixCategoryItem[]) {
     total,
     items: items.map((item, index) => ({
       ...item,
-      color: spendingMixChartColors[index % spendingMixChartColors.length]!,
+      color: getSpendingCategoryColor(item, index),
       percent: total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0,
     })),
   };
@@ -1151,7 +1176,7 @@ function SpendingMixRows({
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
         const CategoryIcon = getSpendingCategoryIcon(item.label);
         const isExpanded = expandedKey === item.key;
-        const chartColor = spendingMixChartColors[index % spendingMixChartColors.length]!;
+        const chartColor = getSpendingCategoryColor(item, index);
 
         return (
           <div key={item.key} className="grid grid-cols-[2rem_1fr] gap-3 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
