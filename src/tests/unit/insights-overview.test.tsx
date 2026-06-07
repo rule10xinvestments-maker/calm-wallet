@@ -888,7 +888,7 @@ describe("insights overview", () => {
     expect(within(legend).getByRole("img", { name: "Transfers chart color and category icon" })).toBeInTheDocument();
     expect(screen.getAllByRole("img", { name: "Needs category chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
     expect(screen.getAllByRole("img", { name: "Housing chart color and category icon" })[0]).toHaveStyle({ color: "#10b981" });
-    expect(screen.getAllByRole("img", { name: "Transfers chart color and category icon" })[0]).toHaveStyle({ color: "#f59e0b" });
+    expect(screen.getAllByRole("img", { name: "Transfers chart color and category icon" })[0]).toHaveStyle({ color: "#eab308" });
     expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#ec4899" });
     expect(screen.getAllByRole("img", { name: "Transport chart color and category icon" })[0]).toHaveStyle({ color: "#8b5cf6" });
     expect(screen.getAllByRole("img", { name: "Travel chart color and category icon" })[0]).toHaveStyle({ color: "#14b8a6" });
@@ -1118,7 +1118,7 @@ describe("insights overview", () => {
     expectCategoryIcon("Transport", "lucide-car");
     expectCategoryIcon("Travel", "lucide-plane");
     expect(screen.getByRole("img", { name: "Housing chart color and category icon" })).toHaveStyle({ color: "#10b981" });
-    expect(screen.getByRole("img", { name: "Transfers chart color and category icon" })).toHaveStyle({ color: "#f59e0b" });
+    expect(screen.getByRole("img", { name: "Transfers chart color and category icon" })).toHaveStyle({ color: "#eab308" });
     expect(screen.getByRole("img", { name: "Transport chart color and category icon" })).toHaveStyle({ color: "#8b5cf6" });
     expect(screen.getByRole("img", { name: "Travel chart color and category icon" })).toHaveStyle({ color: "#14b8a6" });
   });
@@ -1148,7 +1148,7 @@ describe("insights overview", () => {
       [
         { ...makeCategory({ key: "housing", label: "Housing", amountMinor: 8800 }), color: "#0ea5e9", percent: 88 },
         { ...makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1100 }), color: "#10b981", percent: 11 },
-        { ...makeCategory({ key: "coffee", label: "Coffee", amountMinor: 100 }), color: "#f59e0b", percent: 1 },
+        { ...makeCategory({ key: "coffee", label: "Coffee", amountMinor: 100 }), color: "#eab308", percent: 1 },
       ],
       10000,
     );

@@ -37,7 +37,7 @@ type ChartMode = InsightsData["selectedChartMode"];
 const spendingMixChartColors = [
   "#0ea5e9",
   "#10b981",
-  "#f59e0b",
+  "#eab308",
   "#ec4899",
   "#8b5cf6",
   "#14b8a6",
@@ -51,7 +51,7 @@ const spendingCategoryColorByLabel: Array<{ pattern: string; color: string }> = 
   { pattern: "housing", color: "#10b981" },
   { pattern: "home", color: "#10b981" },
   { pattern: "rent", color: "#10b981" },
-  { pattern: "transfer", color: "#f59e0b" },
+  { pattern: "transfer", color: "#eab308" },
   { pattern: "dining", color: "#ec4899" },
   { pattern: "food", color: "#ec4899" },
   { pattern: "transport", color: "#8b5cf6" },
