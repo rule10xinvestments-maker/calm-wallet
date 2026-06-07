@@ -793,23 +793,24 @@ describe("insights overview", () => {
     );
   });
 
-  it("renders category breakdown and largest recent expenses", () => {
+  it("renders timeframe category breakdown and largest recent expenses outside Mix", () => {
     renderInsights(makeInsightsData());
 
-    expect(screen.getByText("Spending mix")).toBeInTheDocument();
+    expect(screen.getByText("Category breakdown")).toBeInTheDocument();
     expect(screen.getAllByText("Groceries").length).toBeGreaterThan(0);
-    expect(screen.getByRole("img", { name: "Expenses category share chart" })).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Expenses category share chart" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Expenses category legend")).not.toBeInTheDocument();
     expect(screen.queryByText("$12 - 100%")).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Groceries chart color and category icon" })).toBeInTheDocument();
-    expect(screen.getByRole("meter", { name: "Groceries spending share 100%" })).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Groceries chart color and category icon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: "Groceries spending share 100%" })).not.toBeInTheDocument();
     expect(screen.getByText("Largest recent expenses")).toBeInTheDocument();
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
-  it("renders category mix bars with percentages while keeping category rows", () => {
+  it("renders the full Mix experience with percentages while avoiding duplicate category rows", () => {
     renderInsights(
       makeInsightsData({
+        selectedChartMode: "mix",
         categoryBreakdown: [
           makeCategory({
             label: "Needs category",
@@ -840,11 +841,14 @@ describe("insights overview", () => {
     );
 
     expect(screen.getByRole("img", { name: "Expenses category share chart" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expenses" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText("Category breakdown")).not.toBeInTheDocument();
     expect(screen.queryByText("Tracked")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Needs category").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Housing").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Dining").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Transport").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Needs category")).toHaveLength(1);
+    expect(screen.getAllByText("Housing")).toHaveLength(1);
+    expect(screen.getAllByText("Dining")).toHaveLength(1);
+    expect(screen.getAllByText("Transport")).toHaveLength(1);
     expect(screen.queryByLabelText("Expenses category legend")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Needs category chart color and category icon" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Housing chart color and category icon" })).toBeInTheDocument();
@@ -864,6 +868,7 @@ describe("insights overview", () => {
   it("renders multi-category donuts as rounded arc paths for smoother small slices", () => {
     const { container } = renderInsights(
       makeInsightsData({
+        selectedChartMode: "mix",
         categoryBreakdown: [
           makeCategory({ key: "housing", label: "Housing", amountMinor: 8800, amountDisplay: "$88" }),
           makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1100, amountDisplay: "$11" }),
@@ -899,6 +904,7 @@ describe("insights overview", () => {
   it("defaults to expenses and expands recent entries inline", () => {
     renderInsights(
       makeInsightsData({
+        selectedChartMode: "mix",
         categoryBreakdown: [
           makeCategory({
             label: "Groceries",
@@ -933,7 +939,7 @@ describe("insights overview", () => {
   });
 
   it("selects income segment and renders income category rows", () => {
-    renderInsights(makeInsightsData());
+    renderInsights(makeInsightsData({ selectedChartMode: "mix" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
 
@@ -951,7 +957,7 @@ describe("insights overview", () => {
   });
 
   it("renders calm empty income state when no income exists", () => {
-    renderInsights(makeInsightsData({ monthlyIncomeDisplayMinor: 0, incomeCategoryBreakdown: [] }));
+    renderInsights(makeInsightsData({ selectedChartMode: "mix", monthlyIncomeDisplayMinor: 0, incomeCategoryBreakdown: [] }));
 
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
 
@@ -962,6 +968,7 @@ describe("insights overview", () => {
   it("renders the Personal spending mix icon", () => {
     renderInsights(
       makeInsightsData({
+        selectedChartMode: "mix",
         categoryBreakdown: [
           makeCategory({
             label: "Personal",
@@ -980,6 +987,7 @@ describe("insights overview", () => {
   it("renders empty state for new users", () => {
     renderInsights(
       makeInsightsData({
+        selectedChartMode: "mix",
         trackedBalanceMinor: 0,
         incomeMinor: 0,
         expenseMinor: 0,
@@ -1000,6 +1008,7 @@ describe("insights overview", () => {
   it("does not duplicate a needs category card above spending mix", () => {
     renderInsights(
       makeInsightsData({
+        selectedChartMode: "mix",
         needsReviewCount: 2,
         categoryBreakdown: [
           makeCategory({

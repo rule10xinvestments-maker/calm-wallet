@@ -599,7 +599,38 @@ function TimeframeBarsChart({ data }: { data: InsightsData }) {
 }
 
 function TimeframeMixChart({ data }: { data: InsightsData }) {
-  return <SpendingMixSummaryChart items={data.timeframeCategoryBreakdown} segment="expenses" />;
+  const [spendingMixSegment, setSpendingMixSegment] = useState<SpendingMixSegment>("expenses");
+  const spendingMixItems = spendingMixSegment === "income" ? data.incomeCategoryBreakdown : data.categoryBreakdown;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-slate-500">
+          {data.monthLabel} - {data.displayCurrency} tracked {spendingMixSegment}
+          {data.hasConvertedCurrencies ? " - approximate display totals" : null}
+        </p>
+        <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {(["expenses", "income"] as const).map((segment) => (
+            <button
+              key={segment}
+              aria-pressed={spendingMixSegment === segment}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                spendingMixSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setSpendingMixSegment(segment)}
+              type="button"
+            >
+              {segment === "expenses" ? "Expenses" : "Income"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <SpendingMixSummaryChart items={spendingMixItems} segment={spendingMixSegment} />
+      <div className="space-y-3">
+        <SpendingMixRows items={spendingMixItems} segment={spendingMixSegment} />
+      </div>
+    </div>
+  );
 }
 
 function TimeframeCategoryBreakdown({ data }: { data: InsightsData }) {
@@ -723,10 +754,12 @@ function TimeframeInsightsCard({ data }: { data: InsightsData }) {
         {data.selectedChartMode === "trend" ? <TimeframeTrendChart data={data} /> : null}
         {data.selectedChartMode === "bars" ? <TimeframeBarsChart data={data} /> : null}
         {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} /> : null}
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
-          <TimeframeCategoryBreakdown data={data} />
-        </div>
+        {data.selectedChartMode === "mix" ? null : (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
+            <TimeframeCategoryBreakdown data={data} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -1126,11 +1159,8 @@ function BudgetRemoveButton({
 }
 
 export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction, loadError = false }: InsightsOverviewProps) {
-  const [spendingMixSegment, setSpendingMixSegment] = useState<SpendingMixSegment>("expenses");
   const hasTrackedData = data.trackedTransactionCount > 0;
   const hasCurrentMonthData = data.currentMonthTransactionCount > 0;
-  const spendingMixItems =
-    spendingMixSegment === "income" ? data.incomeCategoryBreakdown : data.categoryBreakdown;
 
   return (
     <section className="space-y-5">
@@ -1184,35 +1214,6 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
           ) : null}
         </div>
       ) : null}
-
-      <Card className="rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-lg">Spending mix</CardTitle>
-          <CardDescription>
-            {data.monthLabel} - {data.displayCurrency} tracked {spendingMixSegment}
-            {data.hasConvertedCurrencies ? " - approximate display totals" : null}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-            {(["expenses", "income"] as const).map((segment) => (
-              <button
-                key={segment}
-                aria-pressed={spendingMixSegment === segment}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  spendingMixSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-                }`}
-                onClick={() => setSpendingMixSegment(segment)}
-                type="button"
-              >
-                {segment === "expenses" ? "Expenses" : "Income"}
-              </button>
-            ))}
-          </div>
-          <SpendingMixSummaryChart items={spendingMixItems} segment={spendingMixSegment} />
-          <SpendingMixRows items={spendingMixItems} segment={spendingMixSegment} />
-        </CardContent>
-      </Card>
 
       <Card className="rounded-lg">
         <CardHeader>
