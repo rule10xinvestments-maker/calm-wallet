@@ -695,8 +695,12 @@ describe("insights overview", () => {
 
     expect(screen.getByLabelText("Apr 2 Groceries spending $8")).toHaveStyle({ backgroundColor: "#0ea5e9" });
     expect(screen.getByLabelText("Apr 2 Dining spending $4")).toHaveStyle({ backgroundColor: "#10b981" });
-    expect(screen.getByLabelText("Groceries category color")).toHaveStyle({ backgroundColor: "#0ea5e9" });
-    expect(screen.getByLabelText("Dining category color")).toHaveStyle({ backgroundColor: "#10b981" });
+    const legend = screen.getByLabelText("Expenses category icon legend");
+
+    expect(within(legend).queryByText("Groceries")).not.toBeInTheDocument();
+    expect(within(legend).queryByText("Dining")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("img", { name: "Groceries chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
+    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#10b981" });
   });
 
   it("renders a calm empty state when 1M bars have no spending days", () => {
@@ -783,7 +787,7 @@ describe("insights overview", () => {
     expect(screen.getByLabelText("Apr tracked spending $12")).toBeInTheDocument();
   });
 
-  it("shows timeframe category totals with percentage and transaction count", () => {
+  it("shows timeframe category totals with percentage and transaction count without changing Trend rows", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "trend",
@@ -798,10 +802,36 @@ describe("insights overview", () => {
     );
 
     expect(screen.getByText("$100 across 4 tracked transactions")).toBeInTheDocument();
-    expect(screen.getByLabelText("Groceries category color")).toBeInTheDocument();
-    expect(screen.getByLabelText("Dining category color")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Groceries chart color and category icon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Dining chart color and category icon" })).not.toBeInTheDocument();
     expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
     expect(screen.getByText("25% of spending - 1 transaction")).toBeInTheDocument();
+  });
+
+  it("renders Bars category breakdown with Mix-style icons and the Needs category review badge", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        timeframeExpenseDisplay: "$100",
+        timeframeExpenseDisplayMinor: 10000,
+        timeframeTransactionCount: 4,
+        categoryBreakdown: [
+          makeCategory({ key: "needs-category", label: "Needs category", amountMinor: 7500, amountDisplay: "$75", transactionCount: 3 }),
+          makeCategory({ key: "dining", label: "Dining", amountMinor: 2500, amountDisplay: "$25", transactionCount: 1 }),
+        ],
+        timeframeCategoryBreakdown: [
+          makeCategory({ key: "needs-category", label: "Needs category", amountMinor: 7500, amountDisplay: "$75", transactionCount: 3 }),
+          makeCategory({ key: "dining", label: "Dining", amountMinor: 2500, amountDisplay: "$25", transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "Needs category chart color and category icon" })).toHaveStyle({ color: "#0ea5e9" });
+    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#10b981" });
+    expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review");
+    expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
+    expect(screen.getByText("$75")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Needs category category color")).not.toBeInTheDocument();
   });
 
   it("opens a compact month picker grouped by year", () => {

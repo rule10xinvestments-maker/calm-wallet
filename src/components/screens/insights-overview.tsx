@@ -537,6 +537,21 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   );
 }
 
+function CategoryColorIcon({ label, color, className = "" }: { label: string; color: string; className?: string }) {
+  const CategoryIcon = getSpendingCategoryIcon(label);
+
+  return (
+    <div
+      aria-label={`${label} chart color and category icon`}
+      className={`flex h-8 w-8 items-center justify-center rounded-full border ${className}`}
+      role="img"
+      style={{ backgroundColor: `${color}1A`, borderColor: `${color}33`, color }}
+    >
+      <CategoryIcon aria-hidden="true" className="h-4 w-4" />
+    </div>
+  );
+}
+
 function TimeframeBarsChart({ data }: { data: InsightsData }) {
   const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
   const isIncome = barsSegment === "income";
@@ -581,12 +596,9 @@ function TimeframeBarsChart({ data }: { data: InsightsData }) {
   );
 
   const legend = activeLegendItems.length ? (
-    <div aria-label={`${isIncome ? "Income" : "Expenses"} category color legend`} className="flex flex-wrap gap-x-3 gap-y-1">
+    <div aria-label={`${isIncome ? "Income" : "Expenses"} category icon legend`} className="flex gap-2 overflow-x-auto pb-1">
       {activeLegendItems.slice(0, 6).map((item) => (
-        <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" key={item.key}>
-          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-          {item.label}
-        </span>
+        <CategoryColorIcon className="shrink-0" color={item.color} key={item.key} label={item.label} />
       ))}
     </div>
   ) : null;
@@ -743,7 +755,7 @@ function TimeframeMixChart({ data }: { data: InsightsData }) {
   );
 }
 
-function TimeframeCategoryBreakdown({ data }: { data: InsightsData }) {
+function TimeframeCategoryBreakdown({ data, showIcons = false }: { data: InsightsData; showIcons?: boolean }) {
   const total = data.timeframeCategoryBreakdown.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
 
   if (!data.timeframeCategoryBreakdown.length) {
@@ -758,15 +770,22 @@ function TimeframeCategoryBreakdown({ data }: { data: InsightsData }) {
 
         return (
           <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
-            <div className="grid min-w-0 grid-cols-[0.75rem_1fr] gap-2">
-              <span
-                aria-label={`${item.label} category color`}
-                className="mt-1.5 h-2.5 w-2.5 rounded-full"
-                role="img"
-                style={{ backgroundColor: chartColor }}
-              />
+            <div className={`grid min-w-0 ${showIcons ? "grid-cols-[2rem_1fr] gap-3" : "grid-cols-1"}`}>
+              {showIcons ? (
+                <CategoryColorIcon className="mt-0.5" color={chartColor} label={item.label} />
+              ) : null}
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
+                  {showIcons && item.label.toLowerCase() === "needs category" ? (
+                    <Link
+                      className="rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
+                      href="/transactions?view=needs-review"
+                    >
+                      Review
+                    </Link>
+                  ) : null}
+                </div>
                 <p className="text-xs text-slate-500">
                   {percent}% of spending - {item.transactionCount} {item.transactionCount === 1 ? "transaction" : "transactions"}
                 </p>
@@ -876,7 +895,7 @@ function TimeframeInsightsCard({ data }: { data: InsightsData }) {
         {data.selectedChartMode === "mix" ? null : (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
-            <TimeframeCategoryBreakdown data={data} />
+            <TimeframeCategoryBreakdown data={data} showIcons={data.selectedChartMode === "bars"} />
           </div>
         )}
       </CardContent>
