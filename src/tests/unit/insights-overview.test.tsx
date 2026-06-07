@@ -272,6 +272,12 @@ function renderInsights(data: InsightsData, options: { loadError?: boolean } = {
   );
 }
 
+function expectCategoryIcon(label: string, iconClass: string, index = 0) {
+  const icon = screen.getAllByRole("img", { name: `${label} chart color and category icon` })[index]!;
+
+  expect(icon.querySelector("svg")).toHaveClass(iconClass);
+}
+
 describe("insights overview", () => {
   it("renders safe load-error copy while keeping the page recoverable", () => {
     renderInsights(makeInsightsData({ categoryBreakdown: [], trackedTransactionCount: 0 }), { loadError: true });
@@ -834,6 +840,50 @@ describe("insights overview", () => {
     expect(screen.queryByLabelText("Needs category category color")).not.toBeInTheDocument();
   });
 
+  it("uses distinct category icons in Bars legend and breakdown rows", () => {
+    const categories = [
+      makeCategory({ key: "needs-category", label: "Needs category", amountMinor: 7000, amountDisplay: "$70", transactionCount: 2 }),
+      makeCategory({ key: "housing", label: "Housing", amountMinor: 6000, amountDisplay: "$60", transactionCount: 1 }),
+      makeCategory({ key: "transfers", label: "Transfers", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 }),
+      makeCategory({ key: "dining", label: "Dining", amountMinor: 4000, amountDisplay: "$40", transactionCount: 1 }),
+      makeCategory({ key: "transport", label: "Transport", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+      makeCategory({ key: "travel", label: "Travel", amountMinor: 2000, amountDisplay: "$20", transactionCount: 1 }),
+      makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1000, amountDisplay: "$10", transactionCount: 1 }),
+    ];
+
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        categoryBreakdown: categories,
+        timeframeCategoryBreakdown: categories,
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-02",
+            label: "2",
+            amountMinor: 28000,
+            amountDisplay: "$280",
+            transactionCount: 8,
+            segments: categories.map((category) => ({
+              key: category.key,
+              label: category.label,
+              amountMinor: category.amountMinor,
+              amountDisplay: category.amountDisplay,
+              transactionCount: category.transactionCount,
+            })),
+          }),
+        ],
+      }),
+    );
+
+    expectCategoryIcon("Needs category", "lucide-circle-help");
+    expectCategoryIcon("Housing", "lucide-house");
+    expectCategoryIcon("Transfers", "lucide-arrow-left-right");
+    expectCategoryIcon("Dining", "lucide-utensils");
+    expectCategoryIcon("Transport", "lucide-car");
+    expectCategoryIcon("Travel", "lucide-plane");
+    expectCategoryIcon("Groceries", "lucide-shopping-basket");
+  });
+
   it("opens a compact month picker grouped by year", () => {
     renderInsights(makeInsightsData());
 
@@ -1035,6 +1085,25 @@ describe("insights overview", () => {
     expect(screen.getByText("26%")).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Dining spending share 22%" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Transport spending share 19%" })).toBeInTheDocument();
+  });
+
+  it("uses distinct category icons in Mix rows", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 6000, amountDisplay: "$60", transactionCount: 1 }),
+          makeCategory({ key: "transfers", label: "Transfers", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 }),
+          makeCategory({ key: "transport", label: "Transport", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+          makeCategory({ key: "travel", label: "Travel", amountMinor: 2000, amountDisplay: "$20", transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    expectCategoryIcon("Housing", "lucide-house");
+    expectCategoryIcon("Transfers", "lucide-arrow-left-right");
+    expectCategoryIcon("Transport", "lucide-car");
+    expectCategoryIcon("Travel", "lucide-plane");
   });
 
   it("renders multi-category donuts as rounded arc paths for smoother small slices", () => {

@@ -3,12 +3,15 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowLeftRight,
   Car,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
   HeartPulse,
+  House,
+  Plane,
   ReceiptText,
   ShoppingBag,
   ShoppingBasket,
@@ -918,7 +921,19 @@ function getSpendingCategoryIcon(label: string): LucideIcon {
     return ShoppingBasket;
   }
 
-  if (normalizedLabel.includes("travel") || normalizedLabel.includes("transport") || normalizedLabel.includes("taxi") || normalizedLabel.includes("car")) {
+  if (normalizedLabel.includes("housing") || normalizedLabel.includes("home") || normalizedLabel.includes("rent")) {
+    return House;
+  }
+
+  if (normalizedLabel.includes("transfer")) {
+    return ArrowLeftRight;
+  }
+
+  if (normalizedLabel.includes("travel") || normalizedLabel.includes("flight") || normalizedLabel.includes("plane")) {
+    return Plane;
+  }
+
+  if (normalizedLabel.includes("transport") || normalizedLabel.includes("taxi") || normalizedLabel.includes("car")) {
     return Car;
   }
 
