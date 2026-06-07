@@ -42,6 +42,17 @@ const spendingMixChartColors = [
   "#64748b",
 ];
 
+const incomeCategoryChartColors = [
+  "#059669",
+  "#14b8a6",
+  "#22c55e",
+  "#0d9488",
+  "#65a30d",
+  "#06b6d4",
+  "#84cc16",
+  "#64748b",
+];
+
 type InsightsOverviewProps = {
   data: InsightsData;
   upsertBudgetAction: (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
@@ -527,30 +538,89 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
 }
 
 function TimeframeBarsChart({ data }: { data: InsightsData }) {
-  const max = Math.max(...data.timeframeBars.map((bar) => bar.amountMinor), 1);
+  const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
+  const isIncome = barsSegment === "income";
+  const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
+  const categoryItems = isIncome ? data.incomeCategoryBreakdown : data.categoryBreakdown;
+  const palette = isIncome ? incomeCategoryChartColors : spendingMixChartColors;
+  const categoryColorMap = new Map(categoryItems.map((item, index) => [item.key, palette[index % palette.length]!]));
+  const activeBars = data.timeframeBars.filter((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor) > 0);
+  const getSegmentColor = (key: string, index: number) => categoryColorMap.get(key) ?? palette[index % palette.length]!;
+  const activeLegendItems = Array.from(
+    new Map(
+      activeBars
+        .flatMap((bar) => (isIncome ? bar.incomeSegments : bar.segments))
+        .map((segment, index) => [
+          segment.key,
+          {
+            key: segment.key,
+            label: segment.label,
+            color: getSegmentColor(segment.key, index),
+          },
+        ]),
+    ).values(),
+  );
+
+  const toggle = (
+    <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1">
+      {(["expenses", "income"] as const).map((segment) => (
+        <button
+          key={segment}
+          aria-pressed={barsSegment === segment}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            barsSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+          }`}
+          onClick={() => setBarsSegment(segment)}
+          type="button"
+        >
+          {segment === "expenses" ? "Expenses" : "Income"}
+        </button>
+      ))}
+    </div>
+  );
+
+  const legend = activeLegendItems.length ? (
+    <div aria-label={`${isIncome ? "Income" : "Expenses"} category color legend`} className="flex flex-wrap gap-x-3 gap-y-1">
+      {activeLegendItems.slice(0, 6).map((item) => (
+        <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" key={item.key}>
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  ) : null;
 
   if (granularity === "day") {
-    const spendingDays = data.timeframeBars.filter((bar) => bar.amountMinor > 0);
-    const dayMax = Math.max(...spendingDays.map((bar) => bar.amountMinor), 1);
+    const dayMax = Math.max(...activeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
 
-    if (!spendingDays.length) {
+    if (!activeBars.length) {
       return (
-        <div className="space-y-3" aria-label="Tracked spending by day" role="img">
-          <p className="text-xs leading-5 text-slate-500">Showing days with tracked spending.</p>
+        <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by day`} role="img">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
+            {toggle}
+          </div>
           <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
-            No tracked spending days in this timeframe yet.
+            {isIncome ? "No income tracked for this month yet." : "No spending tracked for this month yet."}
           </p>
         </div>
       );
     }
 
     return (
-      <div className="space-y-3" aria-label="Tracked spending by day" role="img">
-        <p className="text-xs leading-5 text-slate-500">Showing days with tracked spending.</p>
+      <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by day`} role="img">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
+          {toggle}
+        </div>
+        {legend}
         <div className="space-y-2">
-          {spendingDays.map((bar) => {
-            const width = `${Math.max(10, Math.round((bar.amountMinor / dayMax) * 100))}%`;
+          {activeBars.map((bar) => {
+            const amountMinor = isIncome ? bar.incomeAmountMinor : bar.amountMinor;
+            const amountDisplay = isIncome ? bar.incomeAmountDisplay : bar.amountDisplay;
+            const segments = isIncome ? bar.incomeSegments : bar.segments;
+            const width = `${Math.max(10, Math.round((amountMinor / dayMax) * 100))}%`;
             const label = formatSpendingDayLabel(bar);
 
             return (
@@ -558,12 +628,25 @@ function TimeframeBarsChart({ data }: { data: InsightsData }) {
                 <span className="whitespace-nowrap text-xs font-medium text-slate-600">{label}</span>
                 <div className="h-8 overflow-hidden rounded-lg bg-slate-50">
                   <div
-                    aria-label={`${label} tracked spending ${bar.amountDisplay}`}
-                    className="h-full rounded-lg bg-sky-500"
+                    aria-label={`${label} tracked ${isIncome ? "income" : "spending"} ${amountDisplay}`}
+                    className="flex h-full overflow-hidden rounded-lg"
                     style={{ width }}
-                  />
+                  >
+                    {segments.map((segment, index) => (
+                      <span
+                        aria-label={`${label} ${segment.label} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
+                        className="h-full"
+                        key={segment.key}
+                        role="img"
+                        style={{
+                          backgroundColor: getSegmentColor(segment.key, index),
+                          flexBasis: `${Math.max(0, (segment.amountMinor / amountMinor) * 100)}%`,
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{bar.amountDisplay}</span>
+                <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{amountDisplay}</span>
               </div>
             );
           })}
@@ -573,27 +656,54 @@ function TimeframeBarsChart({ data }: { data: InsightsData }) {
   }
 
   return (
-    <div
-      className="grid min-h-44 grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] items-end gap-2"
-      aria-label="Tracked spending by month"
-      role="img"
-    >
-      {data.timeframeBars.map((bar) => {
-        const height = bar.amountMinor > 0 ? Math.max(8, Math.round((bar.amountMinor / max) * 128)) : 2;
+    <div className="space-y-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs leading-5 text-slate-500">Showing monthly tracked {isIncome ? "income" : "spending"}.</p>
+        {toggle}
+      </div>
+      {legend}
+      <div
+        className="grid min-h-44 grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] items-end gap-2"
+        aria-label={`Tracked ${isIncome ? "income" : "spending"} by month`}
+        role="img"
+      >
+        {data.timeframeBars.map((bar) => {
+          const amountMinor = isIncome ? bar.incomeAmountMinor : bar.amountMinor;
+          const amountDisplay = isIncome ? bar.incomeAmountDisplay : bar.amountDisplay;
+          const segments = isIncome ? bar.incomeSegments : bar.segments;
+          const height = amountMinor > 0 ? Math.max(8, Math.round((amountMinor / max) * 128)) : 2;
 
-        return (
-          <div className="flex min-w-0 flex-col items-center gap-2" key={bar.key}>
-            <div className="flex h-32 w-full items-end rounded-md bg-slate-50 px-1">
-              <div
-                aria-label={`${bar.label} tracked spending ${bar.amountDisplay}`}
-                className="w-full rounded-md bg-sky-500"
-                style={{ height }}
-              />
+          return (
+            <div className="flex min-w-0 flex-col items-center gap-2" key={bar.key}>
+              <div className="flex h-32 w-full items-end rounded-md bg-slate-50 px-1">
+                <div
+                  aria-label={`${bar.label} tracked ${isIncome ? "income" : "spending"} ${amountDisplay}`}
+                  className="flex w-full overflow-hidden rounded-md"
+                  style={{ height }}
+                >
+                  {segments.length ? (
+                    segments.map((segment, index) => (
+                      <span
+                        aria-label={`${bar.label} ${segment.label} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
+                        className="h-full"
+                        key={segment.key}
+                        role="img"
+                        style={{
+                          backgroundColor: getSegmentColor(segment.key, index),
+                          flexBasis: `${Math.max(0, (segment.amountMinor / amountMinor) * 100)}%`,
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <span className="h-full w-full bg-slate-300" />
+                  )}
+                </div>
+              </div>
+              <span className="h-4 max-w-full truncate text-[10px] font-medium text-slate-500">{bar.label}</span>
             </div>
-            <span className="h-4 max-w-full truncate text-[10px] font-medium text-slate-500">{bar.label}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -642,16 +752,25 @@ function TimeframeCategoryBreakdown({ data }: { data: InsightsData }) {
 
   return (
     <div className="space-y-3">
-      {data.timeframeCategoryBreakdown.map((item) => {
+      {data.timeframeCategoryBreakdown.map((item, index) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
+        const chartColor = spendingMixChartColors[index % spendingMixChartColors.length]!;
 
         return (
           <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
-              <p className="text-xs text-slate-500">
-                {percent}% of spending - {item.transactionCount} {item.transactionCount === 1 ? "transaction" : "transactions"}
-              </p>
+            <div className="grid min-w-0 grid-cols-[0.75rem_1fr] gap-2">
+              <span
+                aria-label={`${item.label} category color`}
+                className="mt-1.5 h-2.5 w-2.5 rounded-full"
+                role="img"
+                style={{ backgroundColor: chartColor }}
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
+                <p className="text-xs text-slate-500">
+                  {percent}% of spending - {item.transactionCount} {item.transactionCount === 1 ? "transaction" : "transactions"}
+                </p>
+              </div>
             </div>
             <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
           </div>

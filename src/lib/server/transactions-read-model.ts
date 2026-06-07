@@ -144,8 +144,20 @@ export type InsightsTimeframeBar = {
   label: string;
   amountMinor: number;
   amountDisplay: string;
+  incomeAmountMinor: number;
+  incomeAmountDisplay: string;
   transactionCount: number;
   granularity: "day" | "month";
+  segments: InsightsTimeframeBarSegment[];
+  incomeSegments: InsightsTimeframeBarSegment[];
+};
+
+export type InsightsTimeframeBarSegment = {
+  key: string;
+  label: string;
+  amountMinor: number;
+  amountDisplay: string;
+  transactionCount: number;
 };
 
 export type InsightsMonthTrendDay = {
@@ -563,6 +575,7 @@ function shiftDay(date: Date, offset: number) {
 function buildInsightsTimeframeDailyBars(args: {
   transactions: Transaction[];
   monthStart: Date;
+  categoryLabels: Record<string, string>;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
 }) {
@@ -574,26 +587,83 @@ function buildInsightsTimeframeDailyBars(args: {
     const dayEnd = shiftDay(dayStart, 1);
     const transactions = args.transactions.filter((transaction) => {
       const occurredAt = new Date(transaction.occurredAt);
-      return transaction.transactionType === "expense" && occurredAt >= dayStart && occurredAt < dayEnd;
+      return occurredAt >= dayStart && occurredAt < dayEnd;
     });
-    const convertedBreakdowns = buildConvertedBreakdowns({
-      originalCurrencyBreakdowns: sumBreakdowns(transactions),
+    const expenseTransactions = transactions.filter((transaction) => transaction.transactionType === "expense");
+    const incomeTransactions = transactions.filter((transaction) => transaction.transactionType === "income");
+    const segments = buildInsightsBarCategorySegments({
+      transactions: expenseTransactions,
+      categoryLabels: args.categoryLabels,
       displayCurrency: args.displayCurrency,
       rateLookup: args.rateLookup,
     });
-    const amountMinor = convertedBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0);
+    const incomeSegments = buildInsightsBarCategorySegments({
+      transactions: incomeTransactions,
+      categoryLabels: args.categoryLabels,
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const amountMinor = segments.reduce((sum, segment) => sum + segment.amountMinor, 0);
+    const incomeAmountMinor = incomeSegments.reduce((sum, segment) => sum + segment.amountMinor, 0);
 
     bars.push({
       key: toDayKey(dayStart),
       label: String(dayStart.getUTCDate()),
       amountMinor,
       amountDisplay: formatInsightsMoney(amountMinor, args.displayCurrency),
-      transactionCount: transactions.length,
+      incomeAmountMinor,
+      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency),
+      transactionCount: expenseTransactions.length,
       granularity: "day",
+      segments,
+      incomeSegments,
     });
   }
 
   return bars;
+}
+
+function buildInsightsBarCategorySegments(args: {
+  transactions: Transaction[];
+  categoryLabels: Record<string, string>;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}): InsightsTimeframeBarSegment[] {
+  const categoryTotals = new Map<
+    string,
+    { label: string; amountMinor: number; transactionCount: number; originalCurrencies: Set<string>; hasMissingRates: boolean }
+  >();
+
+  args.transactions.forEach((transaction) => {
+    const category = getInsightsCategoryMeta(transaction, args.categoryLabels);
+    const sourceCurrency = normalizeCurrency(transaction.currency);
+    const conversionRate = getConversionRate(sourceCurrency, args.displayCurrency, args.rateLookup);
+    const current = categoryTotals.get(category.key) ?? {
+      label: category.label,
+      amountMinor: 0,
+      transactionCount: 0,
+      originalCurrencies: new Set<string>(),
+      hasMissingRates: false,
+    };
+
+    current.amountMinor += conversionRate === null ? 0 : convertMinor(transaction.amountMinor, conversionRate);
+    current.transactionCount += 1;
+    current.originalCurrencies.add(sourceCurrency);
+    current.hasMissingRates = current.hasMissingRates || conversionRate === null;
+    categoryTotals.set(category.key, current);
+  });
+
+  return Array.from(categoryTotals.entries())
+    .sort((a, b) => b[1].amountMinor - a[1].amountMinor || b[1].transactionCount - a[1].transactionCount)
+    .map(([key, value]) => ({
+      key,
+      label: value.label,
+      amountMinor: value.amountMinor,
+      amountDisplay: value.hasMissingRates
+        ? `${formatInsightsMoney(value.amountMinor, args.displayCurrency)} + rate unavailable`
+        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(args.displayCurrency) ? "â‰ˆ " : ""}${formatInsightsMoney(value.amountMinor, args.displayCurrency)}`,
+      transactionCount: value.transactionCount,
+    }));
 }
 
 function buildInsightsSelectedMonthTrendDays(args: {
@@ -652,6 +722,7 @@ function buildInsightsTimeframeBars(args: {
   transactions: Transaction[];
   startMonth: Date;
   endMonth: Date;
+  categoryLabels: Record<string, string>;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
   months: InsightsTimeframeMonth[];
@@ -660,19 +731,46 @@ function buildInsightsTimeframeBars(args: {
     return buildInsightsTimeframeDailyBars({
       transactions: args.transactions,
       monthStart: args.startMonth,
+      categoryLabels: args.categoryLabels,
       displayCurrency: args.displayCurrency,
       rateLookup: args.rateLookup,
     });
   }
 
-  return args.months.map((month) => ({
-    key: month.month,
-    label: month.label,
-    amountMinor: month.expenseMinor,
-    amountDisplay: month.expenseDisplay,
-    transactionCount: month.transactionCount,
-    granularity: "month" as const,
-  }));
+  return args.months.map((month) => {
+    const monthStart = parseMonthKey(month.month, args.endMonth);
+    const monthEnd = shiftMonth(monthStart, 1);
+    const transactions = args.transactions.filter((transaction) => {
+      const occurredAt = new Date(transaction.occurredAt);
+      return occurredAt >= monthStart && occurredAt < monthEnd;
+    });
+    const segments = buildInsightsBarCategorySegments({
+      transactions: transactions.filter((transaction) => transaction.transactionType === "expense"),
+      categoryLabels: args.categoryLabels,
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const incomeSegments = buildInsightsBarCategorySegments({
+      transactions: transactions.filter((transaction) => transaction.transactionType === "income"),
+      categoryLabels: args.categoryLabels,
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const incomeAmountMinor = incomeSegments.reduce((sum, segment) => sum + segment.amountMinor, 0);
+
+    return {
+      key: month.month,
+      label: month.label,
+      amountMinor: month.expenseMinor,
+      amountDisplay: month.expenseDisplay,
+      incomeAmountMinor,
+      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency),
+      transactionCount: month.transactionCount,
+      granularity: "month" as const,
+      segments,
+      incomeSegments,
+    };
+  });
 }
 
 export function resolveInsightsMonthStatus(args: {
@@ -1141,6 +1239,7 @@ export function buildInsightsData(
     transactions: timeframeTransactions,
     startMonth: timeframeStartMonthDate,
     endMonth: timeframeEndMonthDate,
+    categoryLabels,
     displayCurrency,
     rateLookup,
     months: timeframeMonths,

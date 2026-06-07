@@ -33,6 +33,32 @@ function makeCategory(
   };
 }
 
+function makeTimeframeBar(
+  overrides: Partial<InsightsData["timeframeBars"][number]> = {},
+): InsightsData["timeframeBars"][number] {
+  return {
+    key: "2026-04-10",
+    label: "10",
+    amountMinor: 1200,
+    amountDisplay: "$12",
+    incomeAmountMinor: 0,
+    incomeAmountDisplay: "$0",
+    transactionCount: 1,
+    granularity: "day",
+    segments: [
+      {
+        key: "groceries",
+        label: "Groceries",
+        amountMinor: 1200,
+        amountDisplay: "$12",
+        transactionCount: 1,
+      },
+    ],
+    incomeSegments: [],
+    ...overrides,
+  };
+}
+
 function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
   return {
     trackedBalanceMinor: 3000,
@@ -110,22 +136,22 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
       },
     ],
     timeframeBars: [
-      {
+      makeTimeframeBar({
         key: "2026-04-01",
         label: "1",
         amountMinor: 0,
         amountDisplay: "$0",
         transactionCount: 0,
-        granularity: "day",
-      },
-      {
+        segments: [],
+      }),
+      makeTimeframeBar({
         key: "2026-04-10",
         label: "10",
         amountMinor: 2000,
         amountDisplay: "$20",
         transactionCount: 2,
-        granularity: "day",
-      },
+        segments: [{ key: "groceries", label: "Groceries", amountMinor: 2000, amountDisplay: "$20", transactionCount: 2 }],
+      }),
     ],
     selectedMonthTrendDays: [
       {
@@ -566,32 +592,111 @@ describe("insights overview", () => {
         selectedChartMode: "bars",
         selectedTimeframe: "1M",
         timeframeBars: [
-          {
+          makeTimeframeBar({
             key: "2026-04-01",
             label: "1",
             amountMinor: 0,
             amountDisplay: "$0",
             transactionCount: 0,
-            granularity: "day",
-          },
-          {
+            segments: [],
+          }),
+          makeTimeframeBar({
             key: "2026-04-02",
             label: "2",
             amountMinor: 1200,
             amountDisplay: "$12",
             transactionCount: 1,
-            granularity: "day",
-          },
+          }),
         ],
       }),
     );
 
     expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expenses" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("Showing days with tracked spending.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Apr 1 tracked spending $0")).not.toBeInTheDocument();
     expect(screen.getByText("Apr 2")).toBeInTheDocument();
     expect(screen.getByLabelText("Apr 2 tracked spending $12")).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr 2 Groceries spending $12")).toBeInTheDocument();
     expect(screen.getAllByText("$12").length).toBeGreaterThan(0);
+  });
+
+  it("renders Bars income days from the Income toggle", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        incomeCategoryBreakdown: [
+          makeCategory({ key: "salary", label: "Salary", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-02",
+            label: "2",
+            amountMinor: 1200,
+            amountDisplay: "$12",
+            segments: [{ key: "groceries", label: "Groceries", amountMinor: 1200, amountDisplay: "$12", transactionCount: 1 }],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-05",
+            label: "5",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            incomeAmountMinor: 3000,
+            incomeAmountDisplay: "$30",
+            transactionCount: 0,
+            segments: [],
+            incomeSegments: [{ key: "salary", label: "Salary", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.getByRole("img", { name: "Tracked income by day" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Showing days with tracked income.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Apr 2 tracked income $0")).not.toBeInTheDocument();
+    expect(screen.getByText("Apr 5")).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr 5 tracked income $30")).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr 5 Salary income $30")).toBeInTheDocument();
+  });
+
+  it("renders multi-category Bars days with Mix-matched segment colors", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 800, amountDisplay: "$8", transactionCount: 1 }),
+          makeCategory({ key: "dining", label: "Dining", amountMinor: 400, amountDisplay: "$4", transactionCount: 1 }),
+        ],
+        timeframeCategoryBreakdown: [
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 800, amountDisplay: "$8", transactionCount: 1 }),
+          makeCategory({ key: "dining", label: "Dining", amountMinor: 400, amountDisplay: "$4", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-02",
+            label: "2",
+            amountMinor: 1200,
+            amountDisplay: "$12",
+            transactionCount: 2,
+            segments: [
+              { key: "groceries", label: "Groceries", amountMinor: 800, amountDisplay: "$8", transactionCount: 1 },
+              { key: "dining", label: "Dining", amountMinor: 400, amountDisplay: "$4", transactionCount: 1 },
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(screen.getByLabelText("Apr 2 Groceries spending $8")).toHaveStyle({ backgroundColor: "#0ea5e9" });
+    expect(screen.getByLabelText("Apr 2 Dining spending $4")).toHaveStyle({ backgroundColor: "#10b981" });
+    expect(screen.getByLabelText("Groceries category color")).toHaveStyle({ backgroundColor: "#0ea5e9" });
+    expect(screen.getByLabelText("Dining category color")).toHaveStyle({ backgroundColor: "#10b981" });
   });
 
   it("renders a calm empty state when 1M bars have no spending days", () => {
@@ -603,22 +708,47 @@ describe("insights overview", () => {
         timeframeExpenseDisplayMinor: 0,
         timeframeTransactionCount: 0,
         timeframeBars: [
-          {
+          makeTimeframeBar({
             key: "2026-04-01",
             label: "1",
             amountMinor: 0,
             amountDisplay: "$0",
             transactionCount: 0,
-            granularity: "day",
-          },
+            segments: [],
+          }),
         ],
       }),
     );
 
     expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
     expect(screen.getByText("Showing days with tracked spending.")).toBeInTheDocument();
-    expect(screen.getByText("No tracked spending days in this timeframe yet.")).toBeInTheDocument();
+    expect(screen.getByText("No spending tracked for this month yet.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Apr 1 tracked spending $0")).not.toBeInTheDocument();
+  });
+
+  it("renders a calm empty state when Bars income has no income days", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        incomeCategoryBreakdown: [],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-01",
+            label: "1",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            transactionCount: 0,
+            segments: [],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.getByRole("img", { name: "Tracked income by day" })).toBeInTheDocument();
+    expect(screen.getByText("No income tracked for this month yet.")).toBeInTheDocument();
   });
 
   it("renders 6M bars as monthly tracked spending buckets", () => {
@@ -627,22 +757,23 @@ describe("insights overview", () => {
         selectedChartMode: "bars",
         selectedTimeframe: "6M",
         timeframeBars: [
-          {
+          makeTimeframeBar({
             key: "2026-03",
             label: "Mar",
             amountMinor: 500,
             amountDisplay: "$5",
             transactionCount: 1,
             granularity: "month",
-          },
-          {
+            segments: [{ key: "groceries", label: "Groceries", amountMinor: 500, amountDisplay: "$5", transactionCount: 1 }],
+          }),
+          makeTimeframeBar({
             key: "2026-04",
             label: "Apr",
             amountMinor: 1200,
             amountDisplay: "$12",
             transactionCount: 1,
             granularity: "month",
-          },
+          }),
         ],
       }),
     );
@@ -667,6 +798,8 @@ describe("insights overview", () => {
     );
 
     expect(screen.getByText("$100 across 4 tracked transactions")).toBeInTheDocument();
+    expect(screen.getByLabelText("Groceries category color")).toBeInTheDocument();
+    expect(screen.getByLabelText("Dining category color")).toBeInTheDocument();
     expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
     expect(screen.getByText("25% of spending - 1 transaction")).toBeInTheDocument();
   });

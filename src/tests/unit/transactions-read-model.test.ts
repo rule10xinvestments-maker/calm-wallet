@@ -501,6 +501,47 @@ describe("transactions read model", () => {
     expect(data.timeframeBars[29]).toMatchObject({ key: "2026-04-30", label: "30", amountMinor: 3000, granularity: "day" });
   });
 
+  it("builds daily Bars category segments for expenses and income", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "apr-02-grocery", amountMinor: 1200, categoryId: "groceries", occurredAt: "2026-04-02T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-02-dining", amountMinor: 800, categoryId: "dining", occurredAt: "2026-04-02T12:00:00.000Z" }),
+        makeTransaction({
+          id: "apr-05-income",
+          transactionType: "income",
+          amountMinor: 5000,
+          categoryId: "salary",
+          occurredAt: "2026-04-05T12:00:00.000Z",
+        }),
+      ],
+      { groceries: "Groceries", dining: "Dining", salary: "Salary" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "1M",
+      "bars",
+    );
+
+    expect(data.timeframeBars[1]).toMatchObject({
+      key: "2026-04-02",
+      amountMinor: 2000,
+      segments: [
+        { key: "groceries", label: "Groceries", amountMinor: 1200, amountDisplay: "$12" },
+        { key: "dining", label: "Dining", amountMinor: 800, amountDisplay: "$8" },
+      ],
+    });
+    expect(data.timeframeBars[4]).toMatchObject({
+      key: "2026-04-05",
+      incomeAmountMinor: 5000,
+      incomeAmountDisplay: "$50",
+      incomeSegments: [{ key: "salary", label: "Salary", amountMinor: 5000, amountDisplay: "$50" }],
+    });
+  });
+
   it("keeps 6M and 1Y bar buckets monthly", () => {
     const sixMonth = buildInsightsData(
       [makeTransaction({ id: "apr", amountMinor: 1200, occurredAt: "2026-04-02T10:00:00.000Z" })],
