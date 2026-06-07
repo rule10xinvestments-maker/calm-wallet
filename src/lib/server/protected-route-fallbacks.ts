@@ -84,8 +84,12 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
         label: "1",
         amountMinor: 0,
         amountDisplay: "$0",
+        incomeAmountMinor: 0,
+        incomeAmountDisplay: "$0",
         transactionCount: 0,
         granularity: "day",
+        segments: [],
+        incomeSegments: [],
       },
     ],
     selectedMonthTrendDays: [

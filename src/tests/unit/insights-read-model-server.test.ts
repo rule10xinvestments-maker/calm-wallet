@@ -33,8 +33,9 @@ describe("insights page read model server loader", () => {
   it("loads only through ownership-scoped service paths", async () => {
     const { loadInsightsPageData } = await import("@/lib/server/transactions-read-model");
 
-    await loadInsightsPageData("user-1");
+    const data = await loadInsightsPageData("user-1");
 
+    expect(data.selectedChartMode).toBe("mix");
     expect(listTransactions).toHaveBeenCalledWith("user-1", {
       includeDeleted: false,
       limit: 100,

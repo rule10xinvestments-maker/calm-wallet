@@ -22,6 +22,7 @@ describe("protected route fallbacks", () => {
     expect(getFallbackInsightsData(new Date("2026-06-03T00:00:00.000Z"))).toMatchObject({
       trackedTransactionCount: 0,
       monthLabel: "June 2026",
+      selectedChartMode: "mix",
       categoryBreakdown: [],
       largestRecentExpenses: [],
     });
