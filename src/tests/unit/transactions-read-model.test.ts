@@ -7,6 +7,7 @@ import {
   filterTransactionsForView,
   getReviewStateMeta,
   mapTransactionsToListItems,
+  normalizeInsightsChartMode,
   resolveInsightsMonthStatus,
 } from "@/lib/server/transactions-read-model";
 import type { Transaction } from "@/domain/transactions/types";
@@ -52,6 +53,15 @@ describe("transactions read model", () => {
     expect(filterTransactionsForView(transactions, "income")).toHaveLength(1);
     expect(filterTransactionsForView(transactions, "needs-review")).toHaveLength(1);
     expect(transactions).toHaveLength(3);
+  });
+
+  it("defaults insights chart mode to Mix while preserving explicit URL modes", () => {
+    expect(normalizeInsightsChartMode(undefined)).toBe("mix");
+    expect(normalizeInsightsChartMode(null)).toBe("mix");
+    expect(normalizeInsightsChartMode("")).toBe("mix");
+    expect(normalizeInsightsChartMode("trend")).toBe("trend");
+    expect(normalizeInsightsChartMode("bars")).toBe("bars");
+    expect(normalizeInsightsChartMode("mix")).toBe("mix");
   });
 
   it("filters views without clearing or mutating the source transaction list", () => {

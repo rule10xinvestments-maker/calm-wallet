@@ -290,9 +290,9 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
 
 function ChartModeControls({ data }: { data: InsightsData }) {
   const modes: Array<{ mode: ChartMode; label: string }> = [
+    { mode: "mix", label: "Mix" },
     { mode: "trend", label: "Trend" },
     { mode: "bars", label: "Bars" },
-    { mode: "mix", label: "Mix" },
   ];
 
   return (

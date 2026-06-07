@@ -59,7 +59,7 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
     monthLabel: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     selectedMonth: month,
     selectedTimeframe: "1M",
-    selectedChartMode: "trend",
+    selectedChartMode: "mix",
     timeframePresets: ["1M", "3M", "6M", "1Y", "All"],
     timeframeLabel: `1M ending ${now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`,
     timeframeStartMonth: month,

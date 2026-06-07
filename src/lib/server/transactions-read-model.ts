@@ -458,7 +458,7 @@ export function normalizeInsightsTimeframe(timeframe: string | null | undefined)
 }
 
 export function normalizeInsightsChartMode(chart: string | null | undefined): InsightsChartMode {
-  return chart === "bars" || chart === "mix" || chart === "trend" ? chart : "trend";
+  return chart === "bars" || chart === "mix" || chart === "trend" ? chart : "mix";
 }
 
 function getTimeframeMonthCount(timeframe: InsightsTimeframePreset) {
