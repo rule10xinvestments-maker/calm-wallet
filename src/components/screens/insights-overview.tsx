@@ -112,7 +112,9 @@ function CurrencySwitcher({ data }: { data: InsightsData }) {
             className={`rounded-full border px-2.5 py-1 font-semibold ${
               active ? "border-sky-600 bg-sky-600 text-white" : "border-slate-200 bg-white text-sky-700 hover:bg-sky-50"
             }`}
+            data-scroll-preserve="true"
             href={buildInsightsHref(data, { currency })}
+            scroll={false}
           >
             {currency}
           </Link>
@@ -304,8 +306,10 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
                     active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
                   }`}
+                  data-scroll-preserve="true"
                   href={buildInsightsHref(data, { timeframe })}
                   key={timeframe}
+                  scroll={false}
                 >
                   {timeframe}
                 </Link>

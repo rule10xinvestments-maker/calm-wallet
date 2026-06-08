@@ -311,14 +311,19 @@ describe("insights overview", () => {
     expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&timeframe=1M&chart=mix&currency=RON");
     expect(within(controlBar as HTMLElement).getAllByText("1M").length).toBeGreaterThan(0);
     expect(within(controlBar as HTMLElement).getAllByText("RON").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "3M" })).toHaveAttribute(
+    const timeframeLink = screen.getByRole("link", { name: "3M" });
+    const currencyLink = screen.getByRole("link", { name: "EUR" });
+
+    expect(timeframeLink).toHaveAttribute(
       "href",
       "/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON",
     );
-    expect(screen.getByRole("link", { name: "EUR" })).toHaveAttribute(
+    expect(timeframeLink).toHaveAttribute("data-scroll-preserve", "true");
+    expect(currencyLink).toHaveAttribute(
       "href",
       "/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR",
     );
+    expect(currencyLink).toHaveAttribute("data-scroll-preserve", "true");
   });
 
   it("renders month navigation links without changing tracked balance wording", () => {
@@ -334,14 +339,19 @@ describe("insights overview", () => {
     renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["RON", "USD"] }));
 
     expect(screen.getByText("Tracked spending only. Not a bank statement.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "3M" })).toHaveAttribute(
+    const timeframe3mLink = screen.getByRole("link", { name: "3M" });
+    const timeframeAllLink = screen.getByRole("link", { name: "All" });
+
+    expect(timeframe3mLink).toHaveAttribute(
       "href",
       "/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON",
     );
-    expect(screen.getByRole("link", { name: "All" })).toHaveAttribute(
+    expect(timeframe3mLink).toHaveAttribute("data-scroll-preserve", "true");
+    expect(timeframeAllLink).toHaveAttribute(
       "href",
       "/insights?month=2026-04&timeframe=All&chart=mix&currency=RON",
     );
+    expect(timeframeAllLink).toHaveAttribute("data-scroll-preserve", "true");
   });
 
   it("keeps the chart section directly after the monthly snapshot", () => {
