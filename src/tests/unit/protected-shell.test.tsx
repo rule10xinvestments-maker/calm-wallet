@@ -17,14 +17,16 @@ const notificationPreferences = {
 
 const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
 
-function setDisplayMode(matches: boolean) {
+function setDisplayMode(standaloneMatches: boolean, fullscreenMatches = false) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
       dispatchEvent: vi.fn(),
-      matches,
+      matches:
+        (query === "(display-mode: standalone)" && standaloneMatches) ||
+        (query === "(display-mode: fullscreen)" && fullscreenMatches),
       media: query,
       onchange: null,
       removeEventListener: vi.fn(),
@@ -71,6 +73,7 @@ describe("protected shell PWA install affordance", () => {
   it("keeps sign out as an accessible icon-only header button beside settings", () => {
     renderProtectedShell();
 
+    expect(screen.getByRole("button", { name: "Install Calm Wallet" })).toBeInTheDocument();
     const settingsButton = screen.getByRole("button", { name: "Settings" });
     const signOutButton = screen.getByRole("button", { name: "Sign out" });
 
@@ -96,6 +99,16 @@ describe("protected shell PWA install affordance", () => {
 
     expect(settingsButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
+  });
+
+  it("shows generic install guidance from the authenticated header icon in desktop browser mode", async () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Install Calm Wallet" }));
+
+    expect(await screen.findByText("Use your browser menu to install the app.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 
   it("opens the native install prompt from the authenticated header icon on Android Chrome", async () => {
@@ -181,6 +194,16 @@ describe("protected shell PWA install affordance", () => {
     );
     setNavigatorValue("platform", "iPhone");
     setNavigatorValue("maxTouchPoints", 5);
+
+    renderProtectedShell();
+
+    expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  });
+
+  it("hides the authenticated install icon in fullscreen PWA display mode", () => {
+    setDisplayMode(false, true);
 
     renderProtectedShell();
 

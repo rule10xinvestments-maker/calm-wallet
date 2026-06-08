@@ -7,7 +7,7 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-type InstallGuidance = "android-chrome" | "ios-safari" | "mobile-browser" | null;
+type InstallGuidance = "android-chrome" | "ios-safari" | "mobile-browser" | "browser" | null;
 
 type PwaInstallContextValue = {
   canPrompt: boolean;
@@ -26,8 +26,9 @@ function isStandaloneDisplay() {
 
   const standaloneNavigator = navigator as Navigator & { standalone?: boolean };
   const standaloneMedia = typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches;
+  const fullscreenMedia = typeof window.matchMedia === "function" && window.matchMedia("(display-mode: fullscreen)").matches;
 
-  return standaloneMedia || standaloneNavigator.standalone === true;
+  return standaloneMedia || fullscreenMedia || standaloneNavigator.standalone === true;
 }
 
 function getInstallGuidance(): InstallGuidance {
@@ -54,7 +55,7 @@ function getInstallGuidance(): InstallGuidance {
     return "mobile-browser";
   }
 
-  return null;
+  return "browser";
 }
 
 function getPlatformCategory() {
@@ -126,6 +127,24 @@ async function registerServiceWorker() {
   }
 }
 
+function addMediaChangeListener(media: MediaQueryList, listener: () => void) {
+  if (typeof media.addEventListener === "function") {
+    media.addEventListener("change", listener);
+    return;
+  }
+
+  media.addListener(listener);
+}
+
+function removeMediaChangeListener(media: MediaQueryList, listener: () => void) {
+  if (typeof media.removeEventListener === "function") {
+    media.removeEventListener("change", listener);
+    return;
+  }
+
+  media.removeListener(listener);
+}
+
 export function PwaInstallProvider({ children }: { children: React.ReactNode }) {
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const [canPrompt, setCanPrompt] = useState(false);
@@ -149,6 +168,7 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
         serviceWorkerRegistration: serviceWorkerRegistrationStatus,
         manifest: await loadManifestDiagnostics(),
         displayModeStandalone: typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches,
+        displayModeFullscreen: typeof window.matchMedia === "function" && window.matchMedia("(display-mode: fullscreen)").matches,
         beforeinstallpromptFired: beforeInstallPromptFired,
         appinstalledFired: appInstalledFired,
         userAgent: window.navigator.userAgent,
@@ -158,8 +178,10 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
       });
     }
 
-    const standaloneMedia =
-      typeof window.matchMedia === "function" ? window.matchMedia("(display-mode: standalone)") : null;
+    const displayModeMedia =
+      typeof window.matchMedia === "function"
+        ? [window.matchMedia("(display-mode: standalone)"), window.matchMedia("(display-mode: fullscreen)")]
+        : [];
     function handleStandaloneChange() {
       const nextIsStandalone = isStandaloneDisplay();
       setIsStandalone(nextIsStandalone);
@@ -206,13 +228,13 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
       void writeDiagnostics("appinstalled");
     }
 
-    standaloneMedia?.addEventListener("change", handleStandaloneChange);
+    displayModeMedia.forEach((media) => addMediaChangeListener(media, handleStandaloneChange));
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
       isMounted = false;
-      standaloneMedia?.removeEventListener("change", handleStandaloneChange);
+      displayModeMedia.forEach((media) => removeMediaChangeListener(media, handleStandaloneChange));
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
@@ -273,6 +295,13 @@ export function getInstallGuidanceText(guidance: InstallGuidance) {
     return {
       detail: null,
       title: "Open your browser menu to install the app.",
+    };
+  }
+
+  if (guidance === "browser") {
+    return {
+      detail: null,
+      title: "Use your browser menu to install the app.",
     };
   }
 

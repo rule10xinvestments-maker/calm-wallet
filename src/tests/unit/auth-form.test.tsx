@@ -11,14 +11,16 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-function setDisplayMode(matches: boolean) {
+function setDisplayMode(standaloneMatches: boolean, fullscreenMatches = false) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
       dispatchEvent: vi.fn(),
-      matches,
+      matches:
+        (query === "(display-mode: standalone)" && standaloneMatches) ||
+        (query === "(display-mode: fullscreen)" && fullscreenMatches),
       media: query,
       onchange: null,
       removeEventListener: vi.fn(),
@@ -219,8 +221,24 @@ describe("auth form", () => {
     expect(screen.queryByText(/Use Share/)).not.toBeInTheDocument();
   });
 
+  it("shows generic browser install guidance when the native prompt is unavailable on desktop", async () => {
+    renderSignIn();
+
+    expect(await screen.findByText("Install Calm Wallet on your home screen.")).toBeInTheDocument();
+    expect(screen.getByText("Use your browser menu to install the app.")).toBeInTheDocument();
+  });
+
   it("hides PWA install affordances when already running standalone", () => {
     setDisplayMode(true);
+
+    renderSignIn();
+
+    expect(screen.queryByRole("button", { name: "Download app" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Install Calm Wallet on your home screen.")).not.toBeInTheDocument();
+  });
+
+  it("hides PWA install affordances when running fullscreen", () => {
+    setDisplayMode(false, true);
 
     renderSignIn();
 
