@@ -8,11 +8,12 @@ export function SignOutButton({ action }: SignOutButtonProps) {
   return (
     <form action={action}>
       <button
-        className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-white"
+        aria-label="Sign out"
+        className="inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-600 transition hover:bg-white hover:text-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        title="Sign out"
         type="submit"
       >
         <LogOut aria-hidden="true" className="size-4" />
-        Sign out
       </button>
     </form>
   );

@@ -68,14 +68,16 @@ describe("protected shell PWA install affordance", () => {
     vi.restoreAllMocks();
   });
 
-  it("keeps settings beside sign out and preserves sign-out accessibility", () => {
+  it("keeps sign out as an accessible icon-only header button beside settings", () => {
     renderProtectedShell();
 
     const settingsButton = screen.getByRole("button", { name: "Settings" });
     const signOutButton = screen.getByRole("button", { name: "Sign out" });
 
     expect(settingsButton).toHaveAttribute("aria-expanded", "false");
+    expect(signOutButton).toHaveAttribute("title", "Sign out");
     expect(signOutButton.querySelector("svg")).not.toBeNull();
+    expect(signOutButton).toHaveTextContent("");
 
     fireEvent.click(settingsButton);
 
