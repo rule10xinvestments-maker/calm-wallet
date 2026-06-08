@@ -580,14 +580,58 @@ function getSpendingCategoryColor(item: { label: string }, index: number) {
   return matched?.color ?? spendingMixChartColors[index % spendingMixChartColors.length]!;
 }
 
-function TimeframeBarsChart({ data }: { data: InsightsData }) {
-  const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
+function getIncomeCategoryColor(index: number) {
+  return incomeCategoryChartColors[index % incomeCategoryChartColors.length]!;
+}
+
+function buildBarsIncomeCategoryBreakdown(data: InsightsData): SpendingMixCategoryItem[] {
+  const totals = new Map<string, { label: string; amountMinor: number; transactionCount: number; hasUnavailableRate: boolean }>();
+
+  data.timeframeBars.flatMap((bar) => bar.incomeSegments).forEach((segment) => {
+    const current = totals.get(segment.key) ?? {
+      label: segment.label,
+      amountMinor: 0,
+      transactionCount: 0,
+      hasUnavailableRate: false,
+    };
+
+    totals.set(segment.key, {
+      label: current.label,
+      amountMinor: current.amountMinor + Math.max(segment.amountMinor, 0),
+      transactionCount: current.transactionCount + segment.transactionCount,
+      hasUnavailableRate: current.hasUnavailableRate || segment.amountDisplay.includes("rate unavailable"),
+    });
+  });
+
+  return Array.from(totals.entries())
+    .sort((a, b) => b[1].amountMinor - a[1].amountMinor || b[1].transactionCount - a[1].transactionCount)
+    .map(([key, value]) => ({
+      key,
+      label: value.label,
+      amountMinor: value.amountMinor,
+      amountDisplay: value.hasUnavailableRate
+        ? `${formatMoney(value.amountMinor, data.displayCurrency)} + rate unavailable`
+        : `${getApproxPrefix(data, value.amountMinor)}${formatMoney(value.amountMinor, data.displayCurrency)}`,
+      transactionCount: value.transactionCount,
+      recentEntries: [],
+    }));
+}
+
+function TimeframeBarsChart({
+  data,
+  barsSegment,
+  setBarsSegment,
+}: {
+  data: InsightsData;
+  barsSegment: SpendingMixSegment;
+  setBarsSegment: (segment: SpendingMixSegment) => void;
+}) {
   const isIncome = barsSegment === "income";
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
   const categoryItems = isIncome ? data.incomeCategoryBreakdown : data.categoryBreakdown;
   const palette = isIncome ? incomeCategoryChartColors : spendingMixChartColors;
-  const categoryColorMap = new Map(categoryItems.map((item, index) => [item.key, isIncome ? palette[index % palette.length]! : getSpendingCategoryColor(item, index)]));
+  const categoryColorMap = new Map(categoryItems.map((item, index) => [item.key, isIncome ? getIncomeCategoryColor(index) : getSpendingCategoryColor(item, index)]));
   const activeBars = data.timeframeBars.filter((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor) > 0);
   const getSegmentColor = (key: string, index: number) => categoryColorMap.get(key) ?? palette[index % palette.length]!;
   const activeLegendItems = Array.from(
@@ -783,18 +827,29 @@ function TimeframeMixChart({ data }: { data: InsightsData }) {
   );
 }
 
-function TimeframeCategoryBreakdown({ data, showIcons = false }: { data: InsightsData; showIcons?: boolean }) {
-  const total = data.timeframeCategoryBreakdown.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
+function TimeframeCategoryBreakdown({
+  items,
+  segment = "expenses",
+  showIcons = false,
+  emptyMessage = "No tracked spending in this timeframe yet.",
+}: {
+  items: SpendingMixCategoryItem[];
+  segment?: SpendingMixSegment;
+  showIcons?: boolean;
+  emptyMessage?: string;
+}) {
+  const total = items.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
+  const isIncome = segment === "income";
 
-  if (!data.timeframeCategoryBreakdown.length) {
-    return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked spending in this timeframe yet.</p>;
+  if (!items.length) {
+    return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">{emptyMessage}</p>;
   }
 
   return (
     <div className="space-y-3">
-      {data.timeframeCategoryBreakdown.map((item, index) => {
+      {items.map((item, index) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
-        const chartColor = getSpendingCategoryColor(item, index);
+        const chartColor = isIncome ? getIncomeCategoryColor(index) : getSpendingCategoryColor(item, index);
 
         return (
           <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
@@ -805,7 +860,7 @@ function TimeframeCategoryBreakdown({ data, showIcons = false }: { data: Insight
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
-                  {showIcons && item.label.toLowerCase() === "needs category" ? (
+                  {showIcons && !isIncome && item.label.toLowerCase() === "needs category" ? (
                     <Link
                       className="rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
                       href="/transactions?view=needs-review"
@@ -815,7 +870,7 @@ function TimeframeCategoryBreakdown({ data, showIcons = false }: { data: Insight
                   ) : null}
                 </div>
                 <p className="text-xs text-slate-500">
-                  {percent}% of spending - {item.transactionCount} {item.transactionCount === 1 ? "transaction" : "transactions"}
+                  {percent}% of {isIncome ? "income" : "spending"} - {item.transactionCount} {item.transactionCount === 1 ? "transaction" : "transactions"}
                 </p>
               </div>
             </div>
@@ -902,6 +957,12 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
 }
 
 function TimeframeInsightsCard({ data }: { data: InsightsData }) {
+  const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
+  const isBarsIncome = data.selectedChartMode === "bars" && barsSegment === "income";
+  const breakdownItems = isBarsIncome ? buildBarsIncomeCategoryBreakdown(data) : data.timeframeCategoryBreakdown;
+  const breakdownSegment = isBarsIncome ? "income" : "expenses";
+  const breakdownEmptyMessage = isBarsIncome ? "No income tracked for this month yet." : "No tracked spending in this timeframe yet.";
+
   return (
     <Card className="rounded-lg" data-testid="timeframe-insights-card">
       <CardHeader>
@@ -918,12 +979,17 @@ function TimeframeInsightsCard({ data }: { data: InsightsData }) {
       </CardHeader>
       <CardContent className="space-y-5">
         {data.selectedChartMode === "trend" ? <TimeframeTrendChart data={data} /> : null}
-        {data.selectedChartMode === "bars" ? <TimeframeBarsChart data={data} /> : null}
+        {data.selectedChartMode === "bars" ? <TimeframeBarsChart barsSegment={barsSegment} data={data} setBarsSegment={setBarsSegment} /> : null}
         {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} /> : null}
         {data.selectedChartMode === "mix" ? null : (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
-            <TimeframeCategoryBreakdown data={data} showIcons={data.selectedChartMode === "bars"} />
+            <TimeframeCategoryBreakdown
+              emptyMessage={breakdownEmptyMessage}
+              items={breakdownItems}
+              segment={breakdownSegment}
+              showIcons={data.selectedChartMode === "bars"}
+            />
           </div>
         )}
       </CardContent>

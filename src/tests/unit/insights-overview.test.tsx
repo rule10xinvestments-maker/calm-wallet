@@ -670,6 +670,123 @@ describe("insights overview", () => {
     expect(screen.getByLabelText("Apr 5 Salary income $30")).toBeInTheDocument();
   });
 
+  it("keeps Bars Expenses category breakdown on expense categories", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        timeframeCategoryBreakdown: [
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1500, amountDisplay: "$15", transactionCount: 2 }),
+        ],
+        incomeCategoryBreakdown: [
+          makeCategory({ key: "salary", label: "Salary", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-02",
+            label: "2",
+            amountMinor: 1500,
+            amountDisplay: "$15",
+            segments: [{ key: "groceries", label: "Groceries", amountMinor: 1500, amountDisplay: "$15", transactionCount: 2 }],
+          }),
+        ],
+      }),
+    );
+
+    const card = screen.getByTestId("timeframe-insights-card");
+
+    expect(within(card).getByRole("button", { name: "Expenses" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(card).getByText("Groceries")).toBeInTheDocument();
+    expect(within(card).getByText("100% of spending - 2 transactions")).toBeInTheDocument();
+    expect(within(card).queryByText("Salary")).not.toBeInTheDocument();
+  });
+
+  it("switches Bars category breakdown to income categories and percentages", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        timeframeCategoryBreakdown: [
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 2000, amountDisplay: "$20", transactionCount: 2 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-02",
+            label: "2",
+            amountMinor: 2000,
+            amountDisplay: "$20",
+            segments: [{ key: "groceries", label: "Groceries", amountMinor: 2000, amountDisplay: "$20", transactionCount: 2 }],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-05",
+            label: "5",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            incomeAmountMinor: 3000,
+            incomeAmountDisplay: "$30",
+            segments: [],
+            incomeSegments: [{ key: "salary", label: "Salary", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-15",
+            label: "15",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            incomeAmountMinor: 1000,
+            incomeAmountDisplay: "$10",
+            segments: [],
+            incomeSegments: [{ key: "bonus", label: "Bonus", amountMinor: 1000, amountDisplay: "$10", transactionCount: 1 }],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    const card = screen.getByTestId("timeframe-insights-card");
+
+    expect(within(card).getByText("Salary")).toBeInTheDocument();
+    expect(within(card).getByText("Bonus")).toBeInTheDocument();
+    expect(within(card).getByText("75% of income - 1 transaction")).toBeInTheDocument();
+    expect(within(card).getByText("25% of income - 1 transaction")).toBeInTheDocument();
+    expect(within(card).getAllByText("$30").length).toBeGreaterThan(0);
+    expect(within(card).getAllByText("$10").length).toBeGreaterThan(0);
+    expect(within(card).queryByText("Groceries")).not.toBeInTheDocument();
+    expect(within(card).queryByText("100% of spending - 2 transactions")).not.toBeInTheDocument();
+  });
+
+  it("does not fall back to expense categories when Bars income has one category", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        timeframeCategoryBreakdown: [
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 2000, amountDisplay: "$20", transactionCount: 2 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-05",
+            label: "5",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            incomeAmountMinor: 5000,
+            incomeAmountDisplay: "$50",
+            segments: [],
+            incomeSegments: [{ key: "salary", label: "Salary", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 }],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    const card = screen.getByTestId("timeframe-insights-card");
+
+    expect(within(card).getByText("Salary")).toBeInTheDocument();
+    expect(within(card).getByText("100% of income - 1 transaction")).toBeInTheDocument();
+    expect(within(card).queryByText("Groceries")).not.toBeInTheDocument();
+  });
+
   it("renders multi-category Bars days with Mix-matched segment colors", () => {
     renderInsights(
       makeInsightsData({
@@ -758,7 +875,7 @@ describe("insights overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
 
     expect(screen.getByRole("img", { name: "Tracked income by day" })).toBeInTheDocument();
-    expect(screen.getByText("No income tracked for this month yet.")).toBeInTheDocument();
+    expect(screen.getAllByText("No income tracked for this month yet.").length).toBeGreaterThan(0);
   });
 
   it("renders 6M bars as monthly tracked spending buckets", () => {
