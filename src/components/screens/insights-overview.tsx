@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
   Car,
@@ -33,6 +34,15 @@ type SpendingMixSegment = "expenses" | "income";
 type SpendingMixCategoryItem = InsightsData["categoryBreakdown"][number];
 type MonthPickerMonth = InsightsData["monthPickerYears"][number]["months"][number];
 type ChartMode = InsightsData["selectedChartMode"];
+
+type InsightsQueryButtonProps = {
+  "aria-current"?: "date" | "true";
+  "aria-label"?: string;
+  "aria-pressed"?: boolean;
+  children: ReactNode;
+  className: string;
+  href: string;
+};
 
 const spendingMixChartColors = [
   "#0284c7",
@@ -94,6 +104,40 @@ function getApproxPrefix(data: InsightsData, amountMinor: number) {
   return data.hasConvertedCurrencies && amountMinor !== 0 ? "≈ " : "";
 }
 
+function preventMouseFocus(event: MouseEvent<HTMLButtonElement>) {
+  event.preventDefault();
+}
+
+function InsightsQueryButton({
+  "aria-current": ariaCurrent,
+  "aria-label": ariaLabel,
+  "aria-pressed": ariaPressed,
+  children,
+  className,
+  href,
+}: InsightsQueryButtonProps) {
+  const router = useRouter();
+
+  return (
+    <button
+      aria-current={ariaCurrent}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
+      className={className}
+      data-href={href}
+      data-scroll-preserve="true"
+      onClick={(event) => {
+        event.currentTarget.blur();
+        router.replace(href, { scroll: false });
+      }}
+      onMouseDown={preventMouseFocus}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
 function CurrencySwitcher({ data }: { data: InsightsData }) {
   if (data.availableDisplayCurrencies.length <= 1) {
     return null;
@@ -106,18 +150,16 @@ function CurrencySwitcher({ data }: { data: InsightsData }) {
         const active = currency === data.displayCurrency;
 
         return (
-          <Link
+          <InsightsQueryButton
             key={currency}
-            aria-current={active ? "true" : undefined}
+            aria-pressed={active}
             className={`rounded-full border px-2.5 py-1 font-semibold ${
               active ? "border-sky-600 bg-sky-600 text-white" : "border-slate-200 bg-white text-sky-700 hover:bg-sky-50"
             }`}
-            data-scroll-preserve="true"
             href={buildInsightsHref(data, { currency })}
-            scroll={false}
           >
             {currency}
-          </Link>
+          </InsightsQueryButton>
         );
       })}
     </div>
@@ -226,7 +268,7 @@ function MonthPickerSheet({
                   const isSelected = month.month === data.selectedMonth;
 
                   return (
-                    <Link
+                    <InsightsQueryButton
                       key={month.month}
                       aria-current={isSelected ? "date" : undefined}
                       aria-label={`${month.month}${month.hasActivity ? " tracked activity" : " no tracked activity"}${month.isApproximate ? " approximate" : ""}`}
@@ -242,7 +284,7 @@ function MonthPickerSheet({
                       <span className="mt-1 block text-[11px] font-normal opacity-75">
                         {month.hasActivity ? `Tracked${month.isApproximate ? ", approx" : ""}` : "No activity"}
                       </span>
-                    </Link>
+                    </InsightsQueryButton>
                   );
                 })}
               </div>
@@ -262,15 +304,13 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
     <>
       <div className="sticky top-2 z-40 space-y-2 rounded-lg border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
         <div className="flex items-center gap-1">
-          <Link
+          <InsightsQueryButton
             aria-label={`View ${data.previousMonth}`}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            data-scroll-preserve="true"
             href={buildInsightsHref(data, { month: data.previousMonth })}
-            scroll={false}
           >
             <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-          </Link>
+          </InsightsQueryButton>
           <button
             aria-expanded={isPickerOpen}
             aria-label={`Choose month, current ${data.monthLabel}`}
@@ -282,15 +322,13 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
             <span className="truncate text-sm font-semibold text-slate-900">{data.monthLabel}</span>
           </button>
           {canGoNext ? (
-            <Link
+            <InsightsQueryButton
               aria-label={`View ${data.nextMonth}`}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              data-scroll-preserve="true"
               href={buildInsightsHref(data, { month: data.nextMonth })}
-              scroll={false}
             >
               <ChevronRight aria-hidden="true" className="h-4 w-4" />
-            </Link>
+            </InsightsQueryButton>
           ) : (
             <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300">
               <ChevronRight className="h-4 w-4" />
@@ -305,18 +343,16 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
               const active = timeframe === data.selectedTimeframe;
 
               return (
-                <Link
-                  aria-current={active ? "true" : undefined}
+                <InsightsQueryButton
+                  aria-pressed={active}
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
                     active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
                   }`}
-                  data-scroll-preserve="true"
                   href={buildInsightsHref(data, { timeframe })}
                   key={timeframe}
-                  scroll={false}
                 >
                   {timeframe}
-                </Link>
+                </InsightsQueryButton>
               );
             })}
           </div>
@@ -341,18 +377,16 @@ function ChartModeControls({ data }: { data: InsightsData }) {
         const active = mode === data.selectedChartMode;
 
         return (
-          <Link
-            aria-current={active ? "true" : undefined}
+          <InsightsQueryButton
+            aria-pressed={active}
             className={`rounded-md px-3 py-1.5 text-sm font-medium ${
               active ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
             }`}
-            data-scroll-preserve="true"
             href={buildInsightsHref(data, { chart: mode })}
             key={mode}
-            scroll={false}
           >
             {label}
-          </Link>
+          </InsightsQueryButton>
         );
       })}
     </div>
@@ -666,7 +700,11 @@ function TimeframeBarsChart({
           className={`rounded-md px-3 py-1.5 text-sm font-medium ${
             barsSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
           }`}
-          onClick={() => setBarsSegment(segment)}
+          onClick={(event) => {
+            event.currentTarget.blur();
+            setBarsSegment(segment);
+          }}
+          onMouseDown={preventMouseFocus}
           type="button"
         >
           {segment === "expenses" ? "Expenses" : "Income"}
@@ -819,7 +857,11 @@ function TimeframeMixChart({ data }: { data: InsightsData }) {
               className={`rounded-md px-3 py-1.5 text-sm font-medium ${
                 spendingMixSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
               }`}
-              onClick={() => setSpendingMixSegment(segment)}
+              onClick={(event) => {
+                event.currentTarget.blur();
+                setSpendingMixSegment(segment);
+              }}
+              onMouseDown={preventMouseFocus}
               type="button"
             >
               {segment === "expenses" ? "Expenses" : "Income"}
@@ -1457,12 +1499,12 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
             You have tracked history, but no transactions in {data.monthLabel} yet.
           </p>
           {data.isSelectedMonthCurrent && data.hasHistoricalActivity && data.latestActivityMonth ? (
-            <Link
+            <InsightsQueryButton
               className="inline-flex min-h-10 items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white"
               href={buildInsightsHref(data, { month: data.latestActivityMonth })}
             >
               View latest month with activity
-            </Link>
+            </InsightsQueryButton>
           ) : null}
         </div>
       ) : null}

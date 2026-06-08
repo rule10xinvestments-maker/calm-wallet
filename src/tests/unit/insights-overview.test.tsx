@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSpendingMixDonutSegments,
   getMonthStatusClass,
@@ -7,6 +7,14 @@ import {
 } from "@/components/screens/insights-overview";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
+
+const routerReplaceMock = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    replace: routerReplaceMock,
+  }),
+}));
 
 function makeCategory(
   overrides: Partial<InsightsData["categoryBreakdown"][number]> = {},
@@ -279,6 +287,10 @@ function expectCategoryIcon(label: string, iconClass: string, index = 0) {
 }
 
 describe("insights overview", () => {
+  beforeEach(() => {
+    routerReplaceMock.mockClear();
+  });
+
   it("renders safe load-error copy while keeping the page recoverable", () => {
     renderInsights(makeInsightsData({ categoryBreakdown: [], trackedTransactionCount: 0 }), { loadError: true });
 
@@ -310,23 +322,20 @@ describe("insights overview", () => {
     expect(controlBar).toHaveClass("sticky", "top-2", "z-40");
     const previousMonthLink = screen.getByLabelText("View 2026-03");
 
-    expect(previousMonthLink).toHaveAttribute("href", "/insights?month=2026-03&timeframe=1M&chart=mix&currency=RON");
+    expect(previousMonthLink).toHaveAttribute("data-href", "/insights?month=2026-03&timeframe=1M&chart=mix&currency=RON");
     expect(previousMonthLink).toHaveAttribute("data-scroll-preserve", "true");
     expect(within(controlBar as HTMLElement).getAllByText("1M").length).toBeGreaterThan(0);
     expect(within(controlBar as HTMLElement).getAllByText("RON").length).toBeGreaterThan(0);
-    const timeframeLink = screen.getByRole("link", { name: "3M" });
-    const currencyLink = screen.getByRole("link", { name: "EUR" });
+    const timeframeLink = screen.getByRole("button", { name: "3M" });
+    const currencyLink = screen.getByRole("button", { name: "EUR" });
 
-    expect(timeframeLink).toHaveAttribute(
-      "href",
-      "/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON",
-    );
+    expect(timeframeLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON");
     expect(timeframeLink).toHaveAttribute("data-scroll-preserve", "true");
-    expect(currencyLink).toHaveAttribute(
-      "href",
-      "/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR",
-    );
+    expect(currencyLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR");
     expect(currencyLink).toHaveAttribute("data-scroll-preserve", "true");
+
+    fireEvent.click(timeframeLink);
+    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON", { scroll: false });
   });
 
   it("renders month navigation links without changing tracked balance wording", () => {
@@ -336,9 +345,9 @@ describe("insights overview", () => {
     const previousMonthLink = screen.getByLabelText("View 2026-03");
     const nextMonthLink = screen.getByLabelText("View 2026-05");
 
-    expect(previousMonthLink).toHaveAttribute("href", "/insights?month=2026-03&timeframe=6M&chart=bars&currency=RON");
+    expect(previousMonthLink).toHaveAttribute("data-href", "/insights?month=2026-03&timeframe=6M&chart=bars&currency=RON");
     expect(previousMonthLink).toHaveAttribute("data-scroll-preserve", "true");
-    expect(nextMonthLink).toHaveAttribute("href", "/insights?month=2026-05&timeframe=6M&chart=bars&currency=RON");
+    expect(nextMonthLink).toHaveAttribute("data-href", "/insights?month=2026-05&timeframe=6M&chart=bars&currency=RON");
     expect(nextMonthLink).toHaveAttribute("data-scroll-preserve", "true");
     expect(screen.getByText("Tracked balance")).toBeInTheDocument();
   });
@@ -347,18 +356,12 @@ describe("insights overview", () => {
     renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["RON", "USD"] }));
 
     expect(screen.getByText("Tracked spending only. Not a bank statement.")).toBeInTheDocument();
-    const timeframe3mLink = screen.getByRole("link", { name: "3M" });
-    const timeframeAllLink = screen.getByRole("link", { name: "All" });
+    const timeframe3mLink = screen.getByRole("button", { name: "3M" });
+    const timeframeAllLink = screen.getByRole("button", { name: "All" });
 
-    expect(timeframe3mLink).toHaveAttribute(
-      "href",
-      "/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON",
-    );
+    expect(timeframe3mLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON");
     expect(timeframe3mLink).toHaveAttribute("data-scroll-preserve", "true");
-    expect(timeframeAllLink).toHaveAttribute(
-      "href",
-      "/insights?month=2026-04&timeframe=All&chart=mix&currency=RON",
-    );
+    expect(timeframeAllLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=All&chart=mix&currency=RON");
     expect(timeframeAllLink).toHaveAttribute("data-scroll-preserve", "true");
   });
 
@@ -374,27 +377,21 @@ describe("insights overview", () => {
   it("renders chart mode links and preserves timeframe and currency", () => {
     renderInsights(makeInsightsData({ selectedTimeframe: "6M", displayCurrency: "EUR", availableDisplayCurrencies: ["EUR", "RON"] }));
 
-    const mixLink = screen.getByRole("link", { name: "Mix" });
-    const trendLink = screen.getByRole("link", { name: "Trend" });
-    const barsLink = screen.getByRole("link", { name: "Bars" });
+    const mixLink = screen.getByRole("button", { name: "Mix" });
+    const trendLink = screen.getByRole("button", { name: "Trend" });
+    const barsLink = screen.getByRole("button", { name: "Bars" });
     const chartModeControls = mixLink.closest("div") as HTMLElement;
 
-    expect(mixLink).toHaveAttribute("aria-current", "true");
-    expect(within(chartModeControls).getAllByRole("link").map((link) => link.textContent)).toEqual(["Mix", "Trend", "Bars"]);
-    expect(trendLink).toHaveAttribute(
-      "href",
-      "/insights?month=2026-04&timeframe=6M&chart=trend&currency=EUR",
-    );
-    expect(barsLink).toHaveAttribute(
-      "href",
-      "/insights?month=2026-04&timeframe=6M&chart=bars&currency=EUR",
-    );
-    expect(mixLink).toHaveAttribute(
-      "href",
-      "/insights?month=2026-04&timeframe=6M&chart=mix&currency=EUR",
-    );
+    expect(mixLink).toHaveAttribute("aria-pressed", "true");
+    expect(within(chartModeControls).getAllByRole("button").map((button) => button.textContent)).toEqual(["Mix", "Trend", "Bars"]);
+    expect(trendLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=6M&chart=trend&currency=EUR");
+    expect(barsLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=6M&chart=bars&currency=EUR");
+    expect(mixLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=6M&chart=mix&currency=EUR");
     expect(barsLink).toHaveAttribute("data-scroll-preserve", "true");
     expect(mixLink).toHaveAttribute("data-scroll-preserve", "true");
+
+    fireEvent.click(barsLink);
+    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=6M&chart=bars&currency=EUR", { scroll: false });
   });
 
   it("renders selected-month income and spending trend without default day labels", () => {
@@ -1040,7 +1037,7 @@ describe("insights overview", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Choose month")).toBeInTheDocument();
     expect(screen.getByText("2026")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "2026-04 tracked activity" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2026-04 tracked activity" })).toBeInTheDocument();
   });
 
   it("keeps the month picker fixed above mobile navigation with internal scrolling", () => {
@@ -1091,10 +1088,11 @@ describe("insights overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /April 2026/ }));
 
-    expect(screen.getByRole("link", { name: "2026-02 tracked activity" })).toHaveAttribute(
-      "href",
-      "/insights?month=2026-02&timeframe=1M&chart=mix&currency=RON",
-    );
+    const februaryButton = screen.getByRole("button", { name: "2026-02 tracked activity" });
+
+    expect(februaryButton).toHaveAttribute("data-href", "/insights?month=2026-02&timeframe=1M&chart=mix&currency=RON");
+    fireEvent.click(februaryButton);
+    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-02&timeframe=1M&chart=mix&currency=RON", { scroll: false });
   });
 
   it("marks months with activity and no-activity styling", () => {
@@ -1102,8 +1100,8 @@ describe("insights overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /April 2026/ }));
 
-    expect(screen.getByRole("link", { name: "2026-04 tracked activity" })).toHaveTextContent("Tracked");
-    expect(screen.getByRole("link", { name: "2026-03 no tracked activity" })).toHaveTextContent("No activity");
+    expect(screen.getByRole("button", { name: "2026-04 tracked activity" })).toHaveTextContent("Tracked");
+    expect(screen.getByRole("button", { name: "2026-03 no tracked activity" })).toHaveTextContent("No activity");
   });
 
   it("keeps month status styling logic stable", () => {
@@ -1157,8 +1155,8 @@ describe("insights overview", () => {
     );
 
     expect(screen.getByText("You have tracked history, but no transactions in June 2026 yet.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View latest month with activity" })).toHaveAttribute(
-      "href",
+    expect(screen.getByRole("button", { name: "View latest month with activity" })).toHaveAttribute(
+      "data-href",
       "/insights?month=2026-04&timeframe=1M&chart=mix&currency=USD",
     );
   });
@@ -1510,8 +1508,8 @@ describe("insights overview", () => {
     expect(screen.queryByText("Approximate total")).not.toBeInTheDocument();
     expect(screen.queryByText("Original entries stay unchanged")).not.toBeInTheDocument();
     expect(screen.getByText("View totals as:")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "EUR" })).toHaveAttribute("href", "/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR");
-    expect(screen.getByRole("link", { name: "RON" })).toHaveAttribute("href", "/insights?month=2026-04&timeframe=1M&chart=mix&currency=RON");
+    expect(screen.getByRole("button", { name: "EUR" })).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR");
+    expect(screen.getByRole("button", { name: "RON" })).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=1M&chart=mix&currency=RON");
   });
 
   it("does not render the old kept separate copy", () => {
