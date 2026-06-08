@@ -130,7 +130,7 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const [canPrompt, setCanPrompt] = useState(false);
   const [guidance, setGuidance] = useState<InstallGuidance>(null);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(() => isStandaloneDisplay());
 
   useEffect(() => {
     let beforeInstallPromptFired = false;
@@ -158,6 +158,19 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
       });
     }
 
+    const standaloneMedia =
+      typeof window.matchMedia === "function" ? window.matchMedia("(display-mode: standalone)") : null;
+    function handleStandaloneChange() {
+      const nextIsStandalone = isStandaloneDisplay();
+      setIsStandalone(nextIsStandalone);
+
+      if (nextIsStandalone) {
+        deferredPromptRef.current = null;
+        setCanPrompt(false);
+        setGuidance(null);
+      }
+    }
+
     void registerServiceWorker().then((status) => {
       serviceWorkerRegistrationStatus = status;
       void writeDiagnostics("service-worker-registration");
@@ -166,13 +179,16 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
     if (isStandaloneDisplay()) {
       setIsStandalone(true);
       void writeDiagnostics("standalone-detected");
-      return;
+    } else {
+      setGuidance(getInstallGuidance());
+      void writeDiagnostics("mounted");
     }
 
-    setGuidance(getInstallGuidance());
-    void writeDiagnostics("mounted");
-
     function handleBeforeInstallPrompt(event: Event) {
+      if (isStandaloneDisplay()) {
+        return;
+      }
+
       beforeInstallPromptFired = true;
       event.preventDefault();
       deferredPromptRef.current = event as BeforeInstallPromptEvent;
@@ -190,11 +206,13 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
       void writeDiagnostics("appinstalled");
     }
 
+    standaloneMedia?.addEventListener("change", handleStandaloneChange);
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
       isMounted = false;
+      standaloneMedia?.removeEventListener("change", handleStandaloneChange);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };

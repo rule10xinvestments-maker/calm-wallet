@@ -157,11 +157,35 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByText("Use Share \u2192 Add to Home Screen.")).toBeInTheDocument();
   });
 
-  it("hides the authenticated install icon in standalone mode", () => {
+  it("hides the authenticated install icon in standalone mode while keeping app settings and sign out", () => {
     setDisplayMode(true);
+    setNavigatorValue(
+      "userAgent",
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
+    );
+    setNavigatorValue("platform", "Linux armv8l");
+    setNavigatorValue("maxTouchPoints", 5);
 
     renderProtectedShell();
 
     expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  });
+
+  it("hides the authenticated install icon when iOS reports navigator standalone", () => {
+    setNavigatorValue("standalone", true);
+    setNavigatorValue(
+      "userAgent",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    );
+    setNavigatorValue("platform", "iPhone");
+    setNavigatorValue("maxTouchPoints", 5);
+
+    renderProtectedShell();
+
+    expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 });
