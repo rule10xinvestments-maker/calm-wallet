@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSpendingMixDonutSegments,
   getMonthStatusClass,
@@ -286,9 +286,21 @@ function expectCategoryIcon(label: string, iconClass: string, index = 0) {
   expect(icon.querySelector("svg")).toHaveClass(iconClass);
 }
 
+function setViewportScroll({ width, x = 0, y }: { width: number; x?: number; y: number }) {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  Object.defineProperty(window, "scrollX", { configurable: true, value: x });
+  Object.defineProperty(window, "scrollY", { configurable: true, value: y });
+}
+
 describe("insights overview", () => {
   beforeEach(() => {
     routerReplaceMock.mockClear();
+    setViewportScroll({ width: 1024, y: 0 });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("renders safe load-error copy while keeping the page recoverable", () => {
@@ -336,6 +348,46 @@ describe("insights overview", () => {
 
     fireEvent.click(timeframeLink);
     expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON", { scroll: false });
+  });
+
+  it("restores desktop scroll after Insights query controls update the URL", () => {
+    vi.useFakeTimers();
+    setViewportScroll({ width: 1280, x: 3, y: 640 });
+    const scrollToSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+
+    renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["EUR", "RON", "USD"] }));
+
+    fireEvent.click(screen.getByRole("button", { name: "EUR" }));
+
+    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR", { scroll: false });
+    expect(scrollToSpy).toHaveBeenCalledWith({ behavior: "auto", left: 3, top: 640 });
+    vi.runOnlyPendingTimers();
+  });
+
+  it("leaves the current mobile scroll behavior unchanged for Insights query controls", () => {
+    setViewportScroll({ width: 390, y: 640 });
+    const scrollToSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+
+    renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["EUR", "RON", "USD"] }));
+
+    fireEvent.click(screen.getByRole("button", { name: "EUR" }));
+
+    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR", { scroll: false });
+    expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+
+  it("restores desktop scroll after local Insights segment toggles update state", () => {
+    vi.useFakeTimers();
+    setViewportScroll({ width: 1280, y: 520 });
+    const scrollToSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+
+    renderInsights(makeInsightsData({ selectedChartMode: "mix" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "true");
+    expect(scrollToSpy).toHaveBeenCalledWith({ behavior: "auto", left: 0, top: 520 });
+    vi.runOnlyPendingTimers();
   });
 
   it("renders month navigation links without changing tracked balance wording", () => {

@@ -108,6 +108,37 @@ function preventMouseFocus(event: MouseEvent<HTMLButtonElement>) {
   event.preventDefault();
 }
 
+function getDesktopScrollSnapshot() {
+  if (typeof window === "undefined" || window.innerWidth < 768 || window.scrollY <= 0) {
+    return null;
+  }
+
+  return {
+    x: window.scrollX,
+    y: window.scrollY,
+  };
+}
+
+function restoreDesktopScroll(snapshot: { x: number; y: number } | null) {
+  if (!snapshot || typeof window === "undefined") {
+    return;
+  }
+
+  const restore = () => {
+    window.scrollTo({ behavior: "auto", left: snapshot.x, top: snapshot.y });
+  };
+  const requestFrame =
+    window.requestAnimationFrame?.bind(window) ??
+    ((callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0));
+
+  restore();
+  requestFrame(() => {
+    restore();
+    requestFrame(restore);
+  });
+  window.setTimeout(restore, 120);
+}
+
 function InsightsQueryButton({
   "aria-current": ariaCurrent,
   "aria-label": ariaLabel,
@@ -127,8 +158,11 @@ function InsightsQueryButton({
       data-href={href}
       data-scroll-preserve="true"
       onClick={(event) => {
+        const scrollSnapshot = getDesktopScrollSnapshot();
+
         event.currentTarget.blur();
         router.replace(href, { scroll: false });
+        restoreDesktopScroll(scrollSnapshot);
       }}
       onMouseDown={preventMouseFocus}
       type="button"
@@ -701,8 +735,11 @@ function TimeframeBarsChart({
             barsSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
           }`}
           onClick={(event) => {
+            const scrollSnapshot = getDesktopScrollSnapshot();
+
             event.currentTarget.blur();
             setBarsSegment(segment);
+            restoreDesktopScroll(scrollSnapshot);
           }}
           onMouseDown={preventMouseFocus}
           type="button"
@@ -858,8 +895,11 @@ function TimeframeMixChart({ data }: { data: InsightsData }) {
                 spendingMixSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
               }`}
               onClick={(event) => {
+                const scrollSnapshot = getDesktopScrollSnapshot();
+
                 event.currentTarget.blur();
                 setSpendingMixSegment(segment);
+                restoreDesktopScroll(scrollSnapshot);
               }}
               onMouseDown={preventMouseFocus}
               type="button"
