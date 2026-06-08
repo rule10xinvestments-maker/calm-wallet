@@ -1,7 +1,7 @@
 import { InsightsOverview } from "@/components/screens/insights-overview";
 import { deleteMonthlyCategoryBudgetAction, upsertMonthlyCategoryBudgetAction } from "@/lib/actions/budgets";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
-import { loadInsightsPageData, normalizeInsightsChartMode, normalizeInsightsTimeframe } from "@/lib/server/transactions-read-model";
+import { loadInsightsPageData, normalizeInsightsChartMode, normalizeInsightsTimeframe, type InsightsData } from "@/lib/server/transactions-read-model";
 import { getFallbackInsightsData, logProtectedRouteLoadFailure } from "@/lib/server/protected-route-fallbacks";
 import { redirect } from "next/navigation";
 
@@ -33,7 +33,7 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
 
   const resolvedSearchParams = (await searchParams) ?? {};
   let loadError = false;
-  let data: Awaited<ReturnType<typeof loadInsightsPageData>> = getFallbackInsightsData();
+  let data: InsightsData = getFallbackInsightsData();
 
   try {
     data = await loadInsightsPageData(

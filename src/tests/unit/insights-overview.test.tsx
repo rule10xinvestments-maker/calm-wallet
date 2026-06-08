@@ -8,14 +8,6 @@ import {
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 
-const routerReplaceMock = vi.hoisted(() => vi.fn());
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    replace: routerReplaceMock,
-  }),
-}));
-
 function makeCategory(
   overrides: Partial<InsightsData["categoryBreakdown"][number]> = {},
 ): InsightsData["categoryBreakdown"][number] {
@@ -267,6 +259,24 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
   };
 }
 
+function clientViewKey(data: Pick<InsightsData, "displayCurrency" | "selectedMonth" | "selectedTimeframe">) {
+  return `${data.selectedMonth}|${data.selectedTimeframe}|${data.displayCurrency}`;
+}
+
+function withClientViews(data: InsightsData, views: InsightsData[]) {
+  return {
+    ...data,
+    clientViews: Object.fromEntries(
+      views.map((view) => {
+        const clientView = { ...view };
+
+        delete clientView.clientViews;
+        return [clientViewKey(view), clientView];
+      }),
+    ),
+  };
+}
+
 const noopBudgetAction = async () => initialBudgetActionState;
 
 function renderInsights(data: InsightsData, options: { loadError?: boolean } = {}) {
@@ -294,7 +304,6 @@ function setViewportScroll({ width, x = 0, y }: { width: number; x?: number; y: 
 
 describe("insights overview", () => {
   beforeEach(() => {
-    routerReplaceMock.mockClear();
     setViewportScroll({ width: 1024, y: 0 });
   });
 
@@ -346,11 +355,27 @@ describe("insights overview", () => {
     expect(currencyLink).toHaveAttribute("data-href", "/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR");
     expect(currencyLink).toHaveAttribute("data-scroll-preserve", "true");
 
-    fireEvent.click(timeframeLink);
-    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=3M&chart=mix&currency=RON", { scroll: false });
+    expect(timeframeLink).toHaveAttribute("type", "button");
   });
 
-  it("restores desktop scroll after Insights query controls update the URL", () => {
+  it("switches Insights query controls through local cached data without URL navigation", () => {
+    const initialData = makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["EUR", "RON", "USD"] });
+    const eurView = makeInsightsData({
+      displayCurrency: "EUR",
+      availableDisplayCurrencies: ["EUR", "RON", "USD"],
+      trackedBalanceDisplayMinor: 1234,
+    });
+
+    renderInsights(withClientViews(initialData, [initialData, eurView]));
+
+    fireEvent.click(screen.getByRole("button", { name: "EUR" }));
+
+    expect(screen.getByTestId("monthly-snapshot-card")).toHaveTextContent("EUR");
+    expect(screen.getByTestId("monthly-snapshot-card")).toHaveTextContent("€12.34");
+    expect(screen.getByRole("button", { name: "EUR" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("restores desktop scroll after Insights query controls update local state", () => {
     vi.useFakeTimers();
     setViewportScroll({ width: 1280, x: 3, y: 640 });
     const scrollToSpy = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
@@ -359,7 +384,6 @@ describe("insights overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "EUR" }));
 
-    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR", { scroll: false });
     expect(scrollToSpy).toHaveBeenCalledWith({ behavior: "auto", left: 3, top: 640 });
     vi.runOnlyPendingTimers();
   });
@@ -372,7 +396,6 @@ describe("insights overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "EUR" }));
 
-    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=1M&chart=mix&currency=EUR", { scroll: false });
     expect(scrollToSpy).not.toHaveBeenCalled();
   });
 
@@ -443,7 +466,8 @@ describe("insights overview", () => {
     expect(mixLink).toHaveAttribute("data-scroll-preserve", "true");
 
     fireEvent.click(barsLink);
-    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-04&timeframe=6M&chart=bars&currency=EUR", { scroll: false });
+    expect(screen.getByRole("button", { name: "Bars" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
   });
 
   it("renders selected-month income and spending trend without default day labels", () => {
@@ -1108,8 +1132,7 @@ describe("insights overview", () => {
   });
 
   it("selects a month through the picker while preserving display currency", () => {
-    renderInsights(
-      makeInsightsData({
+    const initialData = makeInsightsData({
         displayCurrency: "RON",
         currency: "RON",
         availableDisplayCurrencies: ["RON", "USD"],
@@ -1135,8 +1158,16 @@ describe("insights overview", () => {
             ],
           },
         ],
-      }),
-    );
+    });
+    const februaryView = makeInsightsData({
+      ...initialData,
+      monthLabel: "February 2026",
+      selectedMonth: "2026-02",
+      previousMonth: "2026-01",
+      nextMonth: "2026-03",
+    });
+
+    renderInsights(withClientViews(initialData, [initialData, februaryView]));
 
     fireEvent.click(screen.getByRole("button", { name: /April 2026/ }));
 
@@ -1144,7 +1175,7 @@ describe("insights overview", () => {
 
     expect(februaryButton).toHaveAttribute("data-href", "/insights?month=2026-02&timeframe=1M&chart=mix&currency=RON");
     fireEvent.click(februaryButton);
-    expect(routerReplaceMock).toHaveBeenCalledWith("/insights?month=2026-02&timeframe=1M&chart=mix&currency=RON", { scroll: false });
+    expect(screen.getByRole("button", { name: "Choose month, current February 2026" })).toBeInTheDocument();
   });
 
   it("marks months with activity and no-activity styling", () => {

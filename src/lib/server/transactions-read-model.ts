@@ -112,7 +112,10 @@ export type InsightsData = {
     isOverBudget: boolean;
     currency: string;
   }>;
+  clientViews?: Record<string, InsightsClientView>;
 };
+
+export type InsightsClientView = Omit<InsightsData, "clientViews">;
 
 export type InsightsMonthPickerYear = {
   year: string;
@@ -1363,6 +1366,21 @@ export function buildInsightsData(
   };
 }
 
+function buildInsightsClientViewKey(args: {
+  currency: string;
+  month: string;
+  timeframe: InsightsTimeframePreset;
+}) {
+  return `${args.month}|${args.timeframe}|${args.currency}`;
+}
+
+function withoutClientViews(data: InsightsData): InsightsClientView {
+  const view: InsightsData = { ...data };
+
+  delete view.clientViews;
+  return view;
+}
+
 export function buildSpendingSummaryData(args: {
   transactions: Transaction[];
   filters?: {
@@ -1623,23 +1641,68 @@ export async function loadInsightsPageData(
   });
   const currenciesForRates = Array.from(new Set([...transactions.map((transaction) => transaction.currency), displayCurrency]));
   const fxRates = await loadFxRatesForDisplay(currenciesForRates);
+  const budgetCategoryOptions = controlledCategories
+    .filter((category) => category.direction === "expense" || category.direction === "both")
+    .map((category) => ({
+      id: category.id,
+      label: category.label,
+    }));
 
-  return buildInsightsData(
+  const data = buildInsightsData(
     transactions,
     categoryLabels,
     currency,
     now,
     budgets,
-    controlledCategories
-      .filter((category) => category.direction === "expense" || category.direction === "both")
-      .map((category) => ({
-        id: category.id,
-        label: category.label,
-    })),
+    budgetCategoryOptions,
     fxRates,
     requestedDisplayCurrency,
     toMonthKey(selectedMonthDate),
     requestedTimeframe,
     requestedChartMode,
   );
+  const cachedMonths = Array.from(
+    new Set(
+      [
+        data.selectedMonth,
+        data.previousMonth,
+        data.nextMonth,
+        data.latestActivityMonth,
+        ...data.monthPickerYears.flatMap((year) => year.months.map((month) => month.month)),
+      ].filter((month): month is string => Boolean(month)),
+    ),
+  );
+  const clientViews: Record<string, InsightsClientView> = {};
+
+  cachedMonths.forEach((month) => {
+    data.timeframePresets.forEach((timeframe) => {
+      data.availableDisplayCurrencies.forEach((viewCurrency) => {
+        const view = buildInsightsData(
+          transactions,
+          categoryLabels,
+          currency,
+          now,
+          budgets,
+          budgetCategoryOptions,
+          fxRates,
+          viewCurrency,
+          month,
+          timeframe,
+          data.selectedChartMode,
+        );
+        clientViews[
+          buildInsightsClientViewKey({
+            currency: view.displayCurrency,
+            month: view.selectedMonth,
+            timeframe: view.selectedTimeframe,
+          })
+        ] = withoutClientViews(view);
+      });
+    });
+  });
+
+  return {
+    ...data,
+    clientViews,
+  };
 }

@@ -2,7 +2,6 @@
 
 import { useActionState, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
   Car,
@@ -42,6 +41,14 @@ type InsightsQueryButtonProps = {
   children: ReactNode;
   className: string;
   href: string;
+  onSelect: () => void;
+};
+
+type InsightsSelectionUpdate = {
+  chart?: ChartMode;
+  currency?: string;
+  month?: string;
+  timeframe?: InsightsData["selectedTimeframe"];
 };
 
 const spendingMixChartColors = [
@@ -146,9 +153,8 @@ function InsightsQueryButton({
   children,
   className,
   href,
+  onSelect,
 }: InsightsQueryButtonProps) {
-  const router = useRouter();
-
   return (
     <button
       aria-current={ariaCurrent}
@@ -161,7 +167,7 @@ function InsightsQueryButton({
         const scrollSnapshot = getDesktopScrollSnapshot();
 
         event.currentTarget.blur();
-        router.replace(href, { scroll: false });
+        onSelect();
         restoreDesktopScroll(scrollSnapshot);
       }}
       onMouseDown={preventMouseFocus}
@@ -172,7 +178,7 @@ function InsightsQueryButton({
   );
 }
 
-function CurrencySwitcher({ data }: { data: InsightsData }) {
+function CurrencySwitcher({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
   if (data.availableDisplayCurrencies.length <= 1) {
     return null;
   }
@@ -191,6 +197,7 @@ function CurrencySwitcher({ data }: { data: InsightsData }) {
               active ? "border-sky-600 bg-sky-600 text-white" : "border-slate-200 bg-white text-sky-700 hover:bg-sky-50"
             }`}
             href={buildInsightsHref(data, { currency })}
+            onSelect={() => onSelect({ currency })}
           >
             {currency}
           </InsightsQueryButton>
@@ -229,6 +236,14 @@ function buildInsightsHref(
   return `/insights?${params.toString()}`;
 }
 
+function buildClientViewKey(args: {
+  currency: string;
+  month: string;
+  timeframe: InsightsData["selectedTimeframe"];
+}) {
+  return `${args.month}|${args.timeframe}|${args.currency}`;
+}
+
 export function getMonthStatusClass(month: MonthPickerMonth) {
   if (!month.hasActivity) {
     return "border-slate-200 bg-slate-50 text-slate-400";
@@ -264,9 +279,11 @@ function getMonthStatusDotClass(month: MonthPickerMonth) {
 function MonthPickerSheet({
   data,
   onClose,
+  onSelect,
 }: {
   data: InsightsData;
   onClose: () => void;
+  onSelect: (updates: InsightsSelectionUpdate) => void;
 }) {
   return (
     <div
@@ -310,6 +327,10 @@ function MonthPickerSheet({
                         isSelected ? "ring-2 ring-sky-500 ring-offset-1" : ""
                       } ${getMonthStatusClass(month)}`}
                       href={buildInsightsHref(data, { month: month.month })}
+                      onSelect={() => {
+                        onSelect({ month: month.month });
+                        onClose();
+                      }}
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span>{month.label}</span>
@@ -330,7 +351,7 @@ function MonthPickerSheet({
   );
 }
 
-function InsightsControlBar({ data }: { data: InsightsData }) {
+function InsightsControlBar({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const canGoNext = data.selectedMonth < data.currentMonth;
 
@@ -342,6 +363,7 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
             aria-label={`View ${data.previousMonth}`}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             href={buildInsightsHref(data, { month: data.previousMonth })}
+            onSelect={() => onSelect({ month: data.previousMonth })}
           >
             <ChevronLeft aria-hidden="true" className="h-4 w-4" />
           </InsightsQueryButton>
@@ -360,6 +382,7 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
               aria-label={`View ${data.nextMonth}`}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               href={buildInsightsHref(data, { month: data.nextMonth })}
+              onSelect={() => onSelect({ month: data.nextMonth })}
             >
               <ChevronRight aria-hidden="true" className="h-4 w-4" />
             </InsightsQueryButton>
@@ -384,21 +407,22 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
                   }`}
                   href={buildInsightsHref(data, { timeframe })}
                   key={timeframe}
+                  onSelect={() => onSelect({ timeframe })}
                 >
                   {timeframe}
                 </InsightsQueryButton>
               );
             })}
           </div>
-          <CurrencySwitcher data={data} />
+          <CurrencySwitcher data={data} onSelect={onSelect} />
         </div>
       </div>
-      {isPickerOpen ? <MonthPickerSheet data={data} onClose={() => setIsPickerOpen(false)} /> : null}
+      {isPickerOpen ? <MonthPickerSheet data={data} onClose={() => setIsPickerOpen(false)} onSelect={onSelect} /> : null}
     </>
   );
 }
 
-function ChartModeControls({ data }: { data: InsightsData }) {
+function ChartModeControls({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
   const modes: Array<{ mode: ChartMode; label: string }> = [
     { mode: "mix", label: "Mix" },
     { mode: "trend", label: "Trend" },
@@ -418,6 +442,7 @@ function ChartModeControls({ data }: { data: InsightsData }) {
             }`}
             href={buildInsightsHref(data, { chart: mode })}
             key={mode}
+            onSelect={() => onSelect({ chart: mode })}
           >
             {label}
           </InsightsQueryButton>
@@ -1046,7 +1071,7 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
   );
 }
 
-function TimeframeInsightsCard({ data }: { data: InsightsData }) {
+function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
   const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
   const isBarsIncome = data.selectedChartMode === "bars" && barsSegment === "income";
   const breakdownItems = isBarsIncome ? buildBarsIncomeCategoryBreakdown(data) : data.timeframeCategoryBreakdown;
@@ -1064,7 +1089,7 @@ function TimeframeInsightsCard({ data }: { data: InsightsData }) {
               {data.hasConvertedCurrencies ? " - approximate" : null}
             </CardDescription>
           </div>
-          <ChartModeControls data={data} />
+          <ChartModeControls data={data} onSelect={onSelect} />
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -1493,8 +1518,31 @@ function BudgetRemoveButton({
 }
 
 export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction, loadError = false }: InsightsOverviewProps) {
-  const hasTrackedData = data.trackedTransactionCount > 0;
-  const hasCurrentMonthData = data.currentMonthTransactionCount > 0;
+  const [activeData, setActiveData] = useState<InsightsData>(data);
+  const hasTrackedData = activeData.trackedTransactionCount > 0;
+  const hasCurrentMonthData = activeData.currentMonthTransactionCount > 0;
+  const selectInsightsView = (updates: InsightsSelectionUpdate) => {
+    setActiveData((currentData) => {
+      const nextChart = updates.chart ?? currentData.selectedChartMode;
+      const nextCurrency = updates.currency ?? currentData.displayCurrency;
+      const nextMonth = updates.month ?? currentData.selectedMonth;
+      const nextTimeframe = updates.timeframe ?? currentData.selectedTimeframe;
+      const cachedView =
+        data.clientViews?.[
+          buildClientViewKey({
+            currency: nextCurrency,
+            month: nextMonth,
+            timeframe: nextTimeframe,
+          })
+        ] ?? currentData;
+
+      return {
+        ...cachedView,
+        clientViews: data.clientViews,
+        selectedChartMode: nextChart,
+      };
+    });
+  };
 
   return (
     <section className="space-y-5">
@@ -1503,7 +1551,7 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
         title="Monthly clarity"
         description="Tracked spending only. Not a bank statement."
       />
-      <InsightsControlBar data={data} />
+      <InsightsControlBar data={activeData} onSelect={selectInsightsView} />
       {loadError ? (
         <Card className="rounded-lg">
           <CardHeader>
@@ -1524,10 +1572,10 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
         </Card>
       ) : null}
 
-      <MonthlySnapshotCard data={data} />
-      <TimeframeInsightsCard data={data} />
+      <MonthlySnapshotCard data={activeData} />
+      <TimeframeInsightsCard data={activeData} onSelect={selectInsightsView} />
 
-      {data.hasMissingRates ? (
+      {activeData.hasMissingRates ? (
         <p className="text-xs leading-5 text-slate-500">
           Some currencies need a rate before they can be included in converted totals.
         </p>
@@ -1536,12 +1584,13 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
       {hasTrackedData && !hasCurrentMonthData ? (
         <div className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
           <p>
-            You have tracked history, but no transactions in {data.monthLabel} yet.
+            You have tracked history, but no transactions in {activeData.monthLabel} yet.
           </p>
-          {data.isSelectedMonthCurrent && data.hasHistoricalActivity && data.latestActivityMonth ? (
+          {activeData.isSelectedMonthCurrent && activeData.hasHistoricalActivity && activeData.latestActivityMonth ? (
             <InsightsQueryButton
               className="inline-flex min-h-10 items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white"
-              href={buildInsightsHref(data, { month: data.latestActivityMonth })}
+              href={buildInsightsHref(activeData, { month: activeData.latestActivityMonth })}
+              onSelect={() => selectInsightsView({ month: activeData.latestActivityMonth ?? undefined })}
             >
               View latest month with activity
             </InsightsQueryButton>
@@ -1555,8 +1604,8 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
           <CardDescription>Top tracked expenses from your recent transaction history.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {data.largestRecentExpenses.length ? (
-            data.largestRecentExpenses.map((item) => (
+          {activeData.largestRecentExpenses.length ? (
+            activeData.largestRecentExpenses.map((item) => (
               <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
                 <div>
                   <p className="font-medium text-slate-900">{item.title}</p>
@@ -1576,11 +1625,11 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
       <Card className="rounded-lg">
         <CardHeader>
           <CardTitle className="text-lg">Monthly category budgets</CardTitle>
-          <CardDescription>Optional limits for controlled categories in {data.monthLabel}.</CardDescription>
+          <CardDescription>Optional limits for controlled categories in {activeData.monthLabel}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {data.budgetProgress.length ? (
-            data.budgetProgress.map((item) => (
+          {activeData.budgetProgress.length ? (
+            activeData.budgetProgress.map((item) => (
               <div key={item.budgetId} className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -1608,7 +1657,7 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
           ) : (
             <p className="text-sm leading-6 text-slate-500">Set a monthly category budget to track progress here.</p>
           )}
-          <BudgetSetup action={upsertBudgetAction} data={data} />
+          <BudgetSetup action={upsertBudgetAction} data={activeData} />
         </CardContent>
       </Card>
     </section>

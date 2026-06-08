@@ -140,5 +140,6 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
     largestRecentExpenses: [],
     budgetCategoryOptions: [],
     budgetProgress: [],
+    clientViews: {},
   };
 }
