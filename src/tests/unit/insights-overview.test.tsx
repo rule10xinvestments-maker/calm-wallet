@@ -308,7 +308,10 @@ describe("insights overview", () => {
     const controlBar = monthButton.closest(".sticky");
 
     expect(controlBar).toHaveClass("sticky", "top-2", "z-40");
-    expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&timeframe=1M&chart=mix&currency=RON");
+    const previousMonthLink = screen.getByLabelText("View 2026-03");
+
+    expect(previousMonthLink).toHaveAttribute("href", "/insights?month=2026-03&timeframe=1M&chart=mix&currency=RON");
+    expect(previousMonthLink).toHaveAttribute("data-scroll-preserve", "true");
     expect(within(controlBar as HTMLElement).getAllByText("1M").length).toBeGreaterThan(0);
     expect(within(controlBar as HTMLElement).getAllByText("RON").length).toBeGreaterThan(0);
     const timeframeLink = screen.getByRole("link", { name: "3M" });
@@ -327,11 +330,16 @@ describe("insights overview", () => {
   });
 
   it("renders month navigation links without changing tracked balance wording", () => {
-    renderInsights(makeInsightsData());
+    renderInsights(makeInsightsData({ currentMonth: "2026-06", nextMonth: "2026-05", selectedTimeframe: "6M", selectedChartMode: "bars", displayCurrency: "RON" }));
 
     expect(screen.getAllByText("April 2026").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("View 2026-03")).toHaveAttribute("href", "/insights?month=2026-03&timeframe=1M&chart=mix&currency=USD");
-    expect(screen.queryByLabelText("View 2026-05")).not.toBeInTheDocument();
+    const previousMonthLink = screen.getByLabelText("View 2026-03");
+    const nextMonthLink = screen.getByLabelText("View 2026-05");
+
+    expect(previousMonthLink).toHaveAttribute("href", "/insights?month=2026-03&timeframe=6M&chart=bars&currency=RON");
+    expect(previousMonthLink).toHaveAttribute("data-scroll-preserve", "true");
+    expect(nextMonthLink).toHaveAttribute("href", "/insights?month=2026-05&timeframe=6M&chart=bars&currency=RON");
+    expect(nextMonthLink).toHaveAttribute("data-scroll-preserve", "true");
     expect(screen.getByText("Tracked balance")).toBeInTheDocument();
   });
 

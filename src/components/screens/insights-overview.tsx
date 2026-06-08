@@ -265,7 +265,9 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
           <Link
             aria-label={`View ${data.previousMonth}`}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            data-scroll-preserve="true"
             href={buildInsightsHref(data, { month: data.previousMonth })}
+            scroll={false}
           >
             <ChevronLeft aria-hidden="true" className="h-4 w-4" />
           </Link>
@@ -283,7 +285,9 @@ function InsightsControlBar({ data }: { data: InsightsData }) {
             <Link
               aria-label={`View ${data.nextMonth}`}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              data-scroll-preserve="true"
               href={buildInsightsHref(data, { month: data.nextMonth })}
+              scroll={false}
             >
               <ChevronRight aria-hidden="true" className="h-4 w-4" />
             </Link>
