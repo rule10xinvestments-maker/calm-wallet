@@ -53,12 +53,18 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const {
+    data: { session },
+  } = user
+    ? { data: { session: null } }
+    : await supabase.auth.getSession();
+  const authUser = user ?? session?.user ?? null;
 
-  if (isProtectedPath && !user) {
+  if (isProtectedPath && !authUser) {
     return redirectToSignIn;
   }
 
-  if (isPublicPath && user) {
+  if (isPublicPath && authUser) {
     return NextResponse.redirect(new URL("/assistant", request.url));
   }
 

@@ -14,16 +14,27 @@ export const getAuthSession = cache(async (): Promise<AuthSessionResult> => {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) {
+  if (!userError && user) {
     return {
       session: null,
-      user: null,
+      user,
+    };
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session?.user) {
+    return {
+      session,
+      user: session.user,
     };
   }
 
   return {
     session: null,
-    user: user ?? null,
+    user: null,
   };
 });
 
