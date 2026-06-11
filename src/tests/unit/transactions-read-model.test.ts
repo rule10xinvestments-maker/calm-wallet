@@ -210,6 +210,9 @@ describe("transactions read model", () => {
     expect(data.displayCurrency).toBe("RON");
     expect(data.availableDisplayCurrencies).toEqual(["EUR", "RON"]);
     expect(data.monthlyIncomeDisplayMinor).toBe(2500);
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(2500);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(10000);
+    expect(data.selectedPeriodTransactionCount).toBe(2);
     expect(data.trackedBalanceDisplayMinor).toBe(-7500);
     expect(data.hasConvertedCurrencies).toBe(true);
     expect(data.convertedCurrencyBreakdowns.find((item) => item.currency === "EUR")).toMatchObject({
@@ -268,6 +271,8 @@ describe("transactions read model", () => {
     expect(data.availableDisplayCurrencies).toEqual(["EUR", "RON"]);
     expect(data.monthlyIncomeDisplayMinor).toBe(5000);
     expect(data.monthlyExpenseDisplayMinor).toBe(2000);
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(5000);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(2000);
     expect(data.trackedBalanceDisplayMinor).toBe(3000);
     expect(data.categoryBreakdown[0]?.amountMinor).toBe(2000);
     expect(data.categoryBreakdown[0]?.amountDisplay).toBe("≈ €20");
@@ -321,6 +326,8 @@ describe("transactions read model", () => {
     expect(data.availableDisplayCurrencies).toEqual(["EUR", "RON"]);
     expect(data.monthlyIncomeDisplayMinor).toBe(25000);
     expect(data.monthlyExpenseDisplayMinor).toBe(10000);
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(25000);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(10000);
     expect(data.trackedBalanceDisplayMinor).toBe(15000);
     expect(data.categoryBreakdown[0]?.amountMinor).toBe(10000);
     expect(data.categoryBreakdown[0]?.amountDisplay).toBe("RON\u00a0100");
@@ -433,6 +440,9 @@ describe("transactions read model", () => {
     expect(data.currentMonthTransactionCount).toBe(1);
     expect(data.monthlyIncomeDisplayMinor).toBe(0);
     expect(data.monthlyExpenseDisplayMinor).toBe(4200);
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(0);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(4200);
+    expect(data.selectedPeriodTransactionCount).toBe(1);
     expect(data.trackedBalanceDisplayMinor).toBe(4800);
     expect(data.categoryBreakdown[0]).toMatchObject({ label: "Groceries", amountMinor: 4200 });
     expect(aprilExpense.occurredAt).toBe("2026-04-10T00:00:00.000Z");
@@ -462,6 +472,9 @@ describe("transactions read model", () => {
     expect(data.selectedChartMode).toBe("bars");
     expect(data.timeframeStartMonth).toBe("2026-02");
     expect(data.timeframeEndMonth).toBe("2026-04");
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(9000);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(5000);
+    expect(data.selectedPeriodTransactionCount).toBe(3);
     expect(data.timeframeExpenseDisplayMinor).toBe(5000);
     expect(data.timeframeTransactionCount).toBe(2);
     expect(data.timeframeMonths.map((month) => [month.month, month.expenseMinor, month.cumulativeExpenseMinor])).toEqual([
@@ -648,6 +661,9 @@ describe("transactions read model", () => {
 
     expect(data.timeframeStartMonth).toBe("2026-01");
     expect(data.timeframeEndMonth).toBe("2026-04");
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(9000);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(4000);
+    expect(data.selectedPeriodTransactionCount).toBe(4);
     expect(data.timeframeExpenseDisplayMinor).toBe(4000);
     expect(data.timeframeCategoryBreakdown).toEqual([
       expect.objectContaining({ label: "Groceries", amountMinor: 3000, transactionCount: 2 }),
@@ -672,6 +688,97 @@ describe("transactions read model", () => {
     expect(data.latestActivityMonthLabel).toBe("April 2026");
     expect(data.hasHistoricalActivity).toBe(true);
     expect(data.isSelectedMonthCurrent).toBe(true);
+  });
+
+  it("keeps an empty selected month period at zero while preserving lifetime tracked balance", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "may-income",
+          transactionType: "income",
+          amountMinor: 481470,
+          currency: "RON",
+          occurredAt: "2026-05-10T00:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "may-spend",
+          transactionType: "expense",
+          amountMinor: 816630,
+          currency: "RON",
+          occurredAt: "2026-05-11T00:00:00.000Z",
+        }),
+      ],
+      {},
+      "RON",
+      new Date("2026-06-04T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      "RON",
+      "2026-06",
+    );
+
+    expect(data.selectedMonth).toBe("2026-06");
+    expect(data.currentMonthTransactionCount).toBe(0);
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(0);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(0);
+    expect(data.selectedPeriodTransactionCount).toBe(0);
+    expect(data.selectedPeriodConvertedCurrencyBreakdowns).toEqual([]);
+    expect(data.categoryBreakdown).toEqual([]);
+    expect(data.largestRecentExpenses).toEqual([]);
+    expect(data.trackedBalanceDisplayMinor).toBe(-335160);
+  });
+
+  it("keeps selected-period spending details non-empty when period expenses exist", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "may-income",
+          transactionType: "income",
+          amountMinor: 481470,
+          currency: "RON",
+          occurredAt: "2026-05-10T00:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "may-spend",
+          transactionType: "expense",
+          amountMinor: 816630,
+          currency: "RON",
+          categoryId: null,
+          itemName: "May card spend",
+          occurredAt: "2026-05-11T00:00:00.000Z",
+        }),
+      ],
+      {},
+      "RON",
+      new Date("2026-06-04T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      "RON",
+      "2026-05",
+    );
+
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(816630);
+    expect(data.categoryBreakdown).toEqual([
+      expect.objectContaining({
+        key: "needs-category",
+        label: "Needs category",
+        amountMinor: 816630,
+        transactionCount: 1,
+      }),
+    ]);
+    expect(data.categoryBreakdown[0]?.recentEntries[0]).toMatchObject({
+      title: "May card spend",
+      amountDisplay: "RON\u00a08,166.30",
+    });
+    expect(data.largestRecentExpenses).toEqual([
+      expect.objectContaining({
+        title: "May card spend",
+        amountDisplay: "RON\u00a08,166.30",
+        categoryLabel: "Uncategorized",
+      }),
+    ]);
   });
 
   it("builds month picker years with tracked activity status", () => {

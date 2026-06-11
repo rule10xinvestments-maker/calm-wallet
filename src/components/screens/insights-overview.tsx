@@ -998,7 +998,7 @@ function TimeframeCategoryBreakdown({
 }
 
 function getMonthlySnapshotConversionNote(data: InsightsData) {
-  const converted = data.convertedCurrencyBreakdowns.filter((breakdown) => breakdown.currency !== data.displayCurrency);
+  const converted = data.selectedPeriodConvertedCurrencyBreakdowns.filter((breakdown) => breakdown.currency !== data.displayCurrency);
   const parts: string[] = [];
 
   converted.forEach((breakdown) => {
@@ -1022,8 +1022,23 @@ function getMonthlySnapshotConversionNote(data: InsightsData) {
   return null;
 }
 
+function getSnapshotHero(data: InsightsData) {
+  if (data.selectedTimeframe === "All") {
+    return {
+      label: "Tracked balance",
+      amountMinor: data.trackedBalanceDisplayMinor,
+    };
+  }
+
+  return {
+    label: data.selectedTimeframe === "1M" ? "Monthly net" : "Period net",
+    amountMinor: data.selectedPeriodIncomeDisplayMinor - data.selectedPeriodExpenseDisplayMinor,
+  };
+}
+
 function MonthlySnapshotCard({ data }: { data: InsightsData }) {
   const conversionNote = getMonthlySnapshotConversionNote(data);
+  const hero = getSnapshotHero(data);
 
   return (
     <Card className="rounded-lg" data-testid="monthly-snapshot-card">
@@ -1038,31 +1053,31 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
         <div className="space-y-1">
-          <p className="text-xs font-medium text-slate-500">Tracked balance</p>
+          <p className="text-xs font-medium text-slate-500">{hero.label}</p>
           <p className="whitespace-nowrap text-2xl font-semibold text-slate-900">
-            {getApproxPrefix(data, data.trackedBalanceDisplayMinor)}
-            {formatMoney(data.trackedBalanceDisplayMinor, data.displayCurrency)}
+            {getApproxPrefix(data, hero.amountMinor)}
+            {formatMoney(hero.amountMinor, data.displayCurrency)}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-emerald-50 px-3 py-2">
             <p className="text-[11px] font-medium text-emerald-700">Income</p>
             <p className="whitespace-nowrap text-sm font-semibold text-emerald-800">
-              {getApproxPrefix(data, data.monthlyIncomeDisplayMinor)}
-              {formatMoney(data.monthlyIncomeDisplayMinor, data.displayCurrency)}
+              {getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}
+              {formatMoney(data.selectedPeriodIncomeDisplayMinor, data.displayCurrency)}
             </p>
           </div>
           <div className="rounded-lg bg-rose-50 px-3 py-2">
             <p className="text-[11px] font-medium text-rose-700">Spending</p>
             <p className="whitespace-nowrap text-sm font-semibold text-rose-800">
-              {getApproxPrefix(data, data.monthlyExpenseDisplayMinor)}
-              {formatMoney(data.monthlyExpenseDisplayMinor, data.displayCurrency)}
+              {getApproxPrefix(data, data.selectedPeriodExpenseDisplayMinor)}
+              {formatMoney(data.selectedPeriodExpenseDisplayMinor, data.displayCurrency)}
             </p>
           </div>
         </div>
         <div className="text-xs leading-5 text-slate-500">
           <p>
-            {data.trackedTransactionCount} tracked {data.trackedTransactionCount === 1 ? "transaction" : "transactions"}
+            {data.selectedPeriodTransactionCount} tracked {data.selectedPeriodTransactionCount === 1 ? "transaction" : "transactions"}
           </p>
           {conversionNote ? <p>{conversionNote}</p> : null}
         </div>
@@ -1600,8 +1615,10 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
 
       <Card className="rounded-lg">
         <CardHeader>
-          <CardTitle className="text-lg">Largest recent expenses</CardTitle>
-          <CardDescription>Top tracked expenses from your recent transaction history.</CardDescription>
+          <CardTitle className="text-lg">
+            {activeData.selectedTimeframe === "1M" ? "Largest expenses this month" : "Largest expenses in period"}
+          </CardTitle>
+          <CardDescription>Top tracked expenses from {activeData.selectedTimeframe === "1M" ? activeData.monthLabel : activeData.timeframeLabel}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {activeData.largestRecentExpenses.length ? (
@@ -1617,7 +1634,9 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
               </div>
             ))
           ) : (
-            <p className="text-sm leading-6 text-slate-500">No tracked expenses yet.</p>
+            <p className="text-sm leading-6 text-slate-500">
+              No tracked expenses in {activeData.selectedTimeframe === "1M" ? activeData.monthLabel : "this period"} yet.
+            </p>
           )}
         </CardContent>
       </Card>

@@ -70,6 +70,26 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
     trackedBalanceDisplayMinor: 3000,
     monthlyIncomeDisplayMinor: 5000,
     monthlyExpenseDisplayMinor: 2000,
+    selectedPeriodIncomeDisplayMinor: 5000,
+    selectedPeriodExpenseDisplayMinor: 2000,
+    selectedPeriodTransactionCount: 3,
+    selectedPeriodConvertedCurrencyBreakdowns: [
+      {
+        currency: "USD",
+        incomeMinor: 5000,
+        expenseMinor: 2000,
+        netMinor: 3000,
+        incomeDisplay: "$50",
+        expenseDisplay: "$20",
+        netDisplay: "$30",
+        incomeDisplayMinor: 5000,
+        expenseDisplayMinor: 2000,
+        netDisplayMinor: 3000,
+        convertedIncomeDisplay: "$50",
+        convertedExpenseDisplay: "$20",
+        convertedNetDisplay: "$30",
+      },
+    ],
     originalCurrencyBreakdowns: [
       {
         currency: "USD",
@@ -326,11 +346,58 @@ describe("insights overview", () => {
 
     expect(screen.getByText("Monthly clarity")).toBeInTheDocument();
     expect(within(snapshot).getByText("Monthly snapshot")).toBeInTheDocument();
-    expect(within(snapshot).getByText("Tracked balance")).toBeInTheDocument();
+    expect(within(snapshot).getByText("Monthly net")).toBeInTheDocument();
     expect(within(snapshot).getByText("$30")).toBeInTheDocument();
     expect(within(snapshot).getByText("Income")).toBeInTheDocument();
     expect(within(snapshot).getByText("Spending")).toBeInTheDocument();
     expect(within(snapshot).getByText("3 tracked transactions")).toBeInTheDocument();
+    expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
+  });
+
+  it("shows zero monthly net for an empty selected month instead of the cumulative tracked balance", () => {
+    renderInsights(
+      makeInsightsData({
+        displayCurrency: "RON",
+        trackedBalanceDisplayMinor: -335160,
+        selectedPeriodIncomeDisplayMinor: 0,
+        selectedPeriodExpenseDisplayMinor: 0,
+        selectedPeriodTransactionCount: 0,
+        selectedPeriodConvertedCurrencyBreakdowns: [],
+      }),
+    );
+
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+
+    expect(within(snapshot).getByText("Monthly net")).toBeInTheDocument();
+    expect(within(snapshot).getAllByText(/RON\s+0/).length).toBeGreaterThan(0);
+    expect(within(snapshot).queryByText("-RON\u00a03,351.60")).not.toBeInTheDocument();
+    expect(within(snapshot).getByText("0 tracked transactions")).toBeInTheDocument();
+    expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
+  });
+
+  it("uses period net wording for multi-month snapshots", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedTimeframe: "3M",
+        selectedPeriodIncomeDisplayMinor: 9000,
+        selectedPeriodExpenseDisplayMinor: 12000,
+        selectedPeriodTransactionCount: 5,
+      }),
+    );
+
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+
+    expect(within(snapshot).getByText("Period net")).toBeInTheDocument();
+    expect(within(snapshot).getByText("-$30")).toBeInTheDocument();
+    expect(within(snapshot).getByText("5 tracked transactions")).toBeInTheDocument();
+  });
+
+  it("keeps tracked balance wording for the All snapshot", () => {
+    renderInsights(makeInsightsData({ selectedTimeframe: "All", trackedBalanceDisplayMinor: 12500 }));
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+
+    expect(within(snapshot).getByText("Tracked balance")).toBeInTheDocument();
+    expect(within(snapshot).getByText("$125")).toBeInTheDocument();
     expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
   });
 
@@ -364,6 +431,8 @@ describe("insights overview", () => {
       displayCurrency: "EUR",
       availableDisplayCurrencies: ["EUR", "RON", "USD"],
       trackedBalanceDisplayMinor: 1234,
+      selectedPeriodIncomeDisplayMinor: 3234,
+      selectedPeriodExpenseDisplayMinor: 2000,
     });
 
     renderInsights(withClientViews(initialData, [initialData, eurView]));
@@ -413,7 +482,7 @@ describe("insights overview", () => {
     vi.runOnlyPendingTimers();
   });
 
-  it("renders month navigation links without changing tracked balance wording", () => {
+  it("renders month navigation links without changing period snapshot wording", () => {
     renderInsights(makeInsightsData({ currentMonth: "2026-06", nextMonth: "2026-05", selectedTimeframe: "6M", selectedChartMode: "bars", displayCurrency: "RON" }));
 
     expect(screen.getAllByText("April 2026").length).toBeGreaterThan(0);
@@ -424,7 +493,7 @@ describe("insights overview", () => {
     expect(previousMonthLink).toHaveAttribute("data-scroll-preserve", "true");
     expect(nextMonthLink).toHaveAttribute("data-href", "/insights?month=2026-05&timeframe=6M&chart=bars&currency=RON");
     expect(nextMonthLink).toHaveAttribute("data-scroll-preserve", "true");
-    expect(screen.getByText("Tracked balance")).toBeInTheDocument();
+    expect(screen.getByText("Period net")).toBeInTheDocument();
   });
 
   it("renders timeframe presets and preserves currency in timeframe URLs", () => {
@@ -1254,7 +1323,7 @@ describe("insights overview", () => {
     expect(screen.queryByText("$12 - 100%")).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Groceries chart color and category icon" })).not.toBeInTheDocument();
     expect(screen.queryByRole("meter", { name: "Groceries spending share 100%" })).not.toBeInTheDocument();
-    expect(screen.getByText("Largest recent expenses")).toBeInTheDocument();
+    expect(screen.getByText("Largest expenses this month")).toBeInTheDocument();
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
@@ -1476,7 +1545,7 @@ describe("insights overview", () => {
     expect(screen.getByText("No monthly spending categories yet.")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Expenses category share chart" })).not.toBeInTheDocument();
     expect(screen.queryByRole("meter")).not.toBeInTheDocument();
-    expect(screen.getByText("No tracked expenses yet.")).toBeInTheDocument();
+    expect(screen.getByText("No tracked expenses in April 2026 yet.")).toBeInTheDocument();
   });
 
   it("does not duplicate a needs category card above spending mix", () => {
@@ -1510,6 +1579,8 @@ describe("insights overview", () => {
         trackedBalanceDisplayMinor: -7500,
         monthlyIncomeDisplayMinor: 2500,
         monthlyExpenseDisplayMinor: 10000,
+        selectedPeriodIncomeDisplayMinor: 2500,
+        selectedPeriodExpenseDisplayMinor: 10000,
         hasConvertedCurrencies: true,
         originalCurrencyBreakdowns: [
           {
@@ -1583,6 +1654,38 @@ describe("insights overview", () => {
             convertedNetDisplay: "RON\u00a025",
           },
         ],
+        selectedPeriodConvertedCurrencyBreakdowns: [
+          {
+            currency: "RON",
+            incomeMinor: 0,
+            expenseMinor: 10000,
+            netMinor: -10000,
+            incomeDisplay: "RON\u00a00",
+            expenseDisplay: "RON\u00a0100",
+            netDisplay: "-RON\u00a0100",
+            incomeDisplayMinor: 0,
+            expenseDisplayMinor: 10000,
+            netDisplayMinor: -10000,
+            convertedIncomeDisplay: "RON\u00a00",
+            convertedExpenseDisplay: "RON\u00a0100",
+            convertedNetDisplay: "-RON\u00a0100",
+          },
+          {
+            currency: "EUR",
+            incomeMinor: 500,
+            expenseMinor: 0,
+            netMinor: 500,
+            incomeDisplay: "€5",
+            expenseDisplay: "€0",
+            netDisplay: "€5",
+            incomeDisplayMinor: 2500,
+            expenseDisplayMinor: 0,
+            netDisplayMinor: 2500,
+            convertedIncomeDisplay: "RON\u00a025",
+            convertedExpenseDisplay: "RON\u00a00",
+            convertedNetDisplay: "RON\u00a025",
+          },
+        ],
       }),
     );
 
@@ -1624,7 +1727,7 @@ describe("insights overview", () => {
   });
 
   it("hides .00 for whole-number insight money and keeps negative values on one line", () => {
-    renderInsights(makeInsightsData({ trackedBalanceDisplayMinor: -3000 }));
+    renderInsights(makeInsightsData({ selectedPeriodIncomeDisplayMinor: 0, selectedPeriodExpenseDisplayMinor: 3000 }));
 
     const value = screen.getByText("-$30");
     expect(value).toBeInTheDocument();

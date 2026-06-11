@@ -49,6 +49,10 @@ export type InsightsData = {
   trackedBalanceDisplayMinor: number;
   monthlyIncomeDisplayMinor: number;
   monthlyExpenseDisplayMinor: number;
+  selectedPeriodIncomeDisplayMinor: number;
+  selectedPeriodExpenseDisplayMinor: number;
+  selectedPeriodTransactionCount: number;
+  selectedPeriodConvertedCurrencyBreakdowns: ConvertedCurrencyBreakdown[];
   originalCurrencyBreakdowns: CurrencyBreakdown[];
   sourceCurrencyBreakdown: CurrencyBreakdown[];
   convertedCurrencyBreakdowns: ConvertedCurrencyBreakdown[];
@@ -1130,6 +1134,8 @@ export function buildInsightsData(
     const occurredAt = new Date(transaction.occurredAt);
     return occurredAt >= timeframeStartMonthDate && occurredAt < timeframeEnd;
   });
+  const selectedPeriodTransactions =
+    selectedTimeframe === "All" ? activeTransactions : selectedTimeframe === "1M" ? currentMonthTransactions : timeframeTransactions;
 
   const originalCurrencyBreakdowns = sumBreakdowns(activeTransactions);
   const convertedCurrencyBreakdowns = buildConvertedBreakdowns({
@@ -1139,6 +1145,11 @@ export function buildInsightsData(
   });
   const convertedCurrentMonthBreakdowns = buildConvertedBreakdowns({
     originalCurrencyBreakdowns: sumBreakdowns(currentMonthTransactions),
+    displayCurrency,
+    rateLookup,
+  });
+  const selectedPeriodConvertedCurrencyBreakdowns = buildConvertedBreakdowns({
+    originalCurrencyBreakdowns: sumBreakdowns(selectedPeriodTransactions),
     displayCurrency,
     rateLookup,
   });
@@ -1156,6 +1167,10 @@ export function buildInsightsData(
     convertedCurrentMonthBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0) || 0;
   const trackedBalanceMinor =
     convertedCurrencyBreakdowns.reduce((sum, breakdown) => sum + (breakdown.netDisplayMinor ?? 0), 0) || 0;
+  const selectedPeriodIncomeDisplayMinor =
+    selectedPeriodConvertedCurrencyBreakdowns.reduce((sum, breakdown) => sum + (breakdown.incomeDisplayMinor ?? 0), 0) || 0;
+  const selectedPeriodExpenseDisplayMinor =
+    selectedPeriodConvertedCurrencyBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0) || 0;
 
   const categoryTotals = new Map<
     string,
@@ -1168,7 +1183,7 @@ export function buildInsightsData(
     }
   >();
 
-  currentMonthTransactions
+  selectedPeriodTransactions
     .filter((transaction) => transaction.transactionType === "expense")
     .forEach((transaction) => {
       const category = getInsightsCategoryMeta(transaction, categoryLabels);
@@ -1217,7 +1232,7 @@ export function buildInsightsData(
     }));
 
   const incomeCategoryBreakdown = buildInsightsCategoryBreakdown({
-    transactions: currentMonthTransactions,
+    transactions: selectedPeriodTransactions,
     transactionType: "income",
     categoryLabels,
     displayCurrency,
@@ -1258,7 +1273,7 @@ export function buildInsightsData(
     (transaction) => transaction.transactionType === "expense",
   ).length;
 
-  const largestRecentExpenses = activeTransactions
+  const largestRecentExpenses = selectedPeriodTransactions
     .filter((transaction) => transaction.transactionType === "expense")
     .sort((a, b) => b.amountMinor - a.amountMinor)
     .slice(0, 3)
@@ -1321,6 +1336,10 @@ export function buildInsightsData(
     trackedBalanceDisplayMinor: trackedBalanceMinor,
     monthlyIncomeDisplayMinor: incomeMinor,
     monthlyExpenseDisplayMinor: expenseMinor,
+    selectedPeriodIncomeDisplayMinor,
+    selectedPeriodExpenseDisplayMinor,
+    selectedPeriodTransactionCount: selectedPeriodTransactions.length,
+    selectedPeriodConvertedCurrencyBreakdowns,
     originalCurrencyBreakdowns,
     sourceCurrencyBreakdown: originalCurrencyBreakdowns,
     convertedCurrencyBreakdowns,
