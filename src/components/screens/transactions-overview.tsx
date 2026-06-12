@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -27,6 +27,8 @@ const tabs: Array<{ value: TransactionsView; label: string }> = [
   { value: "income", label: "Income" },
   { value: "needs-review", label: "Review" },
 ];
+
+type ActivityFilterView = TransactionsView | "deleted";
 
 const importTypeLabels: Record<StagedImportListItem["importType"], string> = {
   receipt_image: "Receipt image",
@@ -57,7 +59,7 @@ function filterTransactions(items: TransactionListItem[], query: string) {
   return items.filter((item) => getSearchableTransactionText(item).includes(normalizedQuery));
 }
 
-function filterTransactionsForActiveView(items: TransactionListItem[], view: TransactionsView) {
+function filterTransactionsForActiveView(items: TransactionListItem[], view: ActivityFilterView) {
   if (view === "expenses") {
     return items.filter((item) => item.amountTone === "expense");
   }
@@ -455,7 +457,7 @@ export function TransactionsOverview({
   initialReviewActionState,
   loadError = false,
 }: TransactionsOverviewProps) {
-  const [activeView, setActiveView] = useState(currentView);
+  const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
@@ -469,10 +471,19 @@ export function TransactionsOverview({
   }, [recentlyDeletedItems]);
 
   const filteredItems = useMemo(
-    () => filterTransactions(filterTransactionsForActiveView(activeItems, activeView), searchQuery),
-    [activeItems, activeView, searchQuery],
+    () =>
+      activeView === "deleted"
+        ? filterTransactions(deletedItems, searchQuery)
+        : filterTransactions(filterTransactionsForActiveView(activeItems, activeView), searchQuery),
+    [activeItems, activeView, deletedItems, searchQuery],
   );
   const hasSearchQuery = searchQuery.trim().length > 0;
+  const isDeletedView = activeView === "deleted";
+  const hasDeletedItems = deletedItems.length > 0;
+  const cardTitle = isDeletedView ? "Recently deleted" : "Recent money movement";
+  const cardSubtitle = isDeletedView
+    ? "Restore entries deleted in the last 30 days."
+    : "Tap an entry to edit, add a note, or review details.";
 
   function handleItemDeleted(item: TransactionListItem) {
     setActiveItems((current) => current.filter((activeItem) => activeItem.id !== item.id));
@@ -482,10 +493,19 @@ export function TransactionsOverview({
   function handleItemRestored(item: TransactionListItem) {
     setDeletedItems((current) => current.filter((deletedItem) => deletedItem.id !== item.id));
     setActiveItems((current) => [item, ...current.filter((activeItem) => activeItem.id !== item.id)]);
+    setActiveView("all");
   }
 
   function handlePermanentDelete(itemId: string) {
-    setDeletedItems((current) => current.filter((item) => item.id !== itemId));
+    setDeletedItems((current) => {
+      const next = current.filter((item) => item.id !== itemId);
+
+      if (!next.length) {
+        setActiveView("all");
+      }
+
+      return next;
+    });
   }
 
   return (
@@ -514,12 +534,28 @@ export function TransactionsOverview({
             {tab.label}
           </button>
         ))}
+        {hasDeletedItems ? (
+          <button
+            aria-label="Recently deleted"
+            className={`flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+              activeView === "deleted"
+                ? "bg-sky-600 text-white shadow-sm"
+                : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveView("deleted")}
+            title="Recently deleted"
+            type="button"
+          >
+            <Trash2 aria-hidden="true" size={14} strokeWidth={2.2} />
+            <span>Deleted</span>
+          </button>
+        ) : null}
       </div>
       <Card>
         <CardHeader className="space-y-0 p-4 pb-2 sm:space-y-1.5 sm:p-6 sm:pb-0">
-          <CardTitle className="text-lg leading-6 sm:text-xl sm:leading-none">Recent money movement</CardTitle>
+          <CardTitle className="text-lg leading-6 sm:text-xl sm:leading-none">{cardTitle}</CardTitle>
           <CardDescription className="text-xs leading-5 sm:text-sm">
-            Tap an entry to edit, add a note, or review details.
+            {cardSubtitle}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
@@ -548,50 +584,45 @@ export function TransactionsOverview({
             </button>
           </form>
           {filteredItems.length ? (
-            filteredItems.map((item) => (
-              <TransactionItemCard
-                key={item.id}
-                categories={categories}
-                deleteAction={deleteAction}
-                initialState={initialActionState}
-                item={item}
-                onDeleted={handleItemDeleted}
-                recategorizeAction={recategorizeAction}
-                updateAction={updateAction}
-              />
-            ))
+            isDeletedView ? (
+              filteredItems.map((item) => (
+                <RecentlyDeletedEntry
+                  key={item.id}
+                  initialActionState={initialActionState}
+                  item={item}
+                  onPermanentDelete={handlePermanentDelete}
+                  onRestore={handleItemRestored}
+                  permanentlyDeleteAction={permanentlyDeleteAction}
+                  restoreAction={restoreAction}
+                />
+              ))
+            ) : (
+              filteredItems.map((item) => (
+                <TransactionItemCard
+                  key={item.id}
+                  categories={categories}
+                  deleteAction={deleteAction}
+                  initialState={initialActionState}
+                  item={item}
+                  onDeleted={handleItemDeleted}
+                  recategorizeAction={recategorizeAction}
+                  updateAction={updateAction}
+                />
+              ))
+            )
           ) : (
             <div className="rounded-2xl bg-slate-50 px-4 py-5 text-sm text-slate-500 sm:py-6">
-              {hasSearchQuery
-                ? "No tracked transactions match that search."
-                : "No transactions found for this signed-in account."}
+              {isDeletedView
+                ? hasSearchQuery
+                  ? "No deleted entries match that search."
+                  : "No recently deleted entries."
+                : hasSearchQuery
+                  ? "No tracked transactions match that search."
+                  : "No transactions found for this signed-in account."}
             </div>
           )}
         </CardContent>
       </Card>
-      {deletedItems.length ? (
-        <Card>
-          <CardHeader className="space-y-1 p-4 pb-2 sm:p-6 sm:pb-0">
-            <CardTitle className="text-base leading-6 sm:text-lg">Recently deleted</CardTitle>
-            <CardDescription className="text-xs leading-5 sm:text-sm">
-              Restore entries deleted in the last 30 days.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-2 sm:p-6 sm:pt-0">
-            {deletedItems.map((item) => (
-              <RecentlyDeletedEntry
-                key={item.id}
-                initialActionState={initialActionState}
-                item={item}
-                onPermanentDelete={handlePermanentDelete}
-                onRestore={handleItemRestored}
-                permanentlyDeleteAction={permanentlyDeleteAction}
-                restoreAction={restoreAction}
-              />
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
       {stagedImports.length ? (
         <Card>
           <CardHeader>

@@ -139,14 +139,20 @@ describe("transactions overview", () => {
     render(<TransactionsOverview {...makeOverviewProps()} />);
 
     expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Recently deleted" })).not.toBeInTheDocument();
   });
 
-  it("shows recoverable deleted entries and restores them into the normal list", async () => {
+  it("shows recoverable deleted entries through the Deleted filter and restores them into the normal list", async () => {
     const restoreAction = vi.fn(async () => ({ status: "success" as const, message: "Transaction restored." }));
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
-        items={[]}
+        items={[
+          makeTransactionItem({
+            id: "active-1",
+            title: "Active market",
+          }),
+        ]}
         recentlyDeletedItems={[
           makeTransactionItem({
             id: "deleted-1",
@@ -160,18 +166,27 @@ describe("transactions overview", () => {
       />,
     );
 
+    expect(screen.getByRole("button", { name: "Recently deleted" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recent money movement" })).toBeInTheDocument();
+    expect(screen.getByText("Active market")).toBeInTheDocument();
+    expect(screen.queryByText("Old market")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
+
     expect(screen.getByRole("heading", { name: "Recently deleted" })).toBeInTheDocument();
     expect(screen.getByText("Restore entries deleted in the last 30 days.")).toBeInTheDocument();
     expect(screen.getByText("Old market")).toBeInTheDocument();
+    expect(screen.queryByText("Active market")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
 
     await waitFor(() => expect(restoreAction).toHaveBeenCalledOnce());
     await waitFor(() => expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument());
     expect(screen.getByText("Old market")).toBeInTheDocument();
+    expect(screen.getByText("Active market")).toBeInTheDocument();
   });
 
-  it("permanently removes recoverable deleted entries from the Activity recovery section", async () => {
+  it("permanently removes recoverable deleted entries from the Deleted filter", async () => {
     const permanentlyDeleteAction = vi.fn(async () => ({
       status: "success" as const,
       message: "Transaction permanently deleted.",
@@ -191,11 +206,14 @@ describe("transactions overview", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
 
     await waitFor(() => expect(permanentlyDeleteAction).toHaveBeenCalledOnce());
     await waitFor(() => expect(screen.queryByText("Old market")).not.toBeInTheDocument());
     expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Recently deleted" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recent money movement" })).toBeInTheDocument();
   });
 
   it("switches Activity filters locally without shrinking the source list", () => {
