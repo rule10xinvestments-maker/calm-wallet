@@ -158,8 +158,8 @@ describe("transaction item card", () => {
     const actionButtons = within(screen.getByRole("group", { name: "Transaction actions" })).getAllByRole("button");
     expect(actionButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
       "Change category, currently Dining",
+      "Add note",
       "Edit details",
-      "Save category",
       "Delete transaction",
     ]);
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
@@ -184,12 +184,13 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
 
-    expect(screen.getByRole("button", { name: "Save category" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add note" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save category" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark tracked" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
   });
 
-  it("submits category save through the review-clearing recategorize action", async () => {
+  it("autosaves category changes through the review-clearing recategorize action", async () => {
     const recategorizeAction = vi.fn(async () => ({
       status: "success" as const,
       message: "Category saved.",
@@ -199,7 +200,6 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "cat-travel" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save category" }));
 
     await waitFor(() => expect(recategorizeAction).toHaveBeenCalledOnce());
     const [, formData] = recategorizeAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
@@ -210,6 +210,16 @@ describe("transaction item card", () => {
     expect(screen.getByText("Travel · May 5")).toBeInTheDocument();
     expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
 
+  });
+
+  it("opens the note editor from the compact note action", () => {
+    renderCard();
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+
+    expect(screen.getByLabelText("Note")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Add note" })).toHaveLength(1);
   });
 
   it("submits edited details once, collapses details, and reflects saved tracked fields", async () => {
@@ -224,6 +234,11 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Amount")).toHaveValue("34.00");
     expect(screen.getByLabelText("Currency")).toHaveValue("USD");
     expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
+    {
+      const addNoteButtons = screen.getAllByRole("button", { name: "Add note" });
+      fireEvent.click(addNoteButtons[addNoteButtons.length - 1]!);
+    }
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "45.67" } });
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "EUR" } });
     fireEvent.change(screen.getByLabelText("Item name"), { target: { value: "ketchup" } });
@@ -321,6 +336,7 @@ describe("transaction item card", () => {
 
     expect(screen.getByLabelText("Item name")).toHaveValue("mustar");
     expect(screen.getByLabelText("Merchant")).toHaveValue("");
+    expect(screen.getByLabelText("Note")).toHaveValue("for sandwiches");
 
     fireEvent.change(screen.getByLabelText("Merchant"), { target: { value: "CCC" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
@@ -435,6 +451,10 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    {
+      const addNoteButtons = screen.getAllByRole("button", { name: "Add note" });
+      fireEvent.click(addNoteButtons[addNoteButtons.length - 1]!);
+    }
     fireEvent.change(screen.getByLabelText("Note"), { target: { value: "mobile note" } });
     fireEvent.click(screen.getByRole("radio", { name: label }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));

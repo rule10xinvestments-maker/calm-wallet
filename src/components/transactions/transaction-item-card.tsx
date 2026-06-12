@@ -5,7 +5,6 @@ import { useFormStatus } from "react-dom";
 import {
   AlertCircle,
   Car,
-  Check,
   ChevronDown,
   CircleHelp,
   HeartPulse,
@@ -13,6 +12,7 @@ import {
   ReceiptText,
   ShoppingBag,
   ShoppingBasket,
+  StickyNote,
   Tag,
   Ticket,
   Trash2,
@@ -85,24 +85,6 @@ function PendingSubmitButton({
   return (
     <button className={className} disabled={pending} type="submit">
       {pending ? pendingLabel : children}
-    </button>
-  );
-}
-
-function PendingIconSubmitButton({
-  icon: Icon,
-  label,
-  className,
-}: {
-  icon: LucideIcon;
-  label: string;
-  className: string;
-}) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button aria-label={label} className={className} disabled={pending} type="submit">
-      <Icon aria-hidden="true" size={18} strokeWidth={2.2} />
     </button>
   );
 }
@@ -186,6 +168,7 @@ export function TransactionItemCard({
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(Boolean(item.note));
   const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
@@ -199,6 +182,7 @@ export function TransactionItemCard({
   const pendingRecategorizedItemRef = useRef<TransactionListItem | null>(null);
   const previousRecategorizeItemRef = useRef<TransactionListItem | null>(null);
   const previousItemRef = useRef(item);
+  const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const deleteNotifiedRef = useRef(false);
   const [recategorizeState, recategorizeFormAction] = useActionState(recategorizeAction, initialState);
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
@@ -277,11 +261,18 @@ export function TransactionItemCard({
       setSelectedTransactionType(item.amountTone);
       setSelectedReviewState(getEditableReviewState(item.reviewState));
       setUncertaintyNote(item.uncertaintyReason ?? "");
+      setIsNoteEditorOpen(Boolean(item.note));
       setIsCategoryPickerOpen(false);
       setIsDeleteConfirmOpen(false);
       deleteNotifiedRef.current = false;
     }
   }, [item]);
+
+  useEffect(() => {
+    if (isEditingDetails && isNoteEditorOpen) {
+      noteTextareaRef.current?.focus();
+    }
+  }, [isEditingDetails, isNoteEditorOpen]);
 
   useEffect(() => {
     if (deleteState.status === "success" && !deleteNotifiedRef.current) {
@@ -327,6 +318,12 @@ export function TransactionItemCard({
   function handleCategoryChange(categoryIdValue: string) {
     setSelectedCategoryId(categoryIdValue);
     prepareRecategorizedItem(categoryIdValue, false);
+  }
+
+  function openNoteEditor() {
+    setIsExpanded(true);
+    setIsEditingDetails(true);
+    setIsNoteEditorOpen(true);
   }
 
   function handleRecategorizeSubmit(event: FormEvent<HTMLFormElement>) {
@@ -458,6 +455,14 @@ export function TransactionItemCard({
                 <ChevronDown aria-hidden="true" className="absolute bottom-1 right-1 text-slate-400" size={12} strokeWidth={2.4} />
               </button>
               <button
+                aria-label={displayItem.note ? "Edit note" : "Add note"}
+                className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+                onClick={openNoteEditor}
+                type="button"
+              >
+                <StickyNote aria-hidden="true" size={18} strokeWidth={2.1} />
+              </button>
+              <button
                 aria-label="Edit details"
                 className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
                 onClick={() => setIsEditingDetails((value) => !value)}
@@ -465,11 +470,6 @@ export function TransactionItemCard({
               >
                 <Pencil aria-hidden="true" size={18} strokeWidth={2.1} />
               </button>
-              <PendingIconSubmitButton
-                className="flex min-h-11 items-center justify-center rounded-2xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 disabled:opacity-60"
-                icon={Check}
-                label="Save category"
-              />
               <button
                 aria-label="Delete transaction"
                 className="flex min-h-11 items-center justify-center rounded-2xl border border-rose-200 bg-white text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
@@ -486,7 +486,10 @@ export function TransactionItemCard({
                   className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
                   value={selectedCategoryId}
                   name="categoryId"
-                  onChange={(event) => handleCategoryChange(event.currentTarget.value)}
+                  onChange={(event) => {
+                    handleCategoryChange(event.currentTarget.value);
+                    event.currentTarget.form?.requestSubmit();
+                  }}
                 >
                   <option value="">Uncategorized</option>
                   {categories.map((category) => (
@@ -624,14 +627,28 @@ export function TransactionItemCard({
                   name="merchant"
                 />
               </label>
-              <label className="grid gap-1">
-                <span className="text-xs font-medium text-slate-600">Note</span>
-                <textarea
-                  className="min-h-20 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                  defaultValue={displayItem.note ?? ""}
-                  name="note"
-                />
-              </label>
+              {isNoteEditorOpen || displayItem.note ? (
+                <label className="grid gap-1">
+                  <span className="text-xs font-medium text-slate-600">Note</span>
+                  <textarea
+                    className="min-h-20 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                    defaultValue={displayItem.note ?? ""}
+                    name="note"
+                    ref={noteTextareaRef}
+                  />
+                </label>
+              ) : (
+                <div className="grid gap-1">
+                  <input name="note" type="hidden" value="" />
+                  <button
+                    className="min-h-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+                    onClick={() => setIsNoteEditorOpen(true)}
+                    type="button"
+                  >
+                    Add note
+                  </button>
+                </div>
+              )}
               <label className="grid gap-1">
                 <span className="text-xs font-medium text-slate-600">Occurred date</span>
                 <input
