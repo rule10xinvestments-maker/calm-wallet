@@ -31,6 +31,7 @@ function makeItem(overrides: Partial<TransactionListItem> = {}): TransactionList
     merchant: null,
     note: null,
     occurredAt: "2026-05-05T12:00:00.000Z",
+    deletedAt: null,
     categoryId: "cat-dining",
     reviewState: "needs_attention",
     uncertaintyReason: "Category needs review.",

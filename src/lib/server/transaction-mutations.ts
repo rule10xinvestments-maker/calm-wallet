@@ -151,6 +151,34 @@ export async function executeDeleteTransaction(args: {
   };
 }
 
+export async function executeRestoreTransaction(args: {
+  userId: string;
+  transactionId: string;
+  transactionService: Pick<TransactionService, "restoreTransaction">;
+}): Promise<TransactionMutationState> {
+  await args.transactionService.restoreTransaction(args.userId, args.transactionId, {
+    actorType: "user",
+  });
+
+  return {
+    status: "success",
+    message: "Transaction restored.",
+  };
+}
+
+export async function executePermanentDeleteTransaction(args: {
+  userId: string;
+  transactionId: string;
+  transactionService: Pick<TransactionService, "permanentlyDeleteTransaction">;
+}): Promise<TransactionMutationState> {
+  await args.transactionService.permanentlyDeleteTransaction(args.userId, args.transactionId);
+
+  return {
+    status: "success",
+    message: "Transaction permanently deleted.",
+  };
+}
+
 export async function executeUpdateTransaction(args: {
   userId: string;
   formData: FormData;

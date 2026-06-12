@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,7 +113,10 @@ type TransactionsOverviewProps = {
   recategorizeAction: TransactionActionHandler;
   updateAction: TransactionActionHandler;
   deleteAction: TransactionActionHandler;
+  restoreAction: TransactionActionHandler;
+  permanentlyDeleteAction: TransactionActionHandler;
   initialActionState: TransactionMutationState;
+  recentlyDeletedItems: TransactionListItem[];
   reviewAction: ImportReviewActionHandler;
   initialReviewActionState: ImportCandidateReviewDecisionActionState;
   loadError?: boolean;
@@ -364,8 +367,79 @@ function StagedImportCard({
   );
 }
 
+type RecentlyDeletedEntryProps = {
+  item: TransactionListItem;
+  restoreAction: TransactionActionHandler;
+  permanentlyDeleteAction: TransactionActionHandler;
+  initialActionState: TransactionMutationState;
+  onRestore: (item: TransactionListItem) => void;
+  onPermanentDelete: (itemId: string) => void;
+};
+
+function RecentlyDeletedEntry({
+  item,
+  restoreAction,
+  permanentlyDeleteAction,
+  initialActionState,
+  onRestore,
+  onPermanentDelete,
+}: RecentlyDeletedEntryProps) {
+  const [restoreState, restoreFormAction] = useActionState(restoreAction, initialActionState);
+  const [deleteForeverState, deleteForeverFormAction] = useActionState(permanentlyDeleteAction, initialActionState);
+
+  useEffect(() => {
+    if (restoreState.status === "success") {
+      onRestore({
+        ...item,
+        deletedAt: null,
+      });
+    }
+  }, [item, onRestore, restoreState.status]);
+
+  useEffect(() => {
+    if (deleteForeverState.status === "success") {
+      onPermanentDelete(item.id);
+    }
+  }, [deleteForeverState.status, item.id, onPermanentDelete]);
+
+  return (
+    <div className="rounded-2xl bg-slate-50 px-3 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="break-words text-sm font-medium text-slate-900">{item.title}</p>
+          <p className="text-xs leading-5 text-slate-500">
+            {item.categoryLabel} · {item.subtitle}
+          </p>
+        </div>
+        <p className={`shrink-0 text-sm font-semibold ${item.amountTone === "income" ? "text-emerald-700" : "text-slate-800"}`}>
+          {item.amountDisplay}
+        </p>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <form action={restoreFormAction}>
+          <input name="transactionId" type="hidden" value={item.id} />
+          <button className="min-h-10 w-full rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white" type="submit">
+            Restore
+          </button>
+        </form>
+        <form action={deleteForeverFormAction}>
+          <input name="transactionId" type="hidden" value={item.id} />
+          <button className="min-h-10 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700" type="submit">
+            Delete forever
+          </button>
+        </form>
+      </div>
+      {restoreState.status === "error" && restoreState.message ? <p className="mt-2 text-xs text-rose-600">{restoreState.message}</p> : null}
+      {deleteForeverState.status === "error" && deleteForeverState.message ? (
+        <p className="mt-2 text-xs text-rose-600">{deleteForeverState.message}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function TransactionsOverview({
   items,
+  recentlyDeletedItems,
   stagedImports,
   stagedImportDetails,
   categories,
@@ -374,6 +448,8 @@ export function TransactionsOverview({
   recategorizeAction,
   updateAction,
   deleteAction,
+  restoreAction,
+  permanentlyDeleteAction,
   initialActionState,
   reviewAction,
   initialReviewActionState,
@@ -381,11 +457,36 @@ export function TransactionsOverview({
 }: TransactionsOverviewProps) {
   const [activeView, setActiveView] = useState(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
+  const [activeItems, setActiveItems] = useState(items);
+  const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
+
+  useEffect(() => {
+    setActiveItems(items);
+  }, [items]);
+
+  useEffect(() => {
+    setDeletedItems(recentlyDeletedItems);
+  }, [recentlyDeletedItems]);
+
   const filteredItems = useMemo(
-    () => filterTransactions(filterTransactionsForActiveView(items, activeView), searchQuery),
-    [activeView, items, searchQuery],
+    () => filterTransactions(filterTransactionsForActiveView(activeItems, activeView), searchQuery),
+    [activeItems, activeView, searchQuery],
   );
   const hasSearchQuery = searchQuery.trim().length > 0;
+
+  function handleItemDeleted(item: TransactionListItem) {
+    setActiveItems((current) => current.filter((activeItem) => activeItem.id !== item.id));
+    setDeletedItems((current) => [item, ...current.filter((deletedItem) => deletedItem.id !== item.id)]);
+  }
+
+  function handleItemRestored(item: TransactionListItem) {
+    setDeletedItems((current) => current.filter((deletedItem) => deletedItem.id !== item.id));
+    setActiveItems((current) => [item, ...current.filter((activeItem) => activeItem.id !== item.id)]);
+  }
+
+  function handlePermanentDelete(itemId: string) {
+    setDeletedItems((current) => current.filter((item) => item.id !== itemId));
+  }
 
   return (
     <section className="space-y-4">
@@ -454,6 +555,7 @@ export function TransactionsOverview({
                 deleteAction={deleteAction}
                 initialState={initialActionState}
                 item={item}
+                onDeleted={handleItemDeleted}
                 recategorizeAction={recategorizeAction}
                 updateAction={updateAction}
               />
@@ -467,6 +569,29 @@ export function TransactionsOverview({
           )}
         </CardContent>
       </Card>
+      {deletedItems.length ? (
+        <Card>
+          <CardHeader className="space-y-1 p-4 pb-2 sm:p-6 sm:pb-0">
+            <CardTitle className="text-base leading-6 sm:text-lg">Recently deleted</CardTitle>
+            <CardDescription className="text-xs leading-5 sm:text-sm">
+              Restore entries deleted in the last 30 days.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 p-4 pt-2 sm:p-6 sm:pt-0">
+            {deletedItems.map((item) => (
+              <RecentlyDeletedEntry
+                key={item.id}
+                initialActionState={initialActionState}
+                item={item}
+                onPermanentDelete={handlePermanentDelete}
+                onRestore={handleItemRestored}
+                permanentlyDeleteAction={permanentlyDeleteAction}
+                restoreAction={restoreAction}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
       {stagedImports.length ? (
         <Card>
           <CardHeader>

@@ -58,7 +58,18 @@ function makeAdapter(overrides: Partial<TransactionServiceAdapter> = {}): Transa
       }),
       error: null,
     })),
+    hardDeleteTransaction: vi.fn(async (_userId, transactionId) => ({
+      data: makeTransactionRow({
+        id: transactionId,
+        deleted_at: "2026-04-21T01:00:00.000Z",
+      }),
+      error: null,
+    })),
     listTransactions: vi.fn(async () => ({ data: [makeTransactionRow()], error: null })),
+    listRecoverableDeletedTransactions: vi.fn(async () => ({
+      data: [makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" })],
+      error: null,
+    })),
     getLatestSoftDeletedTransaction: vi.fn(async () => ({
       data: makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" }),
       error: null,
@@ -368,6 +379,48 @@ describe("transaction service", () => {
     );
   });
 
+  it("permanently deletes only already soft-deleted transactions", async () => {
+    const hardDeleteTransaction = vi.fn(async (_userId, transactionId) => ({
+      data: makeTransactionRow({
+        id: transactionId,
+        deleted_at: "2026-04-21T01:00:00.000Z",
+      }),
+      error: null,
+    }));
+    const adapter = makeAdapter({
+      getTransactionById: vi.fn(async () => ({
+        data: makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" }),
+        error: null,
+      })),
+      hardDeleteTransaction,
+    });
+    const service = createTransactionService(adapter);
+
+    const result = await service.permanentlyDeleteTransaction(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+    );
+
+    expect(result.transaction.deletedAt).not.toBeNull();
+    expect(result.eventCreated).toBe(false);
+    expect(hardDeleteTransaction).toHaveBeenCalledWith(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+    );
+  });
+
+  it("rejects permanent delete for active transactions", async () => {
+    const adapter = makeAdapter();
+    const service = createTransactionService(adapter);
+
+    await expect(
+      service.permanentlyDeleteTransaction(
+        "22222222-2222-2222-2222-222222222222",
+        "11111111-1111-1111-1111-111111111111",
+      ),
+    ).rejects.toThrow("Only deleted transactions can be permanently removed.");
+  });
+
   it("rejects restore for non-deleted transactions", async () => {
     const adapter = makeAdapter();
     const service = createTransactionService(adapter);
@@ -430,5 +483,28 @@ describe("transaction service", () => {
       limit: 10,
       transactionType: "expense",
     });
+  });
+
+  it("lists recoverable deleted transactions through the deleted window adapter path", async () => {
+    const listRecoverableDeletedTransactions = vi.fn(async () => ({
+      data: [makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" })],
+      error: null,
+    }));
+    const adapter = makeAdapter({ listRecoverableDeletedTransactions });
+    const service = createTransactionService(adapter);
+
+    const result = await service.listRecoverableDeletedTransactions(
+      "22222222-2222-2222-2222-222222222222",
+      "2026-03-22T00:00:00.000Z",
+      25,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.deletedAt).toBe("2026-04-21T01:00:00.000Z");
+    expect(listRecoverableDeletedTransactions).toHaveBeenCalledWith(
+      "22222222-2222-2222-2222-222222222222",
+      "2026-03-22T00:00:00.000Z",
+      25,
+    );
   });
 });

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   executeDeleteTransaction,
+  executePermanentDeleteTransaction,
   executeRecategorizeTransaction,
+  executeRestoreTransaction,
   executeUpdateTransaction,
 } from "@/lib/server/transaction-mutations";
 import type { Transaction, TransactionMutationResult } from "@/domain/transactions/types";
@@ -53,10 +55,15 @@ function makeCategoryMemory() {
   };
 }
 
-function makeMutationServices(): Pick<TransactionService, "deleteTransaction" | "recategorizeTransaction" | "updateTransaction"> {
+function makeMutationServices(): Pick<
+  TransactionService,
+  "deleteTransaction" | "permanentlyDeleteTransaction" | "recategorizeTransaction" | "restoreTransaction" | "updateTransaction"
+> {
   return {
     deleteTransaction: vi.fn(async () => makeMutationResult({ deletedAt: "2026-04-21T01:00:00.000Z" })),
+    permanentlyDeleteTransaction: vi.fn(async () => makeMutationResult({ deletedAt: "2026-04-21T01:00:00.000Z" })),
     recategorizeTransaction: vi.fn(async () => makeMutationResult({ categoryId: "cat-1" })),
+    restoreTransaction: vi.fn(async () => makeMutationResult({ deletedAt: null })),
     updateTransaction: vi.fn(async () =>
       makeMutationResult({
         merchant: "Updated Market",
@@ -134,6 +141,32 @@ describe("transaction mutation helpers", () => {
 
     expect(services.deleteTransaction).toHaveBeenCalledOnce();
     expect(result.message).toContain("removed");
+  });
+
+  it("uses the transaction service path for restore", async () => {
+    const services = makeMutationServices();
+
+    const result = await executeRestoreTransaction({
+      userId: "user-1",
+      transactionId: "txn-1",
+      transactionService: services,
+    });
+
+    expect(services.restoreTransaction).toHaveBeenCalledWith("user-1", "txn-1", { actorType: "user" });
+    expect(result.message).toBe("Transaction restored.");
+  });
+
+  it("uses the transaction service path for permanent delete", async () => {
+    const services = makeMutationServices();
+
+    const result = await executePermanentDeleteTransaction({
+      userId: "user-1",
+      transactionId: "txn-1",
+      transactionService: services,
+    });
+
+    expect(services.permanentlyDeleteTransaction).toHaveBeenCalledWith("user-1", "txn-1");
+    expect(result.message).toBe("Transaction permanently deleted.");
   });
 
   it("keeps the limited update path narrow and explicit", async () => {

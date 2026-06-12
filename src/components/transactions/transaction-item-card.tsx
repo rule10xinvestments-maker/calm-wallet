@@ -33,6 +33,7 @@ type TransactionItemCardProps = {
   updateAction: TransactionActionHandler;
   deleteAction: TransactionActionHandler;
   initialState: TransactionMutationState;
+  onDeleted?: (item: TransactionListItem) => void;
 };
 
 const REVIEW_STATE_OPTIONS: Array<{ label: string; value: TransactionListItem["reviewState"] }> = [
@@ -176,6 +177,7 @@ export function TransactionItemCard({
   updateAction,
   deleteAction,
   initialState,
+  onDeleted,
 }: TransactionItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -194,6 +196,7 @@ export function TransactionItemCard({
   const pendingRecategorizedItemRef = useRef<TransactionListItem | null>(null);
   const previousRecategorizeItemRef = useRef<TransactionListItem | null>(null);
   const previousItemRef = useRef(item);
+  const deleteNotifiedRef = useRef(false);
   const [recategorizeState, recategorizeFormAction] = useActionState(recategorizeAction, initialState);
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
   const [deleteState, deleteFormAction] = useActionState(deleteAction, initialState);
@@ -276,14 +279,20 @@ export function TransactionItemCard({
       setUncertaintyNote(item.uncertaintyReason ?? "");
       setIsCategoryPickerOpen(false);
       setIsDeleteConfirmOpen(false);
+      deleteNotifiedRef.current = false;
     }
   }, [item]);
 
   useEffect(() => {
-    if (deleteState.status === "success") {
+    if (deleteState.status === "success" && !deleteNotifiedRef.current) {
+      deleteNotifiedRef.current = true;
       setIsDeleted(true);
+      onDeleted?.({
+        ...displayItem,
+        deletedAt: new Date().toISOString(),
+      });
     }
-  }, [deleteState.status]);
+  }, [deleteState.status, displayItem, onDeleted]);
 
   function buildRecategorizedItem(categoryIdValue: string) {
     const categoryId = categoryIdValue.trim() || null;

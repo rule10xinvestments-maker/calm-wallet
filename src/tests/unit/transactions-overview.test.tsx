@@ -25,6 +25,7 @@ function makeTransactionItem(overrides: Partial<TransactionListItem> = {}): Tran
     merchant: "Market",
     note: null,
     occurredAt: "2026-04-22T10:00:00.000Z",
+    deletedAt: null,
     categoryId: null,
     reviewState: "reviewed",
     uncertaintyReason: null,
@@ -50,6 +51,7 @@ function makeStagedImport(overrides: Partial<StagedImportListItem> = {}): Staged
 function makeOverviewProps() {
   return {
     items: [makeTransactionItem()],
+    recentlyDeletedItems: [],
     stagedImports: [makeStagedImport()],
     stagedImportDetails: {
       "record-1": {
@@ -81,6 +83,8 @@ function makeOverviewProps() {
     recategorizeAction: vi.fn(async () => ({ status: "idle" as const, message: null })),
     updateAction: vi.fn(async () => ({ status: "idle" as const, message: null })),
     deleteAction: vi.fn(async () => ({ status: "idle" as const, message: null })),
+    restoreAction: vi.fn(async () => ({ status: "idle" as const, message: null })),
+    permanentlyDeleteAction: vi.fn(async () => ({ status: "idle" as const, message: null })),
     initialActionState: { status: "idle" as const, message: null },
     reviewAction: vi.fn(async () => initialImportCandidateReviewDecisionActionState),
     initialReviewActionState: initialImportCandidateReviewDecisionActionState,
@@ -129,6 +133,69 @@ describe("transactions overview", () => {
     expect(searchForm.parentElement).toHaveClass("space-y-3");
     expect(searchForm.parentElement).toHaveClass("p-4");
     expect(searchForm.parentElement).toHaveClass("pt-2");
+  });
+
+  it("hides Recently deleted when there are no recoverable entries", () => {
+    render(<TransactionsOverview {...makeOverviewProps()} />);
+
+    expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument();
+  });
+
+  it("shows recoverable deleted entries and restores them into the normal list", async () => {
+    const restoreAction = vi.fn(async () => ({ status: "success" as const, message: "Transaction restored." }));
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[]}
+        recentlyDeletedItems={[
+          makeTransactionItem({
+            id: "deleted-1",
+            title: "Old market",
+            amountDisplay: "-$12.00",
+            deletedAt: "2026-06-01T10:00:00.000Z",
+          }),
+        ]}
+        restoreAction={restoreAction}
+        stagedImports={[]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Recently deleted" })).toBeInTheDocument();
+    expect(screen.getByText("Restore entries deleted in the last 30 days.")).toBeInTheDocument();
+    expect(screen.getByText("Old market")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+
+    await waitFor(() => expect(restoreAction).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument());
+    expect(screen.getByText("Old market")).toBeInTheDocument();
+  });
+
+  it("permanently removes recoverable deleted entries from the Activity recovery section", async () => {
+    const permanentlyDeleteAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Transaction permanently deleted.",
+    }));
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        recentlyDeletedItems={[
+          makeTransactionItem({
+            id: "deleted-1",
+            title: "Old market",
+            deletedAt: "2026-06-01T10:00:00.000Z",
+          }),
+        ]}
+        permanentlyDeleteAction={permanentlyDeleteAction}
+        stagedImports={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
+
+    await waitFor(() => expect(permanentlyDeleteAction).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.queryByText("Old market")).not.toBeInTheDocument());
+    expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument();
   });
 
   it("switches Activity filters locally without shrinking the source list", () => {

@@ -28,6 +28,7 @@ export function getFallbackTransactionsPageData(args: { view: TransactionsView; 
     query: args.query ?? "",
     currency: "USD",
     items: [],
+    recentlyDeletedItems: [],
     categories: [],
   };
 }

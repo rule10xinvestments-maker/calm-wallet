@@ -49,7 +49,9 @@ export type TransactionServiceAdapter = {
     transactionId: string,
     updates: Database["public"]["Tables"]["transactions"]["Update"],
   ): QueryResult<TransactionRow>;
+  hardDeleteTransaction(userId: string, transactionId: string): QueryResult<TransactionRow>;
   listTransactions(userId: string, filters: ListTransactionsFilters): QueryResult<TransactionRow[]>;
+  listRecoverableDeletedTransactions(userId: string, deletedAfter: string, limit: number): QueryResult<TransactionRow[]>;
   getLatestSoftDeletedTransaction(userId: string): QueryResult<TransactionRow>;
   insertTransactionEvent(row: TransactionEventInsertRow): QueryResult<{ id: string }>;
 };
@@ -295,9 +297,35 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
       return { transaction, eventCreated };
     },
 
+    async permanentlyDeleteTransaction(userId: string, transactionId: string): Promise<TransactionMutationResult> {
+      deleteTransactionSchema.parse({ transactionId });
+      const existing = mapTransactionRowToDomain(
+        assertResult(await adapter.getTransactionById(userId, transactionId), "Transaction not found."),
+      );
+
+      if (!existing.deletedAt) {
+        throw new Error("Only deleted transactions can be permanently removed.");
+      }
+
+      const row = assertResult(await adapter.hardDeleteTransaction(userId, transactionId), "Unable to permanently delete transaction.");
+
+      return {
+        transaction: mapTransactionRowToDomain(row),
+        eventCreated: false,
+      };
+    },
+
     async listTransactions(userId: string, filters: ListTransactionsFilters = {}): Promise<Transaction[]> {
       const parsed = listTransactionsSchema.parse(filters);
       const rows = assertResult(await adapter.listTransactions(userId, parsed), "Unable to list transactions.");
+      return rows.map(mapTransactionRowToDomain);
+    },
+
+    async listRecoverableDeletedTransactions(userId: string, deletedAfter: string, limit = 25): Promise<Transaction[]> {
+      const rows = assertResult(
+        await adapter.listRecoverableDeletedTransactions(userId, deletedAfter, limit),
+        "Unable to list deleted transactions.",
+      );
       return rows.map(mapTransactionRowToDomain);
     },
 
@@ -333,6 +361,10 @@ export async function createSupabaseTransactionService() {
         .eq("id", transactionId)
         .select("*")
         .single();
+    },
+
+    async hardDeleteTransaction(userId, transactionId) {
+      return supabase.from("transactions").delete().eq("user_id", userId).eq("id", transactionId).select("*").single();
     },
 
     async listTransactions(userId, filters) {
@@ -383,6 +415,17 @@ export async function createSupabaseTransactionService() {
       }
 
       return query;
+    },
+
+    async listRecoverableDeletedTransactions(userId, deletedAfter, limit) {
+      return supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .not("deleted_at", "is", null)
+        .gte("deleted_at", deletedAfter)
+        .order("deleted_at", { ascending: false })
+        .limit(limit);
     },
 
     async getLatestSoftDeletedTransaction(userId) {

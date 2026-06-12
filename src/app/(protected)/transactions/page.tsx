@@ -3,7 +3,9 @@ import { reviewImportCandidateAction } from "@/lib/actions/imports";
 import { initialImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
 import {
   deleteTransactionAction,
+  permanentlyDeleteTransactionAction,
   recategorizeTransactionAction,
+  restoreTransactionAction,
   updateTransactionAction,
 } from "@/lib/actions/transactions";
 import { initialTransactionMutationState } from "@/lib/actions/transactions-state";
@@ -150,8 +152,11 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       initialActionState={initialTransactionMutationState}
       initialReviewActionState={initialImportCandidateReviewDecisionActionState}
       items={data.items}
+      permanentlyDeleteAction={permanentlyDeleteTransactionAction}
       query={resolvedSearchParams.q ?? data.query}
       recategorizeAction={recategorizeTransactionAction}
+      recentlyDeletedItems={data.recentlyDeletedItems}
+      restoreAction={restoreTransactionAction}
       reviewAction={reviewImportCandidateAction}
       stagedImportDetails={stagedImportDetails}
       stagedImports={stagedImports ?? []}

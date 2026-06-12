@@ -24,6 +24,7 @@ export type TransactionListItem = {
   merchant: string | null;
   note: string | null;
   occurredAt: string;
+  deletedAt: string | null;
   categoryId: string | null;
   reviewState: ReviewState;
   uncertaintyReason: string | null;
@@ -331,6 +332,10 @@ export function filterTransactionsForView(transactions: Transaction[], view: Tra
   const normalizedQuery = query?.trim().toLowerCase();
 
   return transactions.filter((transaction) => {
+    if (transaction.deletedAt) {
+      return false;
+    }
+
     if (view === "expenses" && transaction.transactionType !== "expense") {
       return false;
     }
@@ -377,6 +382,7 @@ export function mapTransactionsToListItems(
       merchant: transaction.merchant,
       note: transaction.note,
       occurredAt: transaction.occurredAt,
+      deletedAt: transaction.deletedAt,
       categoryId: transaction.categoryId,
       reviewState: transaction.reviewState,
       uncertaintyReason: transaction.uncertaintyReason,
@@ -1613,6 +1619,8 @@ export async function loadTransactionsPageData(args: {
     loadCategoryLabels(),
     loadDefaultCurrency(args.userId),
   ]);
+  const recoverableDeletedAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const recentlyDeletedTransactions = await service.listRecoverableDeletedTransactions(args.userId, recoverableDeletedAfter, 25);
 
   const filtered = filterTransactionsForView(transactions, args.view, args.query);
   console.info("transactions:list-load", {
@@ -1626,6 +1634,7 @@ export async function loadTransactionsPageData(args: {
     query: args.query ?? "",
     currency,
     items: mapTransactionsToListItems(filtered, categoryLabels, currency),
+    recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency),
     categories: await loadCategoryOptions(),
   };
 }
