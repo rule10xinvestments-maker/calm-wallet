@@ -88,6 +88,25 @@ function makeOverviewProps() {
 }
 
 describe("transactions overview", () => {
+  it("renders compact Activity filters and icon search controls", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        currentView="needs-review"
+        query="coffee"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "All" })).toHaveAttribute("href", "/transactions?view=all&q=coffee");
+    expect(screen.getByRole("link", { name: "Expenses" })).toHaveAttribute("href", "/transactions?view=expenses&q=coffee");
+    expect(screen.getByRole("link", { name: "Income" })).toHaveAttribute("href", "/transactions?view=income&q=coffee");
+    expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review&q=coffee");
+    expect(screen.queryByRole("link", { name: "Needs review" })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search entries")).toHaveValue("coffee");
+    expect(screen.getByRole("button", { name: "Search entries" })).toHaveAttribute("type", "submit");
+    expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
+  });
+
   it("renders safe load-error copy with the account-scoped empty state", () => {
     render(
       <TransactionsOverview
