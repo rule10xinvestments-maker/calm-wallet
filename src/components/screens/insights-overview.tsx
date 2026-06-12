@@ -576,8 +576,6 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const tooltipTranslate = selectedX > 74 ? "-100%" : selectedX < 26 ? "0" : "-50%";
   const note = !hasIncome ? "No income tracked this month yet." : !hasSpending ? "No spending tracked this month yet." : null;
   const netTone = selectedDay?.netMinor && selectedDay.netMinor < 0 ? "text-rose-600" : "text-emerald-700";
-  const finalNetMinor = lastTrendDay?.netMinor ?? 0;
-  const finalNetTone = finalNetMinor < 0 ? "border-rose-100 bg-rose-50 text-rose-700" : "border-emerald-100 bg-emerald-50 text-emerald-700";
 
   const updateSelectedDayFromClientX = (clientX: number) => {
     if (!Number.isFinite(clientX)) {
@@ -616,12 +614,6 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
         </div>
       ) : null}
       <div className="relative">
-        <div
-          aria-label={`Month net ${formatTrendNetDisplay(data, finalNetMinor)}`}
-          className={`absolute right-0 top-1 z-10 rounded-full border px-2.5 py-1 text-xs font-semibold shadow-sm ${finalNetTone}`}
-        >
-          {formatTrendNetDisplay(data, finalNetMinor)}
-        </div>
       <svg className="h-36 w-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 104">
         <defs>
           <linearGradient id="income-trend-fill" x1="0" x2="0" y1="0" y2="1">
