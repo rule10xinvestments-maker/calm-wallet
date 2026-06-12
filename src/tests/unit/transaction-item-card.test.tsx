@@ -74,8 +74,8 @@ describe("transaction item card", () => {
     expect(screen.getByText("Review")).toBeInTheDocument();
 
     expect(screen.queryByLabelText("Category")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save category" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete transaction" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark tracked" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
   });
@@ -121,16 +121,22 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Personal category icon")).toBeInTheDocument();
   });
 
-  it("expands inline to reveal category correction controls", () => {
+  it("expands inline to reveal a compact transaction action row", () => {
     renderCard();
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
 
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mark reviewed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Change category, currently Dining" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save category" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit details" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete transaction" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark tracked" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
+
+    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
   });
 
   it("keeps mark tracked hidden for already reviewed rows", () => {
@@ -146,7 +152,7 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
 
-    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save category" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark tracked" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
   });
@@ -159,8 +165,9 @@ describe("transaction item card", () => {
     renderCard({ recategorizeAction });
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "cat-travel" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save category" }));
 
     await waitFor(() => expect(recategorizeAction).toHaveBeenCalledOnce());
     const [, formData] = recategorizeAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
@@ -230,7 +237,7 @@ describe("transaction item card", () => {
     renderCard({ deleteAction });
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete transaction" }));
 
     await waitFor(() => expect(deleteAction).toHaveBeenCalledOnce());
     const [, formData] = deleteAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];

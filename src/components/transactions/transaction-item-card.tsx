@@ -1,17 +1,21 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
 import {
   AlertCircle,
   Car,
+  Check,
+  ChevronDown,
   CircleHelp,
   HeartPulse,
+  Pencil,
   ReceiptText,
   ShoppingBag,
   ShoppingBasket,
   Tag,
   Ticket,
+  Trash2,
   Utensils,
   User,
   Wallet,
@@ -85,15 +89,33 @@ function PendingSubmitButton({
   );
 }
 
+function PendingIconSubmitButton({
+  icon: Icon,
+  label,
+  className,
+}: {
+  icon: LucideIcon;
+  label: string;
+  className: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button aria-label={label} className={className} disabled={pending} type="submit">
+      <Icon aria-hidden="true" size={18} strokeWidth={2.2} />
+    </button>
+  );
+}
+
 function getCategoryIcon(item: TransactionListItem): LucideIcon {
   const label = item.categoryLabel.toLowerCase();
 
-  if (item.amountTone === "income" || label.includes("income") || label.includes("salary") || label.includes("pay")) {
-    return Wallet;
+  if (label.includes("uncategorized") || label.includes("needs")) {
+    return CircleHelp;
   }
 
-  if (item.reviewLabel !== "Reviewed") {
-    return AlertCircle;
+  if (item.amountTone === "income" || label.includes("income") || label.includes("salary") || label.includes("pay")) {
+    return Wallet;
   }
 
   if (label.includes("dining") || label.includes("food")) {
@@ -128,8 +150,8 @@ function getCategoryIcon(item: TransactionListItem): LucideIcon {
     return Ticket;
   }
 
-  if (label.includes("uncategorized") || label.includes("needs")) {
-    return CircleHelp;
+  if (item.reviewLabel !== "Reviewed") {
+    return AlertCircle;
   }
 
   return Tag;
@@ -157,6 +179,7 @@ export function TransactionItemCard({
 }: TransactionItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
@@ -177,7 +200,11 @@ export function TransactionItemCard({
   const detailCategoryOptions = categories.filter(
     (category) => !category.direction || category.direction === selectedTransactionType || category.direction === "both",
   );
+  const selectedCategory = selectedCategoryId ? categories.find((category) => category.id === selectedCategoryId) : null;
+  const selectedCategoryLabel = selectedCategory?.label ?? (selectedCategoryId ? displayItem.categoryLabel : "Uncategorized");
+  const categoryIconItem = { ...displayItem, categoryLabel: selectedCategoryLabel };
   const CategoryIcon = getCategoryIcon(displayItem);
+  const ActionCategoryIcon = getCategoryIcon(categoryIconItem);
   const needsReview = displayItem.reviewLabel !== "Reviewed";
   const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
     ? CURRENCY_OPTIONS
@@ -194,6 +221,7 @@ export function TransactionItemCard({
       pendingRecategorizedItemRef.current = null;
       previousRecategorizeItemRef.current = null;
       setPendingRecategorizedItem(null);
+      setIsCategoryPickerOpen(false);
     }
 
     if (recategorizeState.status === "error") {
@@ -241,6 +269,7 @@ export function TransactionItemCard({
       setSelectedTransactionType(item.amountTone);
       setSelectedReviewState(item.reviewState);
       setUncertaintyNote(item.uncertaintyReason ?? "");
+      setIsCategoryPickerOpen(false);
     }
   }, [item]);
 
@@ -287,17 +316,6 @@ export function TransactionItemCard({
 
   function handleRecategorizeSubmit(event: FormEvent<HTMLFormElement>) {
     const formData = new FormData(event.currentTarget);
-    prepareRecategorizedItem(String(formData.get("categoryId") ?? selectedCategoryId), true);
-  }
-
-  function handleRecategorizeClick(event: MouseEvent<HTMLButtonElement>) {
-    const form = event.currentTarget.form;
-
-    if (!form) {
-      return;
-    }
-
-    const formData = new FormData(form);
     prepareRecategorizedItem(String(formData.get("categoryId") ?? selectedCategoryId), true);
   }
 
@@ -406,70 +424,68 @@ export function TransactionItemCard({
 
       {isExpanded ? (
         <div className="mt-3 grid gap-3 border-t border-slate-200 pt-3">
-          <form action={recategorizeFormAction} className="flex gap-2" onSubmit={handleRecategorizeSubmit}>
+          <form action={recategorizeFormAction} className="grid gap-2" onSubmit={handleRecategorizeSubmit}>
             <input name="transactionId" type="hidden" value={item.id} />
-            <select
-              className="min-h-10 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-              value={selectedCategoryId}
-              name="categoryId"
-              onChange={(event) => handleCategoryChange(event.currentTarget.value)}
-            >
-              <option value="">Uncategorized</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
-            <button
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
-              onClick={handleRecategorizeClick}
-              type="submit"
-            >
-              Save
-            </button>
-          </form>
-          <ActionMessage state={recategorizeState} />
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
-              onClick={() => setIsEditingDetails((value) => !value)}
-              type="button"
-            >
-              {isEditingDetails ? "Close details" : "Edit details"}
-            </button>
-
-            {displayItem.reviewState !== "reviewed" ? (
-              <form action={updateFormAction}>
-                <input name="transactionId" type="hidden" value={item.id} />
-                <input name="transactionType" type="hidden" value={displayItem.amountTone} />
-                <input name="amount" type="hidden" value={formatAmountInput(displayItem.amountMinor)} />
-                <input name="currency" type="hidden" value={displayItem.currency} />
-                <input name="itemName" type="hidden" value={displayItem.itemName ?? displayItem.title} />
-                <input name="merchant" type="hidden" value={displayItem.merchant ?? ""} />
-                <input name="note" type="hidden" value={displayItem.note ?? ""} />
-                <input name="occurredAt" type="hidden" value={displayItem.occurredAt.slice(0, 10)} />
-                <input name="categoryId" type="hidden" value={displayItem.categoryId ?? ""} />
-                <input name="reviewState" type="hidden" value="reviewed" />
-                <input name="uncertaintyReason" type="hidden" value="" />
-                <button
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
-                  onClick={() => setSubmittedUpdateIntent("mark-reviewed")}
-                  type="submit"
-                >
-                  Mark reviewed
-                </button>
-              </form>
-            ) : null}
-
-            <form action={deleteFormAction}>
-              <input name="transactionId" type="hidden" value={item.id} />
-              <button className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700" type="submit">
-                Delete
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                aria-expanded={isCategoryPickerOpen}
+                aria-label={`Change category, currently ${selectedCategoryLabel}`}
+                className="relative flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
+                onClick={() => setIsCategoryPickerOpen((value) => !value)}
+                type="button"
+              >
+                <ActionCategoryIcon aria-hidden="true" size={19} strokeWidth={2.1} />
+                <ChevronDown aria-hidden="true" className="absolute bottom-1 right-1 text-slate-400" size={12} strokeWidth={2.4} />
               </button>
-            </form>
-          </div>
+              <PendingIconSubmitButton
+                className="flex min-h-11 items-center justify-center rounded-2xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 disabled:opacity-60"
+                icon={Check}
+                label="Save category"
+              />
+              <button
+                aria-label="Edit details"
+                className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
+                onClick={() => setIsEditingDetails((value) => !value)}
+                type="button"
+              >
+                <Pencil aria-hidden="true" size={18} strokeWidth={2.1} />
+              </button>
+              <button
+                aria-label="Delete transaction"
+                className="flex min-h-11 items-center justify-center rounded-2xl border border-rose-200 bg-white text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
+                form={`delete-${item.id}`}
+                type="submit"
+              >
+                <Trash2 aria-hidden="true" size={18} strokeWidth={2.1} />
+              </button>
+            </div>
+            {isCategoryPickerOpen ? (
+              <label className="grid gap-1">
+                <span className="sr-only">Category</span>
+                <select
+                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                  value={selectedCategoryId}
+                  name="categoryId"
+                  onChange={(event) => handleCategoryChange(event.currentTarget.value)}
+                >
+                  <option value="">Uncategorized</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <input name="categoryId" type="hidden" value={selectedCategoryId} />
+            )}
+          </form>
+
+          <form action={deleteFormAction} id={`delete-${item.id}`}>
+            <input name="transactionId" type="hidden" value={item.id} />
+          </form>
+
+          <ActionMessage state={recategorizeState} />
           <ActionMessage
             state={
               deleteState.status === "success"
