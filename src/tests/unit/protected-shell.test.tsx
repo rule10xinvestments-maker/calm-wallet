@@ -84,14 +84,19 @@ describe("protected shell PWA install affordance", () => {
 
     fireEvent.click(settingsButton);
 
+    const settingsOverlay = screen.getByTestId("header-settings-overlay");
     const settingsPanel = screen.getByTestId("header-settings-panel");
-    expect(settingsPanel).toHaveClass("fixed");
-    expect(settingsPanel).toHaveClass("inset-x-4");
-    expect(settingsPanel).toHaveClass("w-auto");
-    expect(settingsPanel).toHaveClass("sm:absolute");
+    expect(settingsOverlay).toHaveClass("fixed");
+    expect(settingsOverlay).toHaveClass("inset-0");
+    expect(settingsOverlay).toHaveClass("z-[120]");
+    expect(settingsOverlay).toHaveClass("bg-slate-950/25");
+    expect(settingsOverlay.className).toContain("env(safe-area-inset-top)");
+    expect(settingsPanel).toHaveClass("max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]");
+    expect(settingsPanel).toHaveClass("overflow-y-auto");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
     expect(screen.getByText("Daily logging reminder")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close settings overlay" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save notification preferences" })).toBeInTheDocument();
 

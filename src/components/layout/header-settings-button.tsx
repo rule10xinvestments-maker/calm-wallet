@@ -34,26 +34,34 @@ export function HeaderSettingsButton({
 
       {isOpen ? (
         <div
-          className="fixed inset-x-4 top-24 z-20 w-auto max-w-none space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-80 sm:max-w-[calc(100vw-2rem)]"
-          data-testid="header-settings-panel"
+          className="fixed inset-0 z-[120] bg-slate-950/25 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
+          data-testid="header-settings-overlay"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Settings</p>
-              <p className="text-xs leading-5 text-slate-500">Light reminders are optional, calm, and user-controlled.</p>
-            </div>
-            <button
-              className="rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
-              onClick={() => setIsOpen(false)}
-              type="button"
+          <button aria-label="Close settings overlay" className="absolute inset-0 h-full w-full cursor-default" onClick={() => setIsOpen(false)} type="button" />
+          <div className="relative z-10 mx-auto w-full max-w-md">
+            <div
+              className="ml-auto max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl sm:w-80"
+              data-testid="header-settings-panel"
             >
-              Close
-            </button>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-900">Settings</p>
+                  <p className="text-xs leading-5 text-slate-500">Light reminders are optional, calm, and user-controlled.</p>
+                </div>
+                <button
+                  className="rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                  onClick={() => setIsOpen(false)}
+                  type="button"
+                >
+                  Close
+                </button>
+              </div>
+              <NotificationPreferencesCard
+                action={notificationPreferencesAction}
+                preferences={notificationPreferences}
+              />
+            </div>
           </div>
-          <NotificationPreferencesCard
-            action={notificationPreferencesAction}
-            preferences={notificationPreferences}
-          />
         </div>
       ) : null}
     </div>
