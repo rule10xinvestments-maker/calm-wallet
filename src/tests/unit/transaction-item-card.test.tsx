@@ -219,7 +219,69 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add note" }));
 
     expect(screen.getByLabelText("Note")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Add note" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Save note" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
+  });
+
+  it("saves a note from the compact note panel without opening full details", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({ updateAction });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "receipt checked" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+
+    await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
+    const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+
+    expect(formData.get("transactionId")).toBe("txn-1");
+    expect(formData.get("note")).toBe("receipt checked");
+    expect(formData.get("amount")).toBe("34.00");
+    expect(formData.get("transactionType")).toBe("expense");
+    expect(await screen.findByText("Note: receipt checked")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save note" })).not.toBeInTheDocument();
+  });
+
+  it("edits an existing note and can cancel without saving", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({ item: makeItem({ note: "old note" }), updateAction });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    expect(screen.getByRole("button", { name: "Edit note" })).toHaveClass("text-sky-700");
+    fireEvent.click(screen.getByRole("button", { name: "Edit note" }));
+
+    expect(screen.getByLabelText("Note")).toHaveValue("old note");
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "ignored edit" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("button", { name: "Save note" })).not.toBeInTheDocument();
+    expect(screen.getByText("Note: old note")).toBeInTheDocument();
+    expect(updateAction).not.toHaveBeenCalled();
+  });
+
+  it("shows friendly note save failure copy", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "error" as const,
+      message: '[{"code":"custom","message":"raw note failure"}]',
+    }));
+    renderCard({ updateAction });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "receipt checked" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+
+    expect(await screen.findByText("Couldn't save the note. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByText(/raw note failure/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save note" })).toBeInTheDocument();
   });
 
   it("submits edited details once, collapses details, and reflects saved tracked fields", async () => {
@@ -235,15 +297,10 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Currency")).toHaveValue("USD");
     expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
-    {
-      const addNoteButtons = screen.getAllByRole("button", { name: "Add note" });
-      fireEvent.click(addNoteButtons[addNoteButtons.length - 1]!);
-    }
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "45.67" } });
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "EUR" } });
     fireEvent.change(screen.getByLabelText("Item name"), { target: { value: "ketchup" } });
     fireEvent.change(screen.getByLabelText("Merchant"), { target: { value: "Corner store" } });
-    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "receipt checked" } });
     fireEvent.change(screen.getByLabelText("Occurred date"), { target: { value: "2026-05-27" } });
     fireEvent.click(screen.getByRole("radio", { name: "Reviewed" }));
     fireEvent.change(screen.getByLabelText("Uncertainty note"), { target: { value: "" } });
@@ -258,7 +315,7 @@ describe("transaction item card", () => {
     expect(formData.get("currency")).toBe("EUR");
     expect(formData.get("itemName")).toBe("ketchup");
     expect(formData.get("merchant")).toBe("Corner store");
-    expect(formData.get("note")).toBe("receipt checked");
+    expect(formData.get("note")).toBe("");
     expect(formData.get("occurredAt")).toBe("2026-05-27");
     expect(formData.get("reviewState")).toBe("reviewed");
     expect(formData.get("uncertaintyReason")).toBe("");
@@ -268,13 +325,13 @@ describe("transaction item card", () => {
     expect(await screen.findByText("ketchup")).toBeInTheDocument();
     expect(await screen.findByText("-€45.67")).toBeInTheDocument();
     expect(await screen.findByText("Merchant: Corner store")).toBeInTheDocument();
-    expect(await screen.findByText("Note: receipt checked")).toBeInTheDocument();
+    expect(screen.queryByText(/^Note:/)).not.toBeInTheDocument();
     expect(screen.getByText("Dining · May 27")).toBeInTheDocument();
     expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
     expect(screen.queryByText("Category needs review.")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    expect(screen.getByLabelText("Note")).toHaveValue("receipt checked");
+    expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
   });
 
   it("asks for confirmation before deleting and cancels safely", () => {
@@ -336,7 +393,7 @@ describe("transaction item card", () => {
 
     expect(screen.getByLabelText("Item name")).toHaveValue("mustar");
     expect(screen.getByLabelText("Merchant")).toHaveValue("");
-    expect(screen.getByLabelText("Note")).toHaveValue("for sandwiches");
+    expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Merchant"), { target: { value: "CCC" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
@@ -347,6 +404,7 @@ describe("transaction item card", () => {
     expect(formData.get("itemName")).toBe("mustar");
     expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("merchant")).toBe("CCC");
+    expect(formData.get("note")).toBe("for sandwiches");
     expect(await screen.findByText("mustar")).toBeInTheDocument();
     expect(await screen.findByText("Merchant: CCC")).toBeInTheDocument();
     expect(await screen.findByText("Note: for sandwiches")).toBeInTheDocument();
@@ -451,18 +509,13 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    {
-      const addNoteButtons = screen.getAllByRole("button", { name: "Add note" });
-      fireEvent.click(addNoteButtons[addNoteButtons.length - 1]!);
-    }
-    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "mobile note" } });
     fireEvent.click(screen.getByRole("radio", { name: label }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
     const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
 
-    expect(formData.get("note")).toBe("mobile note");
+    expect(formData.get("note")).toBe("");
     expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("reviewState")).toBe(value);
   });

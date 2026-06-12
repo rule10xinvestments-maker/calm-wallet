@@ -168,8 +168,8 @@ export function TransactionItemCard({
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(Boolean(item.note));
-  const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | null>(null);
+  const [isNotePanelOpen, setIsNotePanelOpen] = useState(false);
+  const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | "note" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
   const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionListItem["amountTone"]>(item.amountTone);
@@ -237,7 +237,19 @@ export function TransactionItemCard({
       setIsEditingDetails(false);
     }
 
-    if (updateState.status === "error" && submittedUpdateIntent === "details") {
+    if (updateState.status === "success" && submittedUpdateIntent === "note") {
+      const completedItem = pendingDetailsItemRef.current ?? pendingDetailsItem;
+
+      if (completedItem) {
+        setOptimisticItem(completedItem);
+      }
+
+      pendingDetailsItemRef.current = null;
+      setPendingDetailsItem(null);
+      setIsNotePanelOpen(false);
+    }
+
+    if (updateState.status === "error" && (submittedUpdateIntent === "details" || submittedUpdateIntent === "note")) {
       pendingDetailsItemRef.current = null;
       setPendingDetailsItem(null);
     }
@@ -261,7 +273,7 @@ export function TransactionItemCard({
       setSelectedTransactionType(item.amountTone);
       setSelectedReviewState(getEditableReviewState(item.reviewState));
       setUncertaintyNote(item.uncertaintyReason ?? "");
-      setIsNoteEditorOpen(Boolean(item.note));
+      setIsNotePanelOpen(false);
       setIsCategoryPickerOpen(false);
       setIsDeleteConfirmOpen(false);
       deleteNotifiedRef.current = false;
@@ -269,10 +281,10 @@ export function TransactionItemCard({
   }, [item]);
 
   useEffect(() => {
-    if (isEditingDetails && isNoteEditorOpen) {
+    if (isNotePanelOpen) {
       noteTextareaRef.current?.focus();
     }
-  }, [isEditingDetails, isNoteEditorOpen]);
+  }, [isNotePanelOpen]);
 
   useEffect(() => {
     if (deleteState.status === "success" && !deleteNotifiedRef.current) {
@@ -322,8 +334,8 @@ export function TransactionItemCard({
 
   function openNoteEditor() {
     setIsExpanded(true);
-    setIsEditingDetails(true);
-    setIsNoteEditorOpen(true);
+    setIsEditingDetails(false);
+    setIsNotePanelOpen(true);
   }
 
   function handleRecategorizeSubmit(event: FormEvent<HTMLFormElement>) {
@@ -387,6 +399,19 @@ export function TransactionItemCard({
     setSelectedCategoryId(categoryId ?? "");
     setSelectedReviewState(nextReviewState);
     setUncertaintyNote(uncertaintyReason ?? "");
+  }
+
+  function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget);
+    const note = String(formData.get("note") ?? "").trim() || null;
+    const nextItem: TransactionListItem = {
+      ...displayItem,
+      note,
+    };
+
+    pendingDetailsItemRef.current = nextItem;
+    setSubmittedUpdateIntent("note");
+    setPendingDetailsItem(nextItem);
   }
 
   if (isDeleted) {
@@ -456,7 +481,11 @@ export function TransactionItemCard({
               </button>
               <button
                 aria-label={displayItem.note ? "Edit note" : "Add note"}
-                className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+                className={`flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
+                  displayItem.note
+                    ? "border-sky-200 text-sky-700 hover:border-sky-300 hover:bg-sky-50"
+                    : "border-slate-200 text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+                }`}
                 onClick={openNoteEditor}
                 type="button"
               >
@@ -465,7 +494,10 @@ export function TransactionItemCard({
               <button
                 aria-label="Edit details"
                 className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
-                onClick={() => setIsEditingDetails((value) => !value)}
+                onClick={() => {
+                  setIsNotePanelOpen(false);
+                  setIsEditingDetails((value) => !value);
+                }}
                 type="button"
               >
                 <Pencil aria-hidden="true" size={18} strokeWidth={2.1} />
@@ -540,11 +572,57 @@ export function TransactionItemCard({
             state={
               deleteState.status === "success"
                 ? deleteState
-                : updateState.status !== "idle" && (!isEditingDetails || submittedUpdateIntent === "mark-reviewed")
+                : updateState.status !== "idle" && submittedUpdateIntent !== "note" && (!isEditingDetails || submittedUpdateIntent === "mark-reviewed")
                   ? updateState
                   : initialState
             }
           />
+
+          {isNotePanelOpen ? (
+            <form
+              action={updateFormAction}
+              className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3"
+              onSubmit={handleNoteSubmit}
+            >
+              <input name="transactionId" type="hidden" value={item.id} />
+              <input name="transactionType" type="hidden" value={displayItem.amountTone} />
+              <input name="amount" type="hidden" value={formatAmountInput(displayItem.amountMinor)} />
+              <input name="currency" type="hidden" value={displayItem.currency} />
+              <input name="itemName" type="hidden" value={displayItem.itemName ?? displayItem.title} />
+              <input name="merchant" type="hidden" value={displayItem.merchant ?? ""} />
+              <input name="occurredAt" type="hidden" value={displayItem.occurredAt.slice(0, 10)} />
+              <input name="categoryId" type="hidden" value={selectedCategoryId} />
+              <input name="reviewState" type="hidden" value={getEditableReviewState(displayItem.reviewState)} />
+              <input name="uncertaintyReason" type="hidden" value={displayItem.uncertaintyReason ?? ""} />
+              <label className="grid gap-1">
+                <span className="text-xs font-medium text-slate-600">Note</span>
+                <textarea
+                  className="min-h-20 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                  defaultValue={displayItem.note ?? ""}
+                  name="note"
+                  ref={noteTextareaRef}
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                  onClick={() => setIsNotePanelOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <PendingSubmitButton
+                  className="min-h-10 rounded-2xl bg-sky-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  pendingLabel="Saving..."
+                >
+                  Save note
+                </PendingSubmitButton>
+              </div>
+              {submittedUpdateIntent === "note" && updateState.status === "error" ? (
+                <p className="text-xs text-rose-600">Couldn&apos;t save the note. Please try again.</p>
+              ) : null}
+            </form>
+          ) : null}
 
           {isEditingDetails ? (
             <form
@@ -553,6 +631,7 @@ export function TransactionItemCard({
               onSubmit={handleDetailsSubmit}
             >
               <input name="transactionId" type="hidden" value={item.id} />
+              <input name="note" type="hidden" value={displayItem.note ?? ""} />
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Transaction type</legend>
                 <div className="grid grid-cols-2 gap-2">
@@ -627,28 +706,6 @@ export function TransactionItemCard({
                   name="merchant"
                 />
               </label>
-              {isNoteEditorOpen || displayItem.note ? (
-                <label className="grid gap-1">
-                  <span className="text-xs font-medium text-slate-600">Note</span>
-                  <textarea
-                    className="min-h-20 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                    defaultValue={displayItem.note ?? ""}
-                    name="note"
-                    ref={noteTextareaRef}
-                  />
-                </label>
-              ) : (
-                <div className="grid gap-1">
-                  <input name="note" type="hidden" value="" />
-                  <button
-                    className="min-h-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
-                    onClick={() => setIsNoteEditorOpen(true)}
-                    type="button"
-                  >
-                    Add note
-                  </button>
-                </div>
-              )}
               <label className="grid gap-1">
                 <span className="text-xs font-medium text-slate-600">Occurred date</span>
                 <input
