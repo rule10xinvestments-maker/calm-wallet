@@ -25,15 +25,14 @@ export function ProtectedShell({
   notificationPreferencesAction,
 }: ProtectedShellProps) {
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-6">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-sky-700">Calm Wallet</p>
-          <h1 className="mt-2 text-[1.35rem] font-semibold leading-tight tracking-tight text-slate-900 sm:text-2xl">
-            <span className="block">Your money.</span>
-            <span className="block">One clear view.</span>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:pt-6">
+      <div className="mb-4 flex items-start justify-between gap-3 sm:mb-6 sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-sky-700 sm:text-sm">Calm Wallet</p>
+          <h1 className="mt-1 text-[1.05rem] font-semibold leading-6 tracking-tight text-slate-900 sm:mt-2 sm:text-2xl sm:leading-tight">
+            Your money. One clear view.
           </h1>
-          <p className="mt-2 text-xs leading-5 text-slate-500">Signed in as {accountHint}</p>
+          <p className="mt-1 break-words text-xs leading-4 text-slate-500 sm:mt-2 sm:leading-5">Signed in as {accountHint}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <PwaInstallHeaderIcon />

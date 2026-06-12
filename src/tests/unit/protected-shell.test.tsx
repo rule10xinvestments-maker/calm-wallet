@@ -106,6 +106,20 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
   });
 
+  it("renders the protected header as a compact shared mobile headline", () => {
+    renderProtectedShell();
+
+    const heading = screen.getByRole("heading", { name: "Your money. One clear view." });
+
+    expect(screen.getByText("Calm Wallet")).toBeInTheDocument();
+    expect(screen.getByText("Signed in as paul@example.com")).toBeInTheDocument();
+    expect(heading).toHaveClass("text-[1.05rem]");
+    expect(heading).toHaveClass("leading-6");
+    expect(heading.querySelectorAll("span")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  });
+
   it("shows generic install guidance from the authenticated header icon in desktop browser mode", async () => {
     renderProtectedShell();
 
