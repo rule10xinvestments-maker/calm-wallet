@@ -39,7 +39,7 @@ type QueryError = {
   hint?: string;
 };
 
-type QueryResult<T> = Promise<{ data: T | null; error: QueryError | null }>;
+type QueryResult<T> = Promise<{ data: T | null; error: QueryError | null; count?: number | null }>;
 
 export type TransactionServiceAdapter = {
   insertTransaction(row: Database["public"]["Tables"]["transactions"]["Insert"]): QueryResult<TransactionRow>;
@@ -80,6 +80,18 @@ function assertResult<T>(result: { data: T | null; error: QueryError | null }, f
   }
 
   return result.data;
+}
+
+function getAffectedRowCount<T>(result: { data: T | T[] | null; count?: number | null }) {
+  if (typeof result.count === "number") {
+    return result.count;
+  }
+
+  if (Array.isArray(result.data)) {
+    return result.data.length;
+  }
+
+  return result.data ? 1 : 0;
 }
 
 function mapOptionalTextUpdate(value: string | null | undefined) {
@@ -313,6 +325,10 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         throw makeServiceError(deleteResult.error);
       }
 
+      if (getAffectedRowCount(deleteResult) !== 1) {
+        throw new Error("Unable to permanently delete transaction.");
+      }
+
       return {
         transaction: existing,
         eventCreated: false,
@@ -370,10 +386,9 @@ export async function createSupabaseTransactionService() {
     async hardDeleteTransaction(userId, transactionId) {
       return supabase
         .from("transactions")
-        .delete()
+        .delete({ count: "exact" })
         .eq("user_id", userId)
         .eq("id", transactionId)
-        .not("deleted_at", "is", null)
         .select("id");
     },
 

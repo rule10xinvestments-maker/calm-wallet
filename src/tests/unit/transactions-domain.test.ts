@@ -386,6 +386,7 @@ describe("transaction service", () => {
         deleted_at: "2026-04-21T01:00:00.000Z",
       }),
       error: null,
+      count: 1,
     }));
     const adapter = makeAdapter({
       getTransactionById: vi.fn(async () => ({
@@ -413,6 +414,7 @@ describe("transaction service", () => {
     const hardDeleteTransaction = vi.fn(async () => ({
       data: null,
       error: null,
+      count: 1,
     }));
     const adapter = makeAdapter({
       getTransactionById: vi.fn(async () => ({
@@ -434,6 +436,29 @@ describe("transaction service", () => {
       "22222222-2222-2222-2222-222222222222",
       "11111111-1111-1111-1111-111111111111",
     );
+  });
+
+  it("rejects permanent delete when no row is affected", async () => {
+    const hardDeleteTransaction = vi.fn(async () => ({
+      data: [],
+      error: null,
+      count: 0,
+    }));
+    const adapter = makeAdapter({
+      getTransactionById: vi.fn(async () => ({
+        data: makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" }),
+        error: null,
+      })),
+      hardDeleteTransaction,
+    });
+    const service = createTransactionService(adapter);
+
+    await expect(
+      service.permanentlyDeleteTransaction(
+        "22222222-2222-2222-2222-222222222222",
+        "11111111-1111-1111-1111-111111111111",
+      ),
+    ).rejects.toThrow("Unable to permanently delete transaction.");
   });
 
   it("rejects permanent delete for active transactions", async () => {

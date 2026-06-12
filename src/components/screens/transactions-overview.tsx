@@ -421,7 +421,12 @@ function RecentlyDeletedEntry({
 
   useEffect(() => {
     if (deleteForeverState.status === "success") {
+      setIsDeleteForeverConfirmOpen(false);
       onPermanentDelete(item.id);
+    }
+
+    if (deleteForeverState.status === "error") {
+      setIsDeleteForeverConfirmOpen(false);
     }
   }, [deleteForeverState.status, item.id, onPermanentDelete]);
 

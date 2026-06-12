@@ -232,6 +232,38 @@ describe("transactions overview", () => {
     expect(screen.getByRole("heading", { name: "Recent money movement" })).toBeInTheDocument();
   });
 
+  it("keeps a deleted entry visible with friendly copy when Delete forever fails", async () => {
+    const permanentlyDeleteAction = vi.fn(async () => ({
+      status: "error" as const,
+      message: "Couldn\u2019t delete this entry. Please try again.",
+    }));
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        recentlyDeletedItems={[
+          makeTransactionItem({
+            id: "deleted-1",
+            title: "Old market",
+            deletedAt: "2026-06-01T10:00:00.000Z",
+          }),
+        ]}
+        permanentlyDeleteAction={permanentlyDeleteAction}
+        stagedImports={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
+    fireEvent.click(screen.getByRole("button", { name: /Old market/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Delete forever?" })).getByRole("button", { name: "Delete forever" }));
+
+    await waitFor(() => expect(permanentlyDeleteAction).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete forever?" })).not.toBeInTheDocument());
+    expect(screen.getByText("Old market")).toBeInTheDocument();
+    expect(screen.getByText("Couldn\u2019t delete this entry. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByText(/Cannot coerce/)).not.toBeInTheDocument();
+  });
+
   it("switches Activity filters locally without shrinking the source list", () => {
     render(
       <TransactionsOverview
