@@ -390,6 +390,8 @@ type RecentlyDeletedEntryProps = {
   restoreAction: TransactionActionHandler;
   permanentlyDeleteAction: TransactionActionHandler;
   initialActionState: TransactionMutationState;
+  isExpanded: boolean;
+  onToggle: () => void;
   onRestore: (item: TransactionListItem) => void;
   onPermanentDelete: (itemId: string) => void;
 };
@@ -399,9 +401,12 @@ function RecentlyDeletedEntry({
   restoreAction,
   permanentlyDeleteAction,
   initialActionState,
+  isExpanded,
+  onToggle,
   onRestore,
   onPermanentDelete,
 }: RecentlyDeletedEntryProps) {
+  const [isDeleteForeverConfirmOpen, setIsDeleteForeverConfirmOpen] = useState(false);
   const [restoreState, restoreFormAction] = useActionState(restoreAction, initialActionState);
   const [deleteForeverState, deleteForeverFormAction] = useActionState(permanentlyDeleteAction, initialActionState);
 
@@ -422,7 +427,12 @@ function RecentlyDeletedEntry({
 
   return (
     <div className="rounded-2xl bg-slate-50 px-3 py-3">
-      <div className="flex items-start justify-between gap-3">
+      <button
+        aria-expanded={isExpanded}
+        className="flex w-full items-start justify-between gap-3 text-left"
+        onClick={onToggle}
+        type="button"
+      >
         <div className="min-w-0">
           <p className="break-words text-sm font-medium text-slate-900">{item.title}</p>
           <p className="text-xs leading-5 text-slate-500">
@@ -432,21 +442,54 @@ function RecentlyDeletedEntry({
         <p className={`shrink-0 text-sm font-semibold ${item.amountTone === "income" ? "text-emerald-700" : "text-slate-800"}`}>
           {item.amountDisplay}
         </p>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <form action={restoreFormAction}>
-          <input name="transactionId" type="hidden" value={item.id} />
-          <button className="min-h-10 w-full rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white" type="submit">
-            Restore
-          </button>
-        </form>
-        <form action={deleteForeverFormAction}>
-          <input name="transactionId" type="hidden" value={item.id} />
-          <button className="min-h-10 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700" type="submit">
+      </button>
+      {isExpanded ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <form action={restoreFormAction}>
+            <input name="transactionId" type="hidden" value={item.id} />
+            <button className="min-h-10 w-full rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white" type="submit">
+              Restore
+            </button>
+          </form>
+          <button
+            className="min-h-10 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700"
+            onClick={() => setIsDeleteForeverConfirmOpen(true)}
+            type="button"
+          >
             Delete forever
           </button>
-        </form>
-      </div>
+        </div>
+      ) : null}
+      {isDeleteForeverConfirmOpen ? (
+        <div
+          aria-labelledby={`delete-forever-title-${item.id}`}
+          aria-modal="true"
+          className="fixed inset-0 z-50 grid place-items-center bg-slate-950/30 px-4 py-6"
+          role="dialog"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+            <h2 className="text-base font-semibold text-slate-950" id={`delete-forever-title-${item.id}`}>
+              Delete forever?
+            </h2>
+            <p className="mt-2 text-sm leading-5 text-slate-600">This entry will be permanently removed.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+                onClick={() => setIsDeleteForeverConfirmOpen(false)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <form action={deleteForeverFormAction}>
+                <input name="transactionId" type="hidden" value={item.id} />
+                <button className="min-h-11 w-full rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white" type="submit">
+                  Delete forever
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {restoreState.status === "error" && restoreState.message ? <p className="mt-2 text-xs text-rose-600">{restoreState.message}</p> : null}
       {deleteForeverState.status === "error" && deleteForeverState.message ? (
         <p className="mt-2 text-xs text-rose-600">{deleteForeverState.message}</p>
@@ -477,6 +520,7 @@ export function TransactionsOverview({
   const [searchQuery, setSearchQuery] = useState(query);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
+  const [expandedDeletedItemId, setExpandedDeletedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveItems(items);
@@ -499,7 +543,7 @@ export function TransactionsOverview({
   const visibleTabs = hasDeletedItems ? [...tabs, deletedTab] : tabs;
   const cardTitle = isDeletedView ? "Recently deleted" : "Recent money movement";
   const cardSubtitle = isDeletedView
-    ? "Restore entries deleted in the last 30 days."
+    ? "Tap an entry to restore or delete forever."
     : "Tap an entry to edit, add a note, or review details.";
 
   function handleItemDeleted(item: TransactionListItem) {
@@ -510,10 +554,12 @@ export function TransactionsOverview({
   function handleItemRestored(item: TransactionListItem) {
     setDeletedItems((current) => current.filter((deletedItem) => deletedItem.id !== item.id));
     setActiveItems((current) => [item, ...current.filter((activeItem) => activeItem.id !== item.id)]);
+    setExpandedDeletedItemId(null);
     setActiveView("all");
   }
 
   function handlePermanentDelete(itemId: string) {
+    setExpandedDeletedItemId(null);
     setDeletedItems((current) => {
       const next = current.filter((item) => item.id !== itemId);
 
@@ -601,9 +647,11 @@ export function TransactionsOverview({
                 <RecentlyDeletedEntry
                   key={item.id}
                   initialActionState={initialActionState}
+                  isExpanded={expandedDeletedItemId === item.id}
                   item={item}
                   onPermanentDelete={handlePermanentDelete}
                   onRestore={handleItemRestored}
+                  onToggle={() => setExpandedDeletedItemId((current) => (current === item.id ? null : item.id))}
                   permanentlyDeleteAction={permanentlyDeleteAction}
                   restoreAction={restoreAction}
                 />

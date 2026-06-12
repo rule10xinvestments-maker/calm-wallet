@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TransactionsOverview } from "@/components/screens/transactions-overview";
 import { initialImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
@@ -177,10 +177,13 @@ describe("transactions overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
 
     expect(screen.getByRole("heading", { name: "Recently deleted" })).toBeInTheDocument();
-    expect(screen.getByText("Restore entries deleted in the last 30 days.")).toBeInTheDocument();
+    expect(screen.getByText("Tap an entry to restore or delete forever.")).toBeInTheDocument();
     expect(screen.getByText("Old market")).toBeInTheDocument();
     expect(screen.queryByText("Active market")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restore" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete forever" })).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: /Old market/ }));
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
 
     await waitFor(() => expect(restoreAction).toHaveBeenCalledOnce());
@@ -210,7 +213,17 @@ describe("transactions overview", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
+    fireEvent.click(screen.getByRole("button", { name: /Old market/ }));
     fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Delete forever?" });
+    expect(within(dialog).getByText("This entry will be permanently removed.")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(permanentlyDeleteAction).not.toHaveBeenCalled();
+    expect(screen.getByText("Old market")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Delete forever?" })).getByRole("button", { name: "Delete forever" }));
 
     await waitFor(() => expect(permanentlyDeleteAction).toHaveBeenCalledOnce());
     await waitFor(() => expect(screen.queryByText("Old market")).not.toBeInTheDocument());
