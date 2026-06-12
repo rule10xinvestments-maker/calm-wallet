@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { Search, Trash2 } from "lucide-react";
+import { AlertCircle, List, MinusCircle, PlusCircle, Search, Trash2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -21,14 +22,29 @@ type ImportReviewActionHandler = (
   formData: FormData,
 ) => Promise<ImportCandidateReviewDecisionActionState>;
 
-const tabs: Array<{ value: TransactionsView; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "expenses", label: "Expenses" },
-  { value: "income", label: "Income" },
-  { value: "needs-review", label: "Review" },
+type ActivityFilterView = TransactionsView | "deleted";
+
+type ActivityFilterTab = {
+  value: ActivityFilterView;
+  label: string;
+  accessibilityLabel: string;
+  Icon: LucideIcon;
+  tone?: "attention";
+};
+
+const tabs: ActivityFilterTab[] = [
+  { value: "all", label: "All", accessibilityLabel: "All transactions", Icon: List },
+  { value: "expenses", label: "Spend", accessibilityLabel: "Expenses", Icon: MinusCircle },
+  { value: "income", label: "Income", accessibilityLabel: "Income", Icon: PlusCircle },
+  { value: "needs-review", label: "Review", accessibilityLabel: "Needs review", Icon: AlertCircle, tone: "attention" },
 ];
 
-type ActivityFilterView = TransactionsView | "deleted";
+const deletedTab: ActivityFilterTab = {
+  value: "deleted" as const,
+  label: "Bin",
+  accessibilityLabel: "Recently deleted",
+  Icon: Trash2,
+};
 
 const importTypeLabels: Record<StagedImportListItem["importType"], string> = {
   receipt_image: "Receipt image",
@@ -480,6 +496,7 @@ export function TransactionsOverview({
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
   const hasDeletedItems = deletedItems.length > 0;
+  const visibleTabs = hasDeletedItems ? [...tabs, deletedTab] : tabs;
   const cardTitle = isDeletedView ? "Recently deleted" : "Recent money movement";
   const cardSubtitle = isDeletedView
     ? "Restore entries deleted in the last 30 days."
@@ -519,37 +536,32 @@ export function TransactionsOverview({
           </CardHeader>
         </Card>
       ) : null}
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            className={`flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium transition ${
-              activeView === tab.value
-                ? "bg-sky-600 text-white shadow-sm"
-                : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveView(tab.value)}
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
-        {hasDeletedItems ? (
-          <button
-            aria-label="Recently deleted"
-            className={`flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium transition ${
-              activeView === "deleted"
-                ? "bg-sky-600 text-white shadow-sm"
-                : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveView("deleted")}
-            title="Recently deleted"
-            type="button"
-          >
-            <Trash2 aria-hidden="true" size={14} strokeWidth={2.2} />
-            <span>Deleted</span>
-          </button>
-        ) : null}
+      <div className={`grid gap-1 rounded-2xl bg-white p-1 ring-1 ring-slate-200 ${hasDeletedItems ? "grid-cols-5" : "grid-cols-4"}`}>
+        {visibleTabs.map((tab) => {
+          const isActive = activeView === tab.value;
+          const isAttention = tab.tone === "attention";
+          const Icon = tab.Icon;
+
+          return (
+            <button
+              aria-label={tab.accessibilityLabel}
+              key={tab.value}
+              className={`flex min-h-10 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-medium leading-none transition ${
+                isActive
+                  ? "bg-sky-600 text-white shadow-sm"
+                  : isAttention
+                    ? "text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveView(tab.value)}
+              title={tab.accessibilityLabel}
+              type="button"
+            >
+              <Icon aria-hidden="true" size={15} strokeWidth={2.2} />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
       <Card>
         <CardHeader className="space-y-0 p-4 pb-2 sm:space-y-1.5 sm:p-6 sm:pb-0">

@@ -101,13 +101,15 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "All transactions" })).toHaveAttribute("type", "button");
     expect(screen.getByRole("button", { name: "Expenses" })).toHaveAttribute("type", "button");
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("type", "button");
-    expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Needs review" })).toHaveAttribute("type", "button");
+    expect(screen.getByText("All")).toBeInTheDocument();
+    expect(screen.getByText("Spend")).toBeInTheDocument();
+    expect(screen.getByText("Review")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "All" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Needs review" })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search entries")).toHaveValue("coffee");
     expect(screen.getByRole("button", { name: "Search entries" })).toHaveAttribute("type", "submit");
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
@@ -167,6 +169,7 @@ describe("transactions overview", () => {
     );
 
     expect(screen.getByRole("button", { name: "Recently deleted" })).toBeInTheDocument();
+    expect(screen.getByText("Bin")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Recent money movement" })).toBeInTheDocument();
     expect(screen.getByText("Active market")).toBeInTheDocument();
     expect(screen.queryByText("Old market")).not.toBeInTheDocument();
@@ -255,14 +258,14 @@ describe("transactions overview", () => {
     expect(screen.getByText("income row")).toBeInTheDocument();
     expect(screen.queryByText("review row")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Needs review" }));
     expect(screen.queryByText("expense row")).not.toBeInTheDocument();
     expect(screen.queryByText("income row")).not.toBeInTheDocument();
     expect(screen.getByText("review row")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(screen.getByRole("button", { name: "All transactions" }));
     fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(screen.getByRole("button", { name: "All transactions" }));
 
     expect(screen.getByText("expense row")).toBeInTheDocument();
     expect(screen.getByText("income row")).toBeInTheDocument();
@@ -314,7 +317,7 @@ describe("transactions overview", () => {
     expect(screen.getByText("zile salary")).toBeInTheDocument();
     expect(screen.queryByText("zile review")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Needs review" }));
     expect(screen.queryByText("zile")).not.toBeInTheDocument();
     expect(screen.queryByText("zile salary")).not.toBeInTheDocument();
     expect(screen.getByText("zile review")).toBeInTheDocument();
@@ -323,7 +326,7 @@ describe("transactions overview", () => {
     expect(screen.getByText("zile review")).toBeInTheDocument();
     expect(screen.queryByText("zile salary")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(screen.getByRole("button", { name: "All transactions" }));
     expect(screen.getByText("zile")).toBeInTheDocument();
     expect(screen.getByText("zile salary")).toBeInTheDocument();
     expect(screen.getByText("zile review")).toBeInTheDocument();
