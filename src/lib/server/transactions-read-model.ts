@@ -317,8 +317,8 @@ export function getReviewStateMeta(reviewState: ReviewState) {
 
   if (reviewState === "pending_review") {
     return {
-      label: "Pending review",
-      tone: "pending" as const,
+      label: "Needs review",
+      tone: "attention" as const,
     };
   }
 

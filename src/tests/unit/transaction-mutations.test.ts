@@ -210,6 +210,39 @@ describe("transaction mutation helpers", () => {
     expect(result.message).toBe("Changes saved.");
   });
 
+  it("uses a default uncertainty reason when marking an entry for review", async () => {
+    const services = makeMutationServices();
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "expense");
+    formData.set("amount", "12");
+    formData.set("currency", "USD");
+    formData.set("itemName", "Market");
+    formData.set("merchant", "");
+    formData.set("note", "");
+    formData.set("occurredAt", "2026-04-21");
+    formData.set("categoryId", "");
+    formData.set("reviewState", "needs_attention");
+    formData.set("uncertaintyReason", "");
+
+    const result = await executeUpdateTransaction({
+      userId: "user-1",
+      formData,
+      transactionService: services,
+    });
+
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        reviewState: "needs_attention",
+        uncertaintyReason: "Marked for review.",
+      }),
+      { actorType: "user" },
+    );
+    expect(result.status).toBe("success");
+  });
+
   it("rejects non-positive transaction detail amounts", async () => {
     const services = makeMutationServices();
     const formData = new FormData();

@@ -40,6 +40,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
 describe("transactions read model", () => {
   it("keeps review-state mapping UI-ready", () => {
     expect(getReviewStateMeta("needs_attention").label).toBe("Needs review");
+    expect(getReviewStateMeta("pending_review").label).toBe("Needs review");
     expect(getReviewStateMeta("reviewed").label).toBe("Reviewed");
   });
 

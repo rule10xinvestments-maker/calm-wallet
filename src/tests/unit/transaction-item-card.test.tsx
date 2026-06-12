@@ -223,6 +223,7 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
     expect(screen.getByLabelText("Amount")).toHaveValue("34.00");
     expect(screen.getByLabelText("Currency")).toHaveValue("USD");
+    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "45.67" } });
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "EUR" } });
     fireEvent.change(screen.getByLabelText("Item name"), { target: { value: "ketchup" } });
@@ -379,14 +380,11 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
     expect(screen.getByRole("radio", { name: "Expense" })).toBeChecked();
-    expect(within(screen.getByLabelText("Category")).queryByRole("option", { name: "Salary" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "Income" }));
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "250" } });
-    expect(screen.getByLabelText("Category")).toHaveValue("");
     expect(screen.getByRole("radio", { name: "Needs review" })).toBeChecked();
-    expect(within(screen.getByLabelText("Category")).getByRole("option", { name: "Salary" })).toBeInTheDocument();
-    expect(within(screen.getByLabelText("Category")).queryByRole("option", { name: "Dining" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
@@ -420,14 +418,13 @@ describe("transaction item card", () => {
     expect(screen.getByRole("group", { name: "Review state" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Reviewed" })).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "Tracked" })).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Pending review" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Pending review" })).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Needs review" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
   });
 
   it.each([
     ["Needs review", "needs_attention"],
-    ["Pending review", "pending_review"],
     ["Reviewed", "reviewed"],
   ])("submits %s from the review state chips", async (label, value) => {
     const updateAction = vi.fn(async () => ({

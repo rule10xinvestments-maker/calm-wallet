@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireAuthenticatedSession = vi.fn();
 const permanentlyDeleteTransaction = vi.fn();
+const updateTransaction = vi.fn();
 const createSupabaseTransactionService = vi.fn(async () => ({
   permanentlyDeleteTransaction,
+  updateTransaction,
 }));
 const revalidatePath = vi.fn();
 
@@ -30,6 +32,12 @@ describe("transaction actions", () => {
       },
       eventCreated: false,
     });
+    updateTransaction.mockResolvedValue({
+      transaction: {
+        id: "txn-1",
+      },
+      eventCreated: false,
+    });
   });
 
   it("does not leak raw database errors from permanent delete", async () => {
@@ -46,5 +54,28 @@ describe("transaction actions", () => {
       message: "Couldn\u2019t delete this entry. Please try again.",
     });
     expect(result.message).not.toContain("Cannot coerce");
+  });
+
+  it("does not leak raw validation errors from transaction detail updates", async () => {
+    const { updateTransactionAction } = await import("@/lib/actions/transactions");
+    updateTransaction.mockRejectedValueOnce(
+      new Error('[{"code":"custom","message":"An uncertainty reason is required when review is needed.","path":["uncertaintyReason"]}]'),
+    );
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "expense");
+    formData.set("amount", "12");
+    formData.set("currency", "USD");
+    formData.set("occurredAt", "2026-04-21");
+    formData.set("reviewState", "needs_attention");
+    formData.set("uncertaintyReason", "");
+
+    const result = await updateTransactionAction({ status: "idle", message: null }, formData);
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Couldn\u2019t save changes. Please check the entry and try again.",
+    });
+    expect(result.message).not.toContain("uncertaintyReason");
   });
 });

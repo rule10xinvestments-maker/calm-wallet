@@ -175,10 +175,10 @@ export async function updateTransactionAction(
     revalidatePath("/assistant");
     revalidatePath("/insights");
     return result;
-  } catch (error) {
+  } catch {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to update transaction.",
+      message: "Couldn\u2019t save changes. Please check the entry and try again.",
     };
   }
 }

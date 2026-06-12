@@ -193,8 +193,9 @@ export async function executeUpdateTransaction(args: {
   const note = toNullableString(args.formData.get("note"));
   const occurredAt = toIsoDateTime(args.formData.get("occurredAt"));
   const categoryId = toNullableString(args.formData.get("categoryId"));
-  const reviewState = toRequiredString(args.formData.get("reviewState"), "Review state") as ReviewState;
-  const uncertaintyReason = toNullableString(args.formData.get("uncertaintyReason"));
+  const submittedReviewState = toRequiredString(args.formData.get("reviewState"), "Review state") as ReviewState;
+  const reviewState = submittedReviewState === "reviewed" ? "reviewed" : "needs_attention";
+  const uncertaintyReason = reviewState === "needs_attention" ? toNullableString(args.formData.get("uncertaintyReason")) ?? "Marked for review." : null;
 
   await args.transactionService.updateTransaction(
     args.userId,

@@ -38,7 +38,6 @@ type TransactionItemCardProps = {
 
 const REVIEW_STATE_OPTIONS: Array<{ label: string; value: TransactionListItem["reviewState"] }> = [
   { label: "Reviewed", value: "reviewed" },
-  { label: "Pending review", value: "pending_review" },
   { label: "Needs review", value: "needs_attention" },
 ];
 
@@ -167,7 +166,11 @@ function getReviewLabel(reviewState: TransactionListItem["reviewState"]) {
     return "Needs review";
   }
 
-  return "Pending review";
+  return "Needs review";
+}
+
+function getEditableReviewState(reviewState: TransactionListItem["reviewState"]) {
+  return reviewState === "reviewed" ? "reviewed" : "needs_attention";
 }
 
 export function TransactionItemCard({
@@ -187,7 +190,7 @@ export function TransactionItemCard({
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
   const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionListItem["amountTone"]>(item.amountTone);
-  const [selectedReviewState, setSelectedReviewState] = useState<TransactionListItem["reviewState"]>(item.reviewState);
+  const [selectedReviewState, setSelectedReviewState] = useState<TransactionListItem["reviewState"]>(getEditableReviewState(item.reviewState));
   const [uncertaintyNote, setUncertaintyNote] = useState(item.uncertaintyReason ?? "");
   const [pendingRecategorizedItem, setPendingRecategorizedItem] = useState<TransactionListItem | null>(null);
   const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
@@ -201,9 +204,6 @@ export function TransactionItemCard({
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
   const [deleteState, deleteFormAction] = useActionState(deleteAction, initialState);
   const displayItem = optimisticItem ?? item;
-  const detailCategoryOptions = categories.filter(
-    (category) => !category.direction || category.direction === selectedTransactionType || category.direction === "both",
-  );
   const selectedCategory = selectedCategoryId ? categories.find((category) => category.id === selectedCategoryId) : null;
   const selectedCategoryLabel = selectedCategory?.label ?? (selectedCategoryId ? displayItem.categoryLabel : "Uncategorized");
   const categoryIconItem = { ...displayItem, categoryLabel: selectedCategoryLabel };
@@ -275,7 +275,7 @@ export function TransactionItemCard({
       setIsDeleted(false);
       setSelectedCategoryId(item.categoryId ?? "");
       setSelectedTransactionType(item.amountTone);
-      setSelectedReviewState(item.reviewState);
+      setSelectedReviewState(getEditableReviewState(item.reviewState));
       setUncertaintyNote(item.uncertaintyReason ?? "");
       setIsCategoryPickerOpen(false);
       setIsDeleteConfirmOpen(false);
@@ -352,13 +352,13 @@ export function TransactionItemCard({
       submittedCategory && (!submittedCategory.direction || submittedCategory.direction === transactionType || submittedCategory.direction === "both")
         ? submittedCategory.id
         : null;
-    const reviewState = String(formData.get("reviewState") ?? displayItem.reviewState) as TransactionListItem["reviewState"];
+    const reviewState = getEditableReviewState(String(formData.get("reviewState") ?? displayItem.reviewState) as TransactionListItem["reviewState"]);
     const categoryWasCleared = Boolean(submittedCategoryId && !categoryId);
     const nextReviewState = categoryWasCleared && reviewState === "reviewed" ? "needs_attention" : reviewState;
     const uncertaintyReason =
       nextReviewState === "reviewed"
         ? null
-        : String(formData.get("uncertaintyReason") ?? "").trim() || (categoryWasCleared ? "Category needs review." : null);
+        : String(formData.get("uncertaintyReason") ?? "").trim() || (categoryWasCleared ? "Category needs review." : "Marked for review.");
     const occurredAt = /^\d{4}-\d{2}-\d{2}$/.test(occurredDate) ? `${occurredDate}T12:00:00.000Z` : displayItem.occurredAt;
 
     const nextItem: TransactionListItem = {
@@ -641,25 +641,10 @@ export function TransactionItemCard({
                   type="date"
                 />
               </label>
-              <label className="grid gap-1">
-                <span className="text-xs font-medium text-slate-600">Category</span>
-                <select
-                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
-                  name="categoryId"
-                  onChange={(event) => setSelectedCategoryId(event.currentTarget.value)}
-                  value={selectedCategoryId}
-                >
-                  <option value="">Uncategorized</option>
-                  {detailCategoryOptions.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <input name="categoryId" type="hidden" value={selectedCategoryId} />
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Review state</legend>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2">
                   {REVIEW_STATE_OPTIONS.map((option) => (
                     <label key={option.value} className="block">
                       <input
