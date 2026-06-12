@@ -68,10 +68,10 @@ describe("transaction item card", () => {
 
     expect(screen.getByText("hotdog")).toBeInTheDocument();
     expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
-    expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(screen.getByText("-$34.00")).toBeInTheDocument();
     expect(screen.getByLabelText("Dining category icon")).toBeInTheDocument();
     expect(screen.getByText("Review")).toBeInTheDocument();
+    expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
 
     expect(screen.queryByLabelText("Category")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save category" })).not.toBeInTheDocument();
@@ -121,15 +121,46 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Personal category icon")).toBeInTheDocument();
   });
 
+  it("styles uncategorized review icons as gentle attention markers", () => {
+    renderCard({
+      item: makeItem({
+        categoryId: null,
+        categoryLabel: "Uncategorized",
+      }),
+    });
+
+    expect(screen.getByLabelText("Uncategorized category icon")).toHaveClass("text-amber-700");
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+
+    expect(screen.getByRole("button", { name: "Change category, currently Uncategorized" })).toHaveClass("text-amber-700");
+  });
+
+  it("keeps normal category icons blue", () => {
+    renderCard({
+      item: makeItem({
+        categoryLabel: "Dining",
+        reviewLabel: "Reviewed",
+        reviewState: "reviewed",
+        uncertaintyReason: null,
+      }),
+    });
+
+    expect(screen.getByLabelText("Dining category icon")).toHaveClass("text-sky-700");
+  });
+
   it("expands inline to reveal a compact transaction action row", () => {
     renderCard();
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
 
-    expect(screen.getByRole("button", { name: "Change category, currently Dining" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save category" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit details" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete transaction" })).toBeInTheDocument();
+    const actionButtons = within(screen.getByRole("group", { name: "Transaction actions" })).getAllByRole("button");
+    expect(actionButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Change category, currently Dining",
+      "Edit details",
+      "Save category",
+      "Delete transaction",
+    ]);
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark tracked" })).not.toBeInTheDocument();
@@ -229,7 +260,7 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Note")).toHaveValue("receipt checked");
   });
 
-  it("removes a deleted row after server confirmation without a route refresh", async () => {
+  it("asks for confirmation before deleting and cancels safely", () => {
     const deleteAction = vi.fn(async () => ({
       status: "success" as const,
       message: "Transaction removed from your tracked items.",
@@ -238,6 +269,28 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Delete transaction" }));
+
+    expect(screen.getByRole("dialog", { name: "Delete this entry?" })).toBeInTheDocument();
+    expect(screen.getByText("You can't undo this from here yet.")).toBeInTheDocument();
+    expect(deleteAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog", { name: "Delete this entry?" })).not.toBeInTheDocument();
+    expect(screen.getByText("hotdog")).toBeInTheDocument();
+    expect(deleteAction).not.toHaveBeenCalled();
+  });
+
+  it("removes a deleted row after confirmation without a route refresh", async () => {
+    const deleteAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Transaction removed from your tracked items.",
+    }));
+    renderCard({ deleteAction });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete transaction" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Delete this entry?" })).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(deleteAction).toHaveBeenCalledOnce());
     const [, formData] = deleteAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];

@@ -180,6 +180,7 @@ export function TransactionItemCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
@@ -206,6 +207,10 @@ export function TransactionItemCard({
   const CategoryIcon = getCategoryIcon(displayItem);
   const ActionCategoryIcon = getCategoryIcon(categoryIconItem);
   const needsReview = displayItem.reviewLabel !== "Reviewed";
+  const categoryIconNeedsAttention =
+    displayItem.categoryLabel.toLowerCase().includes("uncategorized") || displayItem.categoryLabel.toLowerCase().includes("needs");
+  const actionCategoryIconNeedsAttention =
+    selectedCategoryLabel.toLowerCase().includes("uncategorized") || selectedCategoryLabel.toLowerCase().includes("needs");
   const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
     ? CURRENCY_OPTIONS
     : ([displayItem.currency, ...CURRENCY_OPTIONS] as const);
@@ -270,6 +275,7 @@ export function TransactionItemCard({
       setSelectedReviewState(item.reviewState);
       setUncertaintyNote(item.uncertaintyReason ?? "");
       setIsCategoryPickerOpen(false);
+      setIsDeleteConfirmOpen(false);
     }
   }, [item]);
 
@@ -391,7 +397,9 @@ export function TransactionItemCard({
       >
         <span
           aria-label={`${displayItem.categoryLabel} category icon`}
-          className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700"
+          className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white ${
+            categoryIconNeedsAttention ? "text-amber-700" : "text-sky-700"
+          }`}
         >
           <CategoryIcon aria-hidden="true" size={18} strokeWidth={2} />
         </span>
@@ -410,7 +418,6 @@ export function TransactionItemCard({
               Merchant: {displayItem.merchant}
             </span>
           ) : null}
-          {needsReview ? <span className="block text-xs font-medium leading-5 text-amber-600">{displayItem.reviewLabel}</span> : null}
         </span>
         <span className="grid justify-items-end gap-1">
           <span className={`shrink-0 text-sm font-semibold ${displayItem.amountTone === "income" ? "text-emerald-700" : "text-slate-800"}`}>
@@ -426,22 +433,21 @@ export function TransactionItemCard({
         <div className="mt-3 grid gap-3 border-t border-slate-200 pt-3">
           <form action={recategorizeFormAction} className="grid gap-2" onSubmit={handleRecategorizeSubmit}>
             <input name="transactionId" type="hidden" value={item.id} />
-            <div className="grid grid-cols-4 gap-2">
+            <div aria-label="Transaction actions" className="grid grid-cols-4 gap-2" role="group">
               <button
                 aria-expanded={isCategoryPickerOpen}
                 aria-label={`Change category, currently ${selectedCategoryLabel}`}
-                className="relative flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
+                className={`relative flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
+                  actionCategoryIconNeedsAttention
+                    ? "border-amber-200 text-amber-700 hover:border-amber-300 hover:bg-amber-50"
+                    : "border-slate-200 text-sky-700 hover:border-sky-200 hover:bg-sky-50"
+                }`}
                 onClick={() => setIsCategoryPickerOpen((value) => !value)}
                 type="button"
               >
                 <ActionCategoryIcon aria-hidden="true" size={19} strokeWidth={2.1} />
                 <ChevronDown aria-hidden="true" className="absolute bottom-1 right-1 text-slate-400" size={12} strokeWidth={2.4} />
               </button>
-              <PendingIconSubmitButton
-                className="flex min-h-11 items-center justify-center rounded-2xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 disabled:opacity-60"
-                icon={Check}
-                label="Save category"
-              />
               <button
                 aria-label="Edit details"
                 className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
@@ -450,11 +456,16 @@ export function TransactionItemCard({
               >
                 <Pencil aria-hidden="true" size={18} strokeWidth={2.1} />
               </button>
+              <PendingIconSubmitButton
+                className="flex min-h-11 items-center justify-center rounded-2xl border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 disabled:opacity-60"
+                icon={Check}
+                label="Save category"
+              />
               <button
                 aria-label="Delete transaction"
                 className="flex min-h-11 items-center justify-center rounded-2xl border border-rose-200 bg-white text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
-                form={`delete-${item.id}`}
-                type="submit"
+                onClick={() => setIsDeleteConfirmOpen(true)}
+                type="button"
               >
                 <Trash2 aria-hidden="true" size={18} strokeWidth={2.1} />
               </button>
@@ -481,9 +492,36 @@ export function TransactionItemCard({
             )}
           </form>
 
-          <form action={deleteFormAction} id={`delete-${item.id}`}>
-            <input name="transactionId" type="hidden" value={item.id} />
-          </form>
+          {isDeleteConfirmOpen ? (
+            <div
+              aria-labelledby={`delete-title-${item.id}`}
+              aria-modal="true"
+              className="fixed inset-0 z-50 grid place-items-center bg-slate-950/30 px-4 py-6"
+              role="dialog"
+            >
+              <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                <h2 className="text-base font-semibold text-slate-950" id={`delete-title-${item.id}`}>
+                  Delete this entry?
+                </h2>
+                <p className="mt-2 text-sm leading-5 text-slate-600">You can&apos;t undo this from here yet.</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+                    onClick={() => setIsDeleteConfirmOpen(false)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <form action={deleteFormAction}>
+                    <input name="transactionId" type="hidden" value={item.id} />
+                    <button className="min-h-11 w-full rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white" type="submit">
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <ActionMessage state={recategorizeState} />
           <ActionMessage
