@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -528,8 +528,26 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const hasIncome = days.some((day) => day.cumulativeIncomeMinor > 0);
   const hasSpending = days.some((day) => day.cumulativeExpenseMinor > 0);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const chartRootRef = useRef<HTMLDivElement | null>(null);
   const scrubLayerRef = useRef<HTMLDivElement | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (selectedDayIndex === null) {
+      return;
+    }
+
+    function clearTrendPointOnOutsidePointerDown(event: PointerEvent) {
+      if (chartRootRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      activePointerIdRef.current = null;
+      setSelectedDayIndex(null);
+    }
+
+    document.addEventListener("pointerdown", clearTrendPointOnOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", clearTrendPointOnOutsidePointerDown);
+  }, [selectedDayIndex]);
 
   if (!hasIncome && !hasSpending) {
     return (
@@ -560,6 +578,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const netTone = selectedDay?.netMinor && selectedDay.netMinor < 0 ? "text-rose-600" : "text-emerald-700";
   const finalNetMinor = lastTrendDay?.netMinor ?? 0;
   const finalNetTone = finalNetMinor < 0 ? "border-rose-100 bg-rose-50 text-rose-700" : "border-emerald-100 bg-emerald-50 text-emerald-700";
+
   const updateSelectedDayFromClientX = (clientX: number) => {
     if (!Number.isFinite(clientX)) {
       return;
@@ -575,7 +594,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   };
 
   return (
-    <div aria-label="Selected month income and spending trend" className="relative space-y-3" role="img">
+    <div aria-label="Selected month income and spending trend" className="relative space-y-3" ref={chartRootRef} role="img">
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
         <span className="font-semibold text-emerald-700">
           Income {lastTrendDay ? `${getApproxPrefix(data, lastTrendDay.cumulativeIncomeMinor)}${lastTrendDay.cumulativeIncomeDisplay}` : ""}

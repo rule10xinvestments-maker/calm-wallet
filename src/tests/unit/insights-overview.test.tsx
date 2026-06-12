@@ -695,6 +695,12 @@ describe("insights overview", () => {
     expect(screen.getByText("Income: $50")).toBeInTheDocument();
     expect(screen.getByText("Spending: $12")).toBeInTheDocument();
     expect(screen.getByText("Net: + $38")).toBeInTheDocument();
+
+    dispatchPointerEvent(document.body, "pointerdown", { clientX: 0, pointerId: 2, pointerType: "touch" });
+
+    expect(screen.queryByText("Income: $50")).not.toBeInTheDocument();
+    expect(screen.queryByText("Spending: $12")).not.toBeInTheDocument();
+    expect(screen.queryByText("Net: + $38")).not.toBeInTheDocument();
     expect(screen.queryByText("No transactions tracked for this month yet.")).not.toBeInTheDocument();
   });
 
