@@ -1425,63 +1425,59 @@ function SpendingMixRows({
         const chartColor = getSpendingCategoryColor(item, index);
 
         return (
-          <div key={item.key} className="grid grid-cols-[2rem_1fr] gap-3 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
-            <div
-              aria-label={`${item.label} chart color and category icon`}
-              className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full border"
-              role="img"
-              style={{ backgroundColor: `${chartColor}1A`, borderColor: `${chartColor}33`, color: chartColor }}
+          <div key={item.key} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+            <button
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? "Hide" : "Show"} ${item.label} entries`}
+              className="grid w-full grid-cols-[2rem_1fr] gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              onClick={() => setExpandedKey(isExpanded ? null : item.key)}
+              type="button"
             >
-              <CategoryIcon aria-hidden="true" className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 space-y-2">
-              <div className="grid grid-cols-[1fr_auto] gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      aria-expanded={isExpanded}
-                      className="rounded-md text-left font-medium text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                      onClick={() => setExpandedKey(isExpanded ? null : item.key)}
-                      type="button"
-                    >
+              <span
+                aria-label={`${item.label} chart color and category icon`}
+                className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full border"
+                role="img"
+                style={{ backgroundColor: `${chartColor}1A`, borderColor: `${chartColor}33`, color: chartColor }}
+              >
+                <CategoryIcon aria-hidden="true" className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 space-y-2">
+                <span className="grid grid-cols-[1fr_auto] gap-3">
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-slate-900">{item.label}</span>
-                    </button>
-                    {item.label.toLowerCase() === "needs category" ? (
-                      <Link
-                        className="rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
-                        href="/transactions?view=needs-review"
-                      >
-                        Review
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-                <button
-                  aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.label} entries`}
-                  className="whitespace-nowrap rounded-md text-right text-sm font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                  onClick={() => setExpandedKey(isExpanded ? null : item.key)}
-                  type="button"
-                >
-                  {item.amountDisplay}
-                </button>
-              </div>
-              <div className="grid grid-cols-[1fr_auto] gap-3">
-                <p className="text-xs text-slate-500">
-                  {item.transactionCount} {item.transactionCount === 1 ? "entry" : "entries"}
-                </p>
-                <p className="text-xs font-medium text-slate-500">{percent}%</p>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  aria-label={`${item.label} ${segment === "income" ? "income" : "spending"} share ${percent}%`}
-                  aria-valuemax={100}
-                  aria-valuemin={0}
-                  aria-valuenow={percent}
-                  className="h-full rounded-full"
-                  role="meter"
-                  style={{ backgroundColor: chartColor, width: `${percent}%` }}
-                />
-              </div>
+                    </span>
+                  </span>
+                  <span className="whitespace-nowrap text-right text-sm font-semibold text-slate-800">{item.amountDisplay}</span>
+                </span>
+                <span className="grid grid-cols-[1fr_auto] gap-3">
+                  <span className="text-xs text-slate-500">
+                    {item.transactionCount} {item.transactionCount === 1 ? "entry" : "entries"}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500">{percent}%</span>
+                </span>
+                <span className="block h-2 overflow-hidden rounded-full bg-slate-100">
+                  <span
+                    aria-label={`${item.label} ${segment === "income" ? "income" : "spending"} share ${percent}%`}
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={percent}
+                    className="block h-full rounded-full"
+                    role="meter"
+                    style={{ backgroundColor: chartColor, width: `${percent}%` }}
+                  />
+                </span>
+              </span>
+            </button>
+            {item.label.toLowerCase() === "needs category" ? (
+              <Link
+                className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
+                href="/transactions?view=needs-review"
+              >
+                Review
+              </Link>
+            ) : null}
+            <div className="ml-11 min-w-0 space-y-2">
               {isExpanded ? (
                 <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
                   <div className="space-y-2">

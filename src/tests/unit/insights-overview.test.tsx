@@ -1517,11 +1517,20 @@ describe("insights overview", () => {
     expect(screen.getByText("2 entries")).toBeInTheDocument();
     expect(screen.queryByText("Corner Market")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    expect(screen.getByRole("button", { name: "Show Groceries entries" })).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("img", { name: "Groceries chart color and category icon" }));
     expect(screen.getByText("Corner Market")).toBeInTheDocument();
     expect(screen.getByText("Apr 22")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-expanded", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    fireEvent.click(screen.getByText("2 entries"));
+    expect(screen.queryByText("Corner Market")).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole("button", { name: "Show Groceries entries" })).getByText("Groceries"));
+    expect(screen.getByText("Corner Market")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("meter", { name: "Groceries spending share 100%" }));
     expect(screen.queryByText("Corner Market")).not.toBeInTheDocument();
   });
 
@@ -1539,7 +1548,7 @@ describe("insights overview", () => {
     expect(screen.getByRole("meter", { name: "Salary income share 100%" })).toBeInTheDocument();
     expect(screen.getByText("1 entry")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Salary" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Salary entries" }));
     expect(screen.getByText("Payroll")).toBeInTheDocument();
   });
 
