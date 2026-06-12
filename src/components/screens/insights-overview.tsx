@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type MouseEvent, type ReactNode } from "react";
+import { useActionState, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -514,11 +514,22 @@ function formatTrendNetDisplay(data: InsightsData, netMinor: number) {
   return `${sign} ${getApproxPrefix(data, Math.abs(netMinor))}${formatMoney(Math.abs(netMinor), data.displayCurrency)}`;
 }
 
+export function getNearestTrendPointIndex(clientX: number, boundsLeft: number, boundsWidth: number, pointCount: number) {
+  if (pointCount <= 1 || boundsWidth <= 0) {
+    return 0;
+  }
+
+  const normalizedX = Math.min(1, Math.max(0, (clientX - boundsLeft) / boundsWidth));
+  return Math.min(pointCount - 1, Math.max(0, Math.round(normalizedX * (pointCount - 1))));
+}
+
 function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const days = data.selectedMonthTrendDays;
   const hasIncome = days.some((day) => day.cumulativeIncomeMinor > 0);
   const hasSpending = days.some((day) => day.cumulativeExpenseMinor > 0);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const scrubLayerRef = useRef<HTMLDivElement | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
 
   if (!hasIncome && !hasSpending) {
     return (
@@ -549,6 +560,19 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const netTone = selectedDay?.netMinor && selectedDay.netMinor < 0 ? "text-rose-600" : "text-emerald-700";
   const finalNetMinor = lastTrendDay?.netMinor ?? 0;
   const finalNetTone = finalNetMinor < 0 ? "border-rose-100 bg-rose-50 text-rose-700" : "border-emerald-100 bg-emerald-50 text-emerald-700";
+  const updateSelectedDayFromClientX = (clientX: number) => {
+    if (!Number.isFinite(clientX)) {
+      return;
+    }
+
+    const bounds = scrubLayerRef.current?.getBoundingClientRect();
+
+    if (!bounds) {
+      return;
+    }
+
+    setSelectedDayIndex(getNearestTrendPointIndex(clientX, bounds.left, bounds.width, days.length));
+  };
 
   return (
     <div aria-label="Selected month income and spending trend" className="relative space-y-3" role="img">
@@ -579,7 +603,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
         >
           {formatTrendNetDisplay(data, finalNetMinor)}
         </div>
-      <svg className="h-36 w-full touch-pan-y overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 104">
+      <svg className="h-36 w-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 104">
         <defs>
           <linearGradient id="income-trend-fill" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#10b981" stopOpacity="0.16" />
@@ -629,27 +653,42 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
             ) : null}
           </>
         ) : null}
-        {days.map((day, index) => {
-          const x = xForIndex(index);
-          const hitWidth = Math.max(3, 100 / days.length);
-
-          return (
-            <g key={day.key}>
-              <rect
-                aria-label={`${formatSpendingDayLabel(day)} trend point, income ${day.cumulativeIncomeDisplay}, spending ${day.cumulativeExpenseDisplay}, net ${day.netDisplay}`}
-                className="cursor-crosshair fill-transparent"
-                height="104"
-                onPointerDown={() => setSelectedDayIndex(index)}
-                onPointerEnter={() => setSelectedDayIndex(index)}
-                onPointerMove={() => setSelectedDayIndex(index)}
-                width={hitWidth}
-                x={x - hitWidth / 2}
-                y="0"
-              />
-            </g>
-          );
-        })}
       </svg>
+        <div
+          aria-label="Scrub selected month trend chart"
+          className="absolute inset-0 cursor-crosshair touch-pan-y"
+          onPointerDown={(event) => {
+            activePointerIdRef.current = event.pointerId;
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+            updateSelectedDayFromClientX(event.clientX);
+          }}
+          onPointerEnter={(event) => {
+            if (event.pointerType === "mouse") {
+              updateSelectedDayFromClientX(event.clientX);
+            }
+          }}
+          onPointerMove={(event) => {
+            if (event.pointerType === "mouse" || activePointerIdRef.current === event.pointerId) {
+              updateSelectedDayFromClientX(event.clientX);
+            }
+          }}
+          onPointerUp={(event) => {
+            if (activePointerIdRef.current === event.pointerId) {
+              activePointerIdRef.current = null;
+            }
+          }}
+          onPointerCancel={(event) => {
+            if (activePointerIdRef.current === event.pointerId) {
+              activePointerIdRef.current = null;
+            }
+          }}
+          ref={scrubLayerRef}
+        />
+        <div className="sr-only" aria-live="polite">
+          {selectedDay
+            ? `${formatSpendingDayLabel(selectedDay)} trend point, income ${selectedDay.cumulativeIncomeDisplay}, spending ${selectedDay.cumulativeExpenseDisplay}, net ${selectedDay.netDisplay}`
+            : ""}
+        </div>
       </div>
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
         <span className="whitespace-nowrap">{firstDay ? formatSpendingDayLabel(firstDay) : data.monthLabel}</span>

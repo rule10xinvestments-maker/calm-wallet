@@ -2,11 +2,26 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSpendingMixDonutSegments,
+  getNearestTrendPointIndex,
   getMonthStatusClass,
   InsightsOverview,
 } from "@/components/screens/insights-overview";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
+
+function dispatchPointerEvent(
+  element: Element,
+  type: "pointerdown" | "pointermove",
+  init: { clientX: number; pointerId: number; pointerType: string },
+) {
+  const event = new Event(type, { bubbles: true });
+  Object.defineProperties(event, {
+    clientX: { value: init.clientX },
+    pointerId: { value: init.pointerId },
+    pointerType: { value: init.pointerType },
+  });
+  fireEvent(element, event);
+}
 
 function makeCategory(
   overrides: Partial<InsightsData["categoryBreakdown"][number]> = {},
@@ -323,6 +338,15 @@ function setViewportScroll({ width, x = 0, y }: { width: number; x?: number; y: 
 }
 
 describe("insights overview", () => {
+  it("maps chart scrub position to the nearest trend point", () => {
+    expect(getNearestTrendPointIndex(0, 0, 300, 4)).toBe(0);
+    expect(getNearestTrendPointIndex(140, 0, 300, 4)).toBe(1);
+    expect(getNearestTrendPointIndex(180, 0, 300, 4)).toBe(2);
+    expect(getNearestTrendPointIndex(360, 0, 300, 4)).toBe(3);
+    expect(getNearestTrendPointIndex(-20, 0, 300, 4)).toBe(0);
+    expect(getNearestTrendPointIndex(20, 0, 0, 4)).toBe(0);
+  });
+
   beforeEach(() => {
     setViewportScroll({ width: 1024, y: 0 });
   });
@@ -649,9 +673,23 @@ describe("insights overview", () => {
       }),
     );
 
-    const point = screen.getByLabelText("Apr 15 trend point, income $50, spending $12, net $38");
+    const scrubLayer = screen.getByLabelText("Scrub selected month trend chart");
+    vi.spyOn(scrubLayer, "getBoundingClientRect").mockReturnValue({
+      bottom: 144,
+      height: 144,
+      left: 0,
+      right: 300,
+      top: 0,
+      width: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
 
-    fireEvent.pointerDown(point);
+    dispatchPointerEvent(scrubLayer, "pointerdown", { clientX: 0, pointerId: 1, pointerType: "touch" });
+    expect(screen.getAllByText("Apr 1").length).toBeGreaterThan(0);
+
+    dispatchPointerEvent(scrubLayer, "pointermove", { clientX: 300, pointerId: 1, pointerType: "touch" });
 
     expect(screen.getAllByText("Apr 15").length).toBeGreaterThan(0);
     expect(screen.getByText("Income: $50")).toBeInTheDocument();
