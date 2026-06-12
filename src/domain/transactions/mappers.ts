@@ -24,7 +24,6 @@ export function mapTransactionRowToDomain(row: TransactionRow): Transaction {
     importRecordId: row.import_record_id,
     importCandidateId: row.import_candidate_id,
     deletedAt: row.deleted_at,
-    deletedForeverAt: row.deleted_forever_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -47,7 +46,6 @@ export function mapDomainTransactionToEventPayload(transaction: Transaction) {
     importRecordId: transaction.importRecordId,
     importCandidateId: transaction.importCandidateId,
     deletedAt: transaction.deletedAt,
-    deletedForeverAt: transaction.deletedForeverAt,
     createdAt: transaction.createdAt,
     updatedAt: transaction.updatedAt,
   };

@@ -32,7 +32,6 @@ function makeTransactionRow(overrides: Partial<TransactionRow> = {}): Transactio
     import_record_id: null,
     import_candidate_id: null,
     deleted_at: null,
-    deleted_forever_at: null,
     created_at: "2026-04-20T10:00:00.000Z",
     updated_at: "2026-04-20T10:00:00.000Z",
     ...overrides,
@@ -59,16 +58,12 @@ function makeAdapter(overrides: Partial<TransactionServiceAdapter> = {}): Transa
       }),
       error: null,
     })),
-    markTransactionDeletedForever: vi.fn(async (_userId, transactionId, deletedForeverAt) => ({
-      data: [
-        makeTransactionRow({
-          id: transactionId,
-          deleted_at: "2026-04-21T01:00:00.000Z",
-          deleted_forever_at: deletedForeverAt,
-        }),
-      ],
+    hardDeleteTransaction: vi.fn(async (_userId, transactionId) => ({
+      data: makeTransactionRow({
+        id: transactionId,
+        deleted_at: "2026-04-21T01:00:00.000Z",
+      }),
       error: null,
-      count: 1,
     })),
     listTransactions: vi.fn(async () => ({ data: [makeTransactionRow()], error: null })),
     listRecoverableDeletedTransactions: vi.fn(async () => ({
@@ -157,11 +152,10 @@ describe("transaction policy", () => {
   });
 
   it("enforces soft delete and recategorize guards", () => {
-    expect(canSoftDeleteTransaction({ ...makeTransactionRow(), deletedAt: null, deletedForeverAt: null, userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(true);
-    expect(canRecategorizeTransaction({ ...makeTransactionRow(), deletedAt: null, deletedForeverAt: null, userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(true);
-    expect(canRestoreTransaction({ ...makeTransactionRow(), deletedAt: "2026-04-21T01:00:00.000Z", deletedForeverAt: null, userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(true);
-    expect(canRestoreTransaction({ ...makeTransactionRow(), deletedAt: null, deletedForeverAt: null, userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(false);
-    expect(canRestoreTransaction({ ...makeTransactionRow(), deletedAt: "2026-04-21T01:00:00.000Z", deletedForeverAt: "2026-04-22T01:00:00.000Z", userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(false);
+    expect(canSoftDeleteTransaction({ ...makeTransactionRow(), deletedAt: null, userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(true);
+    expect(canRecategorizeTransaction({ ...makeTransactionRow(), deletedAt: null, userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(true);
+    expect(canRestoreTransaction({ ...makeTransactionRow(), deletedAt: "2026-04-21T01:00:00.000Z", userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(true);
+    expect(canRestoreTransaction({ ...makeTransactionRow(), deletedAt: null, userId: "u", transactionType: "expense", amountMinor: 1, currency: "USD", occurredAt: "", categoryId: null, itemName: null, merchant: null, note: null, source: "manual", reviewState: "reviewed", uncertaintyReason: null, importRecordId: null, importCandidateId: null, createdAt: "", updatedAt: "", id: "1" })).toBe(false);
   });
 });
 
@@ -385,15 +379,12 @@ describe("transaction service", () => {
     );
   });
 
-  it("marks only already soft-deleted transactions as deleted forever", async () => {
-    const markTransactionDeletedForever = vi.fn(async (_userId, transactionId, deletedForeverAt) => ({
-      data: [
-        makeTransactionRow({
-          id: transactionId,
-          deleted_at: "2026-04-21T01:00:00.000Z",
-          deleted_forever_at: deletedForeverAt,
-        }),
-      ],
+  it("permanently deletes only already soft-deleted transactions", async () => {
+    const hardDeleteTransaction = vi.fn(async (_userId, transactionId) => ({
+      data: makeTransactionRow({
+        id: transactionId,
+        deleted_at: "2026-04-21T01:00:00.000Z",
+      }),
       error: null,
       count: 1,
     }));
@@ -402,7 +393,7 @@ describe("transaction service", () => {
         data: makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" }),
         error: null,
       })),
-      markTransactionDeletedForever,
+      hardDeleteTransaction,
     });
     const service = createTransactionService(adapter);
 
@@ -412,18 +403,16 @@ describe("transaction service", () => {
     );
 
     expect(result.transaction.deletedAt).not.toBeNull();
-    expect(result.transaction.deletedForeverAt).not.toBeNull();
     expect(result.eventCreated).toBe(false);
-    expect(markTransactionDeletedForever).toHaveBeenCalledWith(
+    expect(hardDeleteTransaction).toHaveBeenCalledWith(
       "22222222-2222-2222-2222-222222222222",
       "11111111-1111-1111-1111-111111111111",
-      expect.any(String),
     );
   });
 
-  it("rejects permanent delete when the marker update returns no row", async () => {
-    const markTransactionDeletedForever = vi.fn(async () => ({
-      data: [],
+  it("does not require a returned row when permanently deleting a soft-deleted transaction", async () => {
+    const hardDeleteTransaction = vi.fn(async () => ({
+      data: null,
       error: null,
       count: 1,
     }));
@@ -432,20 +421,25 @@ describe("transaction service", () => {
         data: makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" }),
         error: null,
       })),
-      markTransactionDeletedForever,
+      hardDeleteTransaction,
     });
     const service = createTransactionService(adapter);
 
-    await expect(
-      service.permanentlyDeleteTransaction(
-        "22222222-2222-2222-2222-222222222222",
-        "11111111-1111-1111-1111-111111111111",
-      ),
-    ).rejects.toThrow("Unable to permanently delete transaction.");
+    const result = await service.permanentlyDeleteTransaction(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+    );
+
+    expect(result.transaction.deletedAt).toBe("2026-04-21T01:00:00.000Z");
+    expect(result.eventCreated).toBe(false);
+    expect(hardDeleteTransaction).toHaveBeenCalledWith(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+    );
   });
 
   it("rejects permanent delete when no row is affected", async () => {
-    const markTransactionDeletedForever = vi.fn(async () => ({
+    const hardDeleteTransaction = vi.fn(async () => ({
       data: [],
       error: null,
       count: 0,
@@ -455,7 +449,7 @@ describe("transaction service", () => {
         data: makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" }),
         error: null,
       })),
-      markTransactionDeletedForever,
+      hardDeleteTransaction,
     });
     const service = createTransactionService(adapter);
 

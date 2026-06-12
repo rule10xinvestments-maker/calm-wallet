@@ -134,7 +134,6 @@ export type Database = {
           import_record_id: string | null;
           import_candidate_id: string | null;
           deleted_at: string | null;
-          deleted_forever_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -155,7 +154,6 @@ export type Database = {
           import_record_id?: string | null;
           import_candidate_id?: string | null;
           deleted_at?: string | null;
-          deleted_forever_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -176,7 +174,6 @@ export type Database = {
           import_record_id?: string | null;
           import_candidate_id?: string | null;
           deleted_at?: string | null;
-          deleted_forever_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

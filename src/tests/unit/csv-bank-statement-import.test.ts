@@ -81,7 +81,6 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     importRecordId: null,
     importCandidateId: null,
     deletedAt: null,
-    deletedForeverAt: null,
     createdAt: "2026-05-03T10:00:00.000Z",
     updatedAt: "2026-05-03T10:00:00.000Z",
     ...overrides,

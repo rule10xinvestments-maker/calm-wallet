@@ -335,7 +335,6 @@ describe("imports action state", () => {
           importRecordId: "22222222-2222-2222-2222-222222222222",
           importCandidateId: "33333333-3333-3333-3333-333333333333",
           deletedAt: null,
-          deletedForeverAt: null,
           createdAt: "2026-04-23T10:01:00.000Z",
           updatedAt: "2026-04-23T10:01:00.000Z",
         },

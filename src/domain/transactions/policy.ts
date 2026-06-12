@@ -64,7 +64,7 @@ export function canSoftDeleteTransaction(transaction: Transaction) {
 }
 
 export function canRestoreTransaction(transaction: Transaction) {
-  return transaction.deletedAt !== null && transaction.deletedForeverAt === null;
+  return transaction.deletedAt !== null;
 }
 
 export function canRecategorizeTransaction(transaction: Transaction) {

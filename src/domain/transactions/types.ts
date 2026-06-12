@@ -39,7 +39,6 @@ export type Transaction = {
   importRecordId: string | null;
   importCandidateId: string | null;
   deletedAt: string | null;
-  deletedForeverAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
