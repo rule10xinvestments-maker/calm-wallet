@@ -902,6 +902,29 @@ describe("insights overview", () => {
     expect(within(card).getByRole("button", { name: "Expenses" })).toHaveAttribute("aria-pressed", "true");
     expect(within(card).getByText("Groceries")).toBeInTheDocument();
     expect(within(card).getByText("100% of spending - 2 transactions")).toBeInTheDocument();
+    expect(within(card).queryByText("Market")).not.toBeInTheDocument();
+
+    const groceriesRow = within(card).getByRole("button", { name: "Show Groceries entries" });
+
+    expect(groceriesRow).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(within(groceriesRow).getByRole("img", { name: "Groceries chart color and category icon" }));
+    expect(within(card).getByText("Market")).toBeInTheDocument();
+    expect(within(card).getByText("Apr 21")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(within(card).getByText("100% of spending - 2 transactions"));
+    expect(within(card).queryByText("Market")).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole("button", { name: "Show Groceries entries" })).getByText("Groceries"));
+    expect(within(card).getByText("Market")).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole("button", { name: "Hide Groceries entries" })).getByText("$15"));
+    expect(within(card).queryByText("Market")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("meter", { name: "Groceries spending share 100%" }));
+    expect(within(card).getByText("Market")).toBeInTheDocument();
+
     expect(within(card).queryByText("Salary")).not.toBeInTheDocument();
   });
 
@@ -955,6 +978,12 @@ describe("insights overview", () => {
     expect(within(card).getByText("25% of income - 1 transaction")).toBeInTheDocument();
     expect(within(card).getAllByText("$30").length).toBeGreaterThan(0);
     expect(within(card).getAllByText("$10").length).toBeGreaterThan(0);
+    expect(within(card).queryByText("Market")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show Salary entries" }));
+
+    expect(within(card).getByText("Payroll")).toBeInTheDocument();
+    expect(within(card).getByText("Apr 1")).toBeInTheDocument();
     expect(within(card).queryByText("Groceries")).not.toBeInTheDocument();
     expect(within(card).queryByText("100% of spending - 2 transactions")).not.toBeInTheDocument();
   });

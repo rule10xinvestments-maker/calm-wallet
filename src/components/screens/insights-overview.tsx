@@ -737,6 +737,7 @@ function getIncomeCategoryColor(index: number) {
 
 function buildBarsIncomeCategoryBreakdown(data: InsightsData): SpendingMixCategoryItem[] {
   const totals = new Map<string, { label: string; amountMinor: number; transactionCount: number; hasUnavailableRate: boolean }>();
+  const recentEntriesByKey = new Map(data.incomeCategoryBreakdown.map((item) => [item.key, item.recentEntries]));
 
   data.timeframeBars.flatMap((bar) => bar.incomeSegments).forEach((segment) => {
     const current = totals.get(segment.key) ?? {
@@ -764,7 +765,7 @@ function buildBarsIncomeCategoryBreakdown(data: InsightsData): SpendingMixCatego
         ? `${formatMoney(value.amountMinor, data.displayCurrency)} + rate unavailable`
         : `${getApproxPrefix(data, value.amountMinor)}${formatMoney(value.amountMinor, data.displayCurrency)}`,
       transactionCount: value.transactionCount,
-      recentEntries: [],
+      recentEntries: recentEntriesByKey.get(key) ?? [],
     }));
 }
 
@@ -997,12 +998,15 @@ function TimeframeCategoryBreakdown({
   segment = "expenses",
   showIcons = false,
   emptyMessage = "No tracked spending in this timeframe yet.",
+  expandable = false,
 }: {
   items: SpendingMixCategoryItem[];
   segment?: SpendingMixSegment;
   showIcons?: boolean;
   emptyMessage?: string;
+  expandable?: boolean;
 }) {
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const total = items.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
   const isIncome = segment === "income";
 
@@ -1015,6 +1019,71 @@ function TimeframeCategoryBreakdown({
       {items.map((item, index) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
         const chartColor = isIncome ? getIncomeCategoryColor(index) : getSpendingCategoryColor(item, index);
+        const isExpanded = expandedKey === item.key;
+        const countLabel = `${percent}% of ${isIncome ? "income" : "spending"} - ${item.transactionCount} ${
+          item.transactionCount === 1 ? "transaction" : "transactions"
+        }`;
+
+        if (expandable) {
+          return (
+            <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
+              <button
+                aria-expanded={isExpanded}
+                aria-label={`${isExpanded ? "Hide" : "Show"} ${item.label} entries`}
+                className={`grid w-full gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                  showIcons ? "grid-cols-[2rem_1fr]" : "grid-cols-1"
+                }`}
+                onClick={() => setExpandedKey(isExpanded ? null : item.key)}
+                type="button"
+              >
+                {showIcons ? <CategoryColorIcon className="mt-0.5" color={chartColor} label={item.label} /> : null}
+                <span className="min-w-0 space-y-2">
+                  <span className="grid grid-cols-[1fr_auto] gap-3">
+                    <span className="min-w-0">
+                      <span className="truncate text-sm font-medium text-slate-900">{item.label}</span>
+                      <span className="block text-xs text-slate-500">{countLabel}</span>
+                    </span>
+                    <span className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</span>
+                  </span>
+                  <span className="block h-2 overflow-hidden rounded-full bg-slate-100">
+                    <span
+                      aria-label={`${item.label} ${isIncome ? "income" : "spending"} share ${percent}%`}
+                      aria-valuemax={100}
+                      aria-valuemin={0}
+                      aria-valuenow={percent}
+                      className="block h-full rounded-full"
+                      role="meter"
+                      style={{ backgroundColor: chartColor, width: `${percent}%` }}
+                    />
+                  </span>
+                </span>
+              </button>
+              {showIcons && !isIncome && item.label.toLowerCase() === "needs category" ? (
+                <Link
+                  className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
+                  href="/transactions?view=needs-review"
+                >
+                  Review
+                </Link>
+              ) : null}
+              {isExpanded ? (
+                <div className={showIcons ? "ml-11 mt-2 rounded-lg bg-slate-50 px-3 py-2" : "mt-2 rounded-lg bg-slate-50 px-3 py-2"}>
+                  <div className="space-y-2">
+                    {item.recentEntries.map((entry) => (
+                      <div className="grid grid-cols-[1fr_auto] gap-3" key={entry.id}>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-slate-800">{entry.title}</p>
+                          <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
+                        </div>
+                        <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        }
 
         return (
           <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
@@ -1034,9 +1103,7 @@ function TimeframeCategoryBreakdown({
                     </Link>
                   ) : null}
                 </div>
-                <p className="text-xs text-slate-500">
-                  {percent}% of {isIncome ? "income" : "spending"} - {item.transactionCount} {item.transactionCount === 1 ? "transaction" : "transactions"}
-                </p>
+                <p className="text-xs text-slate-500">{countLabel}</p>
               </div>
             </div>
             <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
@@ -1166,6 +1233,7 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
             <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
             <TimeframeCategoryBreakdown
               emptyMessage={breakdownEmptyMessage}
+              expandable={data.selectedChartMode === "bars"}
               items={breakdownItems}
               segment={breakdownSegment}
               showIcons={data.selectedChartMode === "bars"}
