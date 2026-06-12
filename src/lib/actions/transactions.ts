@@ -141,10 +141,10 @@ export async function permanentlyDeleteTransactionAction(
     revalidatePath("/assistant");
     revalidatePath("/insights");
     return result;
-  } catch (error) {
+  } catch {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to permanently delete transaction.",
+      message: "Couldn\u2019t delete this entry. Please try again.",
     };
   }
 }

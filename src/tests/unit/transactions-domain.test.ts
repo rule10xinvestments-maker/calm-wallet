@@ -409,6 +409,33 @@ describe("transaction service", () => {
     );
   });
 
+  it("does not require a returned row when permanently deleting a soft-deleted transaction", async () => {
+    const hardDeleteTransaction = vi.fn(async () => ({
+      data: null,
+      error: null,
+    }));
+    const adapter = makeAdapter({
+      getTransactionById: vi.fn(async () => ({
+        data: makeTransactionRow({ deleted_at: "2026-04-21T01:00:00.000Z" }),
+        error: null,
+      })),
+      hardDeleteTransaction,
+    });
+    const service = createTransactionService(adapter);
+
+    const result = await service.permanentlyDeleteTransaction(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+    );
+
+    expect(result.transaction.deletedAt).toBe("2026-04-21T01:00:00.000Z");
+    expect(result.eventCreated).toBe(false);
+    expect(hardDeleteTransaction).toHaveBeenCalledWith(
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+    );
+  });
+
   it("rejects permanent delete for active transactions", async () => {
     const adapter = makeAdapter();
     const service = createTransactionService(adapter);
