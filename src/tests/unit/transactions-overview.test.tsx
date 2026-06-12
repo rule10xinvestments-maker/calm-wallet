@@ -113,15 +113,17 @@ describe("transactions overview", () => {
     render(<TransactionsOverview {...makeOverviewProps()} />);
 
     const title = screen.getByRole("heading", { name: "Latest entries" });
-    const subtitle = screen.getByText("Real tracked data for the signed-in user.");
+    const subtitle = screen.getByText("Tap an entry to edit, add a note, or review details.");
     const searchForm = screen.getByRole("form", { name: "Search transactions" });
 
+    expect(screen.getByText("Review expenses, income, and items needing attention.")).toBeInTheDocument();
     expect(title).toHaveClass("text-lg");
     expect(title).toHaveClass("sm:text-xl");
     expect(title.parentElement).toHaveClass("p-4");
     expect(title.parentElement).toHaveClass("pb-2");
-    expect(subtitle).toHaveClass("hidden");
-    expect(subtitle).toHaveClass("sm:block");
+    expect(subtitle).toHaveClass("text-xs");
+    expect(subtitle).toHaveClass("leading-5");
+    expect(screen.queryByText("Real tracked data for the signed-in user.")).not.toBeInTheDocument();
     expect(searchForm.parentElement).toHaveClass("space-y-3");
     expect(searchForm.parentElement).toHaveClass("p-4");
     expect(searchForm.parentElement).toHaveClass("pt-2");

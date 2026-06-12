@@ -393,7 +393,7 @@ export function TransactionsOverview({
       <ScreenHeader
         eyebrow="Transactions"
         title="Recent money movement"
-        description="Review your tracked items, with quick visibility into expenses, income, and anything that needs attention."
+        description="Review expenses, income, and items needing attention."
       />
       {loadError ? (
         <Card>
@@ -422,7 +422,9 @@ export function TransactionsOverview({
       <Card>
         <CardHeader className="space-y-0 p-4 pb-2 sm:space-y-1.5 sm:p-6 sm:pb-0">
           <CardTitle className="text-lg leading-6 sm:text-xl sm:leading-none">Latest entries</CardTitle>
-          <CardDescription className="hidden sm:block">Real tracked data for the signed-in user.</CardDescription>
+          <CardDescription className="text-xs leading-5 sm:text-sm">
+            Tap an entry to edit, add a note, or review details.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
           <form
