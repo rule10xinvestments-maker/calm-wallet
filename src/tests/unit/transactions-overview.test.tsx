@@ -107,6 +107,103 @@ describe("transactions overview", () => {
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
   });
 
+  it("filters Activity rows locally by item name without submitting navigation", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "txn-zile",
+            title: "zile",
+            itemName: "zile",
+            merchant: null,
+            note: null,
+            categoryLabel: "Health",
+          }),
+          makeTransactionItem({
+            id: "txn-chirie",
+            title: "chirie",
+            itemName: "chirie",
+            merchant: "Landlord",
+            note: "Rent",
+            categoryLabel: "Housing",
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    const searchInput = screen.getByPlaceholderText("Search entries");
+
+    expect(screen.getByText("zile")).toBeInTheDocument();
+    expect(screen.getByText("chirie")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "zile" } });
+
+    expect(screen.getByText("zile")).toBeInTheDocument();
+    expect(screen.queryByText("chirie")).not.toBeInTheDocument();
+    expect(screen.queryByText("No tracked transactions match that search.")).not.toBeInTheDocument();
+
+    expect(fireEvent.submit(screen.getByRole("form", { name: "Search transactions" }))).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Search entries" }));
+
+    expect(screen.getByText("zile")).toBeInTheDocument();
+    expect(screen.queryByText("chirie")).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "zzzz" } });
+
+    expect(screen.queryByText("zile")).not.toBeInTheDocument();
+    expect(screen.getByText("No tracked transactions match that search.")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "" } });
+
+    expect(screen.getByText("zile")).toBeInTheDocument();
+    expect(screen.getByText("chirie")).toBeInTheDocument();
+  });
+
+  it("filters Activity rows locally by merchant, note, and category", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "txn-1",
+            title: "pharmacy",
+            itemName: "pharmacy",
+            merchant: "Wellness Shop",
+            note: "vitamins",
+            categoryLabel: "Health",
+          }),
+          makeTransactionItem({
+            id: "txn-2",
+            title: "bus",
+            itemName: "bus",
+            merchant: "Transit",
+            note: "commute",
+            categoryLabel: "Transport",
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    const searchInput = screen.getByPlaceholderText("Search entries");
+
+    fireEvent.change(searchInput, { target: { value: "wellness" } });
+    expect(screen.getByText("pharmacy")).toBeInTheDocument();
+    expect(screen.queryByText("bus")).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "commute" } });
+    expect(screen.queryByText("pharmacy")).not.toBeInTheDocument();
+    expect(screen.getByText("bus")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "health" } });
+    expect(screen.getByText("pharmacy")).toBeInTheDocument();
+    expect(screen.queryByText("bus")).not.toBeInTheDocument();
+  });
+
   it("renders safe load-error copy with the account-scoped empty state", () => {
     render(
       <TransactionsOverview

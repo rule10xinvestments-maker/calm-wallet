@@ -93,7 +93,6 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       loadTransactionsPageData({
         userId: user.id,
         view: safeView,
-        query: resolvedSearchParams.q,
       }),
       loadStagedImportList(),
     ]);

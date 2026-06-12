@@ -35,6 +35,30 @@ const importTypeLabels: Record<StagedImportListItem["importType"], string> = {
   csv_import: "CSV import",
 };
 
+function getSearchableTransactionText(item: TransactionListItem) {
+  return [
+    item.title,
+    item.itemName,
+    item.merchant,
+    item.note,
+    item.categoryLabel,
+    item.subtitle,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function filterTransactions(items: TransactionListItem[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return items;
+  }
+
+  return items.filter((item) => getSearchableTransactionText(item).includes(normalizedQuery));
+}
+
 function formatImportDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
     month: "short",
@@ -341,6 +365,10 @@ export function TransactionsOverview({
   initialReviewActionState,
   loadError = false,
 }: TransactionsOverviewProps) {
+  const [searchQuery, setSearchQuery] = useState(query);
+  const filteredItems = filterTransactions(items, searchQuery);
+  const hasSearchQuery = searchQuery.trim().length > 0;
+
   return (
     <section className="space-y-4">
       <ScreenHeader
@@ -365,7 +393,7 @@ export function TransactionsOverview({
                 ? "bg-sky-600 text-white shadow-sm"
                 : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
             }`}
-            href={`/transactions?view=${tab.value}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+            href={`/transactions?view=${tab.value}${hasSearchQuery ? `&q=${encodeURIComponent(searchQuery.trim())}` : ""}`}
           >
             {tab.label}
           </Link>
@@ -377,13 +405,21 @@ export function TransactionsOverview({
           <CardDescription>Real tracked data for the signed-in user.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form action="/transactions" className="relative">
+          <form
+            action="/transactions"
+            aria-label="Search transactions"
+            className="relative"
+            onSubmit={(event) => {
+              event.preventDefault();
+            }}
+          >
             <input name="view" type="hidden" value={currentView} />
             <input
               className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-11 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-              defaultValue={query}
               name="q"
+              onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search entries"
+              value={searchQuery}
             />
             <button
               aria-label="Search entries"
@@ -393,8 +429,8 @@ export function TransactionsOverview({
               <Search aria-hidden="true" size={16} strokeWidth={2.2} />
             </button>
           </form>
-          {items.length ? (
-            items.map((item) => (
+          {filteredItems.length ? (
+            filteredItems.map((item) => (
               <TransactionItemCard
                 key={item.id}
                 categories={categories}
@@ -407,7 +443,7 @@ export function TransactionsOverview({
             ))
           ) : (
             <div className="rounded-2xl bg-slate-50 px-4 py-6 text-sm text-slate-500">
-              {query
+              {hasSearchQuery
                 ? "No tracked transactions match that search."
                 : "No transactions found for this signed-in account."}
             </div>
