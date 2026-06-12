@@ -38,6 +38,10 @@ const REVIEW_STATE_OPTIONS: Array<{ label: string; value: TransactionListItem["r
 ];
 
 const CURRENCY_OPTIONS = ["USD", "EUR", "RON", "GBP"] as const;
+const TRANSACTION_TYPE_OPTIONS: Array<{ label: string; value: TransactionListItem["amountTone"] }> = [
+  { label: "Expense", value: "expense" },
+  { label: "Income", value: "income" },
+];
 
 function formatAmountInput(amountMinor: number) {
   return (amountMinor / 100).toFixed(2);
@@ -156,6 +160,9 @@ export function TransactionItemCard({
   const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
+  const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionListItem["amountTone"]>(item.amountTone);
+  const [selectedReviewState, setSelectedReviewState] = useState<TransactionListItem["reviewState"]>(item.reviewState);
+  const [uncertaintyNote, setUncertaintyNote] = useState(item.uncertaintyReason ?? "");
   const [pendingRecategorizedItem, setPendingRecategorizedItem] = useState<TransactionListItem | null>(null);
   const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -167,6 +174,9 @@ export function TransactionItemCard({
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
   const [deleteState, deleteFormAction] = useActionState(deleteAction, initialState);
   const displayItem = optimisticItem ?? item;
+  const detailCategoryOptions = categories.filter(
+    (category) => !category.direction || category.direction === selectedTransactionType || category.direction === "both",
+  );
   const CategoryIcon = getCategoryIcon(displayItem);
   const needsReview = displayItem.reviewLabel !== "Reviewed";
   const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
@@ -228,6 +238,9 @@ export function TransactionItemCard({
       setOptimisticItem(null);
       setIsDeleted(false);
       setSelectedCategoryId(item.categoryId ?? "");
+      setSelectedTransactionType(item.amountTone);
+      setSelectedReviewState(item.reviewState);
+      setUncertaintyNote(item.uncertaintyReason ?? "");
     }
   }, [item]);
 
@@ -291,22 +304,35 @@ export function TransactionItemCard({
   function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
     const formData = new FormData(event.currentTarget);
     const amountValue = String(formData.get("amount") ?? "").trim();
-    const parsedAmount = Number(amountValue.replace(/,/g, ""));
+    const transactionTypeValue = String(formData.get("transactionType") ?? displayItem.amountTone);
+    const transactionType = transactionTypeValue === "income" ? "income" : "expense";
+    const parsedAmount = Number(amountValue.replace(/,/g, "").replace(/^[+-]\s*/, ""));
     const amountMinor = Number.isFinite(parsedAmount) && parsedAmount > 0 ? Math.round(parsedAmount * 100) : displayItem.amountMinor;
     const currency = String(formData.get("currency") ?? displayItem.currency).trim().toUpperCase() || displayItem.currency;
     const itemName = String(formData.get("itemName") ?? "").trim() || null;
     const merchant = String(formData.get("merchant") ?? "").trim() || null;
     const note = String(formData.get("note") ?? "").trim() || null;
     const occurredDate = String(formData.get("occurredAt") ?? "").trim();
-    const categoryId = String(formData.get("categoryId") ?? "").trim() || null;
+    const submittedCategoryId = String(formData.get("categoryId") ?? "").trim() || null;
+    const submittedCategory = submittedCategoryId ? categories.find((category) => category.id === submittedCategoryId) : null;
+    const categoryId =
+      submittedCategory && (!submittedCategory.direction || submittedCategory.direction === transactionType || submittedCategory.direction === "both")
+        ? submittedCategory.id
+        : null;
     const reviewState = String(formData.get("reviewState") ?? displayItem.reviewState) as TransactionListItem["reviewState"];
-    const uncertaintyReason = reviewState === "reviewed" ? null : String(formData.get("uncertaintyReason") ?? "").trim() || null;
+    const categoryWasCleared = Boolean(submittedCategoryId && !categoryId);
+    const nextReviewState = categoryWasCleared && reviewState === "reviewed" ? "needs_attention" : reviewState;
+    const uncertaintyReason =
+      nextReviewState === "reviewed"
+        ? null
+        : String(formData.get("uncertaintyReason") ?? "").trim() || (categoryWasCleared ? "Category needs review." : null);
     const occurredAt = /^\d{4}-\d{2}-\d{2}$/.test(occurredDate) ? `${occurredDate}T12:00:00.000Z` : displayItem.occurredAt;
 
     const nextItem: TransactionListItem = {
       ...displayItem,
       amountMinor,
-      amountDisplay: formatSignedAmount(amountMinor, currency, displayItem.amountTone),
+      amountDisplay: formatSignedAmount(amountMinor, currency, transactionType),
+      amountTone: transactionType,
       currency,
       title: itemName || displayItem.title || "Unnamed transaction",
       subtitle: new Date(occurredAt).toLocaleDateString("en-US", {
@@ -319,14 +345,18 @@ export function TransactionItemCard({
       note,
       occurredAt,
       categoryId,
-      reviewState,
-      reviewLabel: getReviewLabel(reviewState),
+      reviewState: nextReviewState,
+      reviewLabel: getReviewLabel(nextReviewState),
       uncertaintyReason,
     };
 
     pendingDetailsItemRef.current = nextItem;
     setSubmittedUpdateIntent("details");
     setPendingDetailsItem(nextItem);
+    setSelectedTransactionType(transactionType);
+    setSelectedCategoryId(categoryId ?? "");
+    setSelectedReviewState(nextReviewState);
+    setUncertaintyNote(uncertaintyReason ?? "");
   }
 
   if (isDeleted) {
@@ -413,6 +443,7 @@ export function TransactionItemCard({
             {displayItem.reviewState !== "reviewed" ? (
               <form action={updateFormAction}>
                 <input name="transactionId" type="hidden" value={item.id} />
+                <input name="transactionType" type="hidden" value={displayItem.amountTone} />
                 <input name="amount" type="hidden" value={formatAmountInput(displayItem.amountMinor)} />
                 <input name="currency" type="hidden" value={displayItem.currency} />
                 <input name="itemName" type="hidden" value={displayItem.itemName ?? displayItem.title} />
@@ -456,6 +487,37 @@ export function TransactionItemCard({
               onSubmit={handleDetailsSubmit}
             >
               <input name="transactionId" type="hidden" value={item.id} />
+              <fieldset className="grid gap-2">
+                <legend className="text-xs font-medium text-slate-600">Transaction type</legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {TRANSACTION_TYPE_OPTIONS.map((option) => (
+                    <label key={option.value} className="block">
+                      <input
+                        className="peer sr-only"
+                        checked={selectedTransactionType === option.value}
+                        name="transactionType"
+                        onChange={() => {
+                          setSelectedTransactionType(option.value);
+                          const currentCategory = selectedCategoryId
+                            ? categories.find((category) => category.id === selectedCategoryId)
+                            : null;
+
+                          if (currentCategory?.direction && currentCategory.direction !== option.value && currentCategory.direction !== "both") {
+                            setSelectedCategoryId("");
+                            setSelectedReviewState("needs_attention");
+                            setUncertaintyNote((current) => current || "Category needs review.");
+                          }
+                        }}
+                        type="radio"
+                        value={option.value}
+                      />
+                      <span className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm font-medium text-slate-700 transition peer-checked:border-sky-300 peer-checked:bg-sky-50 peer-checked:text-sky-800">
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
                 <label className="grid gap-1">
                   <span className="text-xs font-medium text-slate-600">Amount</span>
@@ -463,12 +525,9 @@ export function TransactionItemCard({
                     className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
                     defaultValue={formatAmountInput(displayItem.amountMinor)}
                     inputMode="decimal"
-                    min="0.01"
                     name="amount"
-                    pattern="\\d+(\\.\\d{1,2})?"
                     required
-                    step="0.01"
-                    type="number"
+                    type="text"
                   />
                 </label>
                 <label className="grid gap-1">
@@ -519,6 +578,22 @@ export function TransactionItemCard({
                   type="date"
                 />
               </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-medium text-slate-600">Category</span>
+                <select
+                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                  name="categoryId"
+                  onChange={(event) => setSelectedCategoryId(event.currentTarget.value)}
+                  value={selectedCategoryId}
+                >
+                  <option value="">Uncategorized</option>
+                  {detailCategoryOptions.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Review state</legend>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -526,8 +601,9 @@ export function TransactionItemCard({
                     <label key={option.value} className="block">
                       <input
                         className="peer sr-only"
-                        defaultChecked={displayItem.reviewState === option.value}
+                        checked={selectedReviewState === option.value}
                         name="reviewState"
+                        onChange={() => setSelectedReviewState(option.value)}
                         type="radio"
                         value={option.value}
                       />
@@ -542,11 +618,11 @@ export function TransactionItemCard({
                 <span className="text-xs font-medium text-slate-600">Uncertainty note</span>
                 <input
                   className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                  defaultValue={displayItem.uncertaintyReason ?? ""}
+                  onChange={(event) => setUncertaintyNote(event.currentTarget.value)}
+                  value={uncertaintyNote}
                   name="uncertaintyReason"
                 />
               </label>
-              <input name="categoryId" type="hidden" value={displayItem.categoryId ?? ""} />
               <div className="sticky bottom-20 z-10 -mx-3 mt-1 border-t border-slate-100 bg-white/95 px-3 pb-3 pt-3 backdrop-blur">
                 <PendingSubmitButton
                   className="min-h-11 w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"

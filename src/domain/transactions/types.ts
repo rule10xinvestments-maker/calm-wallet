@@ -60,6 +60,7 @@ export type CreateTransactionInput = {
 };
 
 export type UpdateTransactionInput = {
+  transactionType?: TransactionType;
   amountMinor?: number;
   currency?: string;
   occurredAt?: string;

@@ -6,6 +6,7 @@ import type {
 } from "@/domain/transactions/types";
 
 const ALLOWED_UPDATE_FIELDS = [
+  "transactionType",
   "amountMinor",
   "currency",
   "occurredAt",

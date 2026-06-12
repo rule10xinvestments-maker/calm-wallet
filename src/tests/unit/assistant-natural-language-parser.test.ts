@@ -651,6 +651,25 @@ describe("natural-language assistant parser", () => {
     });
   });
 
+  it("treats received-from phrasing as income needing review", () => {
+    for (const [input, merchant] of [
+      ["de la tata 250", "Tata"],
+      ["from dad 250", "Dad"],
+      ["dad gave me 250", "Dad"],
+      ["received 250 from dad", "Dad"],
+      ["received from dad 250", "Dad"],
+    ]) {
+      expect(parseNaturalLanguageAssistantInput(input)).toEqual({
+        kind: "create_transaction",
+        transactionType: "income",
+        amount: "250",
+        merchant,
+        reviewState: "needs_attention",
+        uncertaintyReason: "Category needs review.",
+      });
+    }
+  });
+
   it("routes recent, delete last, and simple spending requests", () => {
     expect(parseNaturalLanguageAssistantInput("show recent")).toEqual({
       kind: "answer_financial_question",

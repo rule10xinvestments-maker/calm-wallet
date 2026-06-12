@@ -171,6 +171,10 @@ function titleCaseShortLabel(value: string) {
     .join(" ");
 }
 
+function cleanIncomeSource(value: string) {
+  return cleanMerchant(value.replace(/^(?:from|de la)\s+/i, ""));
+}
+
 function currentMonthRange(now = new Date()) {
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
@@ -630,6 +634,21 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
       amount,
       currency,
       merchant: "Freelance income",
+    });
+  }
+
+  const receivedFromMatch =
+    cleanTextWithoutAmount.match(/^(?:received|got)\s+(?:money\s+)?(?:from\s+)?(.+)$/i) ??
+    cleanTextWithoutAmount.match(/^(?:from|de la)\s+(.+)$/i) ??
+    cleanTextWithoutAmount.match(/^(.+?)\s+(?:gave|sent|paid)\s+me$/i);
+  if (receivedFromMatch?.[1]) {
+    const merchant = cleanIncomeSource(receivedFromMatch[1]);
+    return buildCreateIntent({
+      transactionType: "income",
+      amount,
+      currency,
+      merchant: merchant ? titleCaseShortLabel(merchant) : "Income",
+      markCategoryForReview: true,
     });
   }
 

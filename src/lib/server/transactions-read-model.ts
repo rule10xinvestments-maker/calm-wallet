@@ -32,6 +32,7 @@ export type TransactionListItem = {
 export type TransactionCategoryOption = {
   id: string;
   label: string;
+  direction?: "expense" | "income" | "both";
 };
 
 export type ControlledCategoryOption = TransactionCategoryOption & {
@@ -1558,10 +1559,11 @@ async function loadCategoryLabels() {
 
 export async function loadCategoryOptions(): Promise<TransactionCategoryOption[]> {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.from("categories").select("id,label").eq("is_active", true).order("sort_order");
+  const { data } = await supabase.from("categories").select("id,label,direction").eq("is_active", true).order("sort_order");
   return (data ?? []).map((category) => ({
     id: category.id,
     label: category.label,
+    direction: category.direction,
   }));
 }
 

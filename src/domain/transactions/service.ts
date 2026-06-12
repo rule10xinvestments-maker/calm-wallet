@@ -171,6 +171,7 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
       });
 
       const updateResult = await adapter.updateTransaction(userId, transactionId, {
+        transaction_type: allowedUpdates.transactionType,
         amount_minor: allowedUpdates.amountMinor,
         currency: allowedUpdates.currency,
         occurred_at: allowedUpdates.occurredAt,

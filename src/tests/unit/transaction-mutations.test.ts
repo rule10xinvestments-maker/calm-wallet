@@ -140,6 +140,7 @@ describe("transaction mutation helpers", () => {
     const services = makeMutationServices();
     const formData = new FormData();
     formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "income");
     formData.set("amount", "34.56");
     formData.set("currency", "eur");
     formData.set("itemName", "Market");
@@ -161,6 +162,7 @@ describe("transaction mutation helpers", () => {
       "txn-1",
       expect.objectContaining({
         amountMinor: 3456,
+        transactionType: "income",
         currency: "EUR",
         itemName: "Market",
         merchant: "Updated Market",
@@ -178,6 +180,7 @@ describe("transaction mutation helpers", () => {
     const services = makeMutationServices();
     const formData = new FormData();
     formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "expense");
     formData.set("amount", "0");
     formData.set("currency", "USD");
     formData.set("itemName", "Market");
@@ -196,5 +199,37 @@ describe("transaction mutation helpers", () => {
       }),
     ).rejects.toThrow("Enter a numeric amount greater than 0.");
     expect(services.updateTransaction).not.toHaveBeenCalled();
+  });
+
+  it("uses explicit transaction type while accepting signed amount text", async () => {
+    const services = makeMutationServices();
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "income");
+    formData.set("amount", "-250");
+    formData.set("currency", "RON");
+    formData.set("itemName", "Dad");
+    formData.set("merchant", "Dad");
+    formData.set("note", "");
+    formData.set("occurredAt", "2026-05-21");
+    formData.set("categoryId", "");
+    formData.set("reviewState", "needs_attention");
+    formData.set("uncertaintyReason", "Category needs review.");
+
+    await executeUpdateTransaction({
+      userId: "user-1",
+      formData,
+      transactionService: services,
+    });
+
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        transactionType: "income",
+        amountMinor: 25000,
+      }),
+      { actorType: "user" },
+    );
   });
 });

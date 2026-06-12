@@ -47,6 +47,7 @@ export const createTransactionSchema = z
 
 export const updateTransactionSchema = z
   .object({
+    transactionType: transactionTypeSchema.optional(),
     amountMinor: positiveAmountSchema.optional(),
     currency: currencySchema.optional(),
     occurredAt: z.string().datetime("Occurred at must be a valid ISO datetime.").optional(),

@@ -1,5 +1,5 @@
 import type { TransactionService } from "@/domain/transactions/service";
-import type { ReviewState } from "@/domain/transactions/types";
+import type { ReviewState, TransactionType } from "@/domain/transactions/types";
 import { createSupabaseCategoryMemoryService, type CategoryMemoryService } from "@/domain/category-memory/service";
 
 export type TransactionMutationState = {
@@ -42,7 +42,7 @@ function toIsoDateTime(value: FormDataEntryValue | null) {
 
 function toAmountMinor(value: FormDataEntryValue | null) {
   const raw = toRequiredString(value, "Amount");
-  const normalized = raw.replace(/,/g, "").trim();
+  const normalized = raw.replace(/,/g, "").trim().replace(/^[+-]\s*/, "");
 
   if (!/^\d+(\.\d{1,2})?$/.test(normalized)) {
     throw new Error("Enter a numeric amount greater than 0.");
@@ -55,6 +55,16 @@ function toAmountMinor(value: FormDataEntryValue | null) {
   }
 
   return Math.round(amount * 100);
+}
+
+function toTransactionType(value: FormDataEntryValue | null) {
+  const transactionType = toRequiredString(value, "Transaction type");
+
+  if (transactionType !== "expense" && transactionType !== "income") {
+    throw new Error("Choose expense or income.");
+  }
+
+  return transactionType as TransactionType;
 }
 
 function toCurrency(value: FormDataEntryValue | null) {
@@ -147,6 +157,7 @@ export async function executeUpdateTransaction(args: {
   transactionService: Pick<TransactionService, "updateTransaction">;
 }): Promise<TransactionMutationState> {
   const transactionId = toRequiredString(args.formData.get("transactionId"), "Transaction");
+  const transactionType = toTransactionType(args.formData.get("transactionType"));
   const amountMinor = toAmountMinor(args.formData.get("amount"));
   const currency = toCurrency(args.formData.get("currency"));
   const itemName = toNullableString(args.formData.get("itemName"));
@@ -161,6 +172,7 @@ export async function executeUpdateTransaction(args: {
     args.userId,
     transactionId,
     {
+      transactionType,
       amountMinor,
       currency,
       merchant,

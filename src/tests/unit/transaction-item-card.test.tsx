@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
@@ -10,8 +10,10 @@ const initialState: TransactionMutationState = {
 };
 
 const categories: TransactionCategoryOption[] = [
-  { id: "cat-dining", label: "Dining" },
-  { id: "cat-travel", label: "Travel" },
+  { id: "cat-dining", label: "Dining", direction: "expense" },
+  { id: "cat-travel", label: "Travel", direction: "expense" },
+  { id: "cat-salary", label: "Salary", direction: "income" },
+  { id: "cat-gifts", label: "Gifts", direction: "both" },
 ];
 
 function makeItem(overrides: Partial<TransactionListItem> = {}): TransactionListItem {
@@ -180,7 +182,7 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    expect(screen.getByLabelText("Amount")).toHaveValue(34);
+    expect(screen.getByLabelText("Amount")).toHaveValue("34.00");
     expect(screen.getByLabelText("Currency")).toHaveValue("USD");
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "45.67" } });
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "EUR" } });
@@ -196,6 +198,7 @@ describe("transaction item card", () => {
     const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
 
     expect(formData.get("transactionId")).toBe("txn-1");
+    expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("amount")).toBe("45.67");
     expect(formData.get("currency")).toBe("EUR");
     expect(formData.get("itemName")).toBe("ketchup");
@@ -264,6 +267,7 @@ describe("transaction item card", () => {
     const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
 
     expect(formData.get("itemName")).toBe("mustar");
+    expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("merchant")).toBe("CCC");
     expect(await screen.findByText("mustar")).toBeInTheDocument();
     expect(await screen.findByText("Merchant: CCC")).toBeInTheDocument();
@@ -298,9 +302,41 @@ describe("transaction item card", () => {
     const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
 
     expect(formData.get("amount")).toBe("5100");
+    expect(formData.get("transactionType")).toBe("income");
     expect(formData.get("currency")).toBe("EUR");
     expect(await screen.findByText("+€5,100.00")).toBeInTheDocument();
     expect(screen.queryByText("-€5,100.00")).not.toBeInTheDocument();
+  });
+
+  it("switches an expense to income without requiring a plus sign", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({ updateAction });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    expect(screen.getByRole("radio", { name: "Expense" })).toBeChecked();
+    expect(within(screen.getByLabelText("Category")).queryByRole("option", { name: "Salary" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Income" }));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "250" } });
+    expect(screen.getByLabelText("Category")).toHaveValue("");
+    expect(screen.getByRole("radio", { name: "Needs review" })).toBeChecked();
+    expect(within(screen.getByLabelText("Category")).getByRole("option", { name: "Salary" })).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Category")).queryByRole("option", { name: "Dining" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
+    const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+
+    expect(formData.get("transactionType")).toBe("income");
+    expect(formData.get("amount")).toBe("250");
+    expect(formData.get("categoryId")).toBe("");
+    expect(formData.get("reviewState")).toBe("needs_attention");
+    expect(await screen.findByText("+$250.00")).toBeInTheDocument();
+    expect(screen.queryByText("-$250.00")).not.toBeInTheDocument();
   });
 
   it("renders separate item name and merchant fields in details", () => {
@@ -349,6 +385,7 @@ describe("transaction item card", () => {
     const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
 
     expect(formData.get("note")).toBe("mobile note");
+    expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("reviewState")).toBe(value);
   });
 
