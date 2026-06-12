@@ -273,19 +273,30 @@ describe("transactions overview", () => {
             id: "txn-expense",
             title: "expense row",
             amountTone: "expense",
+            categoryId: "cat-expense",
             reviewState: "reviewed",
           }),
           makeTransactionItem({
             id: "txn-income",
             title: "income row",
             amountTone: "income",
+            categoryId: "cat-income",
             reviewState: "reviewed",
           }),
           makeTransactionItem({
             id: "txn-review",
             title: "review row",
             amountTone: "expense",
+            categoryId: "cat-review",
             reviewState: "needs_attention",
+          }),
+          makeTransactionItem({
+            id: "txn-income-uncategorized",
+            title: "income uncategorized row",
+            amountTone: "income",
+            categoryId: null,
+            categoryLabel: "Uncategorized",
+            reviewState: "reviewed",
           }),
         ]}
         stagedImports={[]}
@@ -297,16 +308,19 @@ describe("transactions overview", () => {
     expect(screen.getByText("expense row")).toBeInTheDocument();
     expect(screen.queryByText("income row")).not.toBeInTheDocument();
     expect(screen.getByText("review row")).toBeInTheDocument();
+    expect(screen.queryByText("income uncategorized row")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
     expect(screen.queryByText("expense row")).not.toBeInTheDocument();
     expect(screen.getByText("income row")).toBeInTheDocument();
     expect(screen.queryByText("review row")).not.toBeInTheDocument();
+    expect(screen.getByText("income uncategorized row")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Needs review" }));
     expect(screen.queryByText("expense row")).not.toBeInTheDocument();
     expect(screen.queryByText("income row")).not.toBeInTheDocument();
     expect(screen.getByText("review row")).toBeInTheDocument();
+    expect(screen.getByText("income uncategorized row")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "All transactions" }));
     fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
@@ -315,6 +329,7 @@ describe("transactions overview", () => {
     expect(screen.getByText("expense row")).toBeInTheDocument();
     expect(screen.getByText("income row")).toBeInTheDocument();
     expect(screen.getByText("review row")).toBeInTheDocument();
+    expect(screen.getByText("income uncategorized row")).toBeInTheDocument();
     expect(screen.queryByText("No transactions found for this signed-in account.")).not.toBeInTheDocument();
   });
 
@@ -328,6 +343,7 @@ describe("transactions overview", () => {
             title: "zile",
             itemName: "zile",
             amountTone: "expense",
+            categoryId: "cat-health",
             reviewState: "reviewed",
           }),
           makeTransactionItem({
@@ -335,6 +351,7 @@ describe("transactions overview", () => {
             title: "zile salary",
             itemName: "zile salary",
             amountTone: "income",
+            categoryId: "cat-income",
             reviewState: "reviewed",
           }),
           makeTransactionItem({

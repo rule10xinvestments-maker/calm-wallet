@@ -344,7 +344,12 @@ export function filterTransactionsForView(transactions: Transaction[], view: Tra
       return false;
     }
 
-    if (view === "needs-review" && !isReviewStateNeedingReview(transaction.reviewState)) {
+    if (
+      view === "needs-review" &&
+      transaction.reviewState === "reviewed" &&
+      !transaction.uncertaintyReason &&
+      transaction.categoryId
+    ) {
       return false;
     }
 

@@ -75,6 +75,17 @@ function filterTransactions(items: TransactionListItem[], query: string) {
   return items.filter((item) => getSearchableTransactionText(item).includes(normalizedQuery));
 }
 
+function transactionNeedsReview(item: TransactionListItem) {
+  const normalizedCategoryLabel = item.categoryLabel.trim().toLowerCase();
+  return (
+    item.reviewState !== "reviewed" ||
+    Boolean(item.uncertaintyReason) ||
+    !item.categoryId ||
+    normalizedCategoryLabel.includes("uncategorized") ||
+    normalizedCategoryLabel.includes("needs")
+  );
+}
+
 function filterTransactionsForActiveView(items: TransactionListItem[], view: ActivityFilterView) {
   if (view === "expenses") {
     return items.filter((item) => item.amountTone === "expense");
@@ -85,7 +96,7 @@ function filterTransactionsForActiveView(items: TransactionListItem[], view: Act
   }
 
   if (view === "needs-review") {
-    return items.filter((item) => item.reviewState !== "reviewed" || Boolean(item.uncertaintyReason));
+    return items.filter(transactionNeedsReview);
   }
 
   return items;

@@ -45,9 +45,9 @@ describe("transactions read model", () => {
 
   it("supports page segmentation", () => {
     const transactions = [
-      makeTransaction({ id: "1", transactionType: "expense" }),
-      makeTransaction({ id: "2", transactionType: "income", amountMinor: 5000 }),
-      makeTransaction({ id: "3", reviewState: "needs_attention" }),
+      makeTransaction({ id: "1", transactionType: "expense", categoryId: "cat-expense" }),
+      makeTransaction({ id: "2", transactionType: "income", amountMinor: 5000, categoryId: "cat-income" }),
+      makeTransaction({ id: "3", reviewState: "needs_attention", categoryId: "cat-review" }),
     ];
 
     expect(filterTransactionsForView(transactions, "expenses")).toHaveLength(2);
@@ -67,17 +67,23 @@ describe("transactions read model", () => {
 
   it("filters views without clearing or mutating the source transaction list", () => {
     const transactions = [
-      makeTransaction({ id: "expense-1", transactionType: "expense" }),
-      makeTransaction({ id: "income-1", transactionType: "income", amountMinor: 5000 }),
-      makeTransaction({ id: "review-1", reviewState: "needs_attention" }),
+      makeTransaction({ id: "expense-1", transactionType: "expense", categoryId: "cat-expense" }),
+      makeTransaction({ id: "income-1", transactionType: "income", amountMinor: 5000, categoryId: "cat-income" }),
+      makeTransaction({ id: "review-1", reviewState: "needs_attention", categoryId: "cat-review" }),
+      makeTransaction({ id: "income-review-1", transactionType: "income", amountMinor: 2500, categoryId: null }),
     ];
 
     const income = filterTransactionsForView(transactions, "income");
     const needsReview = filterTransactionsForView(transactions, "needs-review");
 
-    expect(income.map((transaction) => transaction.id)).toEqual(["income-1"]);
-    expect(needsReview.map((transaction) => transaction.id)).toEqual(["review-1"]);
-    expect(transactions.map((transaction) => transaction.id)).toEqual(["expense-1", "income-1", "review-1"]);
+    expect(income.map((transaction) => transaction.id)).toEqual(["income-1", "income-review-1"]);
+    expect(needsReview.map((transaction) => transaction.id)).toEqual(["review-1", "income-review-1"]);
+    expect(transactions.map((transaction) => transaction.id)).toEqual([
+      "expense-1",
+      "income-1",
+      "review-1",
+      "income-review-1",
+    ]);
   });
 
   it("maps real list items calmly for the transactions page", () => {
