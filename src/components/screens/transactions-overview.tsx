@@ -420,11 +420,11 @@ export function TransactionsOverview({
         ))}
       </div>
       <Card>
-        <CardHeader>
-          <CardTitle>Latest entries</CardTitle>
-          <CardDescription>Real tracked data for the signed-in user.</CardDescription>
+        <CardHeader className="space-y-0 p-4 pb-2 sm:space-y-1.5 sm:p-6 sm:pb-0">
+          <CardTitle className="text-lg leading-6 sm:text-xl sm:leading-none">Latest entries</CardTitle>
+          <CardDescription className="hidden sm:block">Real tracked data for the signed-in user.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
           <form
             action="/transactions"
             aria-label="Search transactions"
@@ -462,7 +462,7 @@ export function TransactionsOverview({
               />
             ))
           ) : (
-            <div className="rounded-2xl bg-slate-50 px-4 py-6 text-sm text-slate-500">
+            <div className="rounded-2xl bg-slate-50 px-4 py-5 text-sm text-slate-500 sm:py-6">
               {hasSearchQuery
                 ? "No tracked transactions match that search."
                 : "No transactions found for this signed-in account."}

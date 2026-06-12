@@ -109,6 +109,24 @@ describe("transactions overview", () => {
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
   });
 
+  it("renders the Latest entries card with compact mobile spacing", () => {
+    render(<TransactionsOverview {...makeOverviewProps()} />);
+
+    const title = screen.getByRole("heading", { name: "Latest entries" });
+    const subtitle = screen.getByText("Real tracked data for the signed-in user.");
+    const searchForm = screen.getByRole("form", { name: "Search transactions" });
+
+    expect(title).toHaveClass("text-lg");
+    expect(title).toHaveClass("sm:text-xl");
+    expect(title.parentElement).toHaveClass("p-4");
+    expect(title.parentElement).toHaveClass("pb-2");
+    expect(subtitle).toHaveClass("hidden");
+    expect(subtitle).toHaveClass("sm:block");
+    expect(searchForm.parentElement).toHaveClass("space-y-3");
+    expect(searchForm.parentElement).toHaveClass("p-4");
+    expect(searchForm.parentElement).toHaveClass("pt-2");
+  });
+
   it("switches Activity filters locally without shrinking the source list", () => {
     render(
       <TransactionsOverview
