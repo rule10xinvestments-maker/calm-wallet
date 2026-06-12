@@ -49,7 +49,11 @@ export type TransactionServiceAdapter = {
     transactionId: string,
     updates: Database["public"]["Tables"]["transactions"]["Update"],
   ): QueryResult<TransactionRow>;
-  hardDeleteTransaction(userId: string, transactionId: string): QueryResult<TransactionRow | TransactionRow[]>;
+  markTransactionDeletedForever(
+    userId: string,
+    transactionId: string,
+    deletedForeverAt: string,
+  ): QueryResult<TransactionRow[]>;
   listTransactions(userId: string, filters: ListTransactionsFilters): QueryResult<TransactionRow[]>;
   listRecoverableDeletedTransactions(userId: string, deletedAfter: string, limit: number): QueryResult<TransactionRow[]>;
   getLatestSoftDeletedTransaction(userId: string): QueryResult<TransactionRow>;
@@ -319,7 +323,12 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         throw new Error("Only deleted transactions can be permanently removed.");
       }
 
-      const deleteResult = await adapter.hardDeleteTransaction(userId, transactionId);
+      if (existing.deletedForeverAt) {
+        throw new Error("Unable to permanently delete transaction.");
+      }
+
+      const deletedForeverAt = new Date().toISOString();
+      const deleteResult = await adapter.markTransactionDeletedForever(userId, transactionId, deletedForeverAt);
 
       if (deleteResult.error) {
         throw makeServiceError(deleteResult.error);
@@ -329,8 +338,14 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         throw new Error("Unable to permanently delete transaction.");
       }
 
+      const permanentlyDeletedRow = Array.isArray(deleteResult.data) ? deleteResult.data[0] : null;
+
+      if (!permanentlyDeletedRow) {
+        throw new Error("Unable to permanently delete transaction.");
+      }
+
       return {
-        transaction: existing,
+        transaction: mapTransactionRowToDomain(permanentlyDeletedRow),
         eventCreated: false,
       };
     },
@@ -383,13 +398,15 @@ export async function createSupabaseTransactionService() {
         .single();
     },
 
-    async hardDeleteTransaction(userId, transactionId) {
+    async markTransactionDeletedForever(userId, transactionId, deletedForeverAt) {
       return supabase
         .from("transactions")
-        .delete({ count: "exact" })
+        .update({ deleted_forever_at: deletedForeverAt }, { count: "exact" })
         .eq("user_id", userId)
         .eq("id", transactionId)
-        .select("id");
+        .not("deleted_at", "is", null)
+        .is("deleted_forever_at", null)
+        .select("*");
     },
 
     async listTransactions(userId, filters) {
@@ -397,6 +414,7 @@ export async function createSupabaseTransactionService() {
         .from("transactions")
         .select("*")
         .eq("user_id", userId)
+        .is("deleted_forever_at", null)
         .order("occurred_at", { ascending: false });
 
       if (!filters.includeDeleted) {
@@ -448,6 +466,7 @@ export async function createSupabaseTransactionService() {
         .select("*")
         .eq("user_id", userId)
         .not("deleted_at", "is", null)
+        .is("deleted_forever_at", null)
         .gte("deleted_at", deletedAfter)
         .order("deleted_at", { ascending: false })
         .limit(limit);
@@ -459,6 +478,7 @@ export async function createSupabaseTransactionService() {
         .select("*")
         .eq("user_id", userId)
         .not("deleted_at", "is", null)
+        .is("deleted_forever_at", null)
         .order("deleted_at", { ascending: false })
         .order("updated_at", { ascending: false })
         .limit(1)

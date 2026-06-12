@@ -75,6 +75,7 @@ function makeTransaction(overrides: Record<string, unknown> = {}) {
     importRecordId: "11111111-1111-1111-1111-111111111111",
     importCandidateId: "33333333-3333-3333-3333-333333333333",
     deletedAt: null,
+    deletedForeverAt: null,
     createdAt: "2026-04-23T10:01:00.000Z",
     updatedAt: "2026-04-23T10:01:00.000Z",
     ...overrides,
