@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
-import { ScreenHeader } from "@/components/shared/screen-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   ImportCandidateReviewDecisionActionState,
@@ -390,11 +389,7 @@ export function TransactionsOverview({
 
   return (
     <section className="space-y-4">
-      <ScreenHeader
-        eyebrow="Transactions"
-        title="Recent money movement"
-        description="Review expenses, income, and items needing attention."
-      />
+      <p className="text-sm font-medium text-sky-700">Transactions</p>
       {loadError ? (
         <Card>
           <CardHeader>
@@ -421,7 +416,7 @@ export function TransactionsOverview({
       </div>
       <Card>
         <CardHeader className="space-y-0 p-4 pb-2 sm:space-y-1.5 sm:p-6 sm:pb-0">
-          <CardTitle className="text-lg leading-6 sm:text-xl sm:leading-none">Latest entries</CardTitle>
+          <CardTitle className="text-lg leading-6 sm:text-xl sm:leading-none">Recent money movement</CardTitle>
           <CardDescription className="text-xs leading-5 sm:text-sm">
             Tap an entry to edit, add a note, or review details.
           </CardDescription>

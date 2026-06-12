@@ -109,14 +109,16 @@ describe("transactions overview", () => {
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
   });
 
-  it("renders the Latest entries card with compact mobile spacing", () => {
+  it("renders the Activity label and compact Recent money movement card", () => {
     render(<TransactionsOverview {...makeOverviewProps()} />);
 
-    const title = screen.getByRole("heading", { name: "Latest entries" });
+    const title = screen.getByRole("heading", { name: "Recent money movement" });
     const subtitle = screen.getByText("Tap an entry to edit, add a note, or review details.");
     const searchForm = screen.getByRole("form", { name: "Search transactions" });
 
-    expect(screen.getByText("Review expenses, income, and items needing attention.")).toBeInTheDocument();
+    expect(screen.getByText("Transactions")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Latest entries" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Review expenses, income, and items needing attention.")).not.toBeInTheDocument();
     expect(title).toHaveClass("text-lg");
     expect(title).toHaveClass("sm:text-xl");
     expect(title.parentElement).toHaveClass("p-4");
@@ -389,7 +391,7 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByText("Latest entries")).toBeInTheDocument();
+    expect(screen.getByText("Recent money movement")).toBeInTheDocument();
     expect(screen.getByText("Market")).toBeInTheDocument();
     expect(screen.queryByText("Staged imports")).not.toBeInTheDocument();
     expect(
