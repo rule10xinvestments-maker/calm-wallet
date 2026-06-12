@@ -97,14 +97,129 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "All" })).toHaveAttribute("href", "/transactions?view=all&q=coffee");
-    expect(screen.getByRole("link", { name: "Expenses" })).toHaveAttribute("href", "/transactions?view=expenses&q=coffee");
-    expect(screen.getByRole("link", { name: "Income" })).toHaveAttribute("href", "/transactions?view=income&q=coffee");
-    expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review&q=coffee");
-    expect(screen.queryByRole("link", { name: "Needs review" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Expenses" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Review" })).toHaveAttribute("type", "button");
+    expect(screen.queryByRole("link", { name: "All" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Needs review" })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search entries")).toHaveValue("coffee");
     expect(screen.getByRole("button", { name: "Search entries" })).toHaveAttribute("type", "submit");
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
+  });
+
+  it("switches Activity filters locally without shrinking the source list", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "txn-expense",
+            title: "expense row",
+            amountTone: "expense",
+            reviewState: "reviewed",
+          }),
+          makeTransactionItem({
+            id: "txn-income",
+            title: "income row",
+            amountTone: "income",
+            reviewState: "reviewed",
+          }),
+          makeTransactionItem({
+            id: "txn-review",
+            title: "review row",
+            amountTone: "expense",
+            reviewState: "needs_attention",
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
+    expect(screen.getByText("expense row")).toBeInTheDocument();
+    expect(screen.queryByText("income row")).not.toBeInTheDocument();
+    expect(screen.getByText("review row")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.queryByText("expense row")).not.toBeInTheDocument();
+    expect(screen.getByText("income row")).toBeInTheDocument();
+    expect(screen.queryByText("review row")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(screen.queryByText("expense row")).not.toBeInTheDocument();
+    expect(screen.queryByText("income row")).not.toBeInTheDocument();
+    expect(screen.getByText("review row")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+
+    expect(screen.getByText("expense row")).toBeInTheDocument();
+    expect(screen.getByText("income row")).toBeInTheDocument();
+    expect(screen.getByText("review row")).toBeInTheDocument();
+    expect(screen.queryByText("No transactions found for this signed-in account.")).not.toBeInTheDocument();
+  });
+
+  it("composes local Activity filters with live search", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "txn-zile",
+            title: "zile",
+            itemName: "zile",
+            amountTone: "expense",
+            reviewState: "reviewed",
+          }),
+          makeTransactionItem({
+            id: "txn-salary",
+            title: "zile salary",
+            itemName: "zile salary",
+            amountTone: "income",
+            reviewState: "reviewed",
+          }),
+          makeTransactionItem({
+            id: "txn-review",
+            title: "zile review",
+            itemName: "zile review",
+            amountTone: "expense",
+            reviewState: "pending_review",
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    const searchInput = screen.getByPlaceholderText("Search entries");
+
+    fireEvent.change(searchInput, { target: { value: "zile" } });
+    expect(screen.getByText("zile")).toBeInTheDocument();
+    expect(screen.getByText("zile salary")).toBeInTheDocument();
+    expect(screen.getByText("zile review")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.queryByText("zile")).not.toBeInTheDocument();
+    expect(screen.getByText("zile salary")).toBeInTheDocument();
+    expect(screen.queryByText("zile review")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(screen.queryByText("zile")).not.toBeInTheDocument();
+    expect(screen.queryByText("zile salary")).not.toBeInTheDocument();
+    expect(screen.getByText("zile review")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "" } });
+    expect(screen.getByText("zile review")).toBeInTheDocument();
+    expect(screen.queryByText("zile salary")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByText("zile")).toBeInTheDocument();
+    expect(screen.getByText("zile salary")).toBeInTheDocument();
+    expect(screen.getByText("zile review")).toBeInTheDocument();
   });
 
   it("filters Activity rows locally by item name without submitting navigation", () => {

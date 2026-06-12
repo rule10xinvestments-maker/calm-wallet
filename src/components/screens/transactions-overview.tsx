@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { ScreenHeader } from "@/components/shared/screen-header";
@@ -57,6 +56,22 @@ function filterTransactions(items: TransactionListItem[], query: string) {
   }
 
   return items.filter((item) => getSearchableTransactionText(item).includes(normalizedQuery));
+}
+
+function filterTransactionsForActiveView(items: TransactionListItem[], view: TransactionsView) {
+  if (view === "expenses") {
+    return items.filter((item) => item.amountTone === "expense");
+  }
+
+  if (view === "income") {
+    return items.filter((item) => item.amountTone === "income");
+  }
+
+  if (view === "needs-review") {
+    return items.filter((item) => item.reviewState !== "reviewed" || Boolean(item.uncertaintyReason));
+  }
+
+  return items;
 }
 
 function formatImportDate(value: string) {
@@ -365,8 +380,12 @@ export function TransactionsOverview({
   initialReviewActionState,
   loadError = false,
 }: TransactionsOverviewProps) {
+  const [activeView, setActiveView] = useState(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
-  const filteredItems = filterTransactions(items, searchQuery);
+  const filteredItems = useMemo(
+    () => filterTransactions(filterTransactionsForActiveView(items, activeView), searchQuery),
+    [activeView, items, searchQuery],
+  );
   const hasSearchQuery = searchQuery.trim().length > 0;
 
   return (
@@ -386,17 +405,18 @@ export function TransactionsOverview({
       ) : null}
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {tabs.map((tab) => (
-          <Link
+          <button
             key={tab.value}
             className={`flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium transition ${
-              currentView === tab.value
+              activeView === tab.value
                 ? "bg-sky-600 text-white shadow-sm"
                 : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
             }`}
-            href={`/transactions?view=${tab.value}${hasSearchQuery ? `&q=${encodeURIComponent(searchQuery.trim())}` : ""}`}
+            onClick={() => setActiveView(tab.value)}
+            type="button"
           >
             {tab.label}
-          </Link>
+          </button>
         ))}
       </div>
       <Card>
@@ -413,7 +433,7 @@ export function TransactionsOverview({
               event.preventDefault();
             }}
           >
-            <input name="view" type="hidden" value={currentView} />
+            <input name="view" type="hidden" value={activeView} />
             <input
               className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-11 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
               name="q"

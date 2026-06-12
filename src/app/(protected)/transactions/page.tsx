@@ -81,7 +81,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   const safeView = ["all", "expenses", "income", "needs-review"].includes(view) ? view : "all";
   let loadError = false;
   let data: Awaited<ReturnType<typeof loadTransactionsPageData>> = getFallbackTransactionsPageData({
-    view: safeView,
+    view: "all",
     query: resolvedSearchParams.q,
   });
   let stagedImports: Awaited<ReturnType<typeof loadStagedImportList>> = [];
@@ -92,7 +92,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
     [data, stagedImports] = await Promise.all([
       loadTransactionsPageData({
         userId: user.id,
-        view: safeView,
+        view: "all",
       }),
       loadStagedImportList(),
     ]);
@@ -145,12 +145,12 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   return (
     <TransactionsOverview
       categories={data.categories}
-      currentView={data.view}
+      currentView={safeView}
       deleteAction={deleteTransactionAction}
       initialActionState={initialTransactionMutationState}
       initialReviewActionState={initialImportCandidateReviewDecisionActionState}
       items={data.items}
-      query={data.query}
+      query={resolvedSearchParams.q ?? data.query}
       recategorizeAction={recategorizeTransactionAction}
       reviewAction={reviewImportCandidateAction}
       stagedImportDetails={stagedImportDetails}
