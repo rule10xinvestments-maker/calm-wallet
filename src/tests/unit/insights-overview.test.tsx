@@ -634,6 +634,35 @@ describe("insights overview", () => {
     expect(screen.queryByLabelText("Month net + $33")).not.toBeInTheDocument();
   });
 
+  it("uses a combined converted income and spending summary for Trend", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        displayCurrency: "RON",
+        hasConvertedCurrencies: true,
+        selectedPeriodIncomeDisplayMinor: 41708,
+        selectedPeriodExpenseDisplayMinor: 155574,
+        timeframeExpenseDisplay: "RON\u00a01,555.74",
+        timeframeExpenseDisplayMinor: 155574,
+      }),
+    );
+
+    expect(screen.getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
+    expect(
+      screen.getByText((_, node) =>
+        Boolean(
+          node?.tagName.toLowerCase() === "p" &&
+          node?.textContent
+            ?.replace(/\s+/g, " ")
+            .includes("Income ≈ RON 417.08 · Spending ≈ RON 1,555.74"),
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/across \d+ tracked transactions/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Expenses" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
+  });
+
   it("shows income and spending tooltip content on interaction", () => {
     renderInsights(
       makeInsightsData({
@@ -837,6 +866,7 @@ describe("insights overview", () => {
       makeInsightsData({
         selectedChartMode: "bars",
         selectedTimeframe: "1M",
+        selectedPeriodIncomeDisplayMinor: 3000,
         incomeCategoryBreakdown: [
           makeCategory({ key: "salary", label: "Salary", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
         ],
@@ -867,6 +897,7 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("img", { name: "Tracked income by day" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Income $30")).toBeInTheDocument();
     expect(screen.getByText("Showing days with tracked income.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Apr 2 tracked income $0")).not.toBeInTheDocument();
     expect(screen.getByText("Apr 5")).toBeInTheDocument();
@@ -1150,6 +1181,8 @@ describe("insights overview", () => {
         timeframeExpenseDisplay: "$100",
         timeframeExpenseDisplayMinor: 10000,
         timeframeTransactionCount: 4,
+        selectedPeriodIncomeDisplayMinor: 5000,
+        selectedPeriodExpenseDisplayMinor: 10000,
         timeframeCategoryBreakdown: [
           makeCategory({ key: "groceries", label: "Groceries", amountMinor: 7500, amountDisplay: "$75", transactionCount: 3 }),
           makeCategory({ key: "dining", label: "Dining", amountMinor: 2500, amountDisplay: "$25", transactionCount: 1 }),
@@ -1157,7 +1190,11 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getByText("$100 across 4 tracked transactions")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
+    expect(screen.getByText("Income $50 · Spending $100")).toBeInTheDocument();
+    expect(screen.queryByText("$100 across 4 tracked transactions")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Expenses" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Groceries chart color and category icon" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Dining chart color and category icon" })).not.toBeInTheDocument();
     expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();

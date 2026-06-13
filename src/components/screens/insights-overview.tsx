@@ -1208,16 +1208,31 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   const breakdownItems = isBarsIncome ? buildBarsIncomeCategoryBreakdown(data) : data.timeframeCategoryBreakdown;
   const breakdownSegment = isBarsIncome ? "income" : "expenses";
   const breakdownEmptyMessage = isBarsIncome ? "No income tracked for this month yet." : "No tracked spending in this timeframe yet.";
+  const isTrend = data.selectedChartMode === "trend";
+  const summaryDescription = isTrend
+    ? `Income ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
+        data.selectedPeriodIncomeDisplayMinor,
+        data.displayCurrency,
+      )} · Spending ${getApproxPrefix(data, data.selectedPeriodExpenseDisplayMinor)}${formatMoney(
+        data.selectedPeriodExpenseDisplayMinor,
+        data.displayCurrency,
+      )}`
+    : isBarsIncome
+      ? `Income ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
+          data.selectedPeriodIncomeDisplayMinor,
+          data.displayCurrency,
+        )}`
+      : `${data.timeframeExpenseDisplay} across ${data.timeframeTransactionCount} tracked ${
+          data.timeframeTransactionCount === 1 ? "transaction" : "transactions"
+        }`;
 
   return (
     <Card className="rounded-lg" data-testid="timeframe-insights-card">
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="text-lg">Tracked spending view</CardTitle>
-            <CardDescription>
-              {data.timeframeExpenseDisplay} across {data.timeframeTransactionCount} tracked {data.timeframeTransactionCount === 1 ? "transaction" : "transactions"}
-            </CardDescription>
+            <CardTitle className="text-lg">Tracked view</CardTitle>
+            <CardDescription>{summaryDescription}</CardDescription>
           </div>
           <ChartModeControls data={data} onSelect={onSelect} />
         </div>
