@@ -392,13 +392,13 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Delete transaction" }));
 
-    expect(screen.getByRole("dialog", { name: "Delete this entry?" })).toBeInTheDocument();
-    expect(screen.getByText("You can't undo this from here yet.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Remove from Activity?" })).toBeInTheDocument();
+    expect(screen.getByText("It will stay in Bin for 30 days, then it can no longer be restored.")).toBeInTheDocument();
     expect(deleteAction).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(screen.queryByRole("dialog", { name: "Delete this entry?" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Remove from Activity?" })).not.toBeInTheDocument();
     expect(screen.getByText("hotdog")).toBeInTheDocument();
     expect(deleteAction).not.toHaveBeenCalled();
   });
@@ -412,7 +412,7 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Delete transaction" }));
-    fireEvent.click(within(screen.getByRole("dialog", { name: "Delete this entry?" })).getByRole("button", { name: "Delete" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Remove from Activity?" })).getByRole("button", { name: "Move to Bin" }));
 
     await waitFor(() => expect(deleteAction).toHaveBeenCalledOnce());
     const [, formData] = deleteAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
