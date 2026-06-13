@@ -1185,15 +1185,8 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   const breakdownEmptyMessage = isBarsIncome ? "No income tracked for this month yet." : "No tracked spending in this timeframe yet.";
   const isTrend = data.selectedChartMode === "trend";
   const periodContextLabel = data.selectedTimeframe === "1M" ? data.monthLabel : data.timeframeLabel;
-  const primaryValueLine = isTrend
-    ? `Income ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
-        data.selectedPeriodIncomeDisplayMinor,
-        data.displayCurrency,
-      )} · Spending ${getApproxPrefix(data, data.selectedPeriodExpenseDisplayMinor)}${formatMoney(
-        data.selectedPeriodExpenseDisplayMinor,
-        data.displayCurrency,
-      )}`
-    : activeSegment === "income"
+  const primaryValueLine =
+    activeSegment === "income"
       ? `Income ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
           data.selectedPeriodIncomeDisplayMinor,
           data.displayCurrency,
@@ -1224,7 +1217,7 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
             )}
           </div>
           <div className="space-y-1">
-            <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>
+            {isTrend ? null : <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>}
             <p className="text-sm leading-5 text-slate-500">{contextLine}</p>
           </div>
         </div>

@@ -683,7 +683,7 @@ describe("insights overview", () => {
     expect(screen.queryByLabelText("Month net + $33")).not.toBeInTheDocument();
   });
 
-  it("uses a combined converted income and spending summary for Trend", () => {
+  it("keeps Trend context and chart labels without a duplicated combined summary", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "trend",
@@ -697,16 +697,11 @@ describe("insights overview", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
-    expect(
-      screen.getByText((_, node) =>
-        Boolean(
-          node?.tagName.toLowerCase() === "p" &&
-          node?.textContent
-            ?.replace(/\s+/g, " ")
-            .includes("Income ≈ RON 417.08 · Spending ≈ RON 1,555.74"),
-        ),
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("April 2026 · Income and spending trend")).toBeInTheDocument();
+    expect(screen.queryByText(/Income .* Spending/)).not.toBeInTheDocument();
+    const chart = screen.getByRole("img", { name: "Selected month income and spending trend" });
+    expect(within(chart).getByText(/^Income/)).toBeInTheDocument();
+    expect(within(chart).getByText(/^Spending/)).toBeInTheDocument();
     expect(screen.queryByText(/across \d+ tracked transactions/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Expenses" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
@@ -1240,7 +1235,8 @@ describe("insights overview", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
-    expect(screen.getByText("Income $50 · Spending $100")).toBeInTheDocument();
+    expect(screen.getByText("April 2026 · Income and spending trend")).toBeInTheDocument();
+    expect(screen.queryByText("Income $50 · Spending $100")).not.toBeInTheDocument();
     expect(screen.queryByText("$100 across 4 tracked transactions")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Expenses" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
