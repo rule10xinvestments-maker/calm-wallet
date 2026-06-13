@@ -471,7 +471,7 @@ function SpendingSegmentControls({
           aria-pressed={segment === nextSegment}
           className={`whitespace-nowrap rounded-md text-sm font-medium ${
             segment === nextSegment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-          } ${isVertical ? "px-2.5 py-1 text-xs" : "px-3 py-1.5"}`}
+          } ${isVertical ? "px-3 py-1.5 text-xs" : "px-3 py-1.5"}`}
           onClick={(event) => {
             const scrollSnapshot = getDesktopScrollSnapshot();
 
@@ -1201,12 +1201,12 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
 
   return (
     <Card className="rounded-lg" data-testid="timeframe-insights-card">
-      <CardHeader>
+      <CardHeader className="p-4 pb-1">
         <CardTitle className="text-lg">Tracked view</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+      <CardContent className="space-y-3 p-4 pt-0">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-start justify-between gap-1.5">
             <ChartModeControls data={data} onSelect={onSelect} />
             {isTrend ? null : (
               <SpendingSegmentControls
@@ -1216,7 +1216,7 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
               />
             )}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {isTrend ? null : <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>}
             <p className="text-sm leading-5 text-slate-500">{contextLine}</p>
           </div>
