@@ -224,6 +224,54 @@ describe("transaction item card", () => {
     expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
   });
 
+  it("toggles inline action panels from their action buttons", () => {
+    renderCard();
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+
+    const categoryButton = screen.getByRole("button", { name: "Change category, currently Dining" });
+    fireEvent.click(categoryButton);
+    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
+    expect(categoryButton).toHaveClass("bg-sky-50");
+    fireEvent.click(categoryButton);
+    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
+
+    const noteButton = screen.getByRole("button", { name: "Add note" });
+    fireEvent.click(noteButton);
+    expect(screen.getByRole("button", { name: "Save note" })).toBeInTheDocument();
+    expect(noteButton).toHaveClass("bg-sky-50");
+    fireEvent.click(noteButton);
+    expect(screen.queryByRole("button", { name: "Save note" })).not.toBeInTheDocument();
+
+    const editButton = screen.getByRole("button", { name: "Edit details" });
+    fireEvent.click(editButton);
+    expect(screen.getByLabelText("Amount")).toBeInTheDocument();
+    expect(editButton).toHaveClass("bg-sky-50");
+    fireEvent.click(editButton);
+    expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
+  });
+
+  it("keeps only one inline action panel open at a time", () => {
+    renderCard();
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
+    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save note" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    expect(screen.queryByRole("button", { name: "Save note" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Amount")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
+    expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
+  });
+
   it("saves a note from the compact note panel without opening full details", async () => {
     const updateAction = vi.fn(async () => ({
       status: "success" as const,

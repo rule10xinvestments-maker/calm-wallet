@@ -332,10 +332,43 @@ export function TransactionItemCard({
     prepareRecategorizedItem(categoryIdValue, false);
   }
 
-  function openNoteEditor() {
-    setIsExpanded(true);
-    setIsEditingDetails(false);
-    setIsNotePanelOpen(true);
+  function toggleCategoryPicker() {
+    setIsCategoryPickerOpen((isOpen) => {
+      const shouldOpen = !isOpen;
+
+      if (shouldOpen) {
+        setIsNotePanelOpen(false);
+        setIsEditingDetails(false);
+      }
+
+      return shouldOpen;
+    });
+  }
+
+  function toggleNoteEditor() {
+    setIsNotePanelOpen((isOpen) => {
+      const shouldOpen = !isOpen;
+
+      if (shouldOpen) {
+        setIsCategoryPickerOpen(false);
+        setIsEditingDetails(false);
+      }
+
+      return shouldOpen;
+    });
+  }
+
+  function toggleDetailsEditor() {
+    setIsEditingDetails((isOpen) => {
+      const shouldOpen = !isOpen;
+
+      if (shouldOpen) {
+        setIsCategoryPickerOpen(false);
+        setIsNotePanelOpen(false);
+      }
+
+      return shouldOpen;
+    });
   }
 
   function handleRecategorizeSubmit(event: FormEvent<HTMLFormElement>) {
@@ -469,11 +502,15 @@ export function TransactionItemCard({
                 aria-expanded={isCategoryPickerOpen}
                 aria-label={`Change category, currently ${selectedCategoryLabel}`}
                 className={`relative flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
-                  actionCategoryIconNeedsAttention
+                  isCategoryPickerOpen && actionCategoryIconNeedsAttention
+                    ? "border-amber-300 bg-amber-50 text-amber-800"
+                    : isCategoryPickerOpen
+                      ? "border-sky-300 bg-sky-50 text-sky-800"
+                      : actionCategoryIconNeedsAttention
                     ? "border-amber-200 text-amber-700 hover:border-amber-300 hover:bg-amber-50"
                     : "border-slate-200 text-sky-700 hover:border-sky-200 hover:bg-sky-50"
                 }`}
-                onClick={() => setIsCategoryPickerOpen((value) => !value)}
+                onClick={toggleCategoryPicker}
                 type="button"
               >
                 <ActionCategoryIcon aria-hidden="true" size={19} strokeWidth={2.1} />
@@ -482,22 +519,25 @@ export function TransactionItemCard({
               <button
                 aria-label={displayItem.note ? "Edit note" : "Add note"}
                 className={`flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
-                  displayItem.note
+                  isNotePanelOpen
+                    ? "border-sky-300 bg-sky-50 text-sky-800"
+                    : displayItem.note
                     ? "border-sky-200 text-sky-700 hover:border-sky-300 hover:bg-sky-50"
                     : "border-slate-200 text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
                 }`}
-                onClick={openNoteEditor}
+                onClick={toggleNoteEditor}
                 type="button"
               >
                 <StickyNote aria-hidden="true" size={18} strokeWidth={2.1} />
               </button>
               <button
                 aria-label="Edit details"
-                className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
-                onClick={() => {
-                  setIsNotePanelOpen(false);
-                  setIsEditingDetails((value) => !value);
-                }}
+                className={`flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
+                  isEditingDetails
+                    ? "border-sky-300 bg-sky-50 text-sky-800"
+                    : "border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                }`}
+                onClick={toggleDetailsEditor}
                 type="button"
               >
                 <Pencil aria-hidden="true" size={18} strokeWidth={2.1} />
