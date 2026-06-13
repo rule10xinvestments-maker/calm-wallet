@@ -455,19 +455,23 @@ function ChartModeControls({ data, onSelect }: { data: InsightsData; onSelect: (
 function SpendingSegmentControls({
   segment,
   onSegmentChange,
+  orientation = "horizontal",
 }: {
   segment: SpendingMixSegment;
   onSegmentChange: (segment: SpendingMixSegment) => void;
+  orientation?: "horizontal" | "vertical";
 }) {
+  const isVertical = orientation === "vertical";
+
   return (
-    <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1">
+    <div className={`inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1 ${isVertical ? "flex-col" : ""}`}>
       {(["expenses", "income"] as const).map((nextSegment) => (
         <button
           key={nextSegment}
           aria-pressed={segment === nextSegment}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+          className={`whitespace-nowrap rounded-md text-sm font-medium ${
             segment === nextSegment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-          }`}
+          } ${isVertical ? "px-2.5 py-1 text-xs" : "px-3 py-1.5"}`}
           onClick={(event) => {
             const scrollSnapshot = getDesktopScrollSnapshot();
 
@@ -1209,13 +1213,16 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-3">
-          <ChartModeControls data={data} onSelect={onSelect} />
-          {isTrend ? null : (
-            <SpendingSegmentControls
-              segment={activeSegment}
-              onSegmentChange={data.selectedChartMode === "bars" ? setBarsSegment : setMixSegment}
-            />
-          )}
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <ChartModeControls data={data} onSelect={onSelect} />
+            {isTrend ? null : (
+              <SpendingSegmentControls
+                orientation="vertical"
+                segment={activeSegment}
+                onSegmentChange={data.selectedChartMode === "bars" ? setBarsSegment : setMixSegment}
+              />
+            )}
+          </div>
           <div className="space-y-1">
             <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>
             <p className="text-sm leading-5 text-slate-500">{contextLine}</p>

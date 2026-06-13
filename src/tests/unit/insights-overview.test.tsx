@@ -568,9 +568,11 @@ describe("insights overview", () => {
 
     const card = screen.getByTestId("timeframe-insights-card");
     const cardText = card.textContent ?? "";
+    const expensesToggle = within(card).getByRole("button", { name: "Expenses" });
 
     expect(cardText.indexOf("Mix")).toBeLessThan(cardText.indexOf("Spending $20"));
     expect(cardText.indexOf("Expenses")).toBeLessThan(cardText.indexOf("Spending $20"));
+    expect(expensesToggle.parentElement).toHaveClass("flex-col");
     expect(within(card).getByText("Spending $20")).toBeInTheDocument();
     expect(within(card).getByText("April 2026 · USD tracked expenses")).toBeInTheDocument();
 
@@ -594,9 +596,11 @@ describe("insights overview", () => {
 
     const card = screen.getByTestId("timeframe-insights-card");
     const initialText = card.textContent ?? "";
+    const expensesToggle = within(card).getByRole("button", { name: "Expenses" });
 
     expect(initialText.indexOf("Bars")).toBeLessThan(initialText.indexOf("Spending $20"));
     expect(initialText.indexOf("Expenses")).toBeLessThan(initialText.indexOf("Spending $20"));
+    expect(expensesToggle.parentElement).toHaveClass("flex-col");
     expect(within(card).getByText("April 2026 · USD tracked expenses")).toBeInTheDocument();
 
     fireEvent.click(within(card).getByRole("button", { name: "Income" }));
