@@ -1772,6 +1772,8 @@ describe("insights overview", () => {
     );
 
     expect(screen.getAllByText(/Includes\s+€5\s+converted/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/approximate/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/approx/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Converted totals are approximate. Original transactions stay unchanged.")).not.toBeInTheDocument();
     expect(screen.queryByText("Approximate total")).not.toBeInTheDocument();
     expect(screen.queryByText("Original entries stay unchanged")).not.toBeInTheDocument();

@@ -297,8 +297,7 @@ function MonthPickerSheet({
           <div>
             <p className="text-sm font-semibold text-slate-900">Choose month</p>
             <p className="text-xs leading-5 text-slate-500">
-              Tracked activity markers use {data.displayCurrency}
-              {data.hasConvertedCurrencies ? " approximate" : ""} month totals.
+              Tracked activity markers use {data.displayCurrency} month totals.
             </p>
           </div>
           <button
@@ -322,7 +321,7 @@ function MonthPickerSheet({
                     <InsightsQueryButton
                       key={month.month}
                       aria-current={isSelected ? "date" : undefined}
-                      aria-label={`${month.month}${month.hasActivity ? " tracked activity" : " no tracked activity"}${month.isApproximate ? " approximate" : ""}`}
+                      aria-label={`${month.month}${month.hasActivity ? " tracked activity" : " no tracked activity"}`}
                       className={`min-h-12 rounded-lg border px-3 py-2 text-left text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                         isSelected ? "ring-2 ring-sky-500 ring-offset-1" : ""
                       } ${getMonthStatusClass(month)}`}
@@ -337,7 +336,7 @@ function MonthPickerSheet({
                         <span className={`h-2 w-2 rounded-full ${getMonthStatusDotClass(month)}`} />
                       </span>
                       <span className="mt-1 block text-[11px] font-normal opacity-75">
-                        {month.hasActivity ? `Tracked${month.isApproximate ? ", approx" : ""}` : "No activity"}
+                        {month.hasActivity ? "Tracked" : "No activity"}
                       </span>
                     </InsightsQueryButton>
                   );
@@ -960,7 +959,6 @@ function TimeframeMixChart({ data }: { data: InsightsData }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">
           {data.monthLabel} - {data.displayCurrency} tracked {spendingMixSegment}
-          {data.hasConvertedCurrencies ? " - approximate display totals" : null}
         </p>
         <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1">
           {(["expenses", "income"] as const).map((segment) => (
@@ -1218,7 +1216,6 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
             <CardTitle className="text-lg">Tracked spending view</CardTitle>
             <CardDescription>
               {data.timeframeExpenseDisplay} across {data.timeframeTransactionCount} tracked {data.timeframeTransactionCount === 1 ? "transaction" : "transactions"}
-              {data.hasConvertedCurrencies ? " - approximate" : null}
             </CardDescription>
           </div>
           <ChartModeControls data={data} onSelect={onSelect} />
