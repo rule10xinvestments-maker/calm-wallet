@@ -563,6 +563,51 @@ describe("insights overview", () => {
     expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
   });
 
+  it("places tracked card controls before the Mix summary and updates the selected segment summary", () => {
+    renderInsights(makeInsightsData({ selectedChartMode: "mix" }));
+
+    const card = screen.getByTestId("timeframe-insights-card");
+    const cardText = card.textContent ?? "";
+
+    expect(cardText.indexOf("Mix")).toBeLessThan(cardText.indexOf("Spending $20"));
+    expect(cardText.indexOf("Expenses")).toBeLessThan(cardText.indexOf("Spending $20"));
+    expect(within(card).getByText("Spending $20")).toBeInTheDocument();
+    expect(within(card).getByText("April 2026 · USD tracked expenses")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Income" }));
+
+    expect(within(card).getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(card).getByText("Income $50")).toBeInTheDocument();
+    expect(within(card).getByText("April 2026 · USD tracked income")).toBeInTheDocument();
+  });
+
+  it("places tracked card controls before the Bars summary and keeps the segment value in sync", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedPeriodIncomeDisplayMinor: 3000,
+        incomeCategoryBreakdown: [
+          makeCategory({ key: "salary", label: "Salary", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    const card = screen.getByTestId("timeframe-insights-card");
+    const initialText = card.textContent ?? "";
+
+    expect(initialText.indexOf("Bars")).toBeLessThan(initialText.indexOf("Spending $20"));
+    expect(initialText.indexOf("Expenses")).toBeLessThan(initialText.indexOf("Spending $20"));
+    expect(within(card).getByText("April 2026 · USD tracked expenses")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Income" }));
+
+    const incomeText = card.textContent ?? "";
+
+    expect(incomeText.indexOf("Income")).toBeLessThan(incomeText.indexOf("Income $30"));
+    expect(within(card).getByText("Income $30")).toBeInTheDocument();
+    expect(within(card).getByText("April 2026 · USD tracked income")).toBeInTheDocument();
+  });
+
   it("renders selected-month income and spending trend without default day labels", () => {
     renderInsights(
       makeInsightsData({

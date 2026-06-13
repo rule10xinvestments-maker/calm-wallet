@@ -452,6 +452,39 @@ function ChartModeControls({ data, onSelect }: { data: InsightsData; onSelect: (
   );
 }
 
+function SpendingSegmentControls({
+  segment,
+  onSegmentChange,
+}: {
+  segment: SpendingMixSegment;
+  onSegmentChange: (segment: SpendingMixSegment) => void;
+}) {
+  return (
+    <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1">
+      {(["expenses", "income"] as const).map((nextSegment) => (
+        <button
+          key={nextSegment}
+          aria-pressed={segment === nextSegment}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            segment === nextSegment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+          }`}
+          onClick={(event) => {
+            const scrollSnapshot = getDesktopScrollSnapshot();
+
+            event.currentTarget.blur();
+            onSegmentChange(nextSegment);
+            restoreDesktopScroll(scrollSnapshot);
+          }}
+          onMouseDown={preventMouseFocus}
+          type="button"
+        >
+          {nextSegment === "expenses" ? "Expenses" : "Income"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function formatSpendingDayLabel(bar: { key: string; label: string }) {
   const date = new Date(`${bar.key}T00:00:00.000Z`);
 
@@ -772,11 +805,9 @@ function buildBarsIncomeCategoryBreakdown(data: InsightsData): SpendingMixCatego
 function TimeframeBarsChart({
   data,
   barsSegment,
-  setBarsSegment,
 }: {
   data: InsightsData;
   barsSegment: SpendingMixSegment;
-  setBarsSegment: (segment: SpendingMixSegment) => void;
 }) {
   const isIncome = barsSegment === "income";
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
@@ -801,31 +832,6 @@ function TimeframeBarsChart({
     ).values(),
   );
 
-  const toggle = (
-    <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1">
-      {(["expenses", "income"] as const).map((segment) => (
-        <button
-          key={segment}
-          aria-pressed={barsSegment === segment}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-            barsSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-          }`}
-          onClick={(event) => {
-            const scrollSnapshot = getDesktopScrollSnapshot();
-
-            event.currentTarget.blur();
-            setBarsSegment(segment);
-            restoreDesktopScroll(scrollSnapshot);
-          }}
-          onMouseDown={preventMouseFocus}
-          type="button"
-        >
-          {segment === "expenses" ? "Expenses" : "Income"}
-        </button>
-      ))}
-    </div>
-  );
-
   const legend = activeLegendItems.length ? (
     <div aria-label={`${isIncome ? "Income" : "Expenses"} category icon legend`} className="flex gap-2 overflow-x-auto pb-1">
       {activeLegendItems.map((item) => (
@@ -840,10 +846,7 @@ function TimeframeBarsChart({
     if (!activeBars.length) {
       return (
         <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by day`} role="img">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
-            {toggle}
-          </div>
+          <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
           <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
             {isIncome ? "No income tracked for this month yet." : "No spending tracked for this month yet."}
           </p>
@@ -853,10 +856,7 @@ function TimeframeBarsChart({
 
     return (
       <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by day`} role="img">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
-          {toggle}
-        </div>
+        <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
         {legend}
         <div className="space-y-2">
           {activeBars.map((bar) => {
@@ -900,10 +900,7 @@ function TimeframeBarsChart({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-5 text-slate-500">Showing monthly tracked {isIncome ? "income" : "spending"}.</p>
-        {toggle}
-      </div>
+      <p className="text-xs leading-5 text-slate-500">Showing monthly tracked {isIncome ? "income" : "spending"}.</p>
       {legend}
       <div
         className="grid min-h-44 grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] items-end gap-2"
@@ -951,42 +948,14 @@ function TimeframeBarsChart({
   );
 }
 
-function TimeframeMixChart({ data }: { data: InsightsData }) {
-  const [spendingMixSegment, setSpendingMixSegment] = useState<SpendingMixSegment>("expenses");
-  const spendingMixItems = spendingMixSegment === "income" ? data.incomeCategoryBreakdown : data.categoryBreakdown;
+function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: SpendingMixSegment }) {
+  const spendingMixItems = segment === "income" ? data.incomeCategoryBreakdown : data.categoryBreakdown;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-slate-500">
-          {data.monthLabel} - {data.displayCurrency} tracked {spendingMixSegment}
-        </p>
-        <div className="inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {(["expenses", "income"] as const).map((segment) => (
-            <button
-              key={segment}
-              aria-pressed={spendingMixSegment === segment}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                spendingMixSegment === segment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-              }`}
-              onClick={(event) => {
-                const scrollSnapshot = getDesktopScrollSnapshot();
-
-                event.currentTarget.blur();
-                setSpendingMixSegment(segment);
-                restoreDesktopScroll(scrollSnapshot);
-              }}
-              onMouseDown={preventMouseFocus}
-              type="button"
-            >
-              {segment === "expenses" ? "Expenses" : "Income"}
-            </button>
-          ))}
-        </div>
-      </div>
-      <SpendingMixSummaryChart items={spendingMixItems} segment={spendingMixSegment} />
+      <SpendingMixSummaryChart items={spendingMixItems} segment={segment} />
       <div className="space-y-3">
-        <SpendingMixRows items={spendingMixItems} segment={spendingMixSegment} />
+        <SpendingMixRows items={spendingMixItems} segment={segment} />
       </div>
     </div>
   );
@@ -1203,13 +1172,16 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
 }
 
 function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
+  const [mixSegment, setMixSegment] = useState<SpendingMixSegment>("expenses");
   const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
+  const activeSegment = data.selectedChartMode === "bars" ? barsSegment : mixSegment;
   const isBarsIncome = data.selectedChartMode === "bars" && barsSegment === "income";
   const breakdownItems = isBarsIncome ? buildBarsIncomeCategoryBreakdown(data) : data.timeframeCategoryBreakdown;
   const breakdownSegment = isBarsIncome ? "income" : "expenses";
   const breakdownEmptyMessage = isBarsIncome ? "No income tracked for this month yet." : "No tracked spending in this timeframe yet.";
   const isTrend = data.selectedChartMode === "trend";
-  const summaryDescription = isTrend
+  const periodContextLabel = data.selectedTimeframe === "1M" ? data.monthLabel : data.timeframeLabel;
+  const primaryValueLine = isTrend
     ? `Income ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
         data.selectedPeriodIncomeDisplayMinor,
         data.displayCurrency,
@@ -1217,30 +1189,41 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
         data.selectedPeriodExpenseDisplayMinor,
         data.displayCurrency,
       )}`
-    : isBarsIncome
+    : activeSegment === "income"
       ? `Income ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
           data.selectedPeriodIncomeDisplayMinor,
           data.displayCurrency,
         )}`
-      : `${data.timeframeExpenseDisplay} across ${data.timeframeTransactionCount} tracked ${
-          data.timeframeTransactionCount === 1 ? "transaction" : "transactions"
-        }`;
+      : `Spending ${getApproxPrefix(data, data.selectedPeriodExpenseDisplayMinor)}${formatMoney(
+          data.selectedPeriodExpenseDisplayMinor,
+          data.displayCurrency,
+        )}`;
+  const contextLine = isTrend
+    ? `${periodContextLabel} · Income and spending trend`
+    : `${periodContextLabel} · ${data.displayCurrency} tracked ${activeSegment}`;
 
   return (
     <Card className="rounded-lg" data-testid="timeframe-insights-card">
       <CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="text-lg">Tracked view</CardTitle>
-            <CardDescription>{summaryDescription}</CardDescription>
-          </div>
-          <ChartModeControls data={data} onSelect={onSelect} />
-        </div>
+        <CardTitle className="text-lg">Tracked view</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div className="space-y-3">
+          <ChartModeControls data={data} onSelect={onSelect} />
+          {isTrend ? null : (
+            <SpendingSegmentControls
+              segment={activeSegment}
+              onSegmentChange={data.selectedChartMode === "bars" ? setBarsSegment : setMixSegment}
+            />
+          )}
+          <div className="space-y-1">
+            <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>
+            <p className="text-sm leading-5 text-slate-500">{contextLine}</p>
+          </div>
+        </div>
         {data.selectedChartMode === "trend" ? <TimeframeTrendChart data={data} /> : null}
-        {data.selectedChartMode === "bars" ? <TimeframeBarsChart barsSegment={barsSegment} data={data} setBarsSegment={setBarsSegment} /> : null}
-        {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} /> : null}
+        {data.selectedChartMode === "bars" ? <TimeframeBarsChart barsSegment={barsSegment} data={data} /> : null}
+        {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} segment={mixSegment} /> : null}
         {data.selectedChartMode === "mix" ? null : (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
