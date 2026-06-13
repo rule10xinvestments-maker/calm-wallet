@@ -67,7 +67,8 @@ describe("transaction item card", () => {
   it("renders a compact collapsed transaction row with a category icon by default", () => {
     renderCard();
 
-    expect(screen.getByText("hotdog")).toBeInTheDocument();
+    expect(screen.getByText("Hotdog")).toBeInTheDocument();
+    expect(screen.queryByText("hotdog")).not.toBeInTheDocument();
     expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
     expect(screen.getByText("-$34.00")).toBeInTheDocument();
     expect(screen.getByLabelText("Dining category icon")).toBeInTheDocument();
@@ -90,8 +91,14 @@ describe("transaction item card", () => {
   it("shows merchant as secondary metadata instead of the row title", () => {
     renderCard({ item: makeItem({ title: "mustar", itemName: "mustar", merchant: "CCC" }) });
 
-    expect(screen.getByText("mustar")).toBeInTheDocument();
+    expect(screen.getByText("Mustar")).toBeInTheDocument();
     expect(screen.getByText("Merchant: CCC")).toBeInTheDocument();
+  });
+
+  it("preserves mixed-case transaction title display", () => {
+    renderCard({ item: makeItem({ title: "iPhone charger", itemName: "iPhone charger" }) });
+
+    expect(screen.getByText("iPhone charger")).toBeInTheDocument();
   });
 
   it("does not show a note preview on collapsed rows when the note is empty", () => {
@@ -370,7 +377,7 @@ describe("transaction item card", () => {
     expect(await screen.findByText("Changes saved.")).toBeInTheDocument();
     expect(screen.getAllByText("Changes saved.")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
-    expect(await screen.findByText("ketchup")).toBeInTheDocument();
+    expect(await screen.findByText("Ketchup")).toBeInTheDocument();
     expect(await screen.findByText("-€45.67")).toBeInTheDocument();
     expect(await screen.findByText("Merchant: Corner store")).toBeInTheDocument();
     expect(screen.queryByText(/^Note:/)).not.toBeInTheDocument();
@@ -399,7 +406,7 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByRole("dialog", { name: "Remove from Activity?" })).not.toBeInTheDocument();
-    expect(screen.getByText("hotdog")).toBeInTheDocument();
+    expect(screen.getByText("Hotdog")).toBeInTheDocument();
     expect(deleteAction).not.toHaveBeenCalled();
   });
 
@@ -418,7 +425,7 @@ describe("transaction item card", () => {
     const [, formData] = deleteAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
 
     expect(formData.get("transactionId")).toBe("txn-1");
-    await waitFor(() => expect(screen.queryByText("hotdog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Hotdog")).not.toBeInTheDocument());
   });
 
   it("keeps the collapsed title as the item name after editing merchant only", async () => {
@@ -453,7 +460,7 @@ describe("transaction item card", () => {
     expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("merchant")).toBe("CCC");
     expect(formData.get("note")).toBe("for sandwiches");
-    expect(await screen.findByText("mustar")).toBeInTheDocument();
+    expect(await screen.findByText("Mustar")).toBeInTheDocument();
     expect(await screen.findByText("Merchant: CCC")).toBeInTheDocument();
     expect(await screen.findByText("Note: for sandwiches")).toBeInTheDocument();
   });
@@ -607,7 +614,7 @@ describe("transaction item card", () => {
     expect(await screen.findByText("Enter a valid occurred date.")).toBeInTheDocument();
     expect(screen.getAllByText("Enter a valid occurred date.")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
-    expect(screen.getByText("hotdog")).toBeInTheDocument();
+    expect(screen.getByText("Hotdog")).toBeInTheDocument();
     expect(screen.queryByText("ketchup")).not.toBeInTheDocument();
     expect(screen.queryByText("Transaction updated and marked tracked.")).not.toBeInTheDocument();
     expect(screen.queryByText("Tracked")).not.toBeInTheDocument();

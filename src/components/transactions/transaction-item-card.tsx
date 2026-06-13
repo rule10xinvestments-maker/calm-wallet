@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
+import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
 
@@ -468,7 +469,7 @@ export function TransactionItemCard({
           <CategoryIcon aria-hidden="true" size={18} strokeWidth={2} />
         </span>
         <span className="min-w-0 space-y-0.5">
-          <span className="block break-words text-sm font-medium leading-5 text-slate-900">{displayItem.title}</span>
+          <span className="block break-words text-sm font-medium leading-5 text-slate-900">{formatTransactionTitleForDisplay(displayItem.title)}</span>
           <span className="block text-xs leading-5 text-slate-500">
             {displayItem.categoryLabel} · {displayItem.subtitle}
           </span>

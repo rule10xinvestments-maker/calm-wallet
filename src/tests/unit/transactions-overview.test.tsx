@@ -203,7 +203,7 @@ describe("transactions overview", () => {
         recentlyDeletedItems={[
           makeTransactionItem({
             id: "deleted-1",
-            title: "Old market",
+            title: "old market",
             deletedAt: "2026-06-01T10:00:00.000Z",
           }),
         ]}
@@ -213,6 +213,8 @@ describe("transactions overview", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
+    expect(screen.getByText("Old market")).toBeInTheDocument();
+    expect(screen.queryByText("old market")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Old market/ }));
     fireEvent.click(screen.getByRole("button", { name: "Delete forever" }));
 

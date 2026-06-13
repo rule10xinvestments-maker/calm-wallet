@@ -15,6 +15,7 @@ import type {
   TransactionsView,
 } from "@/lib/server/transactions-read-model";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
+import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
 type ImportReviewActionHandler = (
@@ -450,7 +451,7 @@ function RecentlyDeletedEntry({
         type="button"
       >
         <div className="min-w-0">
-          <p className="break-words text-sm font-medium text-slate-900">{item.title}</p>
+          <p className="break-words text-sm font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
           <p className="text-xs leading-5 text-slate-500">
             {item.categoryLabel} · {item.subtitle}
           </p>

@@ -1528,7 +1528,7 @@ describe("insights overview", () => {
             recentEntries: [
               {
                 id: "entry-1",
-                title: "Corner Market",
+                title: "corner market",
                 amountMinor: 700,
                 amountDisplay: "$7",
                 occurredAt: "2026-04-22T00:00:00.000Z",
@@ -1544,23 +1544,25 @@ describe("insights overview", () => {
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("img", { name: "Expenses category share chart" })).toBeInTheDocument();
     expect(screen.getByText("2 entries")).toBeInTheDocument();
-    expect(screen.queryByText("Corner Market")).not.toBeInTheDocument();
+    expect(screen.queryByText("Corner market")).not.toBeInTheDocument();
+    expect(screen.queryByText("corner market")).not.toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Show Groceries entries" })).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(screen.getByRole("img", { name: "Groceries chart color and category icon" }));
-    expect(screen.getByText("Corner Market")).toBeInTheDocument();
+    expect(screen.getByText("Corner market")).toBeInTheDocument();
+    expect(screen.queryByText("corner market")).not.toBeInTheDocument();
     expect(screen.getByText("Apr 22")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.click(screen.getByText("2 entries"));
-    expect(screen.queryByText("Corner Market")).not.toBeInTheDocument();
+    expect(screen.queryByText("Corner market")).not.toBeInTheDocument();
 
     fireEvent.click(within(screen.getByRole("button", { name: "Show Groceries entries" })).getByText("Groceries"));
-    expect(screen.getByText("Corner Market")).toBeInTheDocument();
+    expect(screen.getByText("Corner market")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("meter", { name: "Groceries spending share 100%" }));
-    expect(screen.queryByText("Corner Market")).not.toBeInTheDocument();
+    expect(screen.queryByText("Corner market")).not.toBeInTheDocument();
   });
 
   it("selects income segment and renders income category rows", () => {

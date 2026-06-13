@@ -27,6 +27,7 @@ import { ScreenHeader } from "@/components/shared/screen-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { initialBudgetActionState, type BudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
+import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type SpendingMixSegment = "expenses" | "income";
 
@@ -1070,7 +1071,7 @@ function TimeframeCategoryBreakdown({
                     {item.recentEntries.map((entry) => (
                       <div className="grid grid-cols-[1fr_auto] gap-3" key={entry.id}>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800">{entry.title}</p>
+                          <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title)}</p>
                           <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
                         </div>
                         <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
@@ -1549,7 +1550,7 @@ function SpendingMixRows({
                     {item.recentEntries.map((entry) => (
                       <div key={entry.id} className="grid grid-cols-[1fr_auto] gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800">{entry.title}</p>
+                          <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title)}</p>
                           <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
                         </div>
                         <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
@@ -1736,7 +1737,7 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
             activeData.largestRecentExpenses.map((item) => (
               <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
                 <div>
-                  <p className="font-medium text-slate-900">{item.title}</p>
+                  <p className="font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
                   <p className="text-xs text-slate-500">
                     {item.categoryLabel} - {item.occurredLabel}
                   </p>
