@@ -136,7 +136,7 @@ describe("PWA manifest", () => {
     }
   });
 
-  it("keeps install icon PNGs sized and free of black splash corners", () => {
+  it("keeps install icon PNGs sized with transparent corners", () => {
     const icon192 = readPng(join(process.cwd(), "public", "icons", "calm-wallet-icon-192.png"));
     const icon512 = readPng(join(process.cwd(), "public", "icons", "calm-wallet-icon-512.png"));
     const maskable = readPng(join(process.cwd(), "public", "icons", "calm-wallet-maskable-512.png"));
@@ -145,10 +145,10 @@ describe("PWA manifest", () => {
     expect({ width: icon512.width, height: icon512.height }).toEqual({ width: 512, height: 512 });
     expect({ width: maskable.width, height: maskable.height }).toEqual({ width: 512, height: 512 });
 
-    expect(icon192.getPixel(0, 0)).toEqual({ r: 248, g: 250, b: 252, a: 255 });
-    expect(icon512.getPixel(0, 0)).toEqual({ r: 248, g: 250, b: 252, a: 255 });
-    expect(maskable.getPixel(0, 0)).toEqual({ r: 248, g: 250, b: 252, a: 255 });
-    expect(maskable.getPixel(511, 511)).toEqual({ r: 248, g: 250, b: 252, a: 255 });
+    expect(icon192.getPixel(0, 0).a).toBe(0);
+    expect(icon512.getPixel(0, 0).a).toBe(0);
+    expect(maskable.getPixel(0, 0).a).toBe(0);
+    expect(maskable.getPixel(511, 511).a).toBe(0);
 
     for (const image of [icon192, icon512, maskable]) {
       const corner = image.getPixel(0, 0);
