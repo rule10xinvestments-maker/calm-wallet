@@ -572,6 +572,7 @@ describe("insights overview", () => {
     const expensesToggle = within(card).getByRole("button", { name: "Expenses" });
 
     expect(within(headerRow).getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
+    expect(within(headerRow).getByRole("button", { name: "Mix" })).toBeInTheDocument();
     expect(within(headerRow).getByRole("button", { name: "Expenses" })).toBeInTheDocument();
     expect(cardText.indexOf("Mix")).toBeLessThan(cardText.indexOf("Spending $20"));
     expect(cardText.indexOf("Expenses")).toBeLessThan(cardText.indexOf("Spending $20"));
@@ -603,6 +604,7 @@ describe("insights overview", () => {
     const expensesToggle = within(card).getByRole("button", { name: "Expenses" });
 
     expect(within(headerRow).getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
+    expect(within(headerRow).getByRole("button", { name: "Bars" })).toBeInTheDocument();
     expect(within(headerRow).getByRole("button", { name: "Expenses" })).toBeInTheDocument();
     expect(initialText.indexOf("Bars")).toBeLessThan(initialText.indexOf("Spending $20"));
     expect(initialText.indexOf("Expenses")).toBeLessThan(initialText.indexOf("Spending $20"));

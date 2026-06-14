@@ -1203,7 +1203,10 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
     <Card className="rounded-lg" data-testid="timeframe-insights-card">
       <CardHeader className="p-4 pb-1">
         <div className="flex items-start justify-between gap-3" data-testid="tracked-view-header-row">
-          <CardTitle className="text-lg">Tracked view</CardTitle>
+          <div className="space-y-1">
+            <CardTitle className="text-lg">Tracked view</CardTitle>
+            <ChartModeControls data={data} onSelect={onSelect} />
+          </div>
           {isTrend ? null : (
             <SpendingSegmentControls
               orientation="vertical"
@@ -1214,12 +1217,9 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
         </div>
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
-        <div className="space-y-1.5">
-          <ChartModeControls data={data} onSelect={onSelect} />
-          <div className="space-y-0.5">
-            {isTrend ? null : <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>}
-            <p className="text-sm leading-5 text-slate-500">{contextLine}</p>
-          </div>
+        <div className="space-y-0.5">
+          {isTrend ? null : <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>}
+          <p className="text-sm leading-5 text-slate-500">{contextLine}</p>
         </div>
         {data.selectedChartMode === "trend" ? <TimeframeTrendChart data={data} /> : null}
         {data.selectedChartMode === "bars" ? <TimeframeBarsChart barsSegment={barsSegment} data={data} /> : null}
