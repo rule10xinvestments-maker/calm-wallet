@@ -563,13 +563,16 @@ describe("insights overview", () => {
     expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
   });
 
-  it("places tracked card controls before the Mix summary and updates the selected segment summary", () => {
+  it("places the Mix segment toggle in the tracked card header and updates the selected segment summary", () => {
     renderInsights(makeInsightsData({ selectedChartMode: "mix" }));
 
     const card = screen.getByTestId("timeframe-insights-card");
+    const headerRow = within(card).getByTestId("tracked-view-header-row");
     const cardText = card.textContent ?? "";
     const expensesToggle = within(card).getByRole("button", { name: "Expenses" });
 
+    expect(within(headerRow).getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
+    expect(within(headerRow).getByRole("button", { name: "Expenses" })).toBeInTheDocument();
     expect(cardText.indexOf("Mix")).toBeLessThan(cardText.indexOf("Spending $20"));
     expect(cardText.indexOf("Expenses")).toBeLessThan(cardText.indexOf("Spending $20"));
     expect(expensesToggle.parentElement).toHaveClass("flex-col");
@@ -583,7 +586,7 @@ describe("insights overview", () => {
     expect(within(card).getByText("April 2026 · USD tracked income")).toBeInTheDocument();
   });
 
-  it("places tracked card controls before the Bars summary and keeps the segment value in sync", () => {
+  it("places the Bars segment toggle in the tracked card header and keeps the segment value in sync", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "bars",
@@ -595,9 +598,12 @@ describe("insights overview", () => {
     );
 
     const card = screen.getByTestId("timeframe-insights-card");
+    const headerRow = within(card).getByTestId("tracked-view-header-row");
     const initialText = card.textContent ?? "";
     const expensesToggle = within(card).getByRole("button", { name: "Expenses" });
 
+    expect(within(headerRow).getByRole("heading", { name: "Tracked view" })).toBeInTheDocument();
+    expect(within(headerRow).getByRole("button", { name: "Expenses" })).toBeInTheDocument();
     expect(initialText.indexOf("Bars")).toBeLessThan(initialText.indexOf("Spending $20"));
     expect(initialText.indexOf("Expenses")).toBeLessThan(initialText.indexOf("Spending $20"));
     expect(expensesToggle.parentElement).toHaveClass("flex-col");

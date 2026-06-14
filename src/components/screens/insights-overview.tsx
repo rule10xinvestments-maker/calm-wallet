@@ -1202,20 +1202,20 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   return (
     <Card className="rounded-lg" data-testid="timeframe-insights-card">
       <CardHeader className="p-4 pb-1">
-        <CardTitle className="text-lg">Tracked view</CardTitle>
+        <div className="flex items-start justify-between gap-3" data-testid="tracked-view-header-row">
+          <CardTitle className="text-lg">Tracked view</CardTitle>
+          {isTrend ? null : (
+            <SpendingSegmentControls
+              orientation="vertical"
+              segment={activeSegment}
+              onSegmentChange={data.selectedChartMode === "bars" ? setBarsSegment : setMixSegment}
+            />
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-start justify-between gap-1.5">
-            <ChartModeControls data={data} onSelect={onSelect} />
-            {isTrend ? null : (
-              <SpendingSegmentControls
-                orientation="vertical"
-                segment={activeSegment}
-                onSegmentChange={data.selectedChartMode === "bars" ? setBarsSegment : setMixSegment}
-              />
-            )}
-          </div>
+        <div className="space-y-1.5">
+          <ChartModeControls data={data} onSelect={onSelect} />
           <div className="space-y-0.5">
             {isTrend ? null : <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>}
             <p className="text-sm leading-5 text-slate-500">{contextLine}</p>
