@@ -5,18 +5,13 @@ import { FileSpreadsheet, History, Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import {
-  completeStagedImportUploadAction,
-  createStagedImportIntakeAction,
-  createStagedImportUploadTransportAction,
+  uploadReceiptImageAction,
   uploadCsvBankStatementAction,
 } from "@/lib/actions/imports";
 import {
   initialCsvBankStatementUploadActionState,
-  initialImportIntakeActionState,
-  initialImportUploadCompletionActionState,
-  initialImportUploadTransportActionState,
+  initialReceiptImageUploadActionState,
 } from "@/lib/actions/imports-state";
-import { uploadStagedImportFile } from "@/lib/imports/browser-upload";
 import { CSV_IMPORT_MAX_BYTES } from "@/lib/imports/storage";
 import type { AssistantActionState } from "@/lib/server/assistant";
 
@@ -202,57 +197,21 @@ export function AssistantComposer({
         return;
       }
 
-      const intakeFormData = new FormData();
-      intakeFormData.set("importType", selectedImportType);
-      intakeFormData.set("originalFilename", selectedFile.name);
-      intakeFormData.set("mimeType", selectedFile.type || "application/octet-stream");
+      const receiptFormData = new FormData();
+      receiptFormData.set("file", selectedFile);
 
-      const intakeResult = await createStagedImportIntakeAction(initialImportIntakeActionState, intakeFormData);
+      const receiptResult = await uploadReceiptImageAction(initialReceiptImageUploadActionState, receiptFormData);
 
-      if (intakeResult.status !== "success" || !intakeResult.intake) {
-        throw new Error(intakeResult.message ?? "Unable to create staged import.");
-      }
-
-      const transportFormData = new FormData();
-      transportFormData.set("importRecordId", intakeResult.intake.importRecordId);
-
-      const transportResult = await createStagedImportUploadTransportAction(
-        initialImportUploadTransportActionState,
-        transportFormData,
-      );
-
-      if (transportResult.status !== "success" || !transportResult.uploadContract) {
-        throw new Error(transportResult.message ?? "Unable to create upload contract.");
-      }
-
-      await uploadStagedImportFile({
-        bucket: transportResult.uploadContract.bucket,
-        storagePath: transportResult.uploadContract.storagePath,
-        uploadToken: transportResult.uploadContract.uploadToken,
-        file: selectedFile,
-      });
-
-      const completionFormData = new FormData();
-      completionFormData.set("importRecordId", intakeResult.intake.importRecordId);
-      completionFormData.set("storagePath", transportResult.uploadContract.storagePath);
-      completionFormData.set("originalFilename", selectedFile.name);
-      completionFormData.set("mimeType", selectedFile.type || "application/octet-stream");
-
-      const completionResult = await completeStagedImportUploadAction(
-        initialImportUploadCompletionActionState,
-        completionFormData,
-      );
-
-      if (completionResult.status !== "success" || !completionResult.completion) {
-        throw new Error(completionResult.message ?? "Unable to save staged import upload.");
+      if (receiptResult.status !== "success" || !receiptResult.upload) {
+        throw new Error(receiptResult.message ?? "Receipt upload is not available right now. Please try again later.");
       }
 
       setSelectedFile(null);
       setUploadState({
         status: "success",
-        message: `Staged import uploaded as ${completionResult.completion.importType}.`,
-        importType: completionResult.completion.importType,
-        filename: completionResult.completion.originalFilename,
+        message: receiptResult.message,
+        importType: receiptResult.upload.importType,
+        filename: receiptResult.upload.originalFilename,
       });
     } catch (error) {
       setUploadState({

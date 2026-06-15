@@ -73,6 +73,7 @@ function makeOverviewProps() {
             merchantGuess: "Corner Cafe",
             reviewState: "pending_review",
             acceptanceState: "pending",
+            canAccept: true,
           },
         ],
       },
@@ -614,6 +615,7 @@ describe("transactions overview", () => {
                 merchantGuess: "Corner Cafe",
                 reviewState: "reviewed",
                 acceptanceState: "accepted",
+                canAccept: true,
               },
               {
                 id: "candidate-2",
@@ -623,6 +625,7 @@ describe("transactions overview", () => {
                 merchantGuess: "Cafe",
                 reviewState: "reviewed",
                 acceptanceState: "rejected",
+                canAccept: true,
               },
             ],
           },
@@ -662,6 +665,7 @@ describe("transactions overview", () => {
                 merchantGuess: "Corner Cafe",
                 reviewState: "reviewed",
                 acceptanceState: "accepted",
+                canAccept: true,
               },
               {
                 id: "candidate-2",
@@ -671,6 +675,7 @@ describe("transactions overview", () => {
                 merchantGuess: "Cafe",
                 reviewState: "pending_review",
                 acceptanceState: "pending",
+                canAccept: true,
               },
               {
                 id: "candidate-3",
@@ -680,6 +685,7 @@ describe("transactions overview", () => {
                 merchantGuess: "City Parking",
                 reviewState: "pending_review",
                 acceptanceState: "pending",
+                canAccept: true,
               },
             ],
           },
@@ -693,6 +699,44 @@ describe("transactions overview", () => {
     expect(screen.getByText("$8.00")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Accept candidate" })).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: "Reject candidate" })).toHaveLength(2);
+  });
+
+  it("keeps incomplete receipt drafts reviewable without enabling save", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        stagedImportDetails={{
+          "record-1": {
+            reviewProgress: {
+              totalCandidateCount: 1,
+              acceptedCount: 0,
+              rejectedCount: 0,
+              pendingCount: 1,
+            },
+            candidateCount: 1,
+            reviewSummary: "1 needs_attention",
+            acceptanceSummary: "1 pending",
+            candidatePreviews: [
+              {
+                id: "candidate-1",
+                amountDisplay: "Amount unavailable",
+                dateLabel: "Jun 15",
+                description: "Receipt image: receipt.jpg",
+                merchantGuess: "No merchant guess",
+                reviewState: "needs_attention",
+                acceptanceState: "pending",
+                canAccept: false,
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Amount unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Add amount before saving")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept candidate" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject candidate" })).toBeInTheDocument();
   });
 
   it("renders a calm completed state when review is complete", () => {
@@ -720,6 +764,7 @@ describe("transactions overview", () => {
                 merchantGuess: "Corner Cafe",
                 reviewState: "reviewed",
                 acceptanceState: "accepted",
+                canAccept: true,
               },
             ],
           },

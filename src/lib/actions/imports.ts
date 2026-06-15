@@ -61,9 +61,39 @@ import {
   type TransitionImportRecordToParsingDependencies,
 } from "@/lib/server/imports-status-transition";
 import { prepareStagedImportUpload, type PrepareStagedImportUploadDependencies } from "@/lib/server/imports-upload-preparation";
-import { uploadReceiptImage, type UploadReceiptImageDependencies } from "@/lib/server/receipt-image-import";
+import {
+  uploadReceiptImageAndPrepareDraft,
+  type UploadReceiptImageAndPrepareDraftDependencies,
+} from "@/lib/server/receipt-image-import";
 import { stageReceiptCandidate, type StageReceiptCandidateDependencies } from "@/lib/server/receipt-candidate-staging";
 import { uploadCsvBankStatement, type UploadCsvBankStatementDependencies } from "@/lib/server/csv-bank-statement-import";
+
+const safeReceiptValidationMessages = new Set([
+  "Choose a receipt image first.",
+  "Receipt upload must be a supported image file.",
+  "Receipt image must not be empty.",
+  "Receipt image is too large.",
+]);
+
+function getReceiptUploadErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Receipt upload is not available right now. Please try again later.";
+  }
+
+  if (safeReceiptValidationMessages.has(error.message)) {
+    return error.message;
+  }
+
+  return "Receipt upload is not available right now. Please try again later.";
+}
+
+function getImportReviewErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message === "Accepted candidate is missing required transaction fields.") {
+    return "Receipt needs an amount before it can be saved.";
+  }
+
+  return error instanceof Error ? error.message : "Unable to review import candidate.";
+}
 
 export async function loadStagedImportBundleAction(
   importRecordId: string,
@@ -154,14 +184,20 @@ export async function createStagedImportIntakeAction(
 export async function uploadReceiptImageAction(
   _prevState: ReceiptImageUploadActionState,
   formData: FormData,
-  dependencies?: UploadReceiptImageDependencies,
+  dependencies?: UploadReceiptImageAndPrepareDraftDependencies,
 ): Promise<ReceiptImageUploadActionState> {
   const file = formData.get("file");
+  const extractedText =
+    typeof formData.get("receiptText") === "string" ? String(formData.get("receiptText")).trim() : null;
 
   try {
-    const upload = await uploadReceiptImage(file instanceof File ? file : null, dependencies);
+    const result = await uploadReceiptImageAndPrepareDraft(
+      file instanceof File ? file : null,
+      dependencies,
+      extractedText,
+    );
 
-    if (!upload) {
+    if (!result) {
       return {
         ...initialReceiptImageUploadActionState,
         status: "error",
@@ -171,14 +207,18 @@ export async function uploadReceiptImageAction(
 
     return {
       status: "success",
-      message: "Receipt image uploaded for review.",
-      upload,
+      message:
+        result.candidate?.reviewState === "needs_attention"
+          ? "Receipt uploaded for review. Add the total in Activity before saving it."
+          : "Receipt image uploaded for review.",
+      upload: result.upload,
+      candidate: result.candidate,
     };
   } catch (error) {
     return {
       ...initialReceiptImageUploadActionState,
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to upload receipt image.",
+      message: getReceiptUploadErrorMessage(error),
     };
   }
 }
@@ -526,7 +566,7 @@ export async function reviewImportCandidateAction(
     return {
       ...initialImportCandidateReviewDecisionActionState,
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to review import candidate.",
+      message: getImportReviewErrorMessage(error),
     };
   }
 }

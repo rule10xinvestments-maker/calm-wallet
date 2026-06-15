@@ -82,6 +82,7 @@ describe("receipt candidate staging", () => {
       confidenceScore: null,
       reviewState: "pending_review",
       acceptanceState: "pending",
+      uncertaintyReason: null,
     });
     expect(updateImportRecordStatus).toHaveBeenCalledWith("user-1", "11111111-1111-1111-1111-111111111111", {
       status: "parsed",
@@ -219,6 +220,44 @@ describe("receipt candidate staging", () => {
       "user-1",
       expect.objectContaining({
         categoryId: "33333333-3333-3333-3333-333333333333",
+      }),
+    );
+  });
+
+  it("can stage an incomplete receipt draft as Needs review without inventing an amount", async () => {
+    const createImportCandidate = vi.fn(async (_userId, input) => makeCandidate(input));
+
+    await stageReceiptCandidate(
+      {
+        importRecordId: validInput.importRecordId,
+        transactionType: "expense",
+        amountMinor: null,
+        currency: null,
+        occurredAt: "2026-05-02T10:00:00.000Z",
+        description: "Receipt image: receipt.jpg",
+        merchantGuess: null,
+        reviewState: "needs_attention",
+        uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+      },
+      {
+        getCurrentUser: vi.fn(async () => mockUser()),
+        createImportRecordService: vi.fn(async () => ({
+          getImportRecordById: vi.fn(async () => makeImportRecord()),
+          updateImportRecordStatus: vi.fn(async () => makeImportRecord({ status: "parsed" as const })),
+        })),
+        createImportCandidateService: vi.fn(async () => ({ createImportCandidate })),
+      },
+    );
+
+    expect(createImportCandidate).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: null,
+        currency: null,
+        reviewState: "needs_attention",
+        confidenceScore: 0,
+        uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
       }),
     );
   });

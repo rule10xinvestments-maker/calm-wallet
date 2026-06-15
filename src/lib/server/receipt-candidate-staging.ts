@@ -15,11 +15,14 @@ import { getCurrentUser } from "@/lib/auth/session";
 export type StageReceiptCandidateInput = {
   importRecordId: string;
   transactionType: "expense" | "income";
-  amountMinor: number;
-  currency: string;
-  occurredAt: string;
+  amountMinor?: number | null;
+  currency?: string | null;
+  occurredAt?: string | null;
   description?: string | null;
   merchantGuess?: string | null;
+  categoryId?: string | null;
+  reviewState?: "pending_review" | "needs_attention";
+  uncertaintyReason?: string | null;
 };
 
 export type StageReceiptCandidateDependencies = {
@@ -81,15 +84,16 @@ export async function stageReceiptCandidate(
   const parsedCandidate = createImportCandidateSchema.parse({
     importRecordId: recordId,
     transactionType: input.transactionType,
-    amountMinor: input.amountMinor,
-    currency: input.currency,
-    occurredAt: input.occurredAt,
+    amountMinor: input.amountMinor ?? null,
+    currency: input.currency ?? null,
+    occurredAt: input.occurredAt ?? null,
     description: input.description,
     merchantGuess: input.merchantGuess,
-    categoryId: memoryMatch?.strength === "strong" ? memoryMatch.category.id : null,
-    confidenceScore: null,
-    reviewState: "pending_review",
+    categoryId: input.categoryId ?? (memoryMatch?.strength === "strong" ? memoryMatch.category.id : null),
+    confidenceScore: input.reviewState === "needs_attention" ? 0 : null,
+    reviewState: input.reviewState ?? "pending_review",
     acceptanceState: "pending",
+    uncertaintyReason: input.uncertaintyReason ?? null,
   });
   const importCandidateService = await dependencies.createImportCandidateService();
   const candidate = await importCandidateService.createImportCandidate(user.id, parsedCandidate);

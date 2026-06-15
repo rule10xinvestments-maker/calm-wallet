@@ -1,4 +1,5 @@
 import { createSupabaseImportRecordService, type ImportRecordService } from "@/domain/imports/service";
+import type { ImportCandidate } from "@/domain/imports/types";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import {
@@ -9,8 +10,20 @@ import {
   sanitizeImportFilename,
 } from "@/lib/imports/storage";
 import type { StagedImportIntakeResult } from "@/lib/actions/imports-state";
+import {
+  stageReceiptCandidate,
+  type StageReceiptCandidateDependencies,
+} from "@/lib/server/receipt-candidate-staging";
+import {
+  buildReceiptDraft,
+  type ReceiptDraftCategory,
+} from "@/lib/server/receipt-draft";
 
 type ReceiptUploadFile = Pick<File, "name" | "type" | "size" | "arrayBuffer">;
+type ReceiptImportRecordService = Pick<
+  ImportRecordService,
+  "createImportRecord" | "getImportRecordById" | "updateImportRecordStatus"
+>;
 
 export type UploadReceiptImageDependencies = {
   getCurrentUser: typeof getCurrentUser;
@@ -33,6 +46,36 @@ const defaultDependencies: UploadReceiptImageDependencies = {
   buildImportStoragePath,
   sanitizeImportFilename,
   now: () => new Date(),
+};
+
+export type ReceiptImagePreparedUploadResult = {
+  upload: StagedImportIntakeResult;
+  candidate: ImportCandidate | null;
+};
+
+export type UploadReceiptImageAndPrepareDraftDependencies = Omit<
+  UploadReceiptImageDependencies,
+  "createImportRecordService"
+> &
+  Pick<StageReceiptCandidateDependencies, "createImportCandidateService" | "createCategoryMemoryService"> & {
+    createImportRecordService: () => Promise<ReceiptImportRecordService>;
+    loadDefaultCurrency: (userId: string) => Promise<string>;
+    loadReceiptCategories: () => Promise<ReceiptDraftCategory[]>;
+  };
+
+const defaultPreparedUploadDependencies: UploadReceiptImageAndPrepareDraftDependencies = {
+  ...defaultDependencies,
+  createImportRecordService: createSupabaseImportRecordService,
+  createImportCandidateService: async () => {
+    const { createSupabaseImportCandidateService } = await import("@/domain/imports/service");
+    return createSupabaseImportCandidateService();
+  },
+  createCategoryMemoryService: async () => {
+    const { createSupabaseCategoryMemoryService } = await import("@/domain/category-memory/service");
+    return createSupabaseCategoryMemoryService();
+  },
+  loadDefaultCurrency: loadReceiptDefaultCurrency,
+  loadReceiptCategories,
 };
 
 function validateReceiptImageFile(file: ReceiptUploadFile | null): asserts file is ReceiptUploadFile {
@@ -69,6 +112,28 @@ async function uploadReceiptImageObject(input: {
   if (result.error) {
     throw new Error(result.error.message);
   }
+}
+
+async function loadReceiptDefaultCurrency(userId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from("profiles").select("default_currency").eq("id", userId).single();
+  return data?.default_currency ?? "USD";
+}
+
+async function loadReceiptCategories(): Promise<ReceiptDraftCategory[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("categories")
+    .select("id,slug,label,direction")
+    .eq("is_active", true)
+    .order("sort_order");
+
+  return (data ?? []).map((category) => ({
+    id: category.id,
+    slug: category.slug,
+    label: category.label,
+    direction: category.direction,
+  }));
 }
 
 export async function uploadReceiptImage(
@@ -116,5 +181,60 @@ export async function uploadReceiptImage(
     mimeType: importRecord.mimeType,
     status: importRecord.status,
     storagePrepared: true,
+  };
+}
+
+export async function uploadReceiptImageAndPrepareDraft(
+  file: ReceiptUploadFile | null,
+  dependencies: UploadReceiptImageAndPrepareDraftDependencies = defaultPreparedUploadDependencies,
+  extractedText?: string | null,
+): Promise<ReceiptImagePreparedUploadResult | null> {
+  const upload = await uploadReceiptImage(file, dependencies);
+
+  if (!upload) {
+    return null;
+  }
+
+  const user = await dependencies.getCurrentUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const [defaultCurrency, categories] = await Promise.all([
+    dependencies.loadDefaultCurrency(user.id),
+    dependencies.loadReceiptCategories(),
+  ]);
+  const draft = buildReceiptDraft({
+    extractedText,
+    originalFilename: upload.originalFilename,
+    defaultCurrency,
+    categories,
+    now: dependencies.now(),
+  });
+  const candidate = await stageReceiptCandidate(
+    {
+      importRecordId: upload.importRecordId,
+      transactionType: draft.transactionType,
+      amountMinor: draft.amountMinor,
+      currency: draft.currency,
+      occurredAt: draft.occurredAt,
+      description: draft.description,
+      merchantGuess: draft.merchantGuess,
+      categoryId: draft.categoryId,
+      reviewState: draft.reviewState,
+      uncertaintyReason: draft.uncertaintyReason,
+    },
+    {
+      getCurrentUser: dependencies.getCurrentUser,
+      createImportRecordService: dependencies.createImportRecordService,
+      createImportCandidateService: dependencies.createImportCandidateService,
+      createCategoryMemoryService: dependencies.createCategoryMemoryService,
+    },
+  );
+
+  return {
+    upload,
+    candidate,
   };
 }

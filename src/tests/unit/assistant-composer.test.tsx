@@ -5,28 +5,16 @@ import type { AssistantActionState } from "@/lib/server/assistant";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 
 const {
-  createStagedImportIntakeAction,
-  createStagedImportUploadTransportAction,
-  completeStagedImportUploadAction,
+  uploadReceiptImageAction,
   uploadCsvBankStatementAction,
-  uploadStagedImportFile,
 } = vi.hoisted(() => ({
-  createStagedImportIntakeAction: vi.fn(),
-  createStagedImportUploadTransportAction: vi.fn(),
-  completeStagedImportUploadAction: vi.fn(),
+  uploadReceiptImageAction: vi.fn(),
   uploadCsvBankStatementAction: vi.fn(),
-  uploadStagedImportFile: vi.fn(),
 }));
 
 vi.mock("@/lib/actions/imports", () => ({
-  createStagedImportIntakeAction,
-  createStagedImportUploadTransportAction,
-  completeStagedImportUploadAction,
+  uploadReceiptImageAction,
   uploadCsvBankStatementAction,
-}));
-
-vi.mock("@/lib/imports/browser-upload", () => ({
-  uploadStagedImportFile,
 }));
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
@@ -523,55 +511,48 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Receipt" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("reaches success through the staged upload flow with a bounded uploading state", async () => {
+  it("reaches success through the server receipt upload action with a bounded uploading state", async () => {
     let resolveUpload = () => {};
 
-    createStagedImportIntakeAction.mockResolvedValueOnce({
-      status: "success",
-      message: "Staged import record created. Storage path prepared only.",
-      intake: {
-        importRecordId: "record-1",
-        importType: "receipt_image",
-        storagePath: "user-1/receipt_image/2026/04/receipt.jpg",
-        sanitizedFilename: "receipt.jpg",
-        originalFilename: "receipt.jpg",
-        mimeType: "image/jpeg",
-        status: "uploaded",
-        storagePrepared: true,
-      },
-    });
-    createStagedImportUploadTransportAction.mockResolvedValueOnce({
-      status: "success",
-      message: "Staged import upload contract created.",
-      uploadContract: {
-        importRecordId: "record-1",
-        importType: "receipt_image",
-        bucket: "staged-imports",
-        storagePath: "user-1/receipt_image/2026/04/receipt.jpg",
-        signedUploadUrl: "https://example.test/upload/receipt",
-        uploadToken: "token-receipt",
-      },
-    });
-    uploadStagedImportFile.mockImplementationOnce(
+    uploadReceiptImageAction.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          resolveUpload = resolve;
+        new Promise((resolve) => {
+          resolveUpload = () =>
+            resolve({
+              status: "success",
+              message: "Receipt uploaded for review. Add the total in Activity before saving it.",
+              upload: {
+                importRecordId: "record-1",
+                importType: "receipt_image",
+                storagePath: "user-1/receipt_image/2026/04/receipt.jpg",
+                sanitizedFilename: "receipt.jpg",
+                originalFilename: "receipt.jpg",
+                mimeType: "image/jpeg",
+                status: "uploaded",
+                storagePrepared: true,
+              },
+              candidate: {
+                id: "candidate-1",
+                userId: "user-1",
+                importRecordId: "record-1",
+                transactionType: "expense",
+                amountMinor: null,
+                currency: null,
+                occurredAt: "2026-04-22T10:00:00.000Z",
+                description: "Receipt image: receipt.jpg",
+                merchantGuess: null,
+                categoryId: null,
+                confidenceScore: 0,
+                reviewState: "needs_attention",
+                acceptanceState: "pending",
+                acceptedTransactionId: null,
+                uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+                createdAt: "2026-04-22T10:00:00.000Z",
+                updatedAt: "2026-04-22T10:00:00.000Z",
+              },
+            });
         }),
     );
-    completeStagedImportUploadAction.mockResolvedValueOnce({
-      status: "success",
-      message: "Staged import upload metadata saved.",
-      completion: {
-        importRecordId: "record-1",
-        importType: "receipt_image",
-        storagePath: "user-1/receipt_image/2026/04/receipt.jpg",
-        sanitizedFilename: "receipt.jpg",
-        originalFilename: "receipt.jpg",
-        mimeType: "image/jpeg",
-        status: "uploaded",
-        storagePrepared: true,
-      },
-    });
 
     renderComposer();
     openImportUpload();
@@ -586,17 +567,52 @@ describe("assistant composer", () => {
 
     resolveUpload();
 
-    expect(await screen.findByText("Staged import uploaded as receipt_image.")).toBeInTheDocument();
+    expect(await screen.findByText("Receipt uploaded for review. Add the total in Activity before saving it.")).toBeInTheDocument();
     expect(await screen.findByText("Uploaded receipt.jpg as receipt_image.")).toBeInTheDocument();
-    expect(createStagedImportIntakeAction).toHaveBeenCalled();
-    expect(createStagedImportUploadTransportAction).toHaveBeenCalled();
-    expect(uploadStagedImportFile).toHaveBeenCalledWith({
-      bucket: "staged-imports",
-      storagePath: "user-1/receipt_image/2026/04/receipt.jpg",
-      uploadToken: "token-receipt",
-      file,
+    expect(uploadReceiptImageAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "idle",
+        message: null,
+        upload: null,
+        candidate: null,
+      }),
+      expect.any(FormData),
+    );
+  });
+
+  it("imports a CSV statement through the server CSV action", async () => {
+    uploadCsvBankStatementAction.mockResolvedValueOnce({
+      status: "success",
+      message: "CSV import staged 1 review candidate.",
+      result: {
+        upload: {
+          importRecordId: "record-2",
+          importType: "csv_import",
+          storagePath: "user-1/csv_import/2026/04/statement.csv",
+          sanitizedFilename: "statement.csv",
+          originalFilename: "statement.csv",
+          mimeType: "text/csv",
+          status: "uploaded",
+          storagePrepared: true,
+        },
+        ingestion: null,
+        parserSkippedRowCount: 0,
+        duplicateRowCount: 0,
+      },
     });
-    expect(completeStagedImportUploadAction).toHaveBeenCalled();
+
+    renderComposer();
+    fireEvent.click(screen.getByRole("button", { name: "Statement" }));
+
+    const fileInput = screen.getByLabelText("File");
+    const file = new File(["date,amount"], "statement.csv", { type: "text/csv" });
+
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "Import CSV statement" }));
+
+    expect(await screen.findByText("CSV import staged 1 review candidate.")).toBeInTheDocument();
+    expect(screen.getByText("Uploaded statement.csv as csv_import.")).toBeInTheDocument();
+    expect(uploadCsvBankStatementAction).toHaveBeenCalled();
   });
 
   it("shows a clean error state for an unsupported file or failed upload", async () => {
@@ -610,8 +626,7 @@ describe("assistant composer", () => {
 
     expect(await screen.findByText("Choose an image file for receipt image imports.")).toBeInTheDocument();
     expect(await screen.findByText("File: receipt.pdf")).toBeInTheDocument();
-    expect(createStagedImportIntakeAction).not.toHaveBeenCalled();
-    expect(uploadStagedImportFile).not.toHaveBeenCalled();
+    expect(uploadReceiptImageAction).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Statement" }));
 
@@ -622,8 +637,7 @@ describe("assistant composer", () => {
 
     expect(await screen.findByText("Choose a CSV file for CSV imports.")).toBeInTheDocument();
     expect(await screen.findByText("File: receipt.jpg")).toBeInTheDocument();
-    expect(createStagedImportIntakeAction).not.toHaveBeenCalled();
-    expect(uploadStagedImportFile).not.toHaveBeenCalled();
+    expect(uploadCsvBankStatementAction).not.toHaveBeenCalled();
 
     uploadCsvBankStatementAction.mockResolvedValueOnce({
       status: "success",
@@ -654,6 +668,5 @@ describe("assistant composer", () => {
     });
     expect(screen.getByText("Uploaded statement.csv as csv_import.")).toBeInTheDocument();
     expect(uploadCsvBankStatementAction).toHaveBeenCalled();
-    expect(uploadStagedImportFile).not.toHaveBeenCalled();
   });
 });

@@ -45,12 +45,14 @@ export type ReceiptImageUploadActionState = {
   status: "idle" | "success" | "error";
   message: string | null;
   upload: StagedImportIntakeResult | null;
+  candidate: ImportCandidate | null;
 };
 
 export const initialReceiptImageUploadActionState: ReceiptImageUploadActionState = {
   status: "idle",
   message: null,
   upload: null,
+  candidate: null,
 };
 
 export type CsvBankStatementUploadResult = {

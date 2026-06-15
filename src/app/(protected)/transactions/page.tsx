@@ -139,6 +139,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
           merchantGuess: candidate.merchantGuess ?? "No merchant guess",
           reviewState: candidate.reviewState,
           acceptanceState: candidate.acceptanceState,
+          canAccept: Boolean(candidate.transactionType && candidate.amountMinor && candidate.currency && candidate.occurredAt),
         })),
       },
     ]),

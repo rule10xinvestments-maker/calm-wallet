@@ -118,6 +118,7 @@ type CandidatePreview = {
   merchantGuess: string;
   reviewState: string;
   acceptanceState: string;
+  canAccept: boolean;
 };
 
 type StagedImportDetail = {
@@ -365,14 +366,20 @@ function StagedImportCard({
                     <p>{candidate.merchantGuess}</p>
                     <p>{candidate.reviewState} review | {candidate.acceptanceState} acceptance</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        className="rounded-2xl bg-sky-600 px-3 py-2 text-xs font-medium text-white"
-                        disabled={pendingCandidateId === candidate.id}
-                        onClick={() => void handleReviewDecision(candidate.id, "accept")}
-                        type="button"
-                      >
-                        Accept candidate
-                      </button>
+                      {candidate.canAccept ? (
+                        <button
+                          className="rounded-2xl bg-sky-600 px-3 py-2 text-xs font-medium text-white"
+                          disabled={pendingCandidateId === candidate.id}
+                          onClick={() => void handleReviewDecision(candidate.id, "accept")}
+                          type="button"
+                        >
+                          Accept candidate
+                        </button>
+                      ) : (
+                        <p className="rounded-2xl bg-white px-3 py-2 text-xs font-medium text-amber-700">
+                          Add amount before saving
+                        </p>
+                      )}
                       <button
                         className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700"
                         disabled={pendingCandidateId === candidate.id}
