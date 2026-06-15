@@ -52,6 +52,34 @@ function fileMatchesImportType(importType: "receipt_image" | "csv_import", file:
   return file.name.toLowerCase().endsWith(".csv") && safeCsvMimeTypes.has(file.type);
 }
 
+function getReceiptUploadFailureMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    message === "Choose a receipt image first." ||
+    message === "Receipt upload must be a supported image file." ||
+    message === "Receipt image must not be empty." ||
+    message === "Receipt image is too large." ||
+    message === "Receipt upload is not available right now. Please try again later." ||
+    message === "Please sign in again to upload receipts."
+  ) {
+    return message;
+  }
+
+  if (
+    normalizedMessage.includes("authenticated user is required") ||
+    normalizedMessage.includes("unauthorized") ||
+    normalizedMessage.includes("401") ||
+    normalizedMessage.includes("403") ||
+    normalizedMessage.includes("sign in")
+  ) {
+    return "Please sign in again to upload receipts.";
+  }
+
+  return "Receipt upload is not available right now. Please try again later.";
+}
+
 const actionPanelItems: Array<{
   id: ActionPanel;
   label: string;
@@ -216,7 +244,12 @@ export function AssistantComposer({
     } catch (error) {
       setUploadState({
         status: "error",
-        message: error instanceof Error ? error.message : "Unable to upload staged import.",
+        message:
+          selectedImportType === "receipt_image"
+            ? getReceiptUploadFailureMessage(error)
+            : error instanceof Error
+              ? error.message
+              : "Unable to upload staged import.",
         importType: selectedImportType,
         filename: selectedFile.name,
       });

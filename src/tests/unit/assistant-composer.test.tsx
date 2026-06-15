@@ -669,4 +669,41 @@ describe("assistant composer", () => {
     expect(screen.getByText("Uploaded statement.csv as csv_import.")).toBeInTheDocument();
     expect(uploadCsvBankStatementAction).toHaveBeenCalled();
   });
+
+  it("maps malformed server action responses to calm receipt upload copy", async () => {
+    uploadReceiptImageAction.mockRejectedValueOnce(
+      new Error("An unexpected response was received from the server."),
+    );
+
+    renderComposer();
+    openImportUpload();
+
+    const fileInput = screen.getByLabelText("File");
+    const file = new File(["receipt"], "281.jpg", { type: "image/jpeg" });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "Upload receipt" }));
+
+    expect(await screen.findByText("Receipt upload is not available right now. Please try again later.")).toBeInTheDocument();
+    expect(screen.getByText("File: 281.jpg")).toBeInTheDocument();
+    expect(screen.queryByText("An unexpected response was received from the server.")).not.toBeInTheDocument();
+  });
+
+  it("shows sign-in copy when receipt upload is unauthorized", async () => {
+    uploadReceiptImageAction.mockResolvedValueOnce({
+      status: "error",
+      message: "Please sign in again to upload receipts.",
+      upload: null,
+      candidate: null,
+    });
+
+    renderComposer();
+    openImportUpload();
+
+    const fileInput = screen.getByLabelText("File");
+    const file = new File(["receipt"], "receipt.jpg", { type: "image/jpeg" });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "Upload receipt" }));
+
+    expect(await screen.findByText("Please sign in again to upload receipts.")).toBeInTheDocument();
+  });
 });

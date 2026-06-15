@@ -157,6 +157,66 @@ describe("receipt import actions", () => {
     expect(result.message).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
   });
 
+  it("returns calm typed failure for storage infrastructure errors", async () => {
+    const formData = new FormData();
+    formData.set("file", makeReceiptFile({ name: "receipt.jpg", type: "image/jpeg" }));
+
+    const { uploadReceiptImageAction } = await import("@/lib/actions/imports");
+    const result = await uploadReceiptImageAction(initialReceiptImageUploadActionState, formData, {
+      getCurrentUser: vi.fn(async () => mockUser()),
+      createImportRecordService: vi.fn(async () => ({
+        createImportRecord: vi.fn(),
+        getImportRecordById: vi.fn(),
+        updateImportRecordStatus: vi.fn(),
+      })),
+      createImportCandidateService: vi.fn(async () => ({ createImportCandidate: vi.fn() })),
+      uploadObject: vi.fn(async () => {
+        throw new Error("new row violates row-level security policy for storage.objects");
+      }),
+      buildImportStoragePath: vi.fn(() => "user-1/receipt_image/2026/05/receipt.jpg"),
+      sanitizeImportFilename: vi.fn(() => "receipt.jpg"),
+      loadDefaultCurrency: vi.fn(async () => "USD"),
+      loadReceiptCategories: vi.fn(async () => []),
+      now: () => new Date("2026-05-02T10:00:00.000Z"),
+    });
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Receipt upload is not available right now. Please try again later.",
+      upload: null,
+      candidate: null,
+    });
+  });
+
+  it("returns sign-in copy when the receipt upload session is missing", async () => {
+    const formData = new FormData();
+    formData.set("file", makeReceiptFile({ name: "receipt.jpg", type: "image/jpeg" }));
+
+    const { uploadReceiptImageAction } = await import("@/lib/actions/imports");
+    const result = await uploadReceiptImageAction(initialReceiptImageUploadActionState, formData, {
+      getCurrentUser: vi.fn(async () => null),
+      createImportRecordService: vi.fn(async () => ({
+        createImportRecord: vi.fn(),
+        getImportRecordById: vi.fn(),
+        updateImportRecordStatus: vi.fn(),
+      })),
+      createImportCandidateService: vi.fn(async () => ({ createImportCandidate: vi.fn() })),
+      uploadObject: vi.fn(),
+      buildImportStoragePath: vi.fn(),
+      sanitizeImportFilename: vi.fn(),
+      loadDefaultCurrency: vi.fn(async () => "USD"),
+      loadReceiptCategories: vi.fn(async () => []),
+      now: () => new Date("2026-05-02T10:00:00.000Z"),
+    });
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Please sign in again to upload receipts.",
+      upload: null,
+      candidate: null,
+    });
+  });
+
   it("uses extracted receipt text to stage one grocery expense draft when available", async () => {
     const formData = new FormData();
     formData.set("file", makeReceiptFile({ name: "grocery.jpg", type: "image/jpeg" }));

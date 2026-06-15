@@ -201,7 +201,7 @@ export async function uploadReceiptImageAction(
       return {
         ...initialReceiptImageUploadActionState,
         status: "error",
-        message: "Authenticated user is required.",
+        message: "Please sign in again to upload receipts.",
       };
     }
 
