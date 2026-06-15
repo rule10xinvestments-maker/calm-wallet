@@ -112,10 +112,17 @@ function formatImportDate(value: string) {
 
 type CandidatePreview = {
   id: string;
+  importRecordId?: string;
+  importType?: StagedImportListItem["importType"];
+  originalFilename?: string;
   amountDisplay: string;
+  amountMinor?: number | null;
+  currency?: string | null;
+  occurredAt?: string | null;
   dateLabel: string;
   description: string;
   merchantGuess: string;
+  categoryId?: string | null;
   reviewState: string;
   acceptanceState: string;
   canAccept: boolean;
@@ -163,6 +170,98 @@ function ReviewActionMessage({ state }: { state: ImportCandidateReviewDecisionAc
       {state.message}
     </p>
   );
+}
+
+function getSearchableCandidateText(candidate: CandidatePreview) {
+  return [
+    candidate.originalFilename,
+    candidate.amountDisplay,
+    candidate.description,
+    candidate.merchantGuess,
+    candidate.dateLabel,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function filterCandidates(items: CandidatePreview[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return items;
+  }
+
+  return items.filter((item) => getSearchableCandidateText(item).includes(normalizedQuery));
+}
+
+function flattenPendingCandidates(stagedImportDetails: Record<string, StagedImportDetail>) {
+  return Object.values(stagedImportDetails).flatMap((detail) =>
+    detail.candidatePreviews.filter((candidate) => candidate.acceptanceState === "pending"),
+  );
+}
+
+function formatActivityDate(value: string | null) {
+  if (!value) {
+    return "Date unavailable";
+  }
+
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatSignedMoney(args: {
+  amountMinor: number;
+  currency: string;
+  transactionType: "expense" | "income";
+}) {
+  const formatted = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: args.currency,
+  }).format(args.amountMinor / 100);
+
+  return args.transactionType === "income" ? `+${formatted}` : `-${formatted}`;
+}
+
+function buildTransactionListItemFromReviewResult(
+  result: NonNullable<ImportCandidateReviewDecisionActionState["decisionResult"]>,
+  categories: TransactionCategoryOption[],
+): TransactionListItem | null {
+  const transaction = result.transaction;
+
+  if (!transaction) {
+    return null;
+  }
+
+  const category = categories.find((option) => option.id === transaction.categoryId) ?? null;
+  const amountTone = transaction.transactionType === "income" ? "income" : "expense";
+  const title = transaction.itemName || transaction.merchant || transaction.note || "Receipt entry";
+
+  return {
+    id: transaction.id,
+    title,
+    subtitle: formatActivityDate(transaction.occurredAt),
+    amountMinor: transaction.amountMinor,
+    amountDisplay: formatSignedMoney({
+      amountMinor: transaction.amountMinor,
+      currency: transaction.currency,
+      transactionType: transaction.transactionType,
+    }),
+    amountTone,
+    currency: transaction.currency,
+    reviewLabel: transaction.reviewState === "reviewed" ? "Reviewed" : "Needs review",
+    categoryLabel: category?.label ?? "Uncategorized",
+    itemName: transaction.itemName,
+    merchant: transaction.merchant,
+    note: transaction.note,
+    occurredAt: transaction.occurredAt,
+    deletedAt: transaction.deletedAt,
+    categoryId: transaction.categoryId,
+    reviewState: transaction.reviewState,
+    uncertaintyReason: transaction.uncertaintyReason,
+  };
 }
 
 function getReviewCompletionLabel(reviewProgress: {
@@ -238,6 +337,179 @@ type StagedImportCardProps = {
   initialReviewActionState: ImportCandidateReviewDecisionActionState;
 };
 
+type CandidateReviewEntryProps = {
+  candidate: CandidatePreview;
+  categories: TransactionCategoryOption[];
+  reviewAction: ImportReviewActionHandler;
+  initialReviewActionState: ImportCandidateReviewDecisionActionState;
+  onResolved: (result: NonNullable<ImportCandidateReviewDecisionActionState["decisionResult"]>) => void;
+};
+
+function CandidateReviewEntry({
+  candidate,
+  categories,
+  reviewAction,
+  initialReviewActionState,
+  onResolved,
+}: CandidateReviewEntryProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [reviewActionState, setReviewActionState] = useState(initialReviewActionState);
+  const [isPending, setIsPending] = useState(false);
+  const defaultCategoryId =
+    candidate.categoryId ?? categories.find((category) => category.label.toLowerCase() === "groceries")?.id ?? "";
+  const defaultTitle =
+    candidate.description && candidate.description !== "No description provided"
+      ? candidate.description
+      : candidate.originalFilename ?? "Receipt entry";
+  const defaultMerchant = candidate.merchantGuess === "No merchant guess" ? "" : candidate.merchantGuess;
+  const amountMissing = candidate.amountMinor === null;
+
+  async function submitDecision(formData: FormData) {
+    setIsPending(true);
+
+    try {
+      const nextState = await reviewAction(initialReviewActionState, formData);
+      setReviewActionState(nextState);
+
+      if (nextState.status === "success" && nextState.decisionResult) {
+        onResolved(nextState.decisionResult);
+      }
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl bg-amber-50/70 px-3 py-3 ring-1 ring-amber-100">
+      <button
+        aria-expanded={isExpanded}
+        className="flex w-full items-start justify-between gap-3 text-left"
+        onClick={() => setIsExpanded((current) => !current)}
+        type="button"
+      >
+        <div className="min-w-0 space-y-1">
+          <p className="break-words text-sm font-medium text-slate-900">{defaultTitle}</p>
+          <p className="text-xs leading-5 text-slate-600">
+            {candidate.amountDisplay} · {candidate.dateLabel}
+          </p>
+          {amountMissing ? (
+            <p className="w-fit rounded-full bg-white px-2 py-1 text-xs font-medium text-amber-700">
+              Add amount before saving
+            </p>
+          ) : null}
+        </div>
+        <p className="shrink-0 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700">
+          Review
+        </p>
+      </button>
+      {isExpanded ? (
+        <div className="mt-3 rounded-2xl border border-amber-100 bg-white p-3">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitDecision(new FormData(event.currentTarget));
+            }}
+            className="space-y-3"
+          >
+            <input name="importCandidateId" type="hidden" value={candidate.id} />
+            <input name="decision" type="hidden" value="accept" />
+            <div className="grid grid-cols-2 gap-2">
+              <label className="space-y-1 text-xs font-medium text-slate-600">
+                Amount
+                <input
+                  className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                  defaultValue={candidate.amountMinor ? String(candidate.amountMinor / 100) : ""}
+                  inputMode="decimal"
+                  name="amount"
+                  placeholder="Total"
+                  required
+                />
+              </label>
+              <label className="space-y-1 text-xs font-medium text-slate-600">
+                Currency
+                <input
+                  className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm uppercase text-slate-900"
+                  defaultValue={candidate.currency ?? "RON"}
+                  maxLength={3}
+                  name="currency"
+                  required
+                />
+              </label>
+            </div>
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              Title
+              <input
+                className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                defaultValue={defaultTitle}
+                name="itemName"
+              />
+            </label>
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              Merchant
+              <input
+                className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                defaultValue={defaultMerchant}
+                name="merchant"
+              />
+            </label>
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              Category
+              <select
+                className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                defaultValue={defaultCategoryId}
+                name="categoryId"
+              >
+                <option value="">Uncategorized</option>
+                {categories
+                  .filter((category) => category.direction === "expense" || category.direction === "both")
+                  .map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              Note
+              <textarea
+                className="min-h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                defaultValue={candidate.description === "No description provided" ? "" : candidate.description}
+                name="note"
+                rows={3}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                disabled={isPending}
+                formNoValidate
+                onClick={(event) => {
+                  event.preventDefault();
+                  const formData = new FormData();
+                  formData.set("importCandidateId", candidate.id);
+                  formData.set("decision", "reject");
+                  void submitDecision(formData);
+                }}
+                type="button"
+              >
+                Discard
+              </button>
+              <button
+                className="min-h-10 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                disabled={isPending}
+                type="submit"
+              >
+                Save expense
+              </button>
+            </div>
+          </form>
+          <ReviewActionMessage state={reviewActionState} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function StagedImportCard({
   item,
   detail,
@@ -265,6 +537,18 @@ function StagedImportCard({
     status: importStatus,
     reviewProgress,
   });
+
+  useEffect(() => {
+    setCandidatePreviews(detail?.candidatePreviews ?? []);
+    setReviewProgress(
+      detail?.reviewProgress ?? {
+        totalCandidateCount: 0,
+        acceptedCount: 0,
+        rejectedCount: 0,
+        pendingCount: 0,
+      },
+    );
+  }, [detail]);
 
   async function handleReviewDecision(importCandidateId: string, decision: "accept" | "reject") {
     setPendingCandidateId(importCandidateId);
@@ -544,6 +828,8 @@ export function TransactionsOverview({
   const [searchQuery, setSearchQuery] = useState(query);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
+  const [stagedDetails, setStagedDetails] = useState(stagedImportDetails);
+  const [pendingCandidates, setPendingCandidates] = useState(() => flattenPendingCandidates(stagedImportDetails));
   const [expandedDeletedItemId, setExpandedDeletedItemId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -554,12 +840,21 @@ export function TransactionsOverview({
     setDeletedItems(recentlyDeletedItems);
   }, [recentlyDeletedItems]);
 
+  useEffect(() => {
+    setStagedDetails(stagedImportDetails);
+    setPendingCandidates(flattenPendingCandidates(stagedImportDetails));
+  }, [stagedImportDetails]);
+
   const filteredItems = useMemo(
     () =>
       activeView === "deleted"
         ? filterTransactions(deletedItems, searchQuery)
         : filterTransactions(filterTransactionsForActiveView(activeItems, activeView), searchQuery),
     [activeItems, activeView, deletedItems, searchQuery],
+  );
+  const filteredPendingCandidates = useMemo(
+    () => (activeView === "needs-review" ? filterCandidates(pendingCandidates, searchQuery) : []),
+    [activeView, pendingCandidates, searchQuery],
   );
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
@@ -593,6 +888,53 @@ export function TransactionsOverview({
 
       return next;
     });
+  }
+
+  function handleCandidateResolved(result: NonNullable<ImportCandidateReviewDecisionActionState["decisionResult"]>) {
+    setPendingCandidates((current) => current.filter((candidate) => candidate.id !== result.candidate.id));
+    setStagedDetails((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([recordId, detail]) => [
+          recordId,
+          detail.candidatePreviews.some((candidate) => candidate.id === result.candidate.id)
+            ? {
+                ...detail,
+                reviewProgress: {
+                  totalCandidateCount: result.reviewCompletion.totalCandidateCount,
+                  acceptedCount: result.reviewCompletion.acceptedCount,
+                  rejectedCount: result.reviewCompletion.rejectedCount,
+                  pendingCount: result.reviewCompletion.pendingCount,
+                },
+                reviewSummary:
+                  result.reviewCompletion.pendingCount === 0
+                    ? `${result.reviewCompletion.acceptedCount + result.reviewCompletion.rejectedCount} reviewed`
+                    : detail.reviewSummary,
+                acceptanceSummary:
+                  result.reviewCompletion.pendingCount === 0
+                    ? `${result.reviewCompletion.acceptedCount} accepted, ${result.reviewCompletion.rejectedCount} rejected`
+                    : detail.acceptanceSummary,
+                candidatePreviews: detail.candidatePreviews.map((candidate) =>
+                  candidate.id === result.candidate.id
+                    ? {
+                        ...candidate,
+                        reviewState: result.candidate.reviewState,
+                        acceptanceState: result.candidate.acceptanceState,
+                        canAccept: false,
+                      }
+                    : candidate,
+                ),
+              }
+            : detail,
+        ]),
+      ),
+    );
+
+    const transactionItem = buildTransactionListItemFromReviewResult(result, categories);
+
+    if (transactionItem) {
+      setActiveItems((current) => [transactionItem, ...current.filter((item) => item.id !== transactionItem.id)]);
+      setActiveView("all");
+    }
   }
 
   return (
@@ -665,7 +1007,7 @@ export function TransactionsOverview({
               <Search aria-hidden="true" size={16} strokeWidth={2.2} />
             </button>
           </form>
-          {filteredItems.length ? (
+          {filteredItems.length || filteredPendingCandidates.length ? (
             isDeletedView ? (
               filteredItems.map((item) => (
                 <RecentlyDeletedEntry
@@ -681,18 +1023,30 @@ export function TransactionsOverview({
                 />
               ))
             ) : (
-              filteredItems.map((item) => (
-                <TransactionItemCard
-                  key={item.id}
-                  categories={categories}
-                  deleteAction={deleteAction}
-                  initialState={initialActionState}
-                  item={item}
-                  onDeleted={handleItemDeleted}
-                  recategorizeAction={recategorizeAction}
-                  updateAction={updateAction}
-                />
-              ))
+              <>
+                {filteredPendingCandidates.map((candidate) => (
+                  <CandidateReviewEntry
+                    key={candidate.id}
+                    candidate={candidate}
+                    categories={categories}
+                    initialReviewActionState={initialReviewActionState}
+                    onResolved={handleCandidateResolved}
+                    reviewAction={reviewAction}
+                  />
+                ))}
+                {filteredItems.map((item) => (
+                  <TransactionItemCard
+                    key={item.id}
+                    categories={categories}
+                    deleteAction={deleteAction}
+                    initialState={initialActionState}
+                    item={item}
+                    onDeleted={handleItemDeleted}
+                    recategorizeAction={recategorizeAction}
+                    updateAction={updateAction}
+                  />
+                ))}
+              </>
             )
           ) : (
             <div className="rounded-2xl bg-slate-50 px-4 py-5 text-sm text-slate-500 sm:py-6">
@@ -717,7 +1071,7 @@ export function TransactionsOverview({
             {stagedImports.map((item) => (
               <StagedImportCard
                 key={item.importRecordId}
-                detail={stagedImportDetails[item.importRecordId]}
+                detail={stagedDetails[item.importRecordId]}
                 initialReviewActionState={initialReviewActionState}
                 item={item}
                 reviewAction={reviewAction}

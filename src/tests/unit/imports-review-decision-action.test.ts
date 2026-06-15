@@ -10,10 +10,22 @@ vi.mock("@/lib/server/imports-review-decision", () => ({
 function makeFormData(overrides: {
   importCandidateId?: string;
   decision?: string;
+  amount?: string;
+  currency?: string;
+  itemName?: string;
+  merchant?: string;
+  categoryId?: string;
+  note?: string;
 } = {}) {
   const formData = new FormData();
   formData.set("importCandidateId", overrides.importCandidateId ?? "33333333-3333-3333-3333-333333333333");
   formData.set("decision", overrides.decision ?? "accept");
+  if (overrides.amount) formData.set("amount", overrides.amount);
+  if (overrides.currency) formData.set("currency", overrides.currency);
+  if (overrides.itemName) formData.set("itemName", overrides.itemName);
+  if (overrides.merchant) formData.set("merchant", overrides.merchant);
+  if (overrides.categoryId) formData.set("categoryId", overrides.categoryId);
+  if (overrides.note) formData.set("note", overrides.note);
   return formData;
 }
 
@@ -70,10 +82,10 @@ describe("imports review decision action", () => {
     const result = await reviewImportCandidateAction(initialImportCandidateReviewDecisionActionState, makeFormData());
 
     expect(reviewImportCandidate).toHaveBeenCalledWith(
-      {
+      expect.objectContaining({
         importCandidateId: "33333333-3333-3333-3333-333333333333",
         decision: "accept",
-      },
+      }),
       undefined,
     );
     expect(result).toEqual(
@@ -221,7 +233,59 @@ describe("imports review decision action", () => {
     });
   });
 
-  it("rejects invalid decision input", async () => {
+  it("passes completed receipt fields through the safe action path", async () => {
+    reviewImportCandidate.mockResolvedValueOnce({
+      decision: "accept",
+      candidate: {
+        id: "33333333-3333-3333-3333-333333333333",
+        userId: "user-1",
+        importRecordId: "11111111-1111-1111-1111-111111111111",
+        transactionType: "expense",
+        amountMinor: null,
+        currency: "RON",
+        occurredAt: "2026-04-23T09:00:00.000Z",
+        description: "Receipt image: receipt.jpg",
+        merchantGuess: null,
+        categoryId: null,
+        confidenceScore: 0,
+        reviewState: "reviewed",
+        acceptanceState: "accepted",
+        acceptedTransactionId: "transaction-1",
+        uncertaintyReason: null,
+        createdAt: "2026-04-23T10:00:00.000Z",
+        updatedAt: "2026-04-23T10:01:00.000Z",
+      },
+      transaction: null,
+      transactionCreated: true,
+    });
+
+    const { reviewImportCandidateAction } = await import("@/lib/actions/imports");
+    await reviewImportCandidateAction(
+      initialImportCandidateReviewDecisionActionState,
+      makeFormData({
+        amount: "42.50",
+        currency: "ron",
+        itemName: "Receipt total",
+        merchant: "Market",
+        categoryId: "22222222-2222-2222-2222-222222222222",
+        note: "Manual receipt total",
+      }),
+    );
+
+    expect(reviewImportCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amountMinor: 4250,
+        currency: "ron",
+        itemName: "Receipt total",
+        merchant: "Market",
+        categoryId: "22222222-2222-2222-2222-222222222222",
+        note: "Manual receipt total",
+      }),
+      undefined,
+    );
+  });
+
+  it("returns friendly copy for invalid review failures", async () => {
     reviewImportCandidate.mockRejectedValueOnce(new Error("Invalid enum value."));
 
     const { reviewImportCandidateAction } = await import("@/lib/actions/imports");
@@ -232,7 +296,7 @@ describe("imports review decision action", () => {
 
     expect(result).toEqual({
       status: "error",
-      message: "Invalid enum value.",
+      message: "Couldn\u2019t save receipt. Please try again.",
       decisionResult: null,
     });
   });

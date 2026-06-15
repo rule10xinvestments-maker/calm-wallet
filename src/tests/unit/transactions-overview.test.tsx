@@ -739,6 +739,186 @@ describe("transactions overview", () => {
     expect(screen.getByRole("button", { name: "Reject candidate" })).toBeInTheDocument();
   });
 
+  it("shows incomplete receipt candidates in Review without treating them as normal transactions", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        currentView="needs-review"
+        items={[]}
+        stagedImportDetails={{
+          "record-1": {
+            reviewProgress: {
+              totalCandidateCount: 1,
+              acceptedCount: 0,
+              rejectedCount: 0,
+              pendingCount: 1,
+            },
+            candidateCount: 1,
+            reviewSummary: "1 needs_attention",
+            acceptanceSummary: "1 pending",
+            candidatePreviews: [
+              {
+                id: "candidate-1",
+                importRecordId: "record-1",
+                importType: "receipt_image",
+                originalFilename: "receipt.jpg",
+                amountDisplay: "Amount unavailable",
+                amountMinor: null,
+                currency: "RON",
+                occurredAt: "2026-06-15T10:00:00.000Z",
+                dateLabel: "Jun 15",
+                description: "Receipt image: receipt.jpg",
+                merchantGuess: "No merchant guess",
+                categoryId: "cat-groceries",
+                reviewState: "needs_attention",
+                acceptanceState: "pending",
+                canAccept: false,
+              },
+            ],
+          },
+        }}
+        categories={[{ id: "cat-groceries", label: "Groceries", direction: "expense" }]}
+      />,
+    );
+
+    const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+
+    expect(within(movementCard).getByText("Receipt image: receipt.jpg")).toBeInTheDocument();
+    expect(within(movementCard).getByText(/Amount unavailable/)).toBeInTheDocument();
+    expect(within(movementCard).getByText("Add amount before saving")).toBeInTheDocument();
+    expect(screen.queryByText("No transactions found for this signed-in account.")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "All transactions" }));
+    expect(within(movementCard).queryByText("Receipt image: receipt.jpg")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
+    expect(within(movementCard).queryByText("Receipt image: receipt.jpg")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(within(movementCard).queryByText("Receipt image: receipt.jpg")).not.toBeInTheDocument();
+  });
+
+  it("saves an incomplete receipt candidate as one normal expense transaction after amount is added", async () => {
+    const reviewAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Import candidate accepted and transaction created.",
+      decisionResult: {
+        decision: "accept" as const,
+        candidate: {
+          id: "candidate-1",
+          userId: "user-1",
+          importRecordId: "record-1",
+          transactionType: "expense" as const,
+          amountMinor: null,
+          currency: "RON",
+          occurredAt: "2026-06-15T10:00:00.000Z",
+          description: "Receipt image: receipt.jpg",
+          merchantGuess: null,
+          categoryId: "cat-groceries",
+          confidenceScore: 0,
+          reviewState: "reviewed" as const,
+          acceptanceState: "accepted" as const,
+          acceptedTransactionId: "transaction-1",
+          uncertaintyReason: null,
+          createdAt: "2026-06-15T10:00:00.000Z",
+          updatedAt: "2026-06-15T10:01:00.000Z",
+        },
+        transaction: {
+          id: "transaction-1",
+          userId: "user-1",
+          transactionType: "expense" as const,
+          amountMinor: 4250,
+          currency: "RON",
+          occurredAt: "2026-06-15T10:00:00.000Z",
+          categoryId: "cat-groceries",
+          itemName: "Receipt image: receipt.jpg",
+          merchant: "Market",
+          note: "Manual receipt total",
+          source: "receipt_image" as const,
+          reviewState: "needs_attention" as const,
+          uncertaintyReason: "Receipt total was added manually from Activity.",
+          importRecordId: "record-1",
+          importCandidateId: "candidate-1",
+          deletedAt: null,
+          deletedForeverAt: null,
+          createdAt: "2026-06-15T10:01:00.000Z",
+          updatedAt: "2026-06-15T10:01:00.000Z",
+        },
+        transactionCreated: true,
+        reviewCompletion: {
+          importRecordId: "record-1",
+          importType: "receipt_image" as const,
+          status: "reviewed" as const,
+          totalCandidateCount: 1,
+          acceptedCount: 1,
+          rejectedCount: 0,
+          pendingCount: 0,
+          reviewCompleted: true,
+          transitioned: true,
+        },
+      },
+    }));
+
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        currentView="needs-review"
+        items={[]}
+        stagedImportDetails={{
+          "record-1": {
+            reviewProgress: {
+              totalCandidateCount: 1,
+              acceptedCount: 0,
+              rejectedCount: 0,
+              pendingCount: 1,
+            },
+            candidateCount: 1,
+            reviewSummary: "1 needs_attention",
+            acceptanceSummary: "1 pending",
+            candidatePreviews: [
+              {
+                id: "candidate-1",
+                importRecordId: "record-1",
+                importType: "receipt_image",
+                originalFilename: "receipt.jpg",
+                amountDisplay: "Amount unavailable",
+                amountMinor: null,
+                currency: "RON",
+                occurredAt: "2026-06-15T10:00:00.000Z",
+                dateLabel: "Jun 15",
+                description: "Receipt image: receipt.jpg",
+                merchantGuess: "No merchant guess",
+                categoryId: "cat-groceries",
+                reviewState: "needs_attention",
+                acceptanceState: "pending",
+                canAccept: false,
+              },
+            ],
+          },
+        }}
+        categories={[{ id: "cat-groceries", label: "Groceries", direction: "expense" }]}
+        reviewAction={reviewAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Receipt image: receipt.jpg/ }));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "42.50" } });
+    fireEvent.change(screen.getByLabelText("Merchant"), { target: { value: "Market" } });
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "Manual receipt total" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save expense" }));
+
+    await waitFor(() => expect(reviewAction).toHaveBeenCalledOnce());
+    const [, formData] = reviewAction.mock.calls[0] as unknown as [ImportCandidateReviewDecisionActionState, FormData];
+    expect(formData.get("importCandidateId")).toBe("candidate-1");
+    expect(formData.get("decision")).toBe("accept");
+    expect(formData.get("amount")).toBe("42.50");
+    expect(formData.get("currency")).toBe("RON");
+    expect(formData.get("categoryId")).toBe("cat-groceries");
+
+    await waitFor(() => expect(screen.queryByText("Amount unavailable")).not.toBeInTheDocument());
+    expect(screen.getByText("Receipt image: receipt.jpg")).toBeInTheDocument();
+  });
+
   it("renders a calm completed state when review is complete", () => {
     render(
       <TransactionsOverview

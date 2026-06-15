@@ -204,6 +204,137 @@ describe("imports review decision", () => {
     );
   });
 
+  it("does not create a transaction when an incomplete receipt candidate is accepted without amount", async () => {
+    const createTransaction = vi.fn();
+    const updateImportCandidateStatus = vi.fn();
+
+    await expect(
+      reviewImportCandidate(
+        {
+          importCandidateId: "33333333-3333-3333-3333-333333333333",
+          decision: "accept",
+        },
+        {
+          getCurrentUser: vi.fn(async () => mockUser()),
+          createImportCandidateService: vi.fn(async () => ({
+            getImportCandidateById: vi.fn(async () =>
+              makeCandidate({
+                amountMinor: null,
+                currency: "RON",
+                reviewState: "needs_attention" as const,
+                uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+              }),
+            ),
+            listImportCandidates: vi.fn(async () => []),
+            updateImportCandidateStatus,
+          })),
+          createImportRecordService: vi.fn(async () => ({
+            getImportRecordById: vi.fn(async () => makeImportRecord()),
+            updateImportRecordStatus: vi.fn(),
+          })),
+          createTransactionService: vi.fn(async () => ({
+            listTransactions: vi.fn(async () => []),
+            createTransaction,
+          })),
+        },
+      ),
+    ).rejects.toThrow("Accepted candidate is missing required transaction fields.");
+
+    expect(createTransaction).not.toHaveBeenCalled();
+    expect(updateImportCandidateStatus).not.toHaveBeenCalled();
+  });
+
+  it("creates exactly one Needs review expense from an incomplete receipt candidate after amount is added", async () => {
+    const createTransaction = vi.fn(async (_userId, input) => ({
+      transaction: makeTransaction({
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+        itemName: input.itemName,
+        merchant: input.merchant,
+        note: input.note,
+        categoryId: input.categoryId,
+        reviewState: input.reviewState,
+        uncertaintyReason: input.uncertaintyReason,
+      }),
+      eventCreated: true,
+    }));
+    const updateImportCandidateStatus = vi.fn(async (_userId, _candidateId, input) => ({
+      ...makeCandidate({
+        amountMinor: null,
+        currency: "RON",
+        reviewState: "needs_attention" as const,
+        uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+      }),
+      reviewState: input.reviewState,
+      acceptanceState: input.acceptanceState,
+      acceptedTransactionId: input.acceptedTransactionId ?? null,
+    }));
+
+    const result = await reviewImportCandidate(
+      {
+        importCandidateId: "33333333-3333-3333-3333-333333333333",
+        decision: "accept",
+        amountMinor: 4250,
+        currency: "RON",
+        itemName: "Receipt image: receipt.jpg",
+        merchant: "Market",
+        categoryId: "22222222-2222-2222-2222-222222222222",
+        note: "Manual receipt total",
+      },
+      {
+        getCurrentUser: vi.fn(async () => mockUser()),
+        createImportCandidateService: vi.fn(async () => ({
+          getImportCandidateById: vi.fn(async () =>
+            makeCandidate({
+              amountMinor: null,
+              currency: "RON",
+              reviewState: "needs_attention" as const,
+              uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+            }),
+          ),
+          listImportCandidates: vi.fn(async () => [
+            makeCandidate({
+              acceptanceState: "accepted" as const,
+              reviewState: "reviewed" as const,
+              acceptedTransactionId: "transaction-1",
+            }),
+          ]),
+          updateImportCandidateStatus,
+        })),
+        createImportRecordService: vi.fn(async () => ({
+          getImportRecordById: vi.fn(async () => makeImportRecord()),
+          updateImportRecordStatus: vi.fn(async () => makeImportRecord({ status: "reviewed" as const })),
+        })),
+        createTransactionService: vi.fn(async () => ({
+          listTransactions: vi.fn(async () => []),
+          createTransaction,
+        })),
+      },
+    );
+
+    expect(createTransaction).toHaveBeenCalledOnce();
+    expect(createTransaction.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: 4250,
+        currency: "RON",
+        itemName: "Receipt image: receipt.jpg",
+        merchant: "Market",
+        note: "Manual receipt total",
+        categoryId: "22222222-2222-2222-2222-222222222222",
+        reviewState: "needs_attention",
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        transactionCreated: true,
+        candidate: expect.objectContaining({
+          acceptanceState: "accepted",
+        }),
+      }),
+    );
+  });
+
   it("does not let reject reverse an already accepted candidate", async () => {
     const updateImportCandidateStatus = vi.fn();
     const createTransaction = vi.fn();

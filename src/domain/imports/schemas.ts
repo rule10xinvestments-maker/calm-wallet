@@ -157,4 +157,10 @@ export const ingestImportParserResultSchema = z.object({
 export const reviewImportCandidateSchema = z.object({
   importCandidateId: idSchema,
   decision: z.enum(["accept", "reject"]),
+  amountMinor: z.number().int().positive("Amount must be greater than 0.").nullable().optional(),
+  currency: currencySchema.nullable().optional(),
+  itemName: z.string().trim().max(120).nullable().optional(),
+  merchant: z.string().trim().max(120).nullable().optional(),
+  categoryId: idSchema.nullable().optional(),
+  note: z.string().trim().max(240).nullable().optional(),
 });

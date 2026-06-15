@@ -89,10 +89,28 @@ function getReceiptUploadErrorMessage(error: unknown) {
 
 function getImportReviewErrorMessage(error: unknown) {
   if (error instanceof Error && error.message === "Accepted candidate is missing required transaction fields.") {
-    return "Receipt needs an amount before it can be saved.";
+    return "Add amount before saving.";
   }
 
-  return error instanceof Error ? error.message : "Unable to review import candidate.";
+  return "Couldn\u2019t save receipt. Please try again.";
+}
+
+function parseOptionalPositiveMinorAmount(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const amount = Number(value.replace(",", "."));
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  return Math.round(amount * 100);
+}
+
+function parseOptionalString(value: FormDataEntryValue | null) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 export async function loadStagedImportBundleAction(
@@ -209,7 +227,7 @@ export async function uploadReceiptImageAction(
       status: "success",
       message:
         result.candidate?.reviewState === "needs_attention"
-          ? "Receipt uploaded for review. Add the total in Activity before saving it."
+          ? "Receipt uploaded for review. Open Activity \u2192 Review to add the total."
           : "Receipt image uploaded for review.",
       upload: result.upload,
       candidate: result.candidate,
@@ -534,12 +552,24 @@ export async function reviewImportCandidateAction(
   const importCandidateId =
     typeof formData.get("importCandidateId") === "string" ? String(formData.get("importCandidateId")).trim() : "";
   const decision = typeof formData.get("decision") === "string" ? String(formData.get("decision")).trim() : "";
+  const amountMinor = parseOptionalPositiveMinorAmount(formData.get("amount"));
+  const currency = parseOptionalString(formData.get("currency"));
+  const itemName = parseOptionalString(formData.get("itemName"));
+  const merchant = parseOptionalString(formData.get("merchant"));
+  const categoryId = parseOptionalString(formData.get("categoryId"));
+  const note = parseOptionalString(formData.get("note"));
 
   try {
     const decisionResult = await reviewImportCandidate(
       {
         importCandidateId,
         decision: decision as "accept" | "reject",
+        amountMinor,
+        currency,
+        itemName,
+        merchant,
+        categoryId,
+        note,
       },
       dependencies,
     );

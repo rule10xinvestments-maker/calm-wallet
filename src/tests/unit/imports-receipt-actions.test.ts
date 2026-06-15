@@ -85,7 +85,7 @@ describe("receipt import actions", () => {
 
     expect(result).toEqual({
       status: "success",
-      message: "Receipt uploaded for review. Add the total in Activity before saving it.",
+      message: "Receipt uploaded for review. Open Activity \u2192 Review to add the total.",
       upload: expect.objectContaining({
         importRecordId: "11111111-1111-1111-1111-111111111111",
         importType: "receipt_image",

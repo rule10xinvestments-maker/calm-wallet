@@ -52,25 +52,43 @@ function isSupportedImportType(value: string): value is "receipt_image" | "csv_i
 function mapCandidateToTransactionInput(args: {
   candidate: ImportCandidate;
   importType: "receipt_image" | "csv_import";
+  overrides?: {
+    amountMinor?: number | null;
+    currency?: string | null;
+    itemName?: string | null;
+    merchant?: string | null;
+    categoryId?: string | null;
+    note?: string | null;
+  };
 }): CreateTransactionInput {
-  const { candidate, importType } = args;
+  const { candidate, importType, overrides } = args;
+  const amountMinor = overrides?.amountMinor ?? candidate.amountMinor;
+  const currency = overrides?.currency ?? candidate.currency;
+  const itemName = overrides?.itemName ?? candidate.description ?? candidate.merchantGuess;
+  const merchant = overrides?.merchant ?? candidate.merchantGuess;
+  const note = overrides?.note ?? candidate.description;
+  const categoryId = overrides?.categoryId ?? candidate.categoryId;
 
-  if (!candidate.transactionType || !candidate.amountMinor || !candidate.currency || !candidate.occurredAt) {
+  if (!candidate.transactionType || !amountMinor || !currency || !candidate.occurredAt) {
     throw new Error("Accepted candidate is missing required transaction fields.");
   }
 
+  const needsReview = candidate.reviewState === "needs_attention";
+
   return {
     transactionType: candidate.transactionType,
-    amountMinor: candidate.amountMinor,
-    currency: candidate.currency,
+    amountMinor,
+    currency,
     occurredAt: candidate.occurredAt,
-    categoryId: candidate.categoryId,
-    itemName: candidate.description || candidate.merchantGuess,
-    merchant: candidate.merchantGuess,
-    note: candidate.description,
+    categoryId,
+    itemName,
+    merchant,
+    note,
     source: importType,
-    reviewState: "reviewed",
-    uncertaintyReason: null,
+    reviewState: needsReview ? "needs_attention" : "reviewed",
+    uncertaintyReason: needsReview
+      ? candidate.uncertaintyReason || "Receipt total was added manually from Activity."
+      : null,
     importRecordId: candidate.importRecordId,
     importCandidateId: candidate.id,
   };
@@ -234,6 +252,14 @@ export async function reviewImportCandidate(
     mapCandidateToTransactionInput({
       candidate,
       importType: importRecord.importType,
+      overrides: {
+        amountMinor: parsed.amountMinor,
+        currency: parsed.currency,
+        itemName: parsed.itemName,
+        merchant: parsed.merchant,
+        categoryId: parsed.categoryId,
+        note: parsed.note,
+      },
     }),
     { actorType: "user" },
   );

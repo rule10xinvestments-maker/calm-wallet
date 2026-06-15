@@ -520,7 +520,7 @@ describe("assistant composer", () => {
           resolveUpload = () =>
             resolve({
               status: "success",
-              message: "Receipt uploaded for review. Add the total in Activity before saving it.",
+              message: "Receipt uploaded for review. Open Activity \u2192 Review to add the total.",
               upload: {
                 importRecordId: "record-1",
                 importType: "receipt_image",
@@ -567,7 +567,7 @@ describe("assistant composer", () => {
 
     resolveUpload();
 
-    expect(await screen.findByText("Receipt uploaded for review. Add the total in Activity before saving it.")).toBeInTheDocument();
+    expect(await screen.findByText("Receipt uploaded for review. Open Activity \u2192 Review to add the total.")).toBeInTheDocument();
     expect(await screen.findByText("Uploaded receipt.jpg as receipt_image.")).toBeInTheDocument();
     expect(uploadReceiptImageAction).toHaveBeenCalledWith(
       expect.objectContaining({

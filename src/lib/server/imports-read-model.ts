@@ -3,6 +3,7 @@ import type { ImportCandidate, ImportRecord } from "@/domain/imports/types";
 
 export type StagedImportCandidateItem = {
   id: string;
+  importRecordId?: string;
   reviewState: ImportCandidate["reviewState"];
   acceptanceState: ImportCandidate["acceptanceState"];
   transactionType: ImportCandidate["transactionType"];
@@ -11,6 +12,7 @@ export type StagedImportCandidateItem = {
   occurredAt: string | null;
   description: string | null;
   merchantGuess: string | null;
+  categoryId?: string | null;
   confidenceScore: number | null;
   uncertaintyReason: string | null;
   createdAt: string;
@@ -40,6 +42,7 @@ export type ImportsReadModelAdapter = {
 export function mapImportCandidateToReadItem(candidate: ImportCandidate): StagedImportCandidateItem {
   return {
     id: candidate.id,
+    importRecordId: candidate.importRecordId,
     reviewState: candidate.reviewState,
     acceptanceState: candidate.acceptanceState,
     transactionType: candidate.transactionType,
@@ -48,6 +51,7 @@ export function mapImportCandidateToReadItem(candidate: ImportCandidate): Staged
     occurredAt: candidate.occurredAt,
     description: candidate.description,
     merchantGuess: candidate.merchantGuess,
+    categoryId: candidate.categoryId,
     confidenceScore: candidate.confidenceScore,
     uncertaintyReason: candidate.uncertaintyReason,
     createdAt: candidate.createdAt,

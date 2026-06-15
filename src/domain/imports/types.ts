@@ -117,6 +117,12 @@ export type ImportCandidateReviewDecision = "accept" | "reject";
 export type ReviewImportCandidateInput = {
   importCandidateId: string;
   decision: ImportCandidateReviewDecision;
+  amountMinor?: number | null;
+  currency?: string | null;
+  itemName?: string | null;
+  merchant?: string | null;
+  categoryId?: string | null;
+  note?: string | null;
 };
 
 export type ParserResultCandidateInput = {
