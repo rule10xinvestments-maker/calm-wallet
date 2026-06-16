@@ -137,7 +137,7 @@ export async function reviewImportCandidate(
   const user = await dependencies.getCurrentUser();
 
   if (!user) {
-    return null;
+    throw new Error("Receipt save requires sign in.");
   }
 
   const parsed = reviewImportCandidateSchema.parse(input);

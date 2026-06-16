@@ -335,6 +335,54 @@ describe("imports review decision", () => {
     );
   });
 
+  it("keeps the receipt candidate pending when transaction creation fails", async () => {
+    const createTransaction = vi.fn(async () => {
+      throw new Error("insert violates row-level security policy");
+    });
+    const updateImportCandidateStatus = vi.fn();
+
+    await expect(
+      reviewImportCandidate(
+        {
+          importCandidateId: "33333333-3333-3333-3333-333333333333",
+          decision: "accept",
+          amountMinor: 3600,
+          currency: "RON",
+          itemName: "Receipt image: receipt.jpg",
+          merchant: "Mega Image",
+          categoryId: "22222222-2222-2222-2222-222222222222",
+          note: "Manual receipt total",
+        },
+        {
+          getCurrentUser: vi.fn(async () => mockUser()),
+          createImportCandidateService: vi.fn(async () => ({
+            getImportCandidateById: vi.fn(async () =>
+              makeCandidate({
+                amountMinor: null,
+                currency: "RON",
+                reviewState: "needs_attention" as const,
+                uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+              }),
+            ),
+            listImportCandidates: vi.fn(async () => []),
+            updateImportCandidateStatus,
+          })),
+          createImportRecordService: vi.fn(async () => ({
+            getImportRecordById: vi.fn(async () => makeImportRecord()),
+            updateImportRecordStatus: vi.fn(),
+          })),
+          createTransactionService: vi.fn(async () => ({
+            listTransactions: vi.fn(async () => []),
+            createTransaction,
+          })),
+        },
+      ),
+    ).rejects.toThrow("insert violates row-level security policy");
+
+    expect(createTransaction).toHaveBeenCalledOnce();
+    expect(updateImportCandidateStatus).not.toHaveBeenCalled();
+  });
+
   it("does not let reject reverse an already accepted candidate", async () => {
     const updateImportCandidateStatus = vi.fn();
     const createTransaction = vi.fn();
@@ -487,33 +535,34 @@ describe("imports review decision", () => {
     );
   });
 
-  it("fails closed for unauthenticated access", async () => {
+  it("fails closed with an auth-specific error for unauthenticated access", async () => {
     const getImportCandidateById = vi.fn();
 
-    const result = await reviewImportCandidate(
-      {
-        importCandidateId: "33333333-3333-3333-3333-333333333333",
-        decision: "accept",
-      },
-      {
-        getCurrentUser: vi.fn(async () => null),
-        createImportCandidateService: vi.fn(async () => ({
-          getImportCandidateById,
-          listImportCandidates: vi.fn(),
-          updateImportCandidateStatus: vi.fn(),
-        })),
-        createImportRecordService: vi.fn(async () => ({
-          getImportRecordById: vi.fn(),
-          updateImportRecordStatus: vi.fn(),
-        })),
-        createTransactionService: vi.fn(async () => ({
-          listTransactions: vi.fn(),
-          createTransaction: vi.fn(),
-        })),
-      },
-    );
+    await expect(
+      reviewImportCandidate(
+        {
+          importCandidateId: "33333333-3333-3333-3333-333333333333",
+          decision: "accept",
+        },
+        {
+          getCurrentUser: vi.fn(async () => null),
+          createImportCandidateService: vi.fn(async () => ({
+            getImportCandidateById,
+            listImportCandidates: vi.fn(),
+            updateImportCandidateStatus: vi.fn(),
+          })),
+          createImportRecordService: vi.fn(async () => ({
+            getImportRecordById: vi.fn(),
+            updateImportRecordStatus: vi.fn(),
+          })),
+          createTransactionService: vi.fn(async () => ({
+            listTransactions: vi.fn(),
+            createTransaction: vi.fn(),
+          })),
+        },
+      ),
+    ).rejects.toThrow("Receipt save requires sign in.");
 
-    expect(result).toBeNull();
     expect(getImportCandidateById).not.toHaveBeenCalled();
   });
 

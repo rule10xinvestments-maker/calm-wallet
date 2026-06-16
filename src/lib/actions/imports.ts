@@ -88,11 +88,15 @@ function getReceiptUploadErrorMessage(error: unknown) {
 }
 
 function getImportReviewErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message === "Receipt save requires sign in.") {
+    return "Please sign in again to save this receipt.";
+  }
+
   if (error instanceof Error && error.message === "Accepted candidate is missing required transaction fields.") {
     return "Add amount before saving.";
   }
 
-  return "Couldn\u2019t save receipt. Please try again.";
+  return "Receipt could not be saved right now. Please try again.";
 }
 
 function parseOptionalPositiveMinorAmount(value: FormDataEntryValue | null) {
@@ -111,6 +115,10 @@ function parseOptionalPositiveMinorAmount(value: FormDataEntryValue | null) {
 
 function parseOptionalString(value: FormDataEntryValue | null) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function parseOptionalCurrency(value: FormDataEntryValue | null) {
+  return parseOptionalString(value)?.toUpperCase() ?? null;
 }
 
 export async function loadStagedImportBundleAction(
@@ -553,7 +561,7 @@ export async function reviewImportCandidateAction(
     typeof formData.get("importCandidateId") === "string" ? String(formData.get("importCandidateId")).trim() : "";
   const decision = typeof formData.get("decision") === "string" ? String(formData.get("decision")).trim() : "";
   const amountMinor = parseOptionalPositiveMinorAmount(formData.get("amount"));
-  const currency = parseOptionalString(formData.get("currency"));
+  const currency = parseOptionalCurrency(formData.get("currency"));
   const itemName = parseOptionalString(formData.get("itemName"));
   const merchant = parseOptionalString(formData.get("merchant"));
   const categoryId = parseOptionalString(formData.get("categoryId"));
@@ -578,7 +586,7 @@ export async function reviewImportCandidateAction(
       return {
         ...initialImportCandidateReviewDecisionActionState,
         status: "error",
-        message: "Import candidate could not be reviewed.",
+        message: "Receipt could not be saved right now. Please try again.",
       };
     }
 

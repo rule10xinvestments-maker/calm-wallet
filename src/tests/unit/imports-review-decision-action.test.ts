@@ -204,15 +204,15 @@ describe("imports review decision action", () => {
     );
   });
 
-  it("fails closed for unauthenticated access", async () => {
-    reviewImportCandidate.mockResolvedValueOnce(null);
+  it("returns sign-in copy for unauthenticated access", async () => {
+    reviewImportCandidate.mockRejectedValueOnce(new Error("Receipt save requires sign in."));
 
     const { reviewImportCandidateAction } = await import("@/lib/actions/imports");
     const result = await reviewImportCandidateAction(initialImportCandidateReviewDecisionActionState, makeFormData());
 
     expect(result).toEqual({
       status: "error",
-      message: "Import candidate could not be reviewed.",
+      message: "Please sign in again to save this receipt.",
       decisionResult: null,
     });
   });
@@ -228,7 +228,7 @@ describe("imports review decision action", () => {
 
     expect(result).toEqual({
       status: "error",
-      message: "Import candidate could not be reviewed.",
+      message: "Receipt could not be saved right now. Please try again.",
       decisionResult: null,
     });
   });
@@ -275,7 +275,7 @@ describe("imports review decision action", () => {
     expect(reviewImportCandidate).toHaveBeenCalledWith(
       expect.objectContaining({
         amountMinor: 4250,
-        currency: "ron",
+        currency: "RON",
         itemName: "Receipt total",
         merchant: "Market",
         categoryId: "22222222-2222-2222-2222-222222222222",
@@ -296,9 +296,26 @@ describe("imports review decision action", () => {
 
     expect(result).toEqual({
       status: "error",
-      message: "Couldn\u2019t save receipt. Please try again.",
+      message: "Receipt could not be saved right now. Please try again.",
       decisionResult: null,
     });
+  });
+
+  it("does not expose raw backend validation details to the user", async () => {
+    reviewImportCandidate.mockRejectedValueOnce(
+      new Error("NEXT_PUBLIC_SUPABASE_URL invalid_type currency must be uppercase"),
+    );
+
+    const { reviewImportCandidateAction } = await import("@/lib/actions/imports");
+    const result = await reviewImportCandidateAction(initialImportCandidateReviewDecisionActionState, makeFormData());
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Receipt could not be saved right now. Please try again.",
+      decisionResult: null,
+    });
+    expect(result.message).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(result.message).not.toContain("invalid_type");
   });
 
   it("returns the expected review-decision action result shape", async () => {

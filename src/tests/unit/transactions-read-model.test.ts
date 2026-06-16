@@ -414,6 +414,48 @@ describe("transactions read model", () => {
     expect(data.largestRecentExpenses[0]?.title).toBe("Rent");
   });
 
+  it("includes a saved receipt expense in Activity and Insights totals", () => {
+    const receiptExpense = makeTransaction({
+      id: "receipt-expense",
+      transactionType: "expense",
+      amountMinor: 3600,
+      currency: "RON",
+      categoryId: "groceries",
+      itemName: "Receipt image: 281.jpg",
+      merchant: "Mega Image",
+      note: "Manual receipt total",
+      source: "receipt_image",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Receipt total was added manually from Activity.",
+      importRecordId: "11111111-1111-1111-1111-111111111111",
+      importCandidateId: "33333333-3333-3333-3333-333333333333",
+    });
+
+    const data = buildInsightsData(
+      [receiptExpense],
+      { groceries: "Groceries" },
+      "RON",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+    const listItems = mapTransactionsToListItems([receiptExpense], { groceries: "Groceries" });
+
+    expect(listItems).toHaveLength(1);
+    expect(listItems[0]).toMatchObject({
+      id: "receipt-expense",
+      title: "Receipt image: 281.jpg",
+      merchant: "Mega Image",
+      categoryLabel: "Groceries",
+    });
+    expect(data.trackedTransactionCount).toBe(1);
+    expect(data.expenseMinor).toBe(3600);
+    expect(data.categoryBreakdown[0]).toMatchObject({
+      label: "Groceries",
+      amountMinor: 3600,
+      transactionCount: 1,
+    });
+    expect(data.needsReviewCount).toBe(1);
+  });
+
   it("scopes monthly insight totals to the selected historical month without mutating transactions", () => {
     const aprilExpense = makeTransaction({
       id: "april-expense",
