@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUser } from "@/tests/unit/test-users";
 import { IMPORT_STORAGE_BUCKET, RECEIPT_IMAGE_MAX_BYTES, buildImportStoragePath } from "@/lib/imports/storage";
 import { AI_TOOL_NAMES } from "@/domain/ai/tool-types";
-import { uploadReceiptImage } from "@/lib/server/receipt-image-import";
+import { uploadReceiptImage, uploadReceiptImageAndPrepareDraft } from "@/lib/server/receipt-image-import";
 
 function makeFile(overrides: Partial<Pick<File, "name" | "type" | "size" | "arrayBuffer">> = {}) {
   return {
@@ -166,5 +166,60 @@ describe("receipt image import upload", () => {
     });
 
     expect([...AI_TOOL_NAMES]).toEqual(toolNamesBefore);
+  });
+
+  it("falls back to a manual review candidate when private OCR image loading fails", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const createImportCandidate = vi.fn(async (_userId, input) => ({
+      id: "33333333-3333-3333-3333-333333333333",
+      userId: "user-1",
+      importRecordId: "11111111-1111-1111-1111-111111111111",
+      transactionType: input.transactionType,
+      amountMinor: input.amountMinor,
+      currency: input.currency,
+      occurredAt: input.occurredAt,
+      description: input.description,
+      merchantGuess: input.merchantGuess,
+      categoryId: input.categoryId,
+      confidenceScore: input.confidenceScore,
+      reviewState: input.reviewState,
+      acceptanceState: input.acceptanceState,
+      acceptedTransactionId: null,
+      uncertaintyReason: input.uncertaintyReason,
+      createdAt: "2026-05-02T10:05:00.000Z",
+      updatedAt: "2026-05-02T10:05:00.000Z",
+    }));
+    const extractReceiptText = vi.fn();
+
+    const result = await uploadReceiptImageAndPrepareDraft(makeFile(), {
+      getCurrentUser: vi.fn(async () => mockUser()),
+      createImportRecordService: vi.fn(async () => ({
+        createImportRecord: vi.fn(async () => makeImportRecord()),
+        getImportRecordById: vi.fn(async () => makeImportRecord()),
+        updateImportRecordStatus: vi.fn(async () => makeImportRecord({ status: "parsed" })),
+      })),
+      createImportCandidateService: vi.fn(async () => ({ createImportCandidate })),
+      createCategoryMemoryService: vi.fn(async () => ({ findCategoryMemoryMatch: vi.fn(async () => null) })),
+      uploadObject: vi.fn(async () => undefined),
+      buildImportStoragePath: vi.fn(() => "user-1/receipt_image/2026/05/receipt-unsafe-name.jpg"),
+      sanitizeImportFilename: vi.fn(() => "receipt-unsafe-name.jpg"),
+      loadDefaultCurrency: vi.fn(async () => "USD"),
+      loadReceiptCategories: vi.fn(async () => []),
+      loadReceiptImageFromStorage: vi.fn(async () => {
+        throw new Error("private object not found");
+      }),
+      extractReceiptText,
+      now: () => new Date("2026-05-02T10:00:00.000Z"),
+    });
+
+    expect(extractReceiptText).not.toHaveBeenCalled();
+    expect(result?.candidate).toEqual(
+      expect.objectContaining({
+        amountMinor: null,
+        reviewState: "needs_attention",
+        uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+      }),
+    );
   });
 });

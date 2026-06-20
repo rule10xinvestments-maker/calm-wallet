@@ -13,3 +13,5 @@ xw-mvp-release-candidate-*/
 xw-mvp-release-candidate-*.zip
 xw-sprint-*-ready/
 xw-sprint-*-ready.zip
+
+.vercel

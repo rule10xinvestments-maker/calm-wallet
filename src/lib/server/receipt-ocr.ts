@@ -45,6 +45,24 @@ function getOpenAiVisionModel() {
   return process.env.RECEIPT_OCR_OPENAI_MODEL?.trim() || "gpt-4o-mini";
 }
 
+function logReceiptOcrStage(args: {
+  stage:
+    | "ocr_env_available"
+    | "ocr_provider_called";
+  provider: ReceiptOcrResult["provider"];
+  importRecordId?: string | null;
+  storagePath?: string | null;
+  model?: string | null;
+}) {
+  console.info("receipt_ocr_stage", {
+    stage: args.stage,
+    provider: args.provider,
+    importRecordId: args.importRecordId ?? null,
+    storagePath: args.storagePath ?? null,
+    model: args.model ?? undefined,
+  });
+}
+
 function arrayBufferToBase64(buffer: ArrayBuffer) {
   return Buffer.from(buffer).toString("base64");
 }
@@ -67,6 +85,7 @@ function logReceiptOcrFailure(args: {
   code: string;
   status: ReceiptExtractionStatus;
   provider: ReceiptOcrResult["provider"];
+  stage?: "ocr_env_available" | "ocr_provider_failed";
   importRecordId?: string | null;
   storagePath?: string | null;
   error?: unknown;
@@ -74,6 +93,7 @@ function logReceiptOcrFailure(args: {
   const errorWithMetadata = args.error as { code?: unknown; message?: unknown; status?: unknown } | null;
   console.warn("receipt_ocr_failed", {
     code: args.code,
+    stage: args.stage,
     status: args.status,
     provider: args.provider,
     importRecordId: args.importRecordId ?? null,
@@ -92,6 +112,14 @@ export async function extractReceiptTextFromImage(
   const apiKey = getOpenAiApiKey();
 
   if (!apiKey) {
+    logReceiptOcrFailure({
+      code: "receipt_ocr_provider_unavailable",
+      status: "extraction_unavailable",
+      provider: "none",
+      stage: "ocr_env_available",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+    });
     return {
       status: "extraction_unavailable",
       text: null,
@@ -110,7 +138,22 @@ export async function extractReceiptTextFromImage(
   }
 
   try {
+    const model = getOpenAiVisionModel();
+    logReceiptOcrStage({
+      stage: "ocr_env_available",
+      provider: "openai",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model,
+    });
     const imageBase64 = arrayBufferToBase64(await image.arrayBuffer());
+    logReceiptOcrStage({
+      stage: "ocr_provider_called",
+      provider: "openai",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model,
+    });
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -118,7 +161,7 @@ export async function extractReceiptTextFromImage(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: getOpenAiVisionModel(),
+        model,
         input: [
           {
             role: "user",
@@ -140,6 +183,7 @@ export async function extractReceiptTextFromImage(
         code: "receipt_ocr_provider_response_failed",
         status: "extraction_failed",
         provider: "openai",
+        stage: "ocr_provider_failed",
         importRecordId: context.importRecordId,
         storagePath: context.storagePath,
         error: {
@@ -169,6 +213,7 @@ export async function extractReceiptTextFromImage(
       code: "receipt_ocr_provider_exception",
       status: "extraction_failed",
       provider: "openai",
+      stage: "ocr_provider_failed",
       importRecordId: context.importRecordId,
       storagePath: context.storagePath,
       error,

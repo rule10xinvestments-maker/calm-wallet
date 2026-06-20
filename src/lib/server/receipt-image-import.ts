@@ -66,6 +66,12 @@ export type UploadReceiptImageAndPrepareDraftDependencies = Omit<
     createImportRecordService: () => Promise<ReceiptImportRecordService>;
     loadDefaultCurrency: (userId: string) => Promise<string>;
     loadReceiptCategories: () => Promise<ReceiptDraftCategory[]>;
+    loadReceiptImageFromStorage?: (input: {
+      bucket: typeof IMPORT_STORAGE_BUCKET;
+      storagePath: string;
+      filename: string;
+      mimeType: string;
+    }) => Promise<ReceiptOcrImage>;
     extractReceiptText: (
       image: ReceiptOcrImage,
       context: { importRecordId?: string | null; storagePath?: string | null },
@@ -85,6 +91,7 @@ const defaultPreparedUploadDependencies: UploadReceiptImageAndPrepareDraftDepend
   },
   loadDefaultCurrency: loadReceiptDefaultCurrency,
   loadReceiptCategories,
+  loadReceiptImageFromStorage,
   extractReceiptText: extractReceiptTextFromImage,
 };
 
@@ -124,6 +131,27 @@ async function uploadReceiptImageObject(input: {
   }
 }
 
+async function loadReceiptImageFromStorage(input: {
+  bucket: typeof IMPORT_STORAGE_BUCKET;
+  storagePath: string;
+  filename: string;
+  mimeType: string;
+}): Promise<ReceiptOcrImage> {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.storage.from(input.bucket).download(input.storagePath);
+
+  if (result.error || !result.data) {
+    throw new Error(result.error?.message ?? "Receipt image could not be loaded.");
+  }
+
+  return {
+    name: input.filename,
+    type: input.mimeType,
+    size: result.data.size,
+    arrayBuffer: () => result.data.arrayBuffer(),
+  };
+}
+
 async function loadReceiptDefaultCurrency(userId: string) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.from("profiles").select("default_currency").eq("id", userId).single();
@@ -149,6 +177,7 @@ async function loadReceiptCategories(): Promise<ReceiptDraftCategory[]> {
 async function safelyExtractReceiptText(args: {
   file: ReceiptUploadFile | null;
   upload: StagedImportIntakeResult;
+  loadReceiptImageFromStorage?: UploadReceiptImageAndPrepareDraftDependencies["loadReceiptImageFromStorage"];
   extractReceiptText: UploadReceiptImageAndPrepareDraftDependencies["extractReceiptText"];
 }) {
   if (!args.file) {
@@ -160,8 +189,46 @@ async function safelyExtractReceiptText(args: {
     };
   }
 
+  let image: ReceiptOcrImage = args.file;
+
+  if (args.loadReceiptImageFromStorage) {
+    try {
+      image = await args.loadReceiptImageFromStorage({
+        bucket: IMPORT_STORAGE_BUCKET,
+        storagePath: args.upload.storagePath,
+        filename: args.upload.originalFilename,
+        mimeType: args.upload.mimeType,
+      });
+      console.info("receipt_ocr_stage", {
+        stage: "ocr_image_loaded",
+        code: "receipt_ocr_private_image_loaded",
+        importRecordId: args.upload.importRecordId,
+        storagePath: args.upload.storagePath,
+        mimeType: args.upload.mimeType,
+        size: image.size,
+      });
+    } catch (error) {
+      console.warn("receipt_ocr_failed", {
+        stage: "ocr_image_loaded",
+        code: "receipt_ocr_private_image_load_failed",
+        status: "extraction_failed",
+        provider: "none",
+        importRecordId: args.upload.importRecordId,
+        storagePath: args.upload.storagePath,
+        errorName: error instanceof Error ? error.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : undefined,
+      });
+      return {
+        status: "extraction_failed" as const,
+        text: null,
+        provider: "none" as const,
+        internalCode: "receipt_ocr_private_image_load_failed",
+      };
+    }
+  }
+
   try {
-    return await args.extractReceiptText(args.file, {
+    return await args.extractReceiptText(image, {
       importRecordId: args.upload.importRecordId,
       storagePath: args.upload.storagePath,
     });
@@ -255,6 +322,7 @@ export async function uploadReceiptImageAndPrepareDraft(
   const extractionResult = await safelyExtractReceiptText({
     file,
     upload,
+    loadReceiptImageFromStorage: dependencies.loadReceiptImageFromStorage,
     extractReceiptText: dependencies.extractReceiptText,
   });
   const draft = buildReceiptDraft({
@@ -263,6 +331,18 @@ export async function uploadReceiptImageAndPrepareDraft(
     defaultCurrency,
     categories,
     now: dependencies.now(),
+  });
+  console.info("receipt_ocr_stage", {
+    stage: draft.amountMinor ? "ocr_parse_success" : "ocr_candidate_prefill_failed",
+    code: draft.amountMinor ? "receipt_ocr_draft_prefill_ready" : extractionResult.internalCode,
+    extractionStatus: extractionResult.status,
+    provider: extractionResult.provider,
+    importRecordId: upload.importRecordId,
+    storagePath: upload.storagePath,
+    amountPresent: Boolean(draft.amountMinor),
+    currency: draft.currency,
+    merchantPresent: Boolean(draft.merchantGuess),
+    categoryResolvedIdPresent: Boolean(draft.categoryId),
   });
   const candidate = await stageReceiptCandidate(
     {
@@ -285,6 +365,19 @@ export async function uploadReceiptImageAndPrepareDraft(
       createCategoryMemoryService: dependencies.createCategoryMemoryService,
     },
   );
+  console.info("receipt_ocr_stage", {
+    stage: candidate?.amountMinor ? "ocr_candidate_prefilled" : "ocr_candidate_prefill_failed",
+    code: candidate?.amountMinor ? "receipt_ocr_candidate_prefilled" : "receipt_ocr_candidate_manual_fallback",
+    extractionStatus: extractionResult.status,
+    provider: extractionResult.provider,
+    importRecordId: upload.importRecordId,
+    importCandidateId: candidate?.id ?? null,
+    storagePath: upload.storagePath,
+    amountPresent: Boolean(candidate?.amountMinor),
+    currency: candidate?.currency ?? null,
+    merchantPresent: Boolean(candidate?.merchantGuess),
+    categoryResolvedIdPresent: Boolean(candidate?.categoryId),
+  });
 
   return {
     upload,

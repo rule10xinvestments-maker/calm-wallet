@@ -798,6 +798,57 @@ describe("transactions overview", () => {
     expect(within(movementCard).queryByText("Receipt image: receipt.jpg")).not.toBeInTheDocument();
   });
 
+  it("shows OCR-prefilled receipt candidate fields in Activity Review", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        currentView="needs-review"
+        items={[]}
+        stagedImportDetails={{
+          "record-1": {
+            reviewProgress: {
+              totalCandidateCount: 1,
+              acceptedCount: 0,
+              rejectedCount: 0,
+              pendingCount: 1,
+            },
+            candidateCount: 1,
+            reviewSummary: "1 pending_review",
+            acceptanceSummary: "1 pending",
+            candidatePreviews: [
+              {
+                id: "candidate-1",
+                importRecordId: "record-1",
+                importType: "receipt_image",
+                originalFilename: "281.jpg",
+                amountDisplay: "RON 35.24",
+                amountMinor: 3524,
+                currency: "RON",
+                occurredAt: "2026-06-15T10:00:00.000Z",
+                dateLabel: "Jun 15",
+                description: "Receipt from Mega Image",
+                merchantGuess: "Mega Image",
+                categoryId: "cat-groceries",
+                reviewState: "pending_review",
+                acceptanceState: "pending",
+                canAccept: true,
+              },
+            ],
+          },
+        }}
+        categories={[{ id: "cat-groceries", label: "Groceries", direction: "expense" }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Receipt from Mega Image/ }));
+
+    expect(screen.getByLabelText("Amount")).toHaveValue("35.24");
+    expect(screen.getByLabelText("Currency")).toHaveValue("RON");
+    expect(screen.getByLabelText("Merchant")).toHaveValue("Mega Image");
+    expect(screen.getByLabelText("Category")).toHaveValue("cat-groceries");
+    expect(screen.queryByText("Add amount before saving")).not.toBeInTheDocument();
+  });
+
   it("saves an incomplete receipt candidate as one normal expense transaction after amount is added", async () => {
     const reviewAction = vi.fn(async () => ({
       status: "success" as const,

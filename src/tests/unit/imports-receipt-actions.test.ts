@@ -21,6 +21,15 @@ function makeUnavailableExtraction() {
   };
 }
 
+function makeLoadedReceiptImage(overrides: Partial<{ name: string; type: string; size: number }> = {}) {
+  return {
+    name: overrides.name ?? "receipt.jpg",
+    type: overrides.type ?? "image/jpeg",
+    size: overrides.size ?? 1024,
+    arrayBuffer: vi.fn(async () => new Uint8Array([1, 2, 3]).buffer),
+  };
+}
+
 describe("receipt import actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -63,6 +72,8 @@ describe("receipt import actions", () => {
     }));
 
     const extractReceiptText = vi.fn(async () => makeUnavailableExtraction());
+    const loadedReceiptImage = makeLoadedReceiptImage();
+    const loadReceiptImageFromStorage = vi.fn(async () => loadedReceiptImage);
     const { uploadReceiptImageAction } = await import("@/lib/actions/imports");
     const result = await uploadReceiptImageAction(initialReceiptImageUploadActionState, formData, {
       getCurrentUser: vi.fn(async () => mockUser()),
@@ -90,12 +101,19 @@ describe("receipt import actions", () => {
       sanitizeImportFilename: vi.fn(() => "receipt.jpg"),
       loadDefaultCurrency: vi.fn(async () => "USD"),
       loadReceiptCategories: vi.fn(async () => []),
+      loadReceiptImageFromStorage,
       extractReceiptText,
       now: () => new Date("2026-05-02T10:00:00.000Z"),
     });
 
+    expect(loadReceiptImageFromStorage).toHaveBeenCalledWith({
+      bucket: "staged-imports",
+      storagePath: "user-1/receipt_image/2026/05/receipt.jpg",
+      filename: "receipt.jpg",
+      mimeType: "image/jpeg",
+    });
     expect(extractReceiptText).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Receipt.JPG", type: "image/jpeg" }),
+      loadedReceiptImage,
       {
         importRecordId: "11111111-1111-1111-1111-111111111111",
         storagePath: "user-1/receipt_image/2026/05/receipt.jpg",
@@ -182,6 +200,7 @@ describe("receipt import actions", () => {
       sanitizeImportFilename: vi.fn(() => "receipt.jpg"),
       loadDefaultCurrency: vi.fn(async () => "USD"),
       loadReceiptCategories: vi.fn(async () => []),
+      loadReceiptImageFromStorage: vi.fn(async () => makeLoadedReceiptImage()),
       extractReceiptText: vi.fn(async () => {
         throw new Error("OCR provider key missing");
       }),
@@ -390,6 +409,7 @@ describe("receipt import actions", () => {
           direction: "expense" as const,
         },
       ]),
+      loadReceiptImageFromStorage: vi.fn(async () => makeLoadedReceiptImage({ name: "grocery.jpg" })),
       extractReceiptText: vi.fn(async () => ({
         status: "extraction_success" as const,
         text: "MEGA IMAGE\nTOTAL 42,19 Lei",
