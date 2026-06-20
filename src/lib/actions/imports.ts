@@ -230,15 +230,9 @@ export async function uploadReceiptImageAction(
   dependencies?: UploadReceiptImageAndPrepareDraftDependencies,
 ): Promise<ReceiptImageUploadActionState> {
   const file = formData.get("file");
-  const extractedText =
-    typeof formData.get("receiptText") === "string" ? String(formData.get("receiptText")).trim() : null;
 
   try {
-    const result = await uploadReceiptImageAndPrepareDraft(
-      file instanceof File ? file : null,
-      dependencies,
-      extractedText,
-    );
+    const result = await uploadReceiptImageAndPrepareDraft(file instanceof File ? file : null, dependencies);
 
     if (!result) {
       return {
@@ -253,7 +247,7 @@ export async function uploadReceiptImageAction(
       message:
         result.candidate?.reviewState === "needs_attention"
           ? "Receipt uploaded for review. Open Activity \u2192 Review to add the total."
-          : "Receipt image uploaded for review.",
+          : "We found a total. Please review before saving.",
       upload: result.upload,
       candidate: result.candidate,
     };

@@ -18,6 +18,11 @@ import {
   buildReceiptDraft,
   type ReceiptDraftCategory,
 } from "@/lib/server/receipt-draft";
+import {
+  extractReceiptTextFromImage,
+  type ReceiptOcrImage,
+  type ReceiptOcrResult,
+} from "@/lib/server/receipt-ocr";
 
 type ReceiptUploadFile = Pick<File, "name" | "type" | "size" | "arrayBuffer">;
 type ReceiptImportRecordService = Pick<
@@ -61,6 +66,10 @@ export type UploadReceiptImageAndPrepareDraftDependencies = Omit<
     createImportRecordService: () => Promise<ReceiptImportRecordService>;
     loadDefaultCurrency: (userId: string) => Promise<string>;
     loadReceiptCategories: () => Promise<ReceiptDraftCategory[]>;
+    extractReceiptText: (
+      image: ReceiptOcrImage,
+      context: { importRecordId?: string | null; storagePath?: string | null },
+    ) => Promise<ReceiptOcrResult>;
   };
 
 const defaultPreparedUploadDependencies: UploadReceiptImageAndPrepareDraftDependencies = {
@@ -76,6 +85,7 @@ const defaultPreparedUploadDependencies: UploadReceiptImageAndPrepareDraftDepend
   },
   loadDefaultCurrency: loadReceiptDefaultCurrency,
   loadReceiptCategories,
+  extractReceiptText: extractReceiptTextFromImage,
 };
 
 function validateReceiptImageFile(file: ReceiptUploadFile | null): asserts file is ReceiptUploadFile {
@@ -136,6 +146,44 @@ async function loadReceiptCategories(): Promise<ReceiptDraftCategory[]> {
   }));
 }
 
+async function safelyExtractReceiptText(args: {
+  file: ReceiptUploadFile | null;
+  upload: StagedImportIntakeResult;
+  extractReceiptText: UploadReceiptImageAndPrepareDraftDependencies["extractReceiptText"];
+}) {
+  if (!args.file) {
+    return {
+      status: "extraction_unavailable" as const,
+      text: null,
+      provider: "none" as const,
+      internalCode: "receipt_ocr_file_unavailable",
+    };
+  }
+
+  try {
+    return await args.extractReceiptText(args.file, {
+      importRecordId: args.upload.importRecordId,
+      storagePath: args.upload.storagePath,
+    });
+  } catch (error) {
+    console.warn("receipt_ocr_failed", {
+      code: "receipt_ocr_unhandled_exception",
+      status: "extraction_failed",
+      provider: "unknown",
+      importRecordId: args.upload.importRecordId,
+      storagePath: args.upload.storagePath,
+      errorName: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : undefined,
+    });
+    return {
+      status: "extraction_failed" as const,
+      text: null,
+      provider: "none" as const,
+      internalCode: "receipt_ocr_unhandled_exception",
+    };
+  }
+}
+
 export async function uploadReceiptImage(
   file: ReceiptUploadFile | null,
   dependencies: UploadReceiptImageDependencies = defaultDependencies,
@@ -187,7 +235,6 @@ export async function uploadReceiptImage(
 export async function uploadReceiptImageAndPrepareDraft(
   file: ReceiptUploadFile | null,
   dependencies: UploadReceiptImageAndPrepareDraftDependencies = defaultPreparedUploadDependencies,
-  extractedText?: string | null,
 ): Promise<ReceiptImagePreparedUploadResult | null> {
   const upload = await uploadReceiptImage(file, dependencies);
 
@@ -205,8 +252,13 @@ export async function uploadReceiptImageAndPrepareDraft(
     dependencies.loadDefaultCurrency(user.id),
     dependencies.loadReceiptCategories(),
   ]);
+  const extractionResult = await safelyExtractReceiptText({
+    file,
+    upload,
+    extractReceiptText: dependencies.extractReceiptText,
+  });
   const draft = buildReceiptDraft({
-    extractedText,
+    extractedText: extractionResult.text,
     originalFilename: upload.originalFilename,
     defaultCurrency,
     categories,
@@ -222,6 +274,7 @@ export async function uploadReceiptImageAndPrepareDraft(
       description: draft.description,
       merchantGuess: draft.merchantGuess,
       categoryId: draft.categoryId,
+      confidenceScore: draft.confidenceScore,
       reviewState: draft.reviewState,
       uncertaintyReason: draft.uncertaintyReason,
     },

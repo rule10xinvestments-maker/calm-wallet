@@ -31,8 +31,9 @@ describe("receipt draft extraction", () => {
       description: "Receipt from Mega Image",
       merchantGuess: "Mega Image",
       categoryId: "33333333-3333-3333-3333-333333333333",
+      confidenceScore: 0.72,
       reviewState: "pending_review",
-      uncertaintyReason: null,
+      uncertaintyReason: "Receipt total was extracted automatically. Please review before saving.",
     });
   });
 
@@ -59,11 +60,45 @@ describe("receipt draft extraction", () => {
     expect(draft.transactionType).toBe("expense");
     expect(draft.amountMinor).toBeNull();
     expect(draft.currency).toBeNull();
+    expect(draft.confidenceScore).toBe(0);
     expect(draft.reviewState).toBe("needs_attention");
     expect(draft.uncertaintyReason).toBe("Receipt uploaded, but Calm Wallet could not extract a total yet.");
   });
 
   it("prefers explicit total lines over ordinary line-item amounts", () => {
     expect(extractReceiptTotalMinor("Milk 7.50\nBread 5.20\nTOTAL 12.70")).toBe(1270);
+  });
+
+  it("extracts Romanian comma-decimal totals and maps Lei to RON", () => {
+    const draft = buildReceiptDraft({
+      extractedText: "MEGA IMAGE\nPaine 5,20\nTOTAL 35,24 Lei",
+      originalFilename: "281.jpg",
+      defaultCurrency: "USD",
+      categories: [groceriesCategory],
+      now: new Date("2026-06-15T10:00:00.000Z"),
+    });
+
+    expect(draft.amountMinor).toBe(3524);
+    expect(draft.currency).toBe("RON");
+    expect(draft.merchantGuess).toBe("Mega Image");
+    expect(draft.categoryId).toBe(groceriesCategory.id);
+  });
+
+  it("does not select VAT totals as the receipt amount", () => {
+    expect(
+      extractReceiptTotalMinor(
+        [
+          "MEGA IMAGE",
+          "Lapte 12,50",
+          "TOTAL 35,24",
+          "TOTAL TVA 3,19",
+          "TVA 9% 2,91",
+        ].join("\n"),
+      ),
+    ).toBe(3524);
+  });
+
+  it("leaves amount missing when no reliable total is visible", () => {
+    expect(extractReceiptTotalMinor("MEGA IMAGE\nLapte 12,50\nPaine 4,99\nTVA 1,57")).toBeNull();
   });
 });

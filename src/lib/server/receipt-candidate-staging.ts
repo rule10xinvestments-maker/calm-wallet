@@ -21,6 +21,7 @@ export type StageReceiptCandidateInput = {
   description?: string | null;
   merchantGuess?: string | null;
   categoryId?: string | null;
+  confidenceScore?: number | null;
   reviewState?: "pending_review" | "needs_attention";
   uncertaintyReason?: string | null;
 };
@@ -90,7 +91,7 @@ export async function stageReceiptCandidate(
     description: input.description,
     merchantGuess: input.merchantGuess,
     categoryId: input.categoryId ?? (memoryMatch?.strength === "strong" ? memoryMatch.category.id : null),
-    confidenceScore: input.reviewState === "needs_attention" ? 0 : null,
+    confidenceScore: input.confidenceScore ?? (input.reviewState === "needs_attention" ? 0 : null),
     reviewState: input.reviewState ?? "pending_review",
     acceptanceState: "pending",
     uncertaintyReason: input.uncertaintyReason ?? null,

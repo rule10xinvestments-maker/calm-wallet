@@ -13,6 +13,7 @@ export type ReceiptDraft = {
   description: string;
   merchantGuess: string | null;
   categoryId: string | null;
+  confidenceScore: number | null;
   reviewState: "pending_review" | "needs_attention";
   uncertaintyReason: string | null;
 };
@@ -39,6 +40,8 @@ const totalLinePatterns = [
   /\b(?:suma|valoare)\b[^\d]{0,24}(\d{1,6}(?:[.,]\d{2})?)/i,
 ];
 
+const totalExclusionPattern = /\b(?:tva|vat|tax|subtotal|sub\s*total|rest|change|cash|card|visa|mastercard)\b/i;
+
 function normalizeCurrency(value: string | null | undefined, fallback: string) {
   const normalized = value?.trim().toUpperCase();
   return normalized && /^[A-Z]{3}$/.test(normalized) ? normalized : fallback;
@@ -57,6 +60,10 @@ function parseMoneyToMinor(value: string) {
 
 export function extractReceiptTotalMinor(text: string) {
   for (const line of text.split(/\r?\n/).reverse()) {
+    if (totalExclusionPattern.test(line)) {
+      continue;
+    }
+
     for (const pattern of totalLinePatterns) {
       const match = line.match(pattern);
       const amount = match?.[1] ? parseMoneyToMinor(match[1]) : null;
@@ -99,7 +106,27 @@ function guessMerchant(text: string) {
     .map((value) => value.trim())
     .find((value) => value.length >= 3 && /[a-z]/i.test(value) && !/\btotal\b/i.test(value));
 
-  return line?.slice(0, 120) ?? null;
+  return normalizeMerchant(line)?.slice(0, 120) ?? null;
+}
+
+function normalizeMerchant(value: string | null | undefined) {
+  const normalized = value?.trim().replace(/\s+/g, " ") ?? "";
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^mega\s+image$/i.test(normalized)) {
+    return "Mega Image";
+  }
+
+  if (normalized === normalized.toUpperCase()) {
+    return normalized
+      .toLowerCase()
+      .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+  }
+
+  return normalized;
 }
 
 export function buildReceiptDraft(args: {
@@ -131,6 +158,7 @@ export function buildReceiptDraft(args: {
       description: `Receipt image: ${args.originalFilename}`,
       merchantGuess,
       categoryId: groceriesLike ? groceriesCategory?.id ?? null : null,
+      confidenceScore: 0,
       reviewState: "needs_attention",
       uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
     };
@@ -144,7 +172,8 @@ export function buildReceiptDraft(args: {
     description: merchantGuess ? `Receipt from ${merchantGuess}` : `Receipt image: ${args.originalFilename}`,
     merchantGuess,
     categoryId: groceriesLike ? groceriesCategory?.id ?? null : null,
+    confidenceScore: 0.72,
     reviewState: "pending_review",
-    uncertaintyReason: null,
+    uncertaintyReason: "Receipt total was extracted automatically. Please review before saving.",
   };
 }
