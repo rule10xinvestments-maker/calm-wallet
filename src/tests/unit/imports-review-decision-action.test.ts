@@ -348,6 +348,25 @@ describe("imports review decision action", () => {
     });
   });
 
+  it("returns a narrow safe code for transaction date validation failures", async () => {
+    reviewImportCandidate.mockRejectedValueOnce(
+      new ReceiptSaveError(
+        "receipt_save_transaction_payload_invalid",
+        "Receipt transaction payload is invalid.",
+        "RS-VALIDATION-DATE",
+      ),
+    );
+
+    const { reviewImportCandidateAction } = await import("@/lib/actions/imports");
+    const result = await reviewImportCandidateAction(initialImportCandidateReviewDecisionActionState, makeFormData());
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Receipt could not be saved right now. Code: RS-VALIDATION-DATE",
+      decisionResult: null,
+    });
+  });
+
   it("returns the expected review-decision action result shape", async () => {
     reviewImportCandidate.mockResolvedValueOnce({
       decision: "reject",

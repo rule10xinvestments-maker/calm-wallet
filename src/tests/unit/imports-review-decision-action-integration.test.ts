@@ -11,7 +11,7 @@ function makeCandidate(overrides: Record<string, unknown> = {}) {
     transactionType: "expense" as const,
     amountMinor: null,
     currency: "RON",
-    occurredAt: "2026-06-20T10:00:00.000Z",
+    occurredAt: "2026-06-20T10:00:00+00:00",
     description: "Receipt image: 281.jpg",
     merchantGuess: null,
     categoryId: null,
@@ -20,8 +20,8 @@ function makeCandidate(overrides: Record<string, unknown> = {}) {
     acceptanceState: "pending" as const,
     acceptedTransactionId: null,
     uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
-    createdAt: "2026-06-20T10:00:00.000Z",
-    updatedAt: "2026-06-20T10:00:00.000Z",
+    createdAt: "2026-06-20T10:00:00+00:00",
+    updatedAt: "2026-06-20T10:00:00+00:00",
     ...overrides,
   };
 }
@@ -68,11 +68,11 @@ function makeTransaction(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeActivityReceiptFormData() {
+function makeActivityReceiptFormData(overrides: { amount?: string } = {}) {
   const formData = new FormData();
   formData.set("importCandidateId", "33333333-3333-3333-3333-333333333333");
   formData.set("decision", "accept");
-  formData.set("amount", "35");
+  formData.set("amount", overrides.amount ?? "35");
   formData.set("currency", "RON");
   formData.set("itemName", "Receipt image: 281.jpg");
   formData.set("merchant", "");
@@ -92,6 +92,7 @@ describe("imports review action integration", () => {
         itemName: input.itemName,
         merchant: input.merchant,
         note: input.note,
+        occurredAt: input.occurredAt,
         reviewState: input.reviewState,
         uncertaintyReason: input.uncertaintyReason,
       }),
@@ -153,6 +154,7 @@ describe("imports review action integration", () => {
         itemName: "Receipt image: 281.jpg",
         merchant: null,
         note: "Receipt image: 281.jpg",
+        occurredAt: "2026-06-20T10:00:00.000Z",
         importCandidateId: "33333333-3333-3333-3333-333333333333",
       }),
     );
@@ -175,5 +177,75 @@ describe("imports review action integration", () => {
     expect(result.decisionResult?.transactionCreated).toBe(true);
     expect(result.decisionResult?.transaction?.amountMinor).toBe(3500);
     expect(result.decisionResult?.candidate.acceptanceState).toBe("accepted");
+  });
+
+  it("saves the real Activity receipt payload with a decimal amount", async () => {
+    let candidate = makeCandidate();
+    const createTransaction = vi.fn(async (_userId, input) => ({
+      transaction: makeTransaction({
+        amountMinor: input.amountMinor,
+        occurredAt: input.occurredAt,
+      }),
+      eventCreated: true,
+    }));
+    const updateImportCandidateStatus = vi.fn(async (_userId, _candidateId, input) => {
+      candidate = makeCandidate({
+        reviewState: input.reviewState,
+        acceptanceState: input.acceptanceState,
+        acceptedTransactionId: input.acceptedTransactionId,
+      });
+      return candidate;
+    });
+
+    const result = await reviewImportCandidateAction(
+      initialImportCandidateReviewDecisionActionState,
+      makeActivityReceiptFormData({ amount: "35.24" }),
+      {
+        getCurrentUser: vi.fn(async () => mockUser()),
+        createImportCandidateService: vi.fn(async () => ({
+          getImportCandidateById: vi.fn(async () => candidate),
+          listImportCandidates: vi.fn(async () => [candidate]),
+          updateImportCandidateStatus,
+        })),
+        createImportRecordService: vi.fn(async () => ({
+          getImportRecordById: vi.fn(async () =>
+            makeImportRecord({
+              status: "parsing" as const,
+            }),
+          ),
+          updateImportRecordStatus: vi.fn(async (_userId, _recordId, input) =>
+            makeImportRecord({
+              status: input.status,
+              parseQuality: input.parseQuality,
+              failureReason: input.failureReason,
+            }),
+          ),
+        })),
+        createTransactionService: vi.fn(async () => ({
+          listTransactions: vi.fn(async () => []),
+          createTransaction,
+        })),
+        loadCategoryOptions: vi.fn(async () => [
+          {
+            id: "22222222-2222-4222-9222-222222222222",
+            slug: "groceries",
+            label: "Groceries",
+            direction: "expense" as const,
+          },
+        ]),
+      },
+    );
+
+    expect(result.status).toBe("success");
+    expect(createTransaction).toHaveBeenCalledOnce();
+    expect(createTransaction.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        amountMinor: 3524,
+        currency: "RON",
+        occurredAt: "2026-06-20T10:00:00.000Z",
+        merchant: null,
+      }),
+    );
+    expect(result.decisionResult?.transactionCreated).toBe(true);
   });
 });

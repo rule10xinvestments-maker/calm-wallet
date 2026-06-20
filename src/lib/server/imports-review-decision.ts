@@ -70,6 +70,15 @@ export type ReceiptSaveSupportCode =
   | "RS-CATEGORY"
   | "RS-AMOUNT"
   | "RS-VALIDATION"
+  | "RS-VALIDATION-AMOUNT"
+  | "RS-VALIDATION-CURRENCY"
+  | "RS-VALIDATION-CATEGORY"
+  | "RS-VALIDATION-DATE"
+  | "RS-VALIDATION-TYPE"
+  | "RS-VALIDATION-TITLE"
+  | "RS-VALIDATION-MERCHANT"
+  | "RS-VALIDATION-NOTE"
+  | "RS-VALIDATION-PAYLOAD"
   | "RS-INSERT"
   | "RS-RESOLVE"
   | "RS-REFRESH";
@@ -116,6 +125,7 @@ function logReceiptSaveFailure(args: {
   importCandidateId?: string | null;
   importRecordId?: string | null;
   payloadSummary?: ReceiptSavePayloadSummary;
+  validationPaths?: string[];
   error?: unknown;
 }) {
   const errorWithMetadata = args.error as { code?: unknown; message?: unknown } | null;
@@ -126,6 +136,7 @@ function logReceiptSaveFailure(args: {
     importCandidateId: args.importCandidateId ?? null,
     importRecordId: args.importRecordId ?? null,
     payloadSummary: args.payloadSummary ?? null,
+    validationPaths: args.validationPaths ?? undefined,
     errorName: args.error instanceof Error ? args.error.name : typeof args.error,
     errorCode:
       args.error instanceof ReceiptSaveError
@@ -168,6 +179,14 @@ type ReceiptSavePayloadSummary = {
   merchant: "blank" | "present" | "missing";
 };
 
+type ZodLikeIssue = {
+  path?: Array<string | number>;
+};
+
+type ZodLikeError = Error & {
+  issues?: ZodLikeIssue[];
+};
+
 function summarizeReceiptSavePayload(input: Partial<ReviewImportCandidateInput>, resolvedCategoryId?: string | null) {
   return {
     decision: input.decision,
@@ -200,6 +219,41 @@ function isSupportedImportType(value: string): value is "receipt_image" | "csv_i
   return SUPPORTED_IMPORT_TYPES.includes(value as "receipt_image" | "csv_import");
 }
 
+function normalizeTransactionDate(value: string | null | undefined) {
+  if (!value) {
+    return value;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : value;
+}
+
+function getValidationPaths(error: unknown) {
+  if (!(error instanceof Error) || error.name !== "ZodError") {
+    return [];
+  }
+
+  const issues = (error as ZodLikeError).issues ?? [];
+  return issues
+    .map((issue) => issue.path?.join(".") ?? "")
+    .filter(Boolean);
+}
+
+function getValidationSupportCode(error: unknown): ReceiptSaveSupportCode {
+  const paths = getValidationPaths(error);
+
+  if (paths.includes("amountMinor")) return "RS-VALIDATION-AMOUNT";
+  if (paths.includes("currency")) return "RS-VALIDATION-CURRENCY";
+  if (paths.includes("categoryId")) return "RS-VALIDATION-CATEGORY";
+  if (paths.includes("occurredAt")) return "RS-VALIDATION-DATE";
+  if (paths.includes("transactionType")) return "RS-VALIDATION-TYPE";
+  if (paths.includes("itemName")) return "RS-VALIDATION-TITLE";
+  if (paths.includes("merchant")) return "RS-VALIDATION-MERCHANT";
+  if (paths.includes("note")) return "RS-VALIDATION-NOTE";
+
+  return paths.length ? "RS-VALIDATION-PAYLOAD" : "RS-VALIDATION";
+}
+
 function mapCandidateToTransactionInput(args: {
   candidate: ImportCandidate;
   importType: "receipt_image" | "csv_import";
@@ -222,7 +276,7 @@ function mapCandidateToTransactionInput(args: {
   const merchant = hasOverride("merchant") ? overrides?.merchant : candidate.merchantGuess;
   const note = overrides?.note ?? candidate.description;
   const categoryId = hasOverride("categoryId") ? overrides?.categoryId : candidate.categoryId;
-  const occurredAt = candidate.occurredAt ?? candidate.createdAt;
+  const occurredAt = normalizeTransactionDate(candidate.occurredAt ?? candidate.createdAt);
 
   if (!transactionType || !amountMinor || !currency || !occurredAt) {
     throw new Error("Accepted candidate is missing required transaction fields.");
@@ -629,6 +683,7 @@ export async function reviewImportCandidate(
       importCandidateId: candidate.id,
       importRecordId: candidate.importRecordId,
       payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+      validationPaths: isValidationError ? getValidationPaths(error) : undefined,
       error,
     });
     if (isMissingRequiredFields) {
@@ -639,10 +694,11 @@ export async function reviewImportCandidate(
       );
     }
     if (isValidationError) {
+      const supportCode = getValidationSupportCode(error);
       throw new ReceiptSaveError(
         "receipt_save_transaction_payload_invalid",
         "Receipt transaction payload is invalid.",
-        "RS-VALIDATION",
+        supportCode,
       );
     }
     if (!(error instanceof ReceiptSaveError)) {
