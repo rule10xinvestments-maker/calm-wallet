@@ -161,6 +161,6 @@ export const reviewImportCandidateSchema = z.object({
   currency: currencySchema.nullable().optional(),
   itemName: z.string().trim().max(120).nullable().optional(),
   merchant: z.string().trim().max(120).nullable().optional(),
-  categoryId: idSchema.nullable().optional(),
+  categoryId: z.string().trim().max(120).nullable().optional(),
   note: z.string().trim().max(240).nullable().optional(),
 });

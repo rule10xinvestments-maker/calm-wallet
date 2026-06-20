@@ -49,6 +49,7 @@ import {
   type IngestImportParserResultDependencies,
 } from "@/lib/server/imports-parser-result-ingestion";
 import {
+  ReceiptSaveError,
   reviewImportCandidate,
   type ReviewImportCandidateDependencies,
 } from "@/lib/server/imports-review-decision";
@@ -90,6 +91,10 @@ function getReceiptUploadErrorMessage(error: unknown) {
 function getImportReviewErrorMessage(error: unknown) {
   if (error instanceof Error && error.message === "Receipt save requires sign in.") {
     return "Please sign in again to save this receipt.";
+  }
+
+  if (error instanceof ReceiptSaveError && error.code === "receipt_save_category_invalid") {
+    return "Please choose a category again.";
   }
 
   if (error instanceof Error && error.message === "Accepted candidate is missing required transaction fields.") {

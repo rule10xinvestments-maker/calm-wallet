@@ -2,8 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initialImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
 
 const reviewImportCandidate = vi.fn();
+class ReceiptSaveError extends Error {
+  code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "ReceiptSaveError";
+    this.code = code;
+  }
+}
 
 vi.mock("@/lib/server/imports-review-decision", () => ({
+  ReceiptSaveError,
   reviewImportCandidate,
 }));
 
@@ -316,6 +326,24 @@ describe("imports review decision action", () => {
     });
     expect(result.message).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
     expect(result.message).not.toContain("invalid_type");
+  });
+
+  it("returns category-specific copy for invalid receipt category values", async () => {
+    reviewImportCandidate.mockRejectedValueOnce(
+      new ReceiptSaveError("receipt_save_category_invalid", "Receipt save category is invalid."),
+    );
+
+    const { reviewImportCandidateAction } = await import("@/lib/actions/imports");
+    const result = await reviewImportCandidateAction(
+      initialImportCandidateReviewDecisionActionState,
+      makeFormData({ categoryId: "Groceries" }),
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Please choose a category again.",
+      decisionResult: null,
+    });
   });
 
   it("returns the expected review-decision action result shape", async () => {

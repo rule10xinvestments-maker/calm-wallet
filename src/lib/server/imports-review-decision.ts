@@ -13,6 +13,7 @@ import {
   type CategoryMemoryService,
 } from "@/domain/category-memory/service";
 import { getCurrentUser } from "@/lib/auth/session";
+import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import {
   completeOwnedImportReviewIfReady,
   type ImportReviewCompletionResult,
@@ -27,6 +28,7 @@ export type ReviewImportCandidateDependencies = {
   createImportRecordService: () => Promise<Pick<ImportRecordService, "getImportRecordById" | "updateImportRecordStatus">>;
   createTransactionService: () => Promise<Pick<TransactionService, "createTransaction" | "listTransactions">>;
   createCategoryMemoryService?: () => Promise<Pick<CategoryMemoryService, "recordCategoryCorrectionMemory">>;
+  loadCategoryOptions?: () => Promise<ReceiptSaveCategoryOption[]>;
 };
 
 export type ReviewImportCandidateResult = {
@@ -43,7 +45,65 @@ const defaultDependencies: ReviewImportCandidateDependencies = {
   createImportRecordService: createSupabaseImportRecordService,
   createTransactionService: createSupabaseTransactionService,
   createCategoryMemoryService: createSupabaseCategoryMemoryService,
+  loadCategoryOptions: loadReceiptSaveCategoryOptions,
 };
+
+type ReceiptSaveFailureCode =
+  | "receipt_save_payload_invalid"
+  | "receipt_save_candidate_not_found"
+  | "receipt_save_category_invalid"
+  | "receipt_save_transaction_insert_failed"
+  | "receipt_save_candidate_resolve_failed";
+
+type ReceiptSaveCategoryOption = {
+  id: string;
+  slug: string;
+  label: string;
+  direction: "expense" | "income" | "both";
+};
+
+export class ReceiptSaveError extends Error {
+  code: ReceiptSaveFailureCode;
+
+  constructor(code: ReceiptSaveFailureCode, message: string) {
+    super(message);
+    this.name = "ReceiptSaveError";
+    this.code = code;
+  }
+}
+
+async function loadReceiptSaveCategoryOptions(): Promise<ReceiptSaveCategoryOption[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("categories")
+    .select("id,slug,label,direction")
+    .eq("is_active", true)
+    .order("sort_order");
+
+  return (data ?? []).map((category) => ({
+    id: category.id,
+    slug: category.slug,
+    label: category.label,
+    direction: category.direction,
+  }));
+}
+
+function logReceiptSaveFailure(args: {
+  code: ReceiptSaveFailureCode;
+  stage: string;
+  importCandidateId?: string | null;
+  importRecordId?: string | null;
+  error?: unknown;
+}) {
+  console.error("receipt_save_failed", {
+    code: args.code,
+    stage: args.stage,
+    importCandidateId: args.importCandidateId ?? null,
+    importRecordId: args.importRecordId ?? null,
+    errorName: args.error instanceof Error ? args.error.name : typeof args.error,
+    errorCode: args.error instanceof ReceiptSaveError ? args.error.code : undefined,
+  });
+}
 
 function isSupportedImportType(value: string): value is "receipt_image" | "csv_import" {
   return SUPPORTED_IMPORT_TYPES.includes(value as "receipt_image" | "csv_import");
@@ -62,24 +122,28 @@ function mapCandidateToTransactionInput(args: {
   };
 }): CreateTransactionInput {
   const { candidate, importType, overrides } = args;
+  const hasOverride = (key: keyof NonNullable<typeof overrides>) =>
+    Boolean(overrides && Object.prototype.hasOwnProperty.call(overrides, key));
+  const transactionType = candidate.transactionType ?? (importType === "receipt_image" ? "expense" : null);
   const amountMinor = overrides?.amountMinor ?? candidate.amountMinor;
   const currency = overrides?.currency ?? candidate.currency;
   const itemName = overrides?.itemName ?? candidate.description ?? candidate.merchantGuess;
-  const merchant = overrides?.merchant ?? candidate.merchantGuess;
+  const merchant = hasOverride("merchant") ? overrides?.merchant : candidate.merchantGuess;
   const note = overrides?.note ?? candidate.description;
-  const categoryId = overrides?.categoryId ?? candidate.categoryId;
+  const categoryId = hasOverride("categoryId") ? overrides?.categoryId : candidate.categoryId;
+  const occurredAt = candidate.occurredAt ?? candidate.createdAt;
 
-  if (!candidate.transactionType || !amountMinor || !currency || !candidate.occurredAt) {
+  if (!transactionType || !amountMinor || !currency || !occurredAt) {
     throw new Error("Accepted candidate is missing required transaction fields.");
   }
 
   const needsReview = candidate.reviewState === "needs_attention";
 
   return {
-    transactionType: candidate.transactionType,
+    transactionType,
     amountMinor,
     currency,
-    occurredAt: candidate.occurredAt,
+    occurredAt,
     categoryId,
     itemName,
     merchant,
@@ -92,6 +156,58 @@ function mapCandidateToTransactionInput(args: {
     importRecordId: candidate.importRecordId,
     importCandidateId: candidate.id,
   };
+}
+
+function normalizeCategoryLookupValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function looksLikeUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function categorySupportsTransactionType(category: ReceiptSaveCategoryOption, transactionType: "expense" | "income" | null) {
+  return !transactionType || category.direction === "both" || category.direction === transactionType;
+}
+
+async function resolveCategoryId(args: {
+  value: string | null | undefined;
+  transactionType: "expense" | "income" | null;
+  dependencies: ReviewImportCandidateDependencies;
+  importCandidateId: string;
+  importRecordId: string;
+}) {
+  const value = args.value?.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  if (looksLikeUuid(value)) {
+    return value;
+  }
+
+  const categories = args.dependencies.loadCategoryOptions ? await args.dependencies.loadCategoryOptions() : [];
+  const normalized = normalizeCategoryLookupValue(value);
+  const match = categories.find(
+    (category) =>
+      categorySupportsTransactionType(category, args.transactionType) &&
+      (category.id === value ||
+        normalizeCategoryLookupValue(category.slug) === normalized ||
+        normalizeCategoryLookupValue(category.label) === normalized),
+  );
+
+  if (!match) {
+    logReceiptSaveFailure({
+      code: "receipt_save_category_invalid",
+      stage: "resolve_category",
+      importCandidateId: args.importCandidateId,
+      importRecordId: args.importRecordId,
+    });
+    throw new ReceiptSaveError("receipt_save_category_invalid", "Receipt save category is invalid.");
+  }
+
+  return match.id;
 }
 
 async function recordAcceptedCandidateMemory(args: {
@@ -140,7 +256,20 @@ export async function reviewImportCandidate(
     throw new Error("Receipt save requires sign in.");
   }
 
-  const parsed = reviewImportCandidateSchema.parse(input);
+  let parsed: ReturnType<typeof reviewImportCandidateSchema.parse>;
+
+  try {
+    parsed = reviewImportCandidateSchema.parse(input);
+  } catch (error) {
+    logReceiptSaveFailure({
+      code: "receipt_save_payload_invalid",
+      stage: "parse_payload",
+      importCandidateId: input.importCandidateId,
+      error,
+    });
+    throw new ReceiptSaveError("receipt_save_payload_invalid", "Receipt save payload is invalid.");
+  }
+
   const importCandidateService = await dependencies.createImportCandidateService();
   let candidate: ImportCandidate;
 
@@ -148,6 +277,12 @@ export async function reviewImportCandidate(
     candidate = await importCandidateService.getImportCandidateById(user.id, parsed.importCandidateId);
   } catch (error) {
     if (error instanceof Error && error.message === "Import candidate not found.") {
+      logReceiptSaveFailure({
+        code: "receipt_save_candidate_not_found",
+        stage: "load_candidate",
+        importCandidateId: parsed.importCandidateId,
+        error,
+      });
       return null;
     }
 
@@ -247,9 +382,20 @@ export async function reviewImportCandidate(
     };
   }
 
-  const createdTransaction = await transactionService.createTransaction(
-    user.id,
-    mapCandidateToTransactionInput({
+  const transactionType = candidate.transactionType ?? (importRecord.importType === "receipt_image" ? "expense" : null);
+  const categoryId = await resolveCategoryId({
+    value: parsed.categoryId ?? candidate.categoryId,
+    transactionType,
+    dependencies,
+    importCandidateId: candidate.id,
+    importRecordId: candidate.importRecordId,
+  });
+  let createdTransaction: Awaited<ReturnType<TransactionService["createTransaction"]>>;
+
+  try {
+    createdTransaction = await transactionService.createTransaction(
+      user.id,
+      mapCandidateToTransactionInput({
       candidate,
       importType: importRecord.importType,
       overrides: {
@@ -257,17 +403,41 @@ export async function reviewImportCandidate(
         currency: parsed.currency,
         itemName: parsed.itemName,
         merchant: parsed.merchant,
-        categoryId: parsed.categoryId,
+          categoryId,
         note: parsed.note,
       },
-    }),
-    { actorType: "user" },
-  );
-  const acceptedCandidate = await importCandidateService.updateImportCandidateStatus(user.id, candidate.id, {
-    reviewState: "reviewed",
-    acceptanceState: "accepted",
-    acceptedTransactionId: createdTransaction.transaction.id,
-  });
+      }),
+      { actorType: "user" },
+    );
+  } catch (error) {
+    logReceiptSaveFailure({
+      code: "receipt_save_transaction_insert_failed",
+      stage: "create_transaction",
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      error,
+    });
+    throw error;
+  }
+
+  let acceptedCandidate: ImportCandidate;
+
+  try {
+    acceptedCandidate = await importCandidateService.updateImportCandidateStatus(user.id, candidate.id, {
+      reviewState: "reviewed",
+      acceptanceState: "accepted",
+      acceptedTransactionId: createdTransaction.transaction.id,
+    });
+  } catch (error) {
+    logReceiptSaveFailure({
+      code: "receipt_save_candidate_resolve_failed",
+      stage: "resolve_candidate",
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      error,
+    });
+    throw error;
+  }
   const reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
     importRecordService,
     importCandidateService,
