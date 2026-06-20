@@ -4,11 +4,13 @@ import { initialImportCandidateReviewDecisionActionState } from "@/lib/actions/i
 const reviewImportCandidate = vi.fn();
 class ReceiptSaveError extends Error {
   code: string;
+  supportCode: string;
 
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, supportCode = "RS-UNKNOWN") {
     super(message);
     this.name = "ReceiptSaveError";
     this.code = code;
+    this.supportCode = supportCode;
   }
 }
 
@@ -238,7 +240,7 @@ describe("imports review decision action", () => {
 
     expect(result).toEqual({
       status: "error",
-      message: "Receipt could not be saved right now. Please try again.",
+      message: "Receipt could not be saved right now. Code: RS-CANDIDATE",
       decisionResult: null,
     });
   });
@@ -306,7 +308,7 @@ describe("imports review decision action", () => {
 
     expect(result).toEqual({
       status: "error",
-      message: "Receipt could not be saved right now. Please try again.",
+      message: "Receipt could not be saved right now. Code: RS-UNKNOWN",
       decisionResult: null,
     });
   });
@@ -321,7 +323,7 @@ describe("imports review decision action", () => {
 
     expect(result).toEqual({
       status: "error",
-      message: "Receipt could not be saved right now. Please try again.",
+      message: "Receipt could not be saved right now. Code: RS-UNKNOWN",
       decisionResult: null,
     });
     expect(result.message).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
@@ -330,7 +332,7 @@ describe("imports review decision action", () => {
 
   it("returns category-specific copy for invalid receipt category values", async () => {
     reviewImportCandidate.mockRejectedValueOnce(
-      new ReceiptSaveError("receipt_save_category_invalid", "Receipt save category is invalid."),
+      new ReceiptSaveError("receipt_save_category_invalid", "Receipt save category is invalid.", "RS-CATEGORY"),
     );
 
     const { reviewImportCandidateAction } = await import("@/lib/actions/imports");
@@ -341,7 +343,7 @@ describe("imports review decision action", () => {
 
     expect(result).toEqual({
       status: "error",
-      message: "Please choose a category again.",
+      message: "Please choose a category again. Code: RS-CATEGORY",
       decisionResult: null,
     });
   });

@@ -85,7 +85,7 @@ export async function completeOwnedImportReviewIfReady(
     };
   }
 
-  if (importRecord.status !== "parsed") {
+  if (importRecord.status !== "parsed" && importRecord.importType !== "receipt_image") {
     throw new Error("Only parsed import records can be marked as reviewed.");
   }
 

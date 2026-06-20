@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUser } from "@/tests/unit/test-users";
-import { reviewImportCandidate } from "@/lib/server/imports-review-decision";
+import { ReceiptSaveError, reviewImportCandidate } from "@/lib/server/imports-review-decision";
 
 function makeCandidate(overrides: Record<string, unknown> = {}) {
   return {
@@ -558,7 +558,11 @@ describe("imports review decision", () => {
           })),
         },
       ),
-    ).rejects.toThrow("insert violates row-level security policy");
+    ).rejects.toMatchObject({
+      name: "ReceiptSaveError",
+      code: "receipt_save_transaction_insert_failed",
+      supportCode: "RS-INSERT",
+    } satisfies Partial<ReceiptSaveError>);
 
     expect(createTransaction).toHaveBeenCalledOnce();
     expect(updateImportCandidateStatus).not.toHaveBeenCalled();

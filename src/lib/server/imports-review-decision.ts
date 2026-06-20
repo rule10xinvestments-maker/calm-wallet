@@ -6,6 +6,7 @@ import {
 } from "@/domain/imports/service";
 import { reviewImportCandidateSchema } from "@/domain/imports/schemas";
 import type { ImportCandidate, ReviewImportCandidateInput } from "@/domain/imports/types";
+import { createTransactionSchema } from "@/domain/transactions/schemas";
 import { createSupabaseTransactionService, type TransactionService } from "@/domain/transactions/service";
 import type { CreateTransactionInput, Transaction } from "@/domain/transactions/types";
 import {
@@ -50,10 +51,28 @@ const defaultDependencies: ReviewImportCandidateDependencies = {
 
 type ReceiptSaveFailureCode =
   | "receipt_save_payload_invalid"
+  | "receipt_save_auth_missing"
   | "receipt_save_candidate_not_found"
+  | "receipt_save_import_record_not_found"
+  | "receipt_save_candidate_already_reviewed"
   | "receipt_save_category_invalid"
+  | "receipt_save_transaction_payload_invalid"
   | "receipt_save_transaction_insert_failed"
-  | "receipt_save_candidate_resolve_failed";
+  | "receipt_save_candidate_resolve_failed"
+  | "receipt_save_read_model_refresh_failed";
+
+export type ReceiptSaveSupportCode =
+  | "RS-PAYLOAD"
+  | "RS-AUTH"
+  | "RS-CANDIDATE"
+  | "RS-RECORD"
+  | "RS-STATE"
+  | "RS-CATEGORY"
+  | "RS-AMOUNT"
+  | "RS-VALIDATION"
+  | "RS-INSERT"
+  | "RS-RESOLVE"
+  | "RS-REFRESH";
 
 type ReceiptSaveCategoryOption = {
   id: string;
@@ -64,11 +83,13 @@ type ReceiptSaveCategoryOption = {
 
 export class ReceiptSaveError extends Error {
   code: ReceiptSaveFailureCode;
+  supportCode: ReceiptSaveSupportCode;
 
-  constructor(code: ReceiptSaveFailureCode, message: string) {
+  constructor(code: ReceiptSaveFailureCode, message: string, supportCode: ReceiptSaveSupportCode) {
     super(message);
     this.name = "ReceiptSaveError";
     this.code = code;
+    this.supportCode = supportCode;
   }
 }
 
@@ -91,17 +112,87 @@ async function loadReceiptSaveCategoryOptions(): Promise<ReceiptSaveCategoryOpti
 function logReceiptSaveFailure(args: {
   code: ReceiptSaveFailureCode;
   stage: string;
+  userId?: string | null;
   importCandidateId?: string | null;
   importRecordId?: string | null;
+  payloadSummary?: ReceiptSavePayloadSummary;
   error?: unknown;
 }) {
+  const errorWithMetadata = args.error as { code?: unknown; message?: unknown } | null;
   console.error("receipt_save_failed", {
     code: args.code,
     stage: args.stage,
+    userId: args.userId ?? null,
     importCandidateId: args.importCandidateId ?? null,
     importRecordId: args.importRecordId ?? null,
+    payloadSummary: args.payloadSummary ?? null,
     errorName: args.error instanceof Error ? args.error.name : typeof args.error,
-    errorCode: args.error instanceof ReceiptSaveError ? args.error.code : undefined,
+    errorCode:
+      args.error instanceof ReceiptSaveError
+        ? args.error.code
+        : typeof errorWithMetadata?.code === "string"
+          ? errorWithMetadata.code
+          : undefined,
+    errorMessage:
+      args.error instanceof Error
+        ? args.error.message
+        : typeof errorWithMetadata?.message === "string"
+          ? errorWithMetadata.message
+          : undefined,
+  });
+}
+
+type ReceiptSaveStage =
+  | "payload_received"
+  | "payload_normalized"
+  | "auth_checked"
+  | "candidate_loaded"
+  | "candidate_ownership_checked"
+  | "category_resolved"
+  | "transaction_payload_built"
+  | "transaction_validation_passed"
+  | "transaction_insert_attempted"
+  | "transaction_insert_succeeded"
+  | "candidate_resolve_attempted"
+  | "candidate_resolve_succeeded"
+  | "read_model_refresh_attempted"
+  | "action_response_returned";
+
+type ReceiptSavePayloadSummary = {
+  decision?: string;
+  amountPresent: boolean;
+  amountType: string;
+  currency: string | null;
+  categoryInputPresent: boolean;
+  categoryResolvedIdPresent?: boolean;
+  merchant: "blank" | "present" | "missing";
+};
+
+function summarizeReceiptSavePayload(input: Partial<ReviewImportCandidateInput>, resolvedCategoryId?: string | null) {
+  return {
+    decision: input.decision,
+    amountPresent: input.amountMinor !== null && input.amountMinor !== undefined,
+    amountType: typeof input.amountMinor,
+    currency: input.currency ?? null,
+    categoryInputPresent: Boolean(input.categoryId?.trim()),
+    ...(resolvedCategoryId !== undefined ? { categoryResolvedIdPresent: Boolean(resolvedCategoryId) } : {}),
+    merchant: input.merchant === null ? "blank" : input.merchant ? "present" : "missing",
+  } satisfies ReceiptSavePayloadSummary;
+}
+
+function logReceiptSaveStage(args: {
+  stage: ReceiptSaveStage;
+  userId?: string | null;
+  importCandidateId?: string | null;
+  importRecordId?: string | null;
+  payloadSummary?: ReceiptSavePayloadSummary;
+}) {
+  console.info("receipt_save_stage", {
+    stage: args.stage,
+    userId: args.userId ?? null,
+    importCandidateId: args.importCandidateId ?? null,
+    importRecordId: args.importRecordId ?? null,
+    payloadSummary: args.payloadSummary ?? null,
   });
 }
 
@@ -203,8 +294,11 @@ async function resolveCategoryId(args: {
       stage: "resolve_category",
       importCandidateId: args.importCandidateId,
       importRecordId: args.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload({
+        categoryId: args.value,
+      }),
     });
-    throw new ReceiptSaveError("receipt_save_category_invalid", "Receipt save category is invalid.");
+    throw new ReceiptSaveError("receipt_save_category_invalid", "Receipt save category is invalid.", "RS-CATEGORY");
   }
 
   return match.id;
@@ -250,24 +344,50 @@ export async function reviewImportCandidate(
   input: ReviewImportCandidateInput,
   dependencies: ReviewImportCandidateDependencies = defaultDependencies,
 ): Promise<ReviewImportCandidateResult | null> {
+  logReceiptSaveStage({
+    stage: "payload_received",
+    importCandidateId: input.importCandidateId,
+    payloadSummary: summarizeReceiptSavePayload(input),
+  });
+
   const user = await dependencies.getCurrentUser();
 
   if (!user) {
-    throw new Error("Receipt save requires sign in.");
+    logReceiptSaveFailure({
+      code: "receipt_save_auth_missing",
+      stage: "auth_checked",
+      importCandidateId: input.importCandidateId,
+      payloadSummary: summarizeReceiptSavePayload(input),
+    });
+    throw new ReceiptSaveError("receipt_save_auth_missing", "Receipt save requires sign in.", "RS-AUTH");
   }
+  logReceiptSaveStage({
+    stage: "auth_checked",
+    userId: user.id,
+    importCandidateId: input.importCandidateId,
+    payloadSummary: summarizeReceiptSavePayload(input),
+  });
 
   let parsed: ReturnType<typeof reviewImportCandidateSchema.parse>;
 
   try {
     parsed = reviewImportCandidateSchema.parse(input);
+    logReceiptSaveStage({
+      stage: "payload_normalized",
+      userId: user.id,
+      importCandidateId: parsed.importCandidateId,
+      payloadSummary: summarizeReceiptSavePayload(parsed),
+    });
   } catch (error) {
     logReceiptSaveFailure({
       code: "receipt_save_payload_invalid",
       stage: "parse_payload",
+      userId: user.id,
       importCandidateId: input.importCandidateId,
+      payloadSummary: summarizeReceiptSavePayload(input),
       error,
     });
-    throw new ReceiptSaveError("receipt_save_payload_invalid", "Receipt save payload is invalid.");
+    throw new ReceiptSaveError("receipt_save_payload_invalid", "Receipt save payload is invalid.", "RS-PAYLOAD");
   }
 
   const importCandidateService = await dependencies.createImportCandidateService();
@@ -280,7 +400,9 @@ export async function reviewImportCandidate(
       logReceiptSaveFailure({
         code: "receipt_save_candidate_not_found",
         stage: "load_candidate",
+        userId: user.id,
         importCandidateId: parsed.importCandidateId,
+        payloadSummary: summarizeReceiptSavePayload(parsed),
         error,
       });
       return null;
@@ -288,6 +410,20 @@ export async function reviewImportCandidate(
 
     throw error;
   }
+  logReceiptSaveStage({
+    stage: "candidate_loaded",
+    userId: user.id,
+    importCandidateId: candidate.id,
+    importRecordId: candidate.importRecordId,
+    payloadSummary: summarizeReceiptSavePayload(parsed),
+  });
+  logReceiptSaveStage({
+    stage: "candidate_ownership_checked",
+    userId: user.id,
+    importCandidateId: candidate.id,
+    importRecordId: candidate.importRecordId,
+    payloadSummary: summarizeReceiptSavePayload(parsed),
+  });
 
   const importRecordService = await dependencies.createImportRecordService();
   let importRecord: Awaited<ReturnType<ImportRecordService["getImportRecordById"]>>;
@@ -296,6 +432,15 @@ export async function reviewImportCandidate(
     importRecord = await importRecordService.getImportRecordById(user.id, candidate.importRecordId);
   } catch (error) {
     if (error instanceof Error && error.message === "Import record not found.") {
+      logReceiptSaveFailure({
+        code: "receipt_save_import_record_not_found",
+        stage: "load_import_record",
+        userId: user.id,
+        importCandidateId: candidate.id,
+        importRecordId: candidate.importRecordId,
+        payloadSummary: summarizeReceiptSavePayload(parsed),
+        error,
+      });
       return null;
     }
 
@@ -303,13 +448,37 @@ export async function reviewImportCandidate(
   }
 
   if (!isSupportedImportType(importRecord.importType)) {
-    throw new Error("Unsupported import type.");
+    const error = new ReceiptSaveError("receipt_save_payload_invalid", "Unsupported import type.", "RS-PAYLOAD");
+    logReceiptSaveFailure({
+      code: "receipt_save_payload_invalid",
+      stage: "unsupported_import_type",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed),
+      error,
+    });
+    throw error;
   }
 
   const targetAcceptanceState = parsed.decision === "accept" ? "accepted" : "rejected";
 
   if (candidate.acceptanceState !== "pending" && candidate.acceptanceState !== targetAcceptanceState) {
-    throw new Error("Import candidate has already been reviewed.");
+    const error = new ReceiptSaveError(
+      "receipt_save_candidate_already_reviewed",
+      "Import candidate has already been reviewed.",
+      "RS-STATE",
+    );
+    logReceiptSaveFailure({
+      code: "receipt_save_candidate_already_reviewed",
+      stage: "candidate_state_checked",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed),
+      error,
+    });
+    throw error;
   }
 
   if (parsed.decision === "reject" && candidate.acceptanceState === "rejected") {
@@ -390,12 +559,18 @@ export async function reviewImportCandidate(
     importCandidateId: candidate.id,
     importRecordId: candidate.importRecordId,
   });
+  logReceiptSaveStage({
+    stage: "category_resolved",
+    userId: user.id,
+    importCandidateId: candidate.id,
+    importRecordId: candidate.importRecordId,
+    payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+  });
   let createdTransaction: Awaited<ReturnType<TransactionService["createTransaction"]>>;
+  let transactionInput: CreateTransactionInput;
 
   try {
-    createdTransaction = await transactionService.createTransaction(
-      user.id,
-      mapCandidateToTransactionInput({
+    transactionInput = mapCandidateToTransactionInput({
       candidate,
       importType: importRecord.importType,
       overrides: {
@@ -403,51 +578,163 @@ export async function reviewImportCandidate(
         currency: parsed.currency,
         itemName: parsed.itemName,
         merchant: parsed.merchant,
-          categoryId,
+        categoryId,
         note: parsed.note,
       },
-      }),
-      { actorType: "user" },
-    );
-  } catch (error) {
-    logReceiptSaveFailure({
-      code: "receipt_save_transaction_insert_failed",
-      stage: "create_transaction",
+    });
+    logReceiptSaveStage({
+      stage: "transaction_payload_built",
+      userId: user.id,
       importCandidateId: candidate.id,
       importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+    });
+    createTransactionSchema.parse(transactionInput);
+    logReceiptSaveStage({
+      stage: "transaction_validation_passed",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+    });
+    logReceiptSaveStage({
+      stage: "transaction_insert_attempted",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+    });
+    createdTransaction = await transactionService.createTransaction(
+      user.id,
+      transactionInput,
+      { actorType: "user" },
+    );
+    logReceiptSaveStage({
+      stage: "transaction_insert_succeeded",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+    });
+  } catch (error) {
+    const isMissingRequiredFields =
+      error instanceof Error && error.message === "Accepted candidate is missing required transaction fields.";
+    const isValidationError = error instanceof Error && error.name === "ZodError";
+    logReceiptSaveFailure({
+      code: isValidationError || isMissingRequiredFields
+        ? "receipt_save_transaction_payload_invalid"
+        : "receipt_save_transaction_insert_failed",
+      stage: isValidationError || isMissingRequiredFields ? "validate_transaction_payload" : "create_transaction",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
       error,
     });
+    if (isMissingRequiredFields) {
+      throw new ReceiptSaveError(
+        "receipt_save_transaction_payload_invalid",
+        "Accepted candidate is missing required transaction fields.",
+        "RS-AMOUNT",
+      );
+    }
+    if (isValidationError) {
+      throw new ReceiptSaveError(
+        "receipt_save_transaction_payload_invalid",
+        "Receipt transaction payload is invalid.",
+        "RS-VALIDATION",
+      );
+    }
+    if (!(error instanceof ReceiptSaveError)) {
+      throw new ReceiptSaveError(
+        "receipt_save_transaction_insert_failed",
+        "Receipt transaction could not be created.",
+        "RS-INSERT",
+      );
+    }
     throw error;
   }
 
   let acceptedCandidate: ImportCandidate;
 
   try {
+    logReceiptSaveStage({
+      stage: "candidate_resolve_attempted",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+    });
     acceptedCandidate = await importCandidateService.updateImportCandidateStatus(user.id, candidate.id, {
       reviewState: "reviewed",
       acceptanceState: "accepted",
       acceptedTransactionId: createdTransaction.transaction.id,
     });
+    logReceiptSaveStage({
+      stage: "candidate_resolve_succeeded",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+    });
   } catch (error) {
     logReceiptSaveFailure({
       code: "receipt_save_candidate_resolve_failed",
       stage: "resolve_candidate",
+      userId: user.id,
       importCandidateId: candidate.id,
       importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
       error,
     });
-    throw error;
+    throw new ReceiptSaveError(
+      "receipt_save_candidate_resolve_failed",
+      "Receipt candidate could not be resolved.",
+      "RS-RESOLVE",
+    );
   }
-  const reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
-    importRecordService,
-    importCandidateService,
-  });
+  let reviewCompletion: ImportReviewCompletionResult;
+  try {
+    logReceiptSaveStage({
+      stage: "read_model_refresh_attempted",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+    });
+    reviewCompletion = await completeOwnedImportReviewIfReady(user.id, candidate.importRecordId, {
+      importRecordService,
+      importCandidateService,
+    });
+  } catch (error) {
+    logReceiptSaveFailure({
+      code: "receipt_save_read_model_refresh_failed",
+      stage: "complete_review",
+      userId: user.id,
+      importCandidateId: candidate.id,
+      importRecordId: candidate.importRecordId,
+      payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
+      error,
+    });
+    throw new ReceiptSaveError(
+      "receipt_save_read_model_refresh_failed",
+      "Receipt review could not be refreshed.",
+      "RS-REFRESH",
+    );
+  }
   await recordAcceptedCandidateMemory({
     userId: user.id,
     candidate: acceptedCandidate,
     categoryMemoryService: dependencies.createCategoryMemoryService
       ? await dependencies.createCategoryMemoryService()
       : null,
+  });
+  logReceiptSaveStage({
+    stage: "action_response_returned",
+    userId: user.id,
+    importCandidateId: candidate.id,
+    importRecordId: candidate.importRecordId,
+    payloadSummary: summarizeReceiptSavePayload(parsed, categoryId),
   });
 
   return {

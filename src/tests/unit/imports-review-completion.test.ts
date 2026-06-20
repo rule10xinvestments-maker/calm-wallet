@@ -127,6 +127,46 @@ describe("imports review completion", () => {
     });
   });
 
+  it("allows receipt review completion for legacy uploaded receipt records once candidates are resolved", async () => {
+    const updateImportRecordStatus = vi.fn(async () =>
+      makeImportRecord({
+        status: "reviewed" as const,
+        updatedAt: "2026-04-23T10:10:00.000Z",
+      }),
+    );
+
+    const result = await completeImportReviewIfReady("record-1", {
+      getCurrentUser: vi.fn(async () => mockUser()),
+      createImportRecordService: vi.fn(async () => ({
+        getImportRecordById: vi.fn(async () =>
+          makeImportRecord({
+            status: "uploaded" as const,
+            parseQuality: "unknown" as const,
+          }),
+        ),
+        updateImportRecordStatus,
+      })),
+      createImportCandidateService: vi.fn(async () => ({
+        listImportCandidates: vi.fn(async () => [makeCandidate()]),
+      })),
+    });
+
+    expect(updateImportRecordStatus).toHaveBeenCalledWith("user-1", "record-1", {
+      status: "reviewed",
+      parseQuality: "unknown",
+      failureReason: null,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        importRecordId: "record-1",
+        importType: "receipt_image",
+        status: "reviewed",
+        pendingCount: 0,
+        reviewCompleted: true,
+      }),
+    );
+  });
+
   it("fails closed for unauthenticated access", async () => {
     const getImportRecordById = vi.fn();
 

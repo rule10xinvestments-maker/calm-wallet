@@ -89,19 +89,31 @@ function getReceiptUploadErrorMessage(error: unknown) {
 }
 
 function getImportReviewErrorMessage(error: unknown) {
+  if (error instanceof ReceiptSaveError && error.supportCode === "RS-AUTH") {
+    return "Please sign in again to save this receipt.";
+  }
+
   if (error instanceof Error && error.message === "Receipt save requires sign in.") {
     return "Please sign in again to save this receipt.";
   }
 
-  if (error instanceof ReceiptSaveError && error.code === "receipt_save_category_invalid") {
-    return "Please choose a category again.";
+  if (error instanceof ReceiptSaveError && error.supportCode === "RS-CATEGORY") {
+    return "Please choose a category again. Code: RS-CATEGORY";
+  }
+
+  if (error instanceof ReceiptSaveError && error.supportCode === "RS-AMOUNT") {
+    return "Add amount before saving.";
   }
 
   if (error instanceof Error && error.message === "Accepted candidate is missing required transaction fields.") {
     return "Add amount before saving.";
   }
 
-  return "Receipt could not be saved right now. Please try again.";
+  if (error instanceof ReceiptSaveError) {
+    return `Receipt could not be saved right now. Code: ${error.supportCode}`;
+  }
+
+  return "Receipt could not be saved right now. Code: RS-UNKNOWN";
 }
 
 function parseOptionalPositiveMinorAmount(value: FormDataEntryValue | null) {
@@ -591,7 +603,7 @@ export async function reviewImportCandidateAction(
       return {
         ...initialImportCandidateReviewDecisionActionState,
         status: "error",
-        message: "Receipt could not be saved right now. Please try again.",
+        message: "Receipt could not be saved right now. Code: RS-CANDIDATE",
       };
     }
 
