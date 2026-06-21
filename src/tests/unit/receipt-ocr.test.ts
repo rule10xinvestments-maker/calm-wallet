@@ -18,6 +18,7 @@ describe("receipt OCR provider", () => {
   afterEach(() => {
     process.env.OPENAI_API_KEY = originalOpenAiKey;
     global.fetch = originalFetch;
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -87,6 +88,7 @@ describe("receipt OCR provider", () => {
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
+      headers: { get: vi.fn(() => null) },
     })) as unknown as typeof fetch;
 
     await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
@@ -96,6 +98,52 @@ describe("receipt OCR provider", () => {
       provider: "openai",
       internalCode: "receipt_ocr_provider_response_failed",
     });
+  });
+
+  it("retries one provider rate-limit response before accepting OCR success", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        statusText: "Too Many Requests",
+        headers: { get: vi.fn(() => "0") },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn(async () => ({
+          output_text: JSON.stringify({
+            merchant: null,
+            total: "20.80",
+            currency: "RON",
+            categoryHint: "Groceries",
+            receiptText: "TOTAL LEI 20.80",
+          }),
+        })),
+      });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const resultPromise = extractReceiptTextFromImage(makeImage());
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      status: "extraction_success",
+      text: "TOTAL LEI 20.80",
+      fields: {
+        merchant: null,
+        totalText: "20.80",
+        currency: "RON",
+        categoryHint: "Groceries",
+      },
+      provider: "openai",
+      internalCode: "receipt_ocr_text_extracted",
+    });
+    vi.useRealTimers();
   });
 
   it("passes receipt image bytes as a base64 data URL to the provider", async () => {
@@ -112,10 +160,13 @@ describe("receipt OCR provider", () => {
 
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, { body?: BodyInit }];
     const body = JSON.parse(String(init.body)) as {
-      input: Array<{ content: Array<{ type: string; image_url?: string }> }>;
+      input: Array<{ content: Array<{ type: string; image_url?: string; detail?: string }> }>;
+      max_output_tokens: number;
     };
     const imageInput = body.input[0]?.content.find((item) => item.type === "input_image");
     expect(imageInput?.image_url).toBe("data:image/jpeg;base64,AQID");
+    expect(imageInput).toEqual(expect.objectContaining({ detail: "low" }));
+    expect(body).toEqual(expect.objectContaining({ max_output_tokens: 500 }));
   });
 
   it("keeps OCR provider code out of the client Assistant composer", () => {

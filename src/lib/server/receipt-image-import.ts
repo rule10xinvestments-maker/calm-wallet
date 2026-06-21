@@ -20,6 +20,7 @@ import {
 } from "@/lib/server/receipt-draft";
 import {
   extractReceiptTextFromImage,
+  type ReceiptOcrFailureStatus,
   type ReceiptOcrImage,
   type ReceiptOcrResult,
 } from "@/lib/server/receipt-ocr";
@@ -76,6 +77,11 @@ export type UploadReceiptImageAndPrepareDraftDependencies = Omit<
       image: ReceiptOcrImage,
       context: { importRecordId?: string | null; storagePath?: string | null },
     ) => Promise<ReceiptOcrResult>;
+    persistReceiptOcrStatus?: (input: {
+      userId: string;
+      importRecordId: string;
+      status: ReceiptOcrFailureStatus;
+    }) => Promise<void>;
   };
 
 const defaultPreparedUploadDependencies: UploadReceiptImageAndPrepareDraftDependencies = {
@@ -93,6 +99,7 @@ const defaultPreparedUploadDependencies: UploadReceiptImageAndPrepareDraftDepend
   loadReceiptCategories,
   loadReceiptImageFromStorage,
   extractReceiptText: extractReceiptTextFromImage,
+  persistReceiptOcrStatus,
 };
 
 function validateReceiptImageFile(file: ReceiptUploadFile | null): asserts file is ReceiptUploadFile {
@@ -150,6 +157,32 @@ async function loadReceiptImageFromStorage(input: {
     size: result.data.size,
     arrayBuffer: () => result.data.arrayBuffer(),
   };
+}
+
+async function persistReceiptOcrStatus(input: {
+  userId: string;
+  importRecordId: string;
+  status: ReceiptOcrFailureStatus;
+}) {
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase
+    .from("import_records")
+    .update({ failure_reason: `ocr_status:${input.status}` })
+    .eq("user_id", input.userId)
+    .eq("id", input.importRecordId);
+
+  if (result.error) {
+    console.warn("receipt_ocr_failed", {
+      stage: "ocr_status_persist_failed",
+      code: "receipt_ocr_status_persist_failed",
+      status: input.status,
+      provider: "none",
+      importRecordId: input.importRecordId,
+      errorName: "SupabaseError",
+      errorCode: result.error.code,
+      errorMessage: result.error.message,
+    });
+  }
 }
 
 async function loadReceiptDefaultCurrency(userId: string) {
@@ -261,6 +294,50 @@ async function safelyExtractReceiptText(args: {
   }
 }
 
+function getReceiptOcrStatus(args: {
+  extractionResult: ReceiptOcrResult;
+  amountMinor: number | null;
+  candidateAmountMinor?: number | null;
+}): ReceiptOcrFailureStatus {
+  if (args.candidateAmountMinor || args.amountMinor) {
+    return "extraction_success";
+  }
+
+  if (args.extractionResult.internalCode === "receipt_ocr_provider_unavailable") {
+    return "unavailable";
+  }
+
+  if (args.extractionResult.internalCode === "receipt_ocr_private_image_load_failed") {
+    return "image_load_failed";
+  }
+
+  if (
+    args.extractionResult.internalCode === "receipt_ocr_provider_response_failed" ||
+    args.extractionResult.internalCode === "receipt_ocr_provider_exception" ||
+    args.extractionResult.internalCode === "receipt_ocr_unhandled_exception"
+  ) {
+    return "provider_failed";
+  }
+
+  if (args.extractionResult.internalCode === "receipt_ocr_text_empty") {
+    return "extraction_empty";
+  }
+
+  if (args.extractionResult.text || args.extractionResult.fields) {
+    return "extraction_partial";
+  }
+
+  return "candidate_prefill_failed";
+}
+
+function getReceiptOcrReviewMessage(status: ReceiptOcrFailureStatus) {
+  if (status === "extraction_success") {
+    return "Receipt total was extracted automatically. Please review before saving.";
+  }
+
+  return "We couldn't read the total. Add amount before saving.";
+}
+
 export async function uploadReceiptImage(
   file: ReceiptUploadFile | null,
   dependencies: UploadReceiptImageDependencies = defaultDependencies,
@@ -343,6 +420,10 @@ export async function uploadReceiptImageAndPrepareDraft(
     categories,
     now: dependencies.now(),
   });
+  const draftOcrStatus = getReceiptOcrStatus({
+    extractionResult,
+    amountMinor: draft.amountMinor,
+  });
   console.info("receipt_ocr_stage", {
     stage: draft.amountMinor ? "ocr_parse_success" : extractionResult.text || extractionResult.fields ? "ocr_parse_partial" : "ocr_candidate_prefill_failed",
     code: draft.amountMinor ? "receipt_ocr_draft_prefill_ready" : extractionResult.internalCode,
@@ -379,7 +460,7 @@ export async function uploadReceiptImageAndPrepareDraft(
       categoryId: draft.categoryId,
       confidenceScore: draft.confidenceScore,
       reviewState: draft.reviewState,
-      uncertaintyReason: draft.uncertaintyReason,
+      uncertaintyReason: getReceiptOcrReviewMessage(draftOcrStatus),
     },
     {
       getCurrentUser: dependencies.getCurrentUser,
@@ -388,6 +469,18 @@ export async function uploadReceiptImageAndPrepareDraft(
       createCategoryMemoryService: dependencies.createCategoryMemoryService,
     },
   );
+  const finalOcrStatus = getReceiptOcrStatus({
+    extractionResult,
+    amountMinor: draft.amountMinor,
+    candidateAmountMinor: candidate?.amountMinor,
+  });
+  if (dependencies.persistReceiptOcrStatus) {
+    await dependencies.persistReceiptOcrStatus({
+      userId: user.id,
+      importRecordId: upload.importRecordId,
+      status: finalOcrStatus,
+    });
+  }
   console.info("receipt_ocr_stage", {
     stage: candidate?.amountMinor ? "ocr_candidate_prefill_success" : "ocr_candidate_prefill_failed",
     code: candidate?.amountMinor ? "receipt_ocr_candidate_prefilled" : "receipt_ocr_candidate_manual_fallback",
@@ -400,6 +493,7 @@ export async function uploadReceiptImageAndPrepareDraft(
     currency: candidate?.currency ?? null,
     merchantPresent: Boolean(candidate?.merchantGuess),
     categoryResolvedIdPresent: Boolean(candidate?.categoryId),
+    ocrStatus: finalOcrStatus,
   });
 
   return {

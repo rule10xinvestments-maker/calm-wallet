@@ -734,7 +734,7 @@ describe("transactions overview", () => {
     );
 
     expect(screen.getByText("Amount unavailable")).toBeInTheDocument();
-    expect(screen.getByText("Add amount before saving")).toBeInTheDocument();
+    expect(screen.getByText("We couldn't read the total. Add amount before saving.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Accept candidate" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reject candidate" })).toBeInTheDocument();
   });
@@ -785,7 +785,7 @@ describe("transactions overview", () => {
 
     expect(within(movementCard).getByText("Receipt image: receipt.jpg")).toBeInTheDocument();
     expect(within(movementCard).getByText(/Amount unavailable/)).toBeInTheDocument();
-    expect(within(movementCard).getByText("Add amount before saving")).toBeInTheDocument();
+    expect(within(movementCard).getByText("We couldn't read the total. Add amount before saving.")).toBeInTheDocument();
     expect(screen.queryByText("No transactions found for this signed-in account.")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "All transactions" }));
@@ -846,7 +846,7 @@ describe("transactions overview", () => {
     expect(screen.getByLabelText("Currency")).toHaveValue("RON");
     expect(screen.getByLabelText("Merchant")).toHaveValue("Mega Image");
     expect(screen.getByLabelText("Category")).toHaveValue("cat-groceries");
-    expect(screen.queryByText("Add amount before saving")).not.toBeInTheDocument();
+    expect(screen.queryByText("We couldn't read the total. Add amount before saving.")).not.toBeInTheDocument();
   });
 
   it("saves an incomplete receipt candidate as one normal expense transaction after amount is added", async () => {

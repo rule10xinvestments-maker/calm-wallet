@@ -84,6 +84,19 @@ describe("receipt draft extraction", () => {
     expect(draft.categoryId).toBe(groceriesCategory.id);
   });
 
+  it("extracts dot-decimal TOTAL LEI receipt text as RON", () => {
+    const draft = buildReceiptDraft({
+      extractedText: "Bon fiscal\nTOTAL LEI 20.80",
+      originalFilename: "receipt.jpg",
+      defaultCurrency: "USD",
+      categories: [groceriesCategory],
+      now: new Date("2026-06-21T08:39:00.000Z"),
+    });
+
+    expect(draft.amountMinor).toBe(2080);
+    expect(draft.currency).toBe("RON");
+  });
+
   it("maps structured Mega Image OCR fields into a staged grocery draft", () => {
     const draft = buildReceiptDraft({
       extractedText: "MEGA IMAGE\nBon fiscal",

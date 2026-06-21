@@ -132,7 +132,7 @@ describe("receipt import actions", () => {
         transactionType: "expense",
         amountMinor: null,
         reviewState: "needs_attention",
-        uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+        uncertaintyReason: "We couldn't read the total. Add amount before saving.",
       }),
     });
   });
@@ -141,6 +141,7 @@ describe("receipt import actions", () => {
     const formData = new FormData();
     formData.set("file", makeReceiptFile({ name: "receipt.jpg", type: "image/jpeg" }));
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const persistReceiptOcrStatus = vi.fn(async () => undefined);
 
     const { uploadReceiptImageAction } = await import("@/lib/actions/imports");
     const result = await uploadReceiptImageAction(initialReceiptImageUploadActionState, formData, {
@@ -205,6 +206,7 @@ describe("receipt import actions", () => {
       extractReceiptText: vi.fn(async () => {
         throw new Error("OCR provider key missing");
       }),
+      persistReceiptOcrStatus,
       now: () => new Date("2026-05-02T10:00:00.000Z"),
     });
 
@@ -214,10 +216,15 @@ describe("receipt import actions", () => {
       expect.objectContaining({
         amountMinor: null,
         reviewState: "needs_attention",
-        uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+        uncertaintyReason: "We couldn't read the total. Add amount before saving.",
       }),
     );
     expect(result.message).not.toContain("OCR provider key missing");
+    expect(persistReceiptOcrStatus).toHaveBeenCalledWith({
+      userId: "user-1",
+      importRecordId: "11111111-1111-1111-1111-111111111111",
+      status: "provider_failed",
+    });
   });
 
   it("rejects PDFs through the receipt image action", async () => {

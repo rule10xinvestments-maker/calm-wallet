@@ -394,7 +394,7 @@ function CandidateReviewEntry({
           </p>
           {amountMissing ? (
             <p className="w-fit rounded-full bg-white px-2 py-1 text-xs font-medium text-amber-700">
-              Add amount before saving
+              We couldn&apos;t read the total. Add amount before saving.
             </p>
           ) : null}
         </div>
@@ -661,7 +661,7 @@ function StagedImportCard({
                         </button>
                       ) : (
                         <p className="rounded-2xl bg-white px-3 py-2 text-xs font-medium text-amber-700">
-                          Add amount before saving
+                          We couldn&apos;t read the total. Add amount before saving.
                         </p>
                       )}
                       <button

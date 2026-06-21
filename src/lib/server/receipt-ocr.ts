@@ -6,6 +6,15 @@ export type ReceiptExtractionStatus =
   | "extraction_failed"
   | "extraction_unavailable";
 
+export type ReceiptOcrFailureStatus =
+  | "unavailable"
+  | "image_load_failed"
+  | "provider_failed"
+  | "extraction_empty"
+  | "extraction_partial"
+  | "extraction_success"
+  | "candidate_prefill_failed";
+
 export type ReceiptOcrImage = {
   name: string;
   type: string;
@@ -48,6 +57,8 @@ const openAiReceiptOcrPrompt = [
   "Do not infer line items or amounts that are not visible.",
 ].join(" ");
 
+const OPENAI_RECEIPT_OCR_MAX_ATTEMPTS = 2;
+
 function getOpenAiApiKey() {
   return process.env.OPENAI_API_KEY?.trim() || null;
 }
@@ -84,6 +95,27 @@ function logReceiptOcrStage(args: {
 
 function arrayBufferToBase64(buffer: ArrayBuffer) {
   return Buffer.from(buffer).toString("base64");
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function getRetryDelayMs(response: Response) {
+  const retryAfter = response.headers?.get?.("retry-after");
+  const retryAfterSeconds = retryAfter ? Number(retryAfter) : Number.NaN;
+
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return Math.min(Math.round(retryAfterSeconds * 1000), 2000);
+  }
+
+  return 750;
+}
+
+function shouldRetryProviderResponse(response: Response) {
+  return response.status === 429 || response.status >= 500;
 }
 
 function extractOutputText(payload: OpenAiReceiptOcrResponse) {
@@ -233,31 +265,52 @@ export async function extractReceiptTextFromImage(
       storagePath: context.storagePath,
       model,
     });
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: openAiReceiptOcrPrompt },
-              {
-                type: "input_image",
-                image_url: `data:${image.type};base64,${imageBase64}`,
-              },
-            ],
-          },
-        ],
-        max_output_tokens: 1200,
-      }),
-    });
+    let response: Response | null = null;
 
-    if (!response.ok) {
+    for (let attempt = 1; attempt <= OPENAI_RECEIPT_OCR_MAX_ATTEMPTS; attempt += 1) {
+      response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          input: [
+            {
+              role: "user",
+              content: [
+                { type: "input_text", text: openAiReceiptOcrPrompt },
+                {
+                  type: "input_image",
+                  image_url: `data:${image.type};base64,${imageBase64}`,
+                  detail: "low",
+                },
+              ],
+            },
+          ],
+          max_output_tokens: 500,
+        }),
+      });
+
+      if (response.ok || !shouldRetryProviderResponse(response) || attempt === OPENAI_RECEIPT_OCR_MAX_ATTEMPTS) {
+        break;
+      }
+
+      console.warn("receipt_ocr_failed", {
+        code: "receipt_ocr_provider_retryable_response",
+        stage: "ocr_provider_failed",
+        status: "extraction_failed",
+        provider: "openai",
+        importRecordId: context.importRecordId ?? null,
+        storagePath: context.storagePath ?? null,
+        errorStatus: response.status,
+        attempt,
+      });
+      await delay(getRetryDelayMs(response));
+    }
+
+    if (!response?.ok) {
       logReceiptOcrFailure({
         code: "receipt_ocr_provider_response_failed",
         status: "extraction_failed",
@@ -266,8 +319,8 @@ export async function extractReceiptTextFromImage(
         importRecordId: context.importRecordId,
         storagePath: context.storagePath,
         error: {
-          status: response.status,
-          message: response.statusText,
+          status: response?.status,
+          message: response?.statusText,
         },
       });
       return {

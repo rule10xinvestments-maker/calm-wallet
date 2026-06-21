@@ -191,6 +191,7 @@ describe("receipt image import upload", () => {
       updatedAt: "2026-05-02T10:05:00.000Z",
     }));
     const extractReceiptText = vi.fn();
+    const persistReceiptOcrStatus = vi.fn(async () => undefined);
 
     const result = await uploadReceiptImageAndPrepareDraft(makeFile(), {
       getCurrentUser: vi.fn(async () => mockUser()),
@@ -210,6 +211,7 @@ describe("receipt image import upload", () => {
         throw new Error("private object not found");
       }),
       extractReceiptText,
+      persistReceiptOcrStatus,
       now: () => new Date("2026-05-02T10:00:00.000Z"),
     });
 
@@ -218,8 +220,13 @@ describe("receipt image import upload", () => {
       expect.objectContaining({
         amountMinor: null,
         reviewState: "needs_attention",
-        uncertaintyReason: "Receipt uploaded, but Calm Wallet could not extract a total yet.",
+        uncertaintyReason: "We couldn't read the total. Add amount before saving.",
       }),
     );
+    expect(persistReceiptOcrStatus).toHaveBeenCalledWith({
+      userId: "user-1",
+      importRecordId: "11111111-1111-1111-1111-111111111111",
+      status: "image_load_failed",
+    });
   });
 });
