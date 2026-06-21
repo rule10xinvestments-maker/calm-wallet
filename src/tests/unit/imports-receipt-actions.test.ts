@@ -16,6 +16,7 @@ function makeUnavailableExtraction() {
   return {
     status: "extraction_unavailable" as const,
     text: null,
+    fields: null,
     provider: "none" as const,
     internalCode: "receipt_ocr_provider_unavailable",
   };
@@ -412,7 +413,13 @@ describe("receipt import actions", () => {
       loadReceiptImageFromStorage: vi.fn(async () => makeLoadedReceiptImage({ name: "grocery.jpg" })),
       extractReceiptText: vi.fn(async () => ({
         status: "extraction_success" as const,
-        text: "MEGA IMAGE\nTOTAL 42,19 Lei",
+        text: "MEGA IMAGE\nBon fiscal",
+        fields: {
+          merchant: "Mega Image",
+          totalText: "35,24",
+          currency: "RON",
+          categoryHint: "Groceries",
+        },
         provider: "openai" as const,
         internalCode: "receipt_ocr_text_extracted",
       })),
@@ -424,7 +431,7 @@ describe("receipt import actions", () => {
       "user-1",
       expect.objectContaining({
         transactionType: "expense",
-        amountMinor: 4219,
+        amountMinor: 3524,
         currency: "RON",
         merchantGuess: "Mega Image",
         categoryId: "44444444-4444-4444-4444-444444444444",

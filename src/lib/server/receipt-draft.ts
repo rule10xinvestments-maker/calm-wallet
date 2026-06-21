@@ -18,6 +18,13 @@ export type ReceiptDraft = {
   uncertaintyReason: string | null;
 };
 
+export type ReceiptDraftExtractedFields = {
+  merchant?: string | null;
+  totalText?: string | null;
+  currency?: string | null;
+  categoryHint?: string | null;
+};
+
 const grocerySignals = [
   "grocery",
   "groceries",
@@ -44,10 +51,14 @@ const totalExclusionPattern = /\b(?:tva|vat|tax|subtotal|sub\s*total|rest|change
 
 function normalizeCurrency(value: string | null | undefined, fallback: string) {
   const normalized = value?.trim().toUpperCase();
+  if (normalized && /^(RON|LEI|LEU)$/.test(normalized)) {
+    return "RON";
+  }
+
   return normalized && /^[A-Z]{3}$/.test(normalized) ? normalized : fallback;
 }
 
-function parseMoneyToMinor(value: string) {
+export function parseMoneyToMinor(value: string) {
   const normalized = value.replace(/\s+/g, "").replace(",", ".");
   const amount = Number(normalized);
 
@@ -56,6 +67,11 @@ function parseMoneyToMinor(value: string) {
   }
 
   return Math.round(amount * 100);
+}
+
+function extractAmountText(value: string | null | undefined) {
+  const match = value?.match(/(\d{1,6}(?:[.,]\d{2})?)/);
+  return match?.[1] ?? null;
 }
 
 export function extractReceiptTotalMinor(text: string) {
@@ -131,22 +147,34 @@ function normalizeMerchant(value: string | null | undefined) {
 
 export function buildReceiptDraft(args: {
   extractedText?: string | null;
+  extractedFields?: ReceiptDraftExtractedFields | null;
   originalFilename: string;
   defaultCurrency?: string | null;
   categories?: ReceiptDraftCategory[];
   now?: Date;
 }): ReceiptDraft {
   const text = args.extractedText?.trim() ?? "";
+  const fieldTotalText = extractAmountText(args.extractedFields?.totalText);
   const groceriesCategory =
     args.categories?.find(
       (category) =>
         category.slug === "groceries" &&
         (category.direction === "expense" || category.direction === "both"),
     ) ?? null;
-  const amountMinor = text ? extractReceiptTotalMinor(text) : null;
-  const currency = text || amountMinor ? detectReceiptCurrency(text, args.defaultCurrency ?? "USD") : null;
-  const groceriesLike = receiptLooksLikeGroceries([text, args.originalFilename].join("\n"));
-  const merchantGuess = text ? guessMerchant(text) : null;
+  const amountMinor = fieldTotalText ? parseMoneyToMinor(fieldTotalText) : text ? extractReceiptTotalMinor(text) : null;
+  const currency =
+    args.extractedFields?.currency || text || amountMinor
+      ? normalizeCurrency(args.extractedFields?.currency, detectReceiptCurrency(text, args.defaultCurrency ?? "USD"))
+      : null;
+  const groceriesLike = receiptLooksLikeGroceries(
+    [
+      text,
+      args.extractedFields?.merchant,
+      args.extractedFields?.categoryHint,
+      args.originalFilename,
+    ].join("\n"),
+  );
+  const merchantGuess = normalizeMerchant(args.extractedFields?.merchant) ?? (text ? guessMerchant(text) : null);
   const occurredAt = (args.now ?? new Date()).toISOString();
 
   if (!amountMinor) {

@@ -29,6 +29,7 @@ describe("receipt OCR provider", () => {
     await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
       status: "extraction_unavailable",
       text: null,
+      fields: null,
       provider: "none",
       internalCode: "receipt_ocr_provider_unavailable",
     });
@@ -40,7 +41,13 @@ describe("receipt OCR provider", () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
       json: vi.fn(async () => ({
-        output_text: "MEGA IMAGE\nTOTAL 35,24 Lei",
+        output_text: JSON.stringify({
+          merchant: "Mega Image",
+          total: "35,24",
+          currency: "RON",
+          categoryHint: "Groceries",
+          receiptText: "MEGA IMAGE\nTOTAL 35,24 Lei",
+        }),
       })),
     })) as unknown as typeof fetch;
     global.fetch = fetchMock;
@@ -53,6 +60,12 @@ describe("receipt OCR provider", () => {
     expect(result).toEqual({
       status: "extraction_success",
       text: "MEGA IMAGE\nTOTAL 35,24 Lei",
+      fields: {
+        merchant: "Mega Image",
+        totalText: "35,24",
+        currency: "RON",
+        categoryHint: "Groceries",
+      },
       provider: "openai",
       internalCode: "receipt_ocr_text_extracted",
     });
@@ -79,9 +92,30 @@ describe("receipt OCR provider", () => {
     await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
       status: "extraction_failed",
       text: null,
+      fields: null,
       provider: "openai",
       internalCode: "receipt_ocr_provider_response_failed",
     });
+  });
+
+  it("passes receipt image bytes as a base64 data URL to the provider", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: vi.fn(async () => ({
+        output_text: "MEGA IMAGE\nTOTAL 35,24 Lei",
+      })),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await extractReceiptTextFromImage(makeImage());
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, { body?: BodyInit }];
+    const body = JSON.parse(String(init.body)) as {
+      input: Array<{ content: Array<{ type: string; image_url?: string }> }>;
+    };
+    const imageInput = body.input[0]?.content.find((item) => item.type === "input_image");
+    expect(imageInput?.image_url).toBe("data:image/jpeg;base64,AQID");
   });
 
   it("keeps OCR provider code out of the client Assistant composer", () => {

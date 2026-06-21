@@ -16,8 +16,16 @@ export type ReceiptOcrImage = {
 export type ReceiptOcrResult = {
   status: ReceiptExtractionStatus;
   text: string | null;
+  fields?: ReceiptOcrFields | null;
   provider: "openai" | "none";
   internalCode: string;
+};
+
+export type ReceiptOcrFields = {
+  merchant: string | null;
+  totalText: string | null;
+  currency: string | null;
+  categoryHint: string | null;
 };
 
 type OpenAiReceiptOcrResponse = {
@@ -31,9 +39,12 @@ type OpenAiReceiptOcrResponse = {
 };
 
 const openAiReceiptOcrPrompt = [
-  "Extract readable receipt text from this image for expense review.",
-  "Return only plain text lines from the receipt.",
-  "Keep merchant, total, currency, date, and payment summary lines when visible.",
+  "Extract one expense receipt summary from this image for review.",
+  "Return only JSON with keys merchant, total, currency, categoryHint, and receiptText.",
+  "Use the final payable TOTAL, not subtotal, VAT, tax, change, payment card, or line item prices.",
+  "For Romanian receipts, map Lei, LEI, or RON to RON and preserve comma decimals in total.",
+  "If the merchant is MEGA IMAGE, return Mega Image.",
+  "Use categoryHint Groceries for supermarket, food, grocery, or household receipts.",
   "Do not infer line items or amounts that are not visible.",
 ].join(" ");
 
@@ -48,11 +59,16 @@ function getOpenAiVisionModel() {
 function logReceiptOcrStage(args: {
   stage:
     | "ocr_env_available"
-    | "ocr_provider_called";
+    | "ocr_env_missing"
+    | "ocr_provider_called"
+    | "ocr_provider_returned";
   provider: ReceiptOcrResult["provider"];
   importRecordId?: string | null;
   storagePath?: string | null;
   model?: string | null;
+  status?: ReceiptExtractionStatus;
+  textPresent?: boolean;
+  fieldsPresent?: boolean;
 }) {
   console.info("receipt_ocr_stage", {
     stage: args.stage,
@@ -60,6 +76,9 @@ function logReceiptOcrStage(args: {
     importRecordId: args.importRecordId ?? null,
     storagePath: args.storagePath ?? null,
     model: args.model ?? undefined,
+    status: args.status ?? undefined,
+    textPresent: args.textPresent ?? undefined,
+    fieldsPresent: args.fieldsPresent ?? undefined,
   });
 }
 
@@ -81,11 +100,62 @@ function extractOutputText(payload: OpenAiReceiptOcrResponse) {
   return text || null;
 }
 
+function normalizeOcrTextValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function stripJsonFence(value: string) {
+  const trimmed = value.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced?.[1]?.trim() ?? trimmed;
+}
+
+function parseReceiptOcrFields(text: string | null): ReceiptOcrFields | null {
+  if (!text) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(stripJsonFence(text)) as Record<string, unknown>;
+    const receiptText = normalizeOcrTextValue(parsed.receiptText);
+    const merchant = normalizeOcrTextValue(parsed.merchant);
+    const totalText = normalizeOcrTextValue(parsed.total);
+    const currency = normalizeOcrTextValue(parsed.currency);
+    const categoryHint = normalizeOcrTextValue(parsed.categoryHint);
+
+    if (!merchant && !totalText && !currency && !categoryHint && !receiptText) {
+      return null;
+    }
+
+    return {
+      merchant,
+      totalText,
+      currency,
+      categoryHint,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function extractReceiptTextFromStructuredOutput(text: string | null) {
+  if (!text) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(stripJsonFence(text)) as Record<string, unknown>;
+    return normalizeOcrTextValue(parsed.receiptText) ?? text;
+  } catch {
+    return text;
+  }
+}
+
 function logReceiptOcrFailure(args: {
   code: string;
   status: ReceiptExtractionStatus;
   provider: ReceiptOcrResult["provider"];
-  stage?: "ocr_env_available" | "ocr_provider_failed";
+  stage?: "ocr_env_missing" | "ocr_provider_failed";
   importRecordId?: string | null;
   storagePath?: string | null;
   error?: unknown;
@@ -112,17 +182,25 @@ export async function extractReceiptTextFromImage(
   const apiKey = getOpenAiApiKey();
 
   if (!apiKey) {
+    logReceiptOcrStage({
+      stage: "ocr_env_missing",
+      provider: "none",
+      status: "extraction_unavailable",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+    });
     logReceiptOcrFailure({
       code: "receipt_ocr_provider_unavailable",
       status: "extraction_unavailable",
       provider: "none",
-      stage: "ocr_env_available",
+      stage: "ocr_env_missing",
       importRecordId: context.importRecordId,
       storagePath: context.storagePath,
     });
     return {
       status: "extraction_unavailable",
       text: null,
+      fields: null,
       provider: "none",
       internalCode: "receipt_ocr_provider_unavailable",
     };
@@ -132,6 +210,7 @@ export async function extractReceiptTextFromImage(
     return {
       status: "extraction_failed",
       text: null,
+      fields: null,
       provider: "openai",
       internalCode: "receipt_ocr_unsupported_image_type",
     };
@@ -194,19 +273,35 @@ export async function extractReceiptTextFromImage(
       return {
         status: "extraction_failed",
         text: null,
+        fields: null,
         provider: "openai",
         internalCode: "receipt_ocr_provider_response_failed",
       };
     }
 
     const payload = (await response.json()) as OpenAiReceiptOcrResponse;
-    const text = extractOutputText(payload);
+    const outputText = extractOutputText(payload);
+    const fields = parseReceiptOcrFields(outputText);
+    const text = extractReceiptTextFromStructuredOutput(outputText);
+    const status = text || fields ? "extraction_success" : "extraction_partial";
+
+    logReceiptOcrStage({
+      stage: "ocr_provider_returned",
+      provider: "openai",
+      status,
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model,
+      textPresent: Boolean(text),
+      fieldsPresent: Boolean(fields),
+    });
 
     return {
-      status: text ? "extraction_success" : "extraction_partial",
+      status,
       text,
+      fields,
       provider: "openai",
-      internalCode: text ? "receipt_ocr_text_extracted" : "receipt_ocr_text_empty",
+      internalCode: text || fields ? "receipt_ocr_text_extracted" : "receipt_ocr_text_empty",
     };
   } catch (error) {
     logReceiptOcrFailure({
@@ -221,6 +316,7 @@ export async function extractReceiptTextFromImage(
     return {
       status: "extraction_failed",
       text: null,
+      fields: null,
       provider: "openai",
       internalCode: "receipt_ocr_provider_exception",
     };

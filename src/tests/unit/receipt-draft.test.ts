@@ -84,6 +84,28 @@ describe("receipt draft extraction", () => {
     expect(draft.categoryId).toBe(groceriesCategory.id);
   });
 
+  it("maps structured Mega Image OCR fields into a staged grocery draft", () => {
+    const draft = buildReceiptDraft({
+      extractedText: "MEGA IMAGE\nBon fiscal",
+      extractedFields: {
+        merchant: "MEGA IMAGE",
+        totalText: "35,24 Lei",
+        currency: "Lei",
+        categoryHint: "Groceries",
+      },
+      originalFilename: "281.jpg",
+      defaultCurrency: "USD",
+      categories: [groceriesCategory],
+      now: new Date("2026-06-15T10:00:00.000Z"),
+    });
+
+    expect(draft.amountMinor).toBe(3524);
+    expect(draft.currency).toBe("RON");
+    expect(draft.merchantGuess).toBe("Mega Image");
+    expect(draft.categoryId).toBe(groceriesCategory.id);
+    expect(draft.reviewState).toBe("pending_review");
+  });
+
   it("does not select VAT totals as the receipt amount", () => {
     expect(
       extractReceiptTotalMinor(

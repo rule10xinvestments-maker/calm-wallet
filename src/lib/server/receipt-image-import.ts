@@ -184,6 +184,7 @@ async function safelyExtractReceiptText(args: {
     return {
       status: "extraction_unavailable" as const,
       text: null,
+      fields: null,
       provider: "none" as const,
       internalCode: "receipt_ocr_file_unavailable",
     };
@@ -193,6 +194,13 @@ async function safelyExtractReceiptText(args: {
 
   if (args.loadReceiptImageFromStorage) {
     try {
+      console.info("receipt_ocr_stage", {
+        stage: "ocr_image_load_started",
+        code: "receipt_ocr_private_image_load_started",
+        importRecordId: args.upload.importRecordId,
+        storagePath: args.upload.storagePath,
+        mimeType: args.upload.mimeType,
+      });
       image = await args.loadReceiptImageFromStorage({
         bucket: IMPORT_STORAGE_BUCKET,
         storagePath: args.upload.storagePath,
@@ -209,7 +217,7 @@ async function safelyExtractReceiptText(args: {
       });
     } catch (error) {
       console.warn("receipt_ocr_failed", {
-        stage: "ocr_image_loaded",
+        stage: "ocr_image_load_failed",
         code: "receipt_ocr_private_image_load_failed",
         status: "extraction_failed",
         provider: "none",
@@ -221,6 +229,7 @@ async function safelyExtractReceiptText(args: {
       return {
         status: "extraction_failed" as const,
         text: null,
+        fields: null,
         provider: "none" as const,
         internalCode: "receipt_ocr_private_image_load_failed",
       };
@@ -245,6 +254,7 @@ async function safelyExtractReceiptText(args: {
     return {
       status: "extraction_failed" as const,
       text: null,
+      fields: null,
       provider: "none" as const,
       internalCode: "receipt_ocr_unhandled_exception",
     };
@@ -327,14 +337,27 @@ export async function uploadReceiptImageAndPrepareDraft(
   });
   const draft = buildReceiptDraft({
     extractedText: extractionResult.text,
+    extractedFields: extractionResult.fields,
     originalFilename: upload.originalFilename,
     defaultCurrency,
     categories,
     now: dependencies.now(),
   });
   console.info("receipt_ocr_stage", {
-    stage: draft.amountMinor ? "ocr_parse_success" : "ocr_candidate_prefill_failed",
+    stage: draft.amountMinor ? "ocr_parse_success" : extractionResult.text || extractionResult.fields ? "ocr_parse_partial" : "ocr_candidate_prefill_failed",
     code: draft.amountMinor ? "receipt_ocr_draft_prefill_ready" : extractionResult.internalCode,
+    extractionStatus: extractionResult.status,
+    provider: extractionResult.provider,
+    importRecordId: upload.importRecordId,
+    storagePath: upload.storagePath,
+    amountPresent: Boolean(draft.amountMinor),
+    currency: draft.currency,
+    merchantPresent: Boolean(draft.merchantGuess),
+    categoryResolvedIdPresent: Boolean(draft.categoryId),
+  });
+  console.info("receipt_ocr_stage", {
+    stage: "ocr_candidate_prefill_started",
+    code: "receipt_ocr_candidate_prefill_started",
     extractionStatus: extractionResult.status,
     provider: extractionResult.provider,
     importRecordId: upload.importRecordId,
@@ -366,7 +389,7 @@ export async function uploadReceiptImageAndPrepareDraft(
     },
   );
   console.info("receipt_ocr_stage", {
-    stage: candidate?.amountMinor ? "ocr_candidate_prefilled" : "ocr_candidate_prefill_failed",
+    stage: candidate?.amountMinor ? "ocr_candidate_prefill_success" : "ocr_candidate_prefill_failed",
     code: candidate?.amountMinor ? "receipt_ocr_candidate_prefilled" : "receipt_ocr_candidate_manual_fallback",
     extractionStatus: extractionResult.status,
     provider: extractionResult.provider,
