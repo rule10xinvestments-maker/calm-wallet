@@ -37,6 +37,14 @@ export type ReceiptOcrFields = {
   categoryHint: string | null;
 };
 
+type PreparedOcrImage = {
+  mimeType: string;
+  bytes: Buffer;
+  originalSize: number;
+  optimizedSize: number;
+  wasOptimized: boolean;
+};
+
 type OpenAiReceiptOcrResponse = {
   output_text?: unknown;
   output?: Array<{
@@ -58,6 +66,8 @@ const openAiReceiptOcrPrompt = [
 ].join(" ");
 
 const OPENAI_RECEIPT_OCR_MAX_ATTEMPTS = 2;
+const RECEIPT_OCR_MAX_IMAGE_EDGE = 1400;
+const RECEIPT_OCR_JPEG_QUALITY = 68;
 
 function getOpenAiApiKey() {
   return process.env.OPENAI_API_KEY?.trim() || null;
@@ -93,8 +103,56 @@ function logReceiptOcrStage(args: {
   });
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  return Buffer.from(buffer).toString("base64");
+function bytesToBase64(buffer: ArrayBuffer | Buffer) {
+  return Buffer.isBuffer(buffer) ? buffer.toString("base64") : Buffer.from(buffer).toString("base64");
+}
+
+async function prepareReceiptImageForOcr(image: ReceiptOcrImage): Promise<PreparedOcrImage> {
+  const originalBuffer = Buffer.from(await image.arrayBuffer());
+
+  try {
+    const sharp = (await import("sharp")).default;
+    const optimizedBuffer = await sharp(originalBuffer, { failOn: "none" })
+      .rotate()
+      .resize({
+        width: RECEIPT_OCR_MAX_IMAGE_EDGE,
+        height: RECEIPT_OCR_MAX_IMAGE_EDGE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({
+        quality: RECEIPT_OCR_JPEG_QUALITY,
+        mozjpeg: true,
+      })
+      .toBuffer();
+
+    if (optimizedBuffer.length > 0 && optimizedBuffer.length < originalBuffer.length) {
+      return {
+        mimeType: "image/jpeg",
+        bytes: optimizedBuffer,
+        originalSize: originalBuffer.length,
+        optimizedSize: optimizedBuffer.length,
+        wasOptimized: true,
+      };
+    }
+  } catch (error) {
+    console.warn("receipt_ocr_failed", {
+      code: "receipt_ocr_image_optimization_failed",
+      stage: "ocr_image_optimization_failed",
+      status: "extraction_failed",
+      provider: "none",
+      errorName: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : undefined,
+    });
+  }
+
+  return {
+    mimeType: image.type,
+    bytes: originalBuffer,
+    originalSize: originalBuffer.length,
+    optimizedSize: originalBuffer.length,
+    wasOptimized: false,
+  };
 }
 
 function delay(ms: number) {
@@ -257,7 +315,19 @@ export async function extractReceiptTextFromImage(
       storagePath: context.storagePath,
       model,
     });
-    const imageBase64 = arrayBufferToBase64(await image.arrayBuffer());
+    const preparedImage = await prepareReceiptImageForOcr(image);
+    const imageBase64 = bytesToBase64(preparedImage.bytes);
+    console.info("receipt_ocr_stage", {
+      stage: "ocr_image_optimized",
+      provider: "openai",
+      importRecordId: context.importRecordId ?? null,
+      storagePath: context.storagePath ?? null,
+      model,
+      originalSize: preparedImage.originalSize,
+      optimizedSize: preparedImage.optimizedSize,
+      wasOptimized: preparedImage.wasOptimized,
+      mimeType: preparedImage.mimeType,
+    });
     logReceiptOcrStage({
       stage: "ocr_provider_called",
       provider: "openai",
@@ -283,7 +353,7 @@ export async function extractReceiptTextFromImage(
                 { type: "input_text", text: openAiReceiptOcrPrompt },
                 {
                   type: "input_image",
-                  image_url: `data:${image.type};base64,${imageBase64}`,
+                  image_url: `data:${preparedImage.mimeType};base64,${imageBase64}`,
                   detail: "low",
                 },
               ],

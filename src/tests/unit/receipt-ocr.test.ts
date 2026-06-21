@@ -11,6 +11,16 @@ function makeImage() {
   };
 }
 
+function makeImageFromFixture(path: string) {
+  const bytes = readFileSync(path);
+  return {
+    name: "10824.jpg",
+    type: "image/jpeg",
+    size: bytes.length,
+    arrayBuffer: vi.fn(async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+  };
+}
+
 describe("receipt OCR provider", () => {
   const originalOpenAiKey = process.env.OPENAI_API_KEY;
   const originalFetch = global.fetch;
@@ -103,14 +113,13 @@ describe("receipt OCR provider", () => {
   it("retries one provider rate-limit response before accepting OCR success", async () => {
     process.env.OPENAI_API_KEY = "test-key";
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.useFakeTimers();
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: false,
         status: 429,
         statusText: "Too Many Requests",
-        headers: { get: vi.fn(() => "0") },
+        headers: { get: vi.fn(() => "0.001") },
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -126,9 +135,7 @@ describe("receipt OCR provider", () => {
       });
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const resultPromise = extractReceiptTextFromImage(makeImage());
-    await vi.runAllTimersAsync();
-    const result = await resultPromise;
+    const result = await extractReceiptTextFromImage(makeImage());
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(result).toEqual({
@@ -143,7 +150,6 @@ describe("receipt OCR provider", () => {
       provider: "openai",
       internalCode: "receipt_ocr_text_extracted",
     });
-    vi.useRealTimers();
   });
 
   it("passes receipt image bytes as a base64 data URL to the provider", async () => {
@@ -167,6 +173,48 @@ describe("receipt OCR provider", () => {
     expect(imageInput?.image_url).toBe("data:image/jpeg;base64,AQID");
     expect(imageInput).toEqual(expect.objectContaining({ detail: "low" }));
     expect(body).toEqual(expect.objectContaining({ max_output_tokens: 500 }));
+  });
+
+  it("compresses the actual Vascar receipt fixture before OCR and preserves structured extraction", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    const fixturePath =
+      "C:/xw/.codex-remote-attachments/019ec7ef-af02-7161-9db1-f0ceb6e9b30b/718cebcb-5512-4c91-8861-955c8dd7b570/1-Photo-1.jpg";
+    const image = makeImageFromFixture(fixturePath);
+    const originalBase64Length = Buffer.from(readFileSync(fixturePath)).toString("base64").length;
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: vi.fn(async () => ({
+        output_text: JSON.stringify({
+          merchant: "Vascar",
+          total: "20.80",
+          currency: "RON",
+          categoryHint: "Groceries",
+          receiptText: "VASCAR S.A.\nTOTAL LEI 20.80\nPLATA MODERNA: ELECTRONIC 20.8 LEI",
+        }),
+      })),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const result = await extractReceiptTextFromImage(image, {
+      importRecordId: "4e24f1d2-3dc7-4592-8b22-0c23cc739d8b",
+      storagePath: "user-1/receipt_image/2026/06/10824.jpg",
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, { body?: BodyInit }];
+    const body = JSON.parse(String(init.body)) as {
+      input: Array<{ content: Array<{ type: string; image_url?: string; detail?: string }> }>;
+    };
+    const imageInput = body.input[0]?.content.find((item) => item.type === "input_image");
+    const encodedImage = imageInput?.image_url?.split(",")[1] ?? "";
+
+    expect(imageInput?.image_url).toMatch(/^data:image\/jpeg;base64,/);
+    expect(encodedImage.length).toBeLessThan(originalBase64Length);
+    expect(result.fields).toEqual({
+      merchant: "Vascar",
+      totalText: "20.80",
+      currency: "RON",
+      categoryHint: "Groceries",
+    });
   });
 
   it("keeps OCR provider code out of the client Assistant composer", () => {

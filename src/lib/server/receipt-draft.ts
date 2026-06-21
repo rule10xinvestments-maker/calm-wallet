@@ -40,11 +40,20 @@ const grocerySignals = [
   "penny",
   "auchan",
   "profi",
+  "coca cola",
+  "lays",
+  "snack",
+  "suc",
+  "vascar",
 ];
 
 const totalLinePatterns = [
-  /\b(?:grand\s+total|amount\s+due|total\s+due|total\s+plata|total\s+de\s+plata|total)\b[^\d]{0,24}(\d{1,6}(?:[.,]\d{2})?)/i,
-  /\b(?:suma|valoare)\b[^\d]{0,24}(\d{1,6}(?:[.,]\d{2})?)/i,
+  /\b(?:grand\s+total|amount\s+due|total\s+due|total\s+plata|total\s+de\s+plata|total)\b[^\d]{0,24}(\d{1,6}(?:[.,]\d{1,2})?)/i,
+  /\b(?:suma|valoare)\b[^\d]{0,24}(\d{1,6}(?:[.,]\d{1,2})?)/i,
+];
+
+const paymentLinePatterns = [
+  /\b(?:plata|payment|electronic|card|tichete?)\b[^\d]{0,60}(\d{1,6}(?:[.,]\d{1,2})?)\s*(?:lei|ron)\b/i,
 ];
 
 const totalExclusionPattern = /\b(?:tva|vat|tax|subtotal|sub\s*total|rest|change|cash|card|visa|mastercard)\b/i;
@@ -70,7 +79,7 @@ export function parseMoneyToMinor(value: string) {
 }
 
 function extractAmountText(value: string | null | undefined) {
-  const match = value?.match(/(\d{1,6}(?:[.,]\d{2})?)/);
+  const match = value?.match(/(\d{1,6}(?:[.,]\d{1,2})?)/);
   return match?.[1] ?? null;
 }
 
@@ -81,6 +90,21 @@ export function extractReceiptTotalMinor(text: string) {
     }
 
     for (const pattern of totalLinePatterns) {
+      const match = line.match(pattern);
+      const amount = match?.[1] ? parseMoneyToMinor(match[1]) : null;
+
+      if (amount) {
+        return amount;
+      }
+    }
+  }
+
+  for (const line of text.split(/\r?\n/).reverse()) {
+    if (totalExclusionPattern.test(line)) {
+      continue;
+    }
+
+    for (const pattern of paymentLinePatterns) {
       const match = line.match(pattern);
       const amount = match?.[1] ? parseMoneyToMinor(match[1]) : null;
 
@@ -134,6 +158,10 @@ function normalizeMerchant(value: string | null | undefined) {
 
   if (/^mega\s+image$/i.test(normalized)) {
     return "Mega Image";
+  }
+
+  if (/^vascar(?:\s+s\.?\s*a\.?)?$/i.test(normalized)) {
+    return "Vascar";
   }
 
   if (normalized === normalized.toUpperCase()) {

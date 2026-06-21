@@ -86,7 +86,7 @@ describe("receipt draft extraction", () => {
 
   it("extracts dot-decimal TOTAL LEI receipt text as RON", () => {
     const draft = buildReceiptDraft({
-      extractedText: "Bon fiscal\nTOTAL LEI 20.80",
+      extractedText: "VASCAR S.A.\nCOCA COLA 2L SGR\nLAYS SARE 125G\nTOTAL LEI 20.80",
       originalFilename: "receipt.jpg",
       defaultCurrency: "USD",
       categories: [groceriesCategory],
@@ -95,6 +95,22 @@ describe("receipt draft extraction", () => {
 
     expect(draft.amountMinor).toBe(2080);
     expect(draft.currency).toBe("RON");
+    expect(draft.merchantGuess).toBe("Vascar");
+    expect(draft.categoryId).toBe(groceriesCategory.id);
+  });
+
+  it("uses Romanian electronic payment as fallback when total is unavailable", () => {
+    const draft = buildReceiptDraft({
+      extractedText: "VASCAR S.A.\nPLATA MODERNA: ELECTRONIC 20.8 LEI",
+      originalFilename: "10824.jpg",
+      defaultCurrency: "USD",
+      categories: [groceriesCategory],
+      now: new Date("2026-06-21T08:39:00.000Z"),
+    });
+
+    expect(draft.amountMinor).toBe(2080);
+    expect(draft.currency).toBe("RON");
+    expect(draft.merchantGuess).toBe("Vascar");
   });
 
   it("maps structured Mega Image OCR fields into a staged grocery draft", () => {
@@ -131,6 +147,20 @@ describe("receipt draft extraction", () => {
         ].join("\n"),
       ),
     ).toBe(3524);
+  });
+
+  it("ignores Vascar VAT totals in favor of the final payable total", () => {
+    expect(
+      extractReceiptTotalMinor(
+        [
+          "VASCAR S.A.",
+          "TOTAL LEI 20.80",
+          "TOTAL TVA A - 21% 2.12",
+          "TOTAL TVA B - 11% 0.80",
+          "TOTAL TVA BON 2.92",
+        ].join("\n"),
+      ),
+    ).toBe(2080);
   });
 
   it("leaves amount missing when no reliable total is visible", () => {
