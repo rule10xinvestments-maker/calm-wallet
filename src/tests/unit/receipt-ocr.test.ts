@@ -11,6 +11,17 @@ function makeImage() {
   };
 }
 
+function makeLargeInvalidImage() {
+  const bytes = new Uint8Array(2_000_000);
+
+  return {
+    name: "large-receipt.jpg",
+    type: "image/jpeg",
+    size: bytes.length,
+    arrayBuffer: vi.fn(async () => bytes.buffer),
+  };
+}
+
 function makeImageFromFixture(path: string) {
   const bytes = readFileSync(path);
   return {
@@ -99,6 +110,15 @@ describe("receipt OCR provider", () => {
       status: 500,
       statusText: "Internal Server Error",
       headers: { get: vi.fn(() => null) },
+      text: vi.fn(async () =>
+        JSON.stringify({
+          error: {
+            type: "server_error",
+            code: "internal_error",
+            message: "Provider failed.",
+          },
+        }),
+      ),
     })) as unknown as typeof fetch;
 
     await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
@@ -172,7 +192,23 @@ describe("receipt OCR provider", () => {
     const imageInput = body.input[0]?.content.find((item) => item.type === "input_image");
     expect(imageInput?.image_url).toBe("data:image/jpeg;base64,AQID");
     expect(imageInput).toEqual(expect.objectContaining({ detail: "low" }));
-    expect(body).toEqual(expect.objectContaining({ max_output_tokens: 500 }));
+    expect(body).toEqual(expect.objectContaining({ max_output_tokens: 220 }));
+  });
+
+  it("does not send a large original image to OCR when optimization fails", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock;
+
+    await expect(extractReceiptTextFromImage(makeLargeInvalidImage())).resolves.toEqual({
+      status: "extraction_failed",
+      text: null,
+      fields: null,
+      provider: "openai",
+      internalCode: "receipt_ocr_image_optimization_required",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("compresses the actual Vascar receipt fixture before OCR and preserves structured extraction", async () => {
@@ -209,6 +245,7 @@ describe("receipt OCR provider", () => {
 
     expect(imageInput?.image_url).toMatch(/^data:image\/jpeg;base64,/);
     expect(encodedImage.length).toBeLessThan(originalBase64Length);
+    expect(encodedImage.length).toBeLessThan(60_000);
     expect(result.fields).toEqual({
       merchant: "Vascar",
       totalText: "20.80",

@@ -45,6 +45,15 @@ type PreparedOcrImage = {
   wasOptimized: boolean;
 };
 
+type ProviderErrorMetadata = {
+  status?: number;
+  statusText?: string;
+  errorType?: string;
+  errorCode?: string;
+  errorParam?: string;
+  errorMessage?: string;
+};
+
 type OpenAiReceiptOcrResponse = {
   output_text?: unknown;
   output?: Array<{
@@ -66,8 +75,11 @@ const openAiReceiptOcrPrompt = [
 ].join(" ");
 
 const OPENAI_RECEIPT_OCR_MAX_ATTEMPTS = 2;
-const RECEIPT_OCR_MAX_IMAGE_EDGE = 1400;
-const RECEIPT_OCR_JPEG_QUALITY = 68;
+const OPENAI_RECEIPT_OCR_MAX_OUTPUT_TOKENS = 220;
+const OPENAI_RECEIPT_OCR_TIMEOUT_MS = 12000;
+const RECEIPT_OCR_MAX_IMAGE_EDGE = 960;
+const RECEIPT_OCR_JPEG_QUALITY = 50;
+const RECEIPT_OCR_MAX_UNOPTIMIZED_PROVIDER_BYTES = 1_500_000;
 
 function getOpenAiApiKey() {
   return process.env.OPENAI_API_KEY?.trim() || null;
@@ -249,6 +261,7 @@ function logReceiptOcrFailure(args: {
   importRecordId?: string | null;
   storagePath?: string | null;
   error?: unknown;
+  providerError?: ProviderErrorMetadata;
 }) {
   const errorWithMetadata = args.error as { code?: unknown; message?: unknown; status?: unknown } | null;
   console.warn("receipt_ocr_failed", {
@@ -259,10 +272,42 @@ function logReceiptOcrFailure(args: {
     importRecordId: args.importRecordId ?? null,
     storagePath: args.storagePath ?? null,
     errorName: args.error instanceof Error ? args.error.name : typeof args.error,
-    errorCode: errorWithMetadata?.code,
-    errorStatus: errorWithMetadata?.status,
-    errorMessage: typeof errorWithMetadata?.message === "string" ? errorWithMetadata.message : undefined,
+    errorCode: args.providerError?.errorCode ?? errorWithMetadata?.code,
+    errorStatus: args.providerError?.status ?? errorWithMetadata?.status,
+    errorType: args.providerError?.errorType,
+    errorParam: args.providerError?.errorParam,
+    errorMessage:
+      args.providerError?.errorMessage ??
+      (typeof errorWithMetadata?.message === "string" ? errorWithMetadata.message : undefined),
+    statusText: args.providerError?.statusText,
   });
+}
+
+async function readProviderErrorMetadata(response: Response | null): Promise<ProviderErrorMetadata> {
+  if (!response) {
+    return {};
+  }
+
+  const metadata: ProviderErrorMetadata = {
+    status: response.status,
+    statusText: response.statusText,
+  };
+
+  try {
+    const rawText = await response.text();
+    const parsed = rawText ? (JSON.parse(rawText) as { error?: Record<string, unknown> }) : null;
+    const error = parsed?.error;
+
+    return {
+      ...metadata,
+      errorType: typeof error?.type === "string" ? error.type : undefined,
+      errorCode: typeof error?.code === "string" ? error.code : undefined,
+      errorParam: typeof error?.param === "string" ? error.param : undefined,
+      errorMessage: typeof error?.message === "string" ? error.message.slice(0, 180) : undefined,
+    };
+  } catch {
+    return metadata;
+  }
 }
 
 export async function extractReceiptTextFromImage(
@@ -328,6 +373,30 @@ export async function extractReceiptTextFromImage(
       wasOptimized: preparedImage.wasOptimized,
       mimeType: preparedImage.mimeType,
     });
+    if (
+      !preparedImage.wasOptimized &&
+      preparedImage.originalSize > RECEIPT_OCR_MAX_UNOPTIMIZED_PROVIDER_BYTES
+    ) {
+      logReceiptOcrFailure({
+        code: "receipt_ocr_image_optimization_required",
+        status: "extraction_failed",
+        provider: "openai",
+        stage: "ocr_provider_failed",
+        importRecordId: context.importRecordId,
+        storagePath: context.storagePath,
+        error: {
+          status: "image_too_large_unoptimized",
+          message: "Receipt image optimization did not reduce a large image.",
+        },
+      });
+      return {
+        status: "extraction_failed",
+        text: null,
+        fields: null,
+        provider: "openai",
+        internalCode: "receipt_ocr_image_optimization_required",
+      };
+    }
     logReceiptOcrStage({
       stage: "ocr_provider_called",
       provider: "openai",
@@ -340,6 +409,7 @@ export async function extractReceiptTextFromImage(
     for (let attempt = 1; attempt <= OPENAI_RECEIPT_OCR_MAX_ATTEMPTS; attempt += 1) {
       response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
+        signal: AbortSignal.timeout(OPENAI_RECEIPT_OCR_TIMEOUT_MS),
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
@@ -359,7 +429,7 @@ export async function extractReceiptTextFromImage(
               ],
             },
           ],
-          max_output_tokens: 500,
+          max_output_tokens: OPENAI_RECEIPT_OCR_MAX_OUTPUT_TOKENS,
         }),
       });
 
@@ -381,6 +451,7 @@ export async function extractReceiptTextFromImage(
     }
 
     if (!response?.ok) {
+      const providerError = await readProviderErrorMetadata(response);
       logReceiptOcrFailure({
         code: "receipt_ocr_provider_response_failed",
         status: "extraction_failed",
@@ -388,10 +459,7 @@ export async function extractReceiptTextFromImage(
         stage: "ocr_provider_failed",
         importRecordId: context.importRecordId,
         storagePath: context.storagePath,
-        error: {
-          status: response?.status,
-          message: response?.statusText,
-        },
+        providerError,
       });
       return {
         status: "extraction_failed",

@@ -314,7 +314,8 @@ function getReceiptOcrStatus(args: {
   if (
     args.extractionResult.internalCode === "receipt_ocr_provider_response_failed" ||
     args.extractionResult.internalCode === "receipt_ocr_provider_exception" ||
-    args.extractionResult.internalCode === "receipt_ocr_unhandled_exception"
+    args.extractionResult.internalCode === "receipt_ocr_unhandled_exception" ||
+    args.extractionResult.internalCode === "receipt_ocr_image_optimization_required"
   ) {
     return "provider_failed";
   }
