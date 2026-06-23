@@ -1600,6 +1600,23 @@ async function loadDefaultCurrency(userId: string) {
   return data?.default_currency ?? "USD";
 }
 
+function logInsightsSupportingDataFailure(source: "categories" | "controlled_categories" | "default_currency" | "budgets" | "fx_rates", error: unknown) {
+  console.warn("[insights-supporting-data-fallback]", {
+    source,
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    hasMessage: error instanceof Error && Boolean(error.message),
+  });
+}
+
+async function loadInsightsSupportingData<T>(source: Parameters<typeof logInsightsSupportingDataFailure>[0], loader: () => Promise<T>, fallback: T) {
+  try {
+    return await loader();
+  } catch (error) {
+    logInsightsSupportingDataFailure(source, error);
+    return fallback;
+  }
+}
+
 export async function loadAssistantRecentTransactions(userId: string) {
   const service = await createSupabaseTransactionService();
   const recent = await service.listTransactions(userId, {
@@ -1656,17 +1673,15 @@ export async function loadInsightsPageData(
   const now = new Date();
   const selectedMonthDate = parseMonthKey(selectedMonth, now);
   const monthStart = toMonthStartValue(selectedMonthDate);
-  const [transactions, categoryLabels, currency, controlledCategories, budgets] = await Promise.all([
-    service.listTransactions(userId, {
-      includeDeleted: false,
-      limit: 100,
-    }),
-    loadCategoryLabels(),
-    loadDefaultCurrency(userId),
-    loadControlledCategoryOptions(),
-    budgetService.listMonthlyCategoryBudgets(userId, {
-      monthStart,
-    }),
+  const transactions = await service.listTransactions(userId, {
+    includeDeleted: false,
+    limit: 100,
+  });
+  const [categoryLabels, currency, controlledCategories, budgets] = await Promise.all([
+    loadInsightsSupportingData("categories", loadCategoryLabels, {}),
+    loadInsightsSupportingData("default_currency", () => loadDefaultCurrency(userId), "USD"),
+    loadInsightsSupportingData("controlled_categories", loadControlledCategoryOptions, []),
+    loadInsightsSupportingData("budgets", () => budgetService.listMonthlyCategoryBudgets(userId, { monthStart }), []),
   ]);
   const displayCurrency = resolveInsightsDisplayCurrency({
     transactions,
@@ -1675,7 +1690,7 @@ export async function loadInsightsPageData(
     requestedDisplayCurrency,
   });
   const currenciesForRates = Array.from(new Set([...transactions.map((transaction) => transaction.currency), displayCurrency]));
-  const fxRates = await loadFxRatesForDisplay(currenciesForRates);
+  const fxRates = await loadInsightsSupportingData("fx_rates", () => loadFxRatesForDisplay(currenciesForRates), []);
   const budgetCategoryOptions = controlledCategories
     .filter((category) => category.direction === "expense" || category.direction === "both")
     .map((category) => ({

@@ -9,6 +9,9 @@ export type ReceiptExtractionStatus =
 export type ReceiptOcrFailureStatus =
   | "unavailable"
   | "image_load_failed"
+  | "provider_rate_limited"
+  | "provider_quota_exceeded"
+  | "provider_auth_failed"
   | "provider_failed"
   | "extraction_empty"
   | "extraction_partial"
@@ -77,8 +80,8 @@ const openAiReceiptOcrPrompt = [
 const OPENAI_RECEIPT_OCR_MAX_ATTEMPTS = 2;
 const OPENAI_RECEIPT_OCR_MAX_OUTPUT_TOKENS = 220;
 const OPENAI_RECEIPT_OCR_TIMEOUT_MS = 12000;
-const RECEIPT_OCR_MAX_IMAGE_EDGE = 960;
-const RECEIPT_OCR_JPEG_QUALITY = 50;
+const RECEIPT_OCR_MAX_IMAGE_EDGE = 900;
+const RECEIPT_OCR_JPEG_QUALITY = 48;
 const RECEIPT_OCR_MAX_UNOPTIMIZED_PROVIDER_BYTES = 1_500_000;
 
 function getOpenAiApiKey() {
@@ -178,14 +181,44 @@ function getRetryDelayMs(response: Response) {
   const retryAfterSeconds = retryAfter ? Number(retryAfter) : Number.NaN;
 
   if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
-    return Math.min(Math.round(retryAfterSeconds * 1000), 2000);
+    return Math.min(Math.round(retryAfterSeconds * 1000), 2000) + Math.round(Math.random() * 150);
   }
 
-  return 750;
+  return 650 + Math.round(Math.random() * 250);
 }
 
-function shouldRetryProviderResponse(response: Response) {
-  return response.status === 429 || response.status >= 500;
+function classifyProviderFailure(error: ProviderErrorMetadata) {
+  const code = error.errorCode?.toLowerCase() ?? "";
+  const type = error.errorType?.toLowerCase() ?? "";
+  const message = error.errorMessage?.toLowerCase() ?? "";
+  const status = error.status;
+
+  if (status === 401 || status === 403 || code.includes("invalid_api_key") || type.includes("authentication")) {
+    return "receipt_ocr_provider_auth_failed";
+  }
+
+  if (
+    code.includes("insufficient_quota") ||
+    code.includes("billing") ||
+    type.includes("insufficient_quota") ||
+    type.includes("billing") ||
+    message.includes("quota") ||
+    message.includes("billing")
+  ) {
+    return "receipt_ocr_provider_quota_exceeded";
+  }
+
+  if (status === 429) {
+    return "receipt_ocr_provider_rate_limited";
+  }
+
+  return "receipt_ocr_provider_response_failed";
+}
+
+function shouldRetryProviderResponse(error: ProviderErrorMetadata) {
+  const classification = classifyProviderFailure(error);
+
+  return classification === "receipt_ocr_provider_rate_limited" || (error.status ?? 0) >= 500;
 }
 
 function extractOutputText(payload: OpenAiReceiptOcrResponse) {
@@ -405,6 +438,7 @@ export async function extractReceiptTextFromImage(
       model,
     });
     let response: Response | null = null;
+    let providerError: ProviderErrorMetadata = {};
 
     for (let attempt = 1; attempt <= OPENAI_RECEIPT_OCR_MAX_ATTEMPTS; attempt += 1) {
       response = await fetch("https://api.openai.com/v1/responses", {
@@ -433,7 +467,14 @@ export async function extractReceiptTextFromImage(
         }),
       });
 
-      if (response.ok || !shouldRetryProviderResponse(response) || attempt === OPENAI_RECEIPT_OCR_MAX_ATTEMPTS) {
+      if (response.ok) {
+        break;
+      }
+
+      providerError = await readProviderErrorMetadata(response);
+      const failureCode = classifyProviderFailure(providerError);
+
+      if (!shouldRetryProviderResponse(providerError) || attempt === OPENAI_RECEIPT_OCR_MAX_ATTEMPTS) {
         break;
       }
 
@@ -445,15 +486,19 @@ export async function extractReceiptTextFromImage(
         importRecordId: context.importRecordId ?? null,
         storagePath: context.storagePath ?? null,
         errorStatus: response.status,
+        errorCode: providerError.errorCode,
+        errorType: providerError.errorType,
+        failureCode,
         attempt,
       });
       await delay(getRetryDelayMs(response));
     }
 
     if (!response?.ok) {
-      const providerError = await readProviderErrorMetadata(response);
+      providerError = providerError.status ? providerError : await readProviderErrorMetadata(response);
+      const failureCode = classifyProviderFailure(providerError);
       logReceiptOcrFailure({
-        code: "receipt_ocr_provider_response_failed",
+        code: failureCode,
         status: "extraction_failed",
         provider: "openai",
         stage: "ocr_provider_failed",
@@ -466,7 +511,7 @@ export async function extractReceiptTextFromImage(
         text: null,
         fields: null,
         provider: "openai",
-        internalCode: "receipt_ocr_provider_response_failed",
+        internalCode: failureCode,
       };
     }
 

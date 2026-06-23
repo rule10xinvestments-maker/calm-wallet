@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_TRANSACTION_SOURCE } from "@/domain/transactions/types";
+import type { Transaction } from "@/domain/transactions/types";
 
 const listTransactions = vi.fn();
 const listMonthlyCategoryBudgets = vi.fn();
@@ -66,5 +68,42 @@ describe("insights page read model server loader", () => {
     expect(listMonthlyCategoryBudgets).toHaveBeenCalledWith("user-1", {
       monthStart: "2026-04-01",
     });
+  });
+
+  it("keeps tracked transactions visible when optional budget data is unavailable", async () => {
+    const { loadInsightsPageData } = await import("@/lib/server/transactions-read-model");
+    const transaction: Transaction = {
+      id: "txn-1",
+      userId: "user-1",
+      transactionType: "expense",
+      amountMinor: 500,
+      currency: "RON",
+      occurredAt: "2026-06-13T00:00:00.000Z",
+      categoryId: "groceries",
+      itemName: "Bere",
+      merchant: null,
+      note: null,
+      source: DEFAULT_TRANSACTION_SOURCE,
+      reviewState: "reviewed",
+      uncertaintyReason: null,
+      importRecordId: null,
+      importCandidateId: null,
+      deletedAt: null,
+      deletedForeverAt: null,
+      createdAt: "2026-06-13T00:00:00.000Z",
+      updatedAt: "2026-06-13T00:00:00.000Z",
+    };
+
+    listTransactions.mockResolvedValue([transaction]);
+    listMonthlyCategoryBudgets.mockRejectedValueOnce(new Error("Budget table unavailable"));
+
+    const data = await loadInsightsPageData("user-1", null, "2026-06", "1M", "mix");
+
+    expect(data.trackedTransactionCount).toBe(1);
+    expect(data.currentMonthTransactionCount).toBe(1);
+    expect(data.selectedPeriodTransactionCount).toBe(1);
+    expect(data.monthlyExpenseDisplayMinor).toBe(500);
+    expect(data.displayCurrency).toBe("RON");
+    expect(data.budgetProgress).toEqual([]);
   });
 });

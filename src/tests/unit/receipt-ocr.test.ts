@@ -140,6 +140,15 @@ describe("receipt OCR provider", () => {
         status: 429,
         statusText: "Too Many Requests",
         headers: { get: vi.fn(() => "0.001") },
+        text: vi.fn(async () =>
+          JSON.stringify({
+            error: {
+              type: "rate_limit_error",
+              code: "rate_limit_exceeded",
+              message: "Rate limit reached.",
+            },
+          }),
+        ),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -170,6 +179,86 @@ describe("receipt OCR provider", () => {
       provider: "openai",
       internalCode: "receipt_ocr_text_extracted",
     });
+  });
+
+  it("retries one short rate-limit response and then falls back calmly", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const rateLimitResponse = () => ({
+      ok: false,
+      status: 429,
+      statusText: "Too Many Requests",
+      headers: { get: vi.fn(() => "0.001") },
+      text: vi.fn(async () =>
+        JSON.stringify({
+          error: {
+            type: "rate_limit_error",
+            code: "rate_limit_exceeded",
+            message: "Rate limit reached.",
+          },
+        }),
+      ),
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce(rateLimitResponse()).mockResolvedValueOnce(rateLimitResponse());
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+      status: "extraction_failed",
+      text: null,
+      fields: null,
+      provider: "openai",
+      internalCode: "receipt_ocr_provider_rate_limited",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry quota or billing failures", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      statusText: "Too Many Requests",
+      headers: { get: vi.fn(() => "0.001") },
+      text: vi.fn(async () =>
+        JSON.stringify({
+          error: {
+            type: "insufficient_quota",
+            code: "insufficient_quota",
+            message: "You exceeded your current quota. Check billing details.",
+          },
+        }),
+      ),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+      status: "extraction_failed",
+      text: null,
+      fields: null,
+      provider: "openai",
+      internalCode: "receipt_ocr_provider_quota_exceeded",
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("falls back calmly when the provider request times out", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const timeoutError = new DOMException("The operation was aborted.", "TimeoutError");
+    const fetchMock = vi.fn(async () => {
+      throw timeoutError;
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+      status: "extraction_failed",
+      text: null,
+      fields: null,
+      provider: "openai",
+      internalCode: "receipt_ocr_provider_exception",
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("passes receipt image bytes as a base64 data URL to the provider", async () => {
@@ -245,7 +334,7 @@ describe("receipt OCR provider", () => {
 
     expect(imageInput?.image_url).toMatch(/^data:image\/jpeg;base64,/);
     expect(encodedImage.length).toBeLessThan(originalBase64Length);
-    expect(encodedImage.length).toBeLessThan(60_000);
+    expect(encodedImage.length).toBeLessThan(55_000);
     expect(result.fields).toEqual({
       merchant: "Vascar",
       totalText: "20.80",

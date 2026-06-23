@@ -311,6 +311,18 @@ function getReceiptOcrStatus(args: {
     return "image_load_failed";
   }
 
+  if (args.extractionResult.internalCode === "receipt_ocr_provider_rate_limited") {
+    return "provider_rate_limited";
+  }
+
+  if (args.extractionResult.internalCode === "receipt_ocr_provider_quota_exceeded") {
+    return "provider_quota_exceeded";
+  }
+
+  if (args.extractionResult.internalCode === "receipt_ocr_provider_auth_failed") {
+    return "provider_auth_failed";
+  }
+
   if (
     args.extractionResult.internalCode === "receipt_ocr_provider_response_failed" ||
     args.extractionResult.internalCode === "receipt_ocr_provider_exception" ||
