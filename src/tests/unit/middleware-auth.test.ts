@@ -50,6 +50,9 @@ describe("auth middleware", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-request-x-auth-verified")).toBe("middleware");
+    expect(response.headers.get("x-middleware-request-x-auth-user-id")).toBe("user-1");
+    expect(response.headers.get("x-middleware-request-x-auth-user-email")).toBe("user@example.com");
     expect(getUser).toHaveBeenCalledOnce();
     expect(getSession).toHaveBeenCalledOnce();
   });

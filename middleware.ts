@@ -29,12 +29,7 @@ export async function middleware(request: NextRequest) {
   );
   const supabaseUrl = getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL");
   const supabaseAnonKey = getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+  const cookiesToSetBuffer: CookieToSet[] = [];
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -44,7 +39,7 @@ export async function middleware(request: NextRequest) {
       setAll(cookiesToSet: CookieToSet[]) {
         cookiesToSet.forEach(({ name, value, options }) => {
           request.cookies.set(name, value);
-          response.cookies.set(name, value, options);
+          cookiesToSetBuffer.push({ name, value, options });
         });
       },
     },
@@ -60,13 +55,39 @@ export async function middleware(request: NextRequest) {
     : await supabase.auth.getSession();
   const authUser = user ?? session?.user ?? null;
 
+  if (authUser) {
+    requestHeaders.set("x-auth-user-id", authUser.id);
+    requestHeaders.set("x-auth-user-email", authUser.email ?? "");
+    requestHeaders.set("x-auth-verified", "middleware");
+  } else {
+    requestHeaders.delete("x-auth-user-id");
+    requestHeaders.delete("x-auth-user-email");
+    requestHeaders.delete("x-auth-verified");
+  }
+
   if (isProtectedPath && !authUser) {
+    cookiesToSetBuffer.forEach(({ name, value, options }) => {
+      redirectToSignIn.cookies.set(name, value, options);
+    });
     return redirectToSignIn;
   }
 
   if (isPublicPath && authUser) {
-    return NextResponse.redirect(new URL("/assistant", request.url));
+    const redirectToAssistant = NextResponse.redirect(new URL("/assistant", request.url));
+    cookiesToSetBuffer.forEach(({ name, value, options }) => {
+      redirectToAssistant.cookies.set(name, value, options);
+    });
+    return redirectToAssistant;
   }
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+  cookiesToSetBuffer.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options);
+  });
 
   return response;
 }
