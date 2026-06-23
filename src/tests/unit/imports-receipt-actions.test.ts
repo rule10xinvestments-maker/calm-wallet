@@ -444,7 +444,7 @@ describe("receipt import actions", () => {
         categoryId: "44444444-4444-4444-4444-444444444444",
         reviewState: "pending_review",
         acceptanceState: "pending",
-        uncertaintyReason: "Receipt total was extracted automatically. Please review before saving.",
+        uncertaintyReason: "We found a total. Please review before saving.",
       }),
     );
   });

@@ -9,6 +9,9 @@ export type ReceiptExtractionStatus =
 export type ReceiptOcrFailureStatus =
   | "unavailable"
   | "image_load_failed"
+  | "local_ocr_success"
+  | "local_ocr_partial"
+  | "local_ocr_failed"
   | "provider_rate_limited"
   | "provider_quota_exceeded"
   | "provider_auth_failed"
@@ -29,7 +32,7 @@ export type ReceiptOcrResult = {
   status: ReceiptExtractionStatus;
   text: string | null;
   fields?: ReceiptOcrFields | null;
-  provider: "openai" | "none";
+  provider: "local_tesseract" | "openai" | "none";
   internalCode: string;
 };
 
@@ -67,6 +70,10 @@ type OpenAiReceiptOcrResponse = {
   }>;
 };
 
+type OcrAttemptResult = ReceiptOcrResult & {
+  shouldFallbackToLocal?: boolean;
+};
+
 const openAiReceiptOcrPrompt = [
   "Extract one expense receipt summary from this image for review.",
   "Return only JSON with keys merchant, total, currency, categoryHint, and receiptText.",
@@ -80,6 +87,7 @@ const openAiReceiptOcrPrompt = [
 const OPENAI_RECEIPT_OCR_MAX_ATTEMPTS = 2;
 const OPENAI_RECEIPT_OCR_MAX_OUTPUT_TOKENS = 220;
 const OPENAI_RECEIPT_OCR_TIMEOUT_MS = 12000;
+const LOCAL_TESSERACT_OCR_TIMEOUT_MS = 14000;
 const RECEIPT_OCR_MAX_IMAGE_EDGE = 900;
 const RECEIPT_OCR_JPEG_QUALITY = 48;
 const RECEIPT_OCR_MAX_UNOPTIMIZED_PROVIDER_BYTES = 1_500_000;
@@ -92,10 +100,20 @@ function getOpenAiVisionModel() {
   return process.env.RECEIPT_OCR_OPENAI_MODEL?.trim() || "gpt-4o-mini";
 }
 
+function shouldTryOpenAiOcr() {
+  return process.env.RECEIPT_OCR_OPENAI_ENABLED?.trim().toLowerCase() !== "false";
+}
+
+function getTesseractLanguage() {
+  return process.env.RECEIPT_OCR_TESSERACT_LANG?.trim() || "eng";
+}
+
 function logReceiptOcrStage(args: {
   stage:
     | "ocr_env_available"
     | "ocr_env_missing"
+    | "ocr_local_provider_called"
+    | "ocr_local_provider_returned"
     | "ocr_provider_called"
     | "ocr_provider_returned";
   provider: ReceiptOcrResult["provider"];
@@ -135,6 +153,8 @@ async function prepareReceiptImageForOcr(image: ReceiptOcrImage): Promise<Prepar
         fit: "inside",
         withoutEnlargement: true,
       })
+      .grayscale()
+      .normalize()
       .jpeg({
         quality: RECEIPT_OCR_JPEG_QUALITY,
         mozjpeg: true,
@@ -168,6 +188,19 @@ async function prepareReceiptImageForOcr(image: ReceiptOcrImage): Promise<Prepar
     optimizedSize: originalBuffer.length,
     wasOptimized: false,
   };
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, onTimeout: () => Error): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(onTimeout()), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  });
 }
 
 function delay(ms: number) {
@@ -343,13 +376,91 @@ async function readProviderErrorMetadata(response: Response | null): Promise<Pro
   }
 }
 
-export async function extractReceiptTextFromImage(
-  image: ReceiptOcrImage,
-  context: { importRecordId?: string | null; storagePath?: string | null } = {},
+async function extractReceiptTextWithLocalTesseract(
+  preparedImage: PreparedOcrImage,
+  context: { importRecordId?: string | null; storagePath?: string | null },
 ): Promise<ReceiptOcrResult> {
+  let worker: { recognize: (image: Buffer) => Promise<{ data?: { text?: string } }>; setParameters?: (params: Record<string, string>) => Promise<unknown>; terminate: () => Promise<unknown> } | null = null;
+
+  try {
+    const tesseract = await import("tesseract.js");
+    const language = getTesseractLanguage();
+
+    logReceiptOcrStage({
+      stage: "ocr_local_provider_called",
+      provider: "local_tesseract",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model: language,
+    });
+
+    const task = (async () => {
+      worker = await tesseract.createWorker(language, 1, {
+        cachePath: process.env.RECEIPT_OCR_TESSERACT_CACHE_PATH?.trim() || "/tmp/tesseract-cache",
+        logger: () => undefined,
+      });
+      await worker.setParameters?.({
+        preserve_interword_spaces: "1",
+        tessedit_pageseg_mode: tesseract.PSM.SPARSE_TEXT,
+      });
+      return worker.recognize(preparedImage.bytes);
+    })();
+    const result = await withTimeout(
+      task,
+      LOCAL_TESSERACT_OCR_TIMEOUT_MS,
+      () => new Error("Local Tesseract OCR timed out."),
+    );
+    const text = result.data?.text?.trim() || null;
+    const status: ReceiptExtractionStatus = text ? "extraction_success" : "extraction_unavailable";
+
+    logReceiptOcrStage({
+      stage: "ocr_local_provider_returned",
+      provider: "local_tesseract",
+      status,
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model: language,
+      textPresent: Boolean(text),
+      fieldsPresent: false,
+    });
+
+    return {
+      status,
+      text,
+      fields: null,
+      provider: "local_tesseract",
+      internalCode: text ? "receipt_ocr_local_text_extracted" : "receipt_ocr_local_text_empty",
+    };
+  } catch (error) {
+    logReceiptOcrFailure({
+      code: "receipt_ocr_local_provider_failed",
+      status: "extraction_failed",
+      provider: "local_tesseract",
+      stage: "ocr_provider_failed",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      error,
+    });
+    return {
+      status: "extraction_failed",
+      text: null,
+      fields: null,
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_provider_failed",
+    };
+  } finally {
+    const workerToTerminate = worker as { terminate: () => Promise<unknown> } | null;
+    await workerToTerminate?.terminate().catch(() => undefined);
+  }
+}
+
+async function extractReceiptTextWithOpenAi(
+  preparedImage: PreparedOcrImage,
+  context: { importRecordId?: string | null; storagePath?: string | null },
+): Promise<OcrAttemptResult> {
   const apiKey = getOpenAiApiKey();
 
-  if (!apiKey) {
+  if (!apiKey || !shouldTryOpenAiOcr()) {
     logReceiptOcrStage({
       stage: "ocr_env_missing",
       provider: "none",
@@ -371,16 +482,7 @@ export async function extractReceiptTextFromImage(
       fields: null,
       provider: "none",
       internalCode: "receipt_ocr_provider_unavailable",
-    };
-  }
-
-  if (!isSupportedReceiptImageMimeType(image.type)) {
-    return {
-      status: "extraction_failed",
-      text: null,
-      fields: null,
-      provider: "openai",
-      internalCode: "receipt_ocr_unsupported_image_type",
+      shouldFallbackToLocal: true,
     };
   }
 
@@ -393,19 +495,7 @@ export async function extractReceiptTextFromImage(
       storagePath: context.storagePath,
       model,
     });
-    const preparedImage = await prepareReceiptImageForOcr(image);
     const imageBase64 = bytesToBase64(preparedImage.bytes);
-    console.info("receipt_ocr_stage", {
-      stage: "ocr_image_optimized",
-      provider: "openai",
-      importRecordId: context.importRecordId ?? null,
-      storagePath: context.storagePath ?? null,
-      model,
-      originalSize: preparedImage.originalSize,
-      optimizedSize: preparedImage.optimizedSize,
-      wasOptimized: preparedImage.wasOptimized,
-      mimeType: preparedImage.mimeType,
-    });
     if (
       !preparedImage.wasOptimized &&
       preparedImage.originalSize > RECEIPT_OCR_MAX_UNOPTIMIZED_PROVIDER_BYTES
@@ -428,6 +518,7 @@ export async function extractReceiptTextFromImage(
         fields: null,
         provider: "openai",
         internalCode: "receipt_ocr_image_optimization_required",
+        shouldFallbackToLocal: true,
       };
     }
     logReceiptOcrStage({
@@ -512,6 +603,7 @@ export async function extractReceiptTextFromImage(
         fields: null,
         provider: "openai",
         internalCode: failureCode,
+        shouldFallbackToLocal: true,
       };
     }
 
@@ -538,6 +630,7 @@ export async function extractReceiptTextFromImage(
       fields,
       provider: "openai",
       internalCode: text || fields ? "receipt_ocr_text_extracted" : "receipt_ocr_text_empty",
+      shouldFallbackToLocal: !(text || fields),
     };
   } catch (error) {
     logReceiptOcrFailure({
@@ -555,6 +648,58 @@ export async function extractReceiptTextFromImage(
       fields: null,
       provider: "openai",
       internalCode: "receipt_ocr_provider_exception",
+      shouldFallbackToLocal: true,
     };
   }
+}
+
+function toPublicOcrResult(result: OcrAttemptResult): ReceiptOcrResult {
+  return {
+    status: result.status,
+    text: result.text,
+    fields: result.fields ?? null,
+    provider: result.provider,
+    internalCode: result.internalCode,
+  };
+}
+
+export async function extractReceiptTextFromImage(
+  image: ReceiptOcrImage,
+  context: { importRecordId?: string | null; storagePath?: string | null } = {},
+): Promise<ReceiptOcrResult> {
+  if (!isSupportedReceiptImageMimeType(image.type)) {
+    return {
+      status: "extraction_failed",
+      text: null,
+      fields: null,
+      provider: "none",
+      internalCode: "receipt_ocr_unsupported_image_type",
+    };
+  }
+
+  const preparedImage = await prepareReceiptImageForOcr(image);
+  console.info("receipt_ocr_stage", {
+    stage: "ocr_image_optimized",
+    provider: "none",
+    importRecordId: context.importRecordId ?? null,
+    storagePath: context.storagePath ?? null,
+    originalSize: preparedImage.originalSize,
+    optimizedSize: preparedImage.optimizedSize,
+    wasOptimized: preparedImage.wasOptimized,
+    mimeType: preparedImage.mimeType,
+  });
+
+  const openAiResult = await extractReceiptTextWithOpenAi(preparedImage, context);
+
+  if (!openAiResult.shouldFallbackToLocal) {
+    return toPublicOcrResult(openAiResult);
+  }
+
+  const localResult = await extractReceiptTextWithLocalTesseract(preparedImage, context);
+
+  if (localResult.text || localResult.fields) {
+    return localResult;
+  }
+
+  return localResult.internalCode === "receipt_ocr_local_provider_failed" ? localResult : toPublicOcrResult(openAiResult);
 }

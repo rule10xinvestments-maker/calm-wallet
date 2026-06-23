@@ -33,7 +33,7 @@ describe("receipt draft extraction", () => {
       categoryId: "33333333-3333-3333-3333-333333333333",
       confidenceScore: 0.72,
       reviewState: "pending_review",
-      uncertaintyReason: "Receipt total was extracted automatically. Please review before saving.",
+      uncertaintyReason: "We found a total. Please review before saving.",
     });
   });
 

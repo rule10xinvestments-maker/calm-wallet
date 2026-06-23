@@ -230,6 +230,6 @@ export function buildReceiptDraft(args: {
     categoryId: groceriesLike ? groceriesCategory?.id ?? null : null,
     confidenceScore: 0.72,
     reviewState: "pending_review",
-    uncertaintyReason: "Receipt total was extracted automatically. Please review before saving.",
+    uncertaintyReason: "We found a total. Please review before saving.",
   };
 }

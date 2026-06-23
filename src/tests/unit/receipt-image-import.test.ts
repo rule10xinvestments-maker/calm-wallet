@@ -293,4 +293,76 @@ describe("receipt image import upload", () => {
       status: "provider_rate_limited",
     });
   });
+
+  it("persists local_ocr_success and stages prefilled receipt fields from Tesseract text", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const groceriesCategory = {
+      id: "33333333-3333-3333-3333-333333333333",
+      slug: "groceries",
+      label: "Groceries",
+      direction: "expense" as const,
+    };
+    const createImportCandidate = vi.fn(async (_userId, input) => ({
+      id: "44444444-4444-4444-4444-444444444444",
+      userId: "user-1",
+      importRecordId: "11111111-1111-1111-1111-111111111111",
+      transactionType: input.transactionType,
+      amountMinor: input.amountMinor,
+      currency: input.currency,
+      occurredAt: input.occurredAt,
+      description: input.description,
+      merchantGuess: input.merchantGuess,
+      categoryId: input.categoryId,
+      confidenceScore: input.confidenceScore,
+      reviewState: input.reviewState,
+      acceptanceState: input.acceptanceState,
+      acceptedTransactionId: null,
+      uncertaintyReason: input.uncertaintyReason,
+      createdAt: "2026-05-02T10:05:00.000Z",
+      updatedAt: "2026-05-02T10:05:00.000Z",
+    }));
+    const persistReceiptOcrStatus = vi.fn(async () => undefined);
+
+    const result = await uploadReceiptImageAndPrepareDraft(makeFile({ name: "10824.jpg" }), {
+      getCurrentUser: vi.fn(async () => mockUser()),
+      createImportRecordService: vi.fn(async () => ({
+        createImportRecord: vi.fn(async () => makeImportRecord({ originalFilename: "10824.jpg" })),
+        getImportRecordById: vi.fn(async () => makeImportRecord({ originalFilename: "10824.jpg" })),
+        updateImportRecordStatus: vi.fn(async () => makeImportRecord({ status: "parsed", originalFilename: "10824.jpg" })),
+      })),
+      createImportCandidateService: vi.fn(async () => ({ createImportCandidate })),
+      createCategoryMemoryService: vi.fn(async () => ({ findCategoryMemoryMatch: vi.fn(async () => null) })),
+      uploadObject: vi.fn(async () => undefined),
+      buildImportStoragePath: vi.fn(() => "user-1/receipt_image/2026/05/10824.jpg"),
+      sanitizeImportFilename: vi.fn(() => "10824.jpg"),
+      loadDefaultCurrency: vi.fn(async () => "USD"),
+      loadReceiptCategories: vi.fn(async () => [groceriesCategory]),
+      loadReceiptImageFromStorage: vi.fn(async () => makeFile({ name: "10824.jpg" })),
+      extractReceiptText: vi.fn(async () => ({
+        status: "extraction_success" as const,
+        text: "VASCAR S.A.\nCOCA COLA 2L SGR\nLAYS SARE 125G\nTOTAL LEI 20.80",
+        fields: null,
+        provider: "local_tesseract" as const,
+        internalCode: "receipt_ocr_local_text_extracted",
+      })),
+      persistReceiptOcrStatus,
+      now: () => new Date("2026-05-02T10:00:00.000Z"),
+    });
+
+    expect(result?.candidate).toEqual(
+      expect.objectContaining({
+        amountMinor: 2080,
+        currency: "RON",
+        merchantGuess: "Vascar",
+        categoryId: groceriesCategory.id,
+        reviewState: "pending_review",
+        uncertaintyReason: "We found a total. Please review before saving.",
+      }),
+    );
+    expect(persistReceiptOcrStatus).toHaveBeenCalledWith({
+      userId: "user-1",
+      importRecordId: "11111111-1111-1111-1111-111111111111",
+      status: "local_ocr_success",
+    });
+  });
 });

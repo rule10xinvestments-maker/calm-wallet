@@ -2,6 +2,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { extractReceiptTextFromImage } from "@/lib/server/receipt-ocr";
 
+const tesseractMocks = vi.hoisted(() => ({
+  createWorker: vi.fn(),
+  recognize: vi.fn(),
+  setParameters: vi.fn(),
+  terminate: vi.fn(),
+}));
+
+vi.mock("tesseract.js", () => ({
+  createWorker: tesseractMocks.createWorker,
+  PSM: {
+    SPARSE_TEXT: "11",
+  },
+}));
+
 function makeImage() {
   return {
     name: "receipt.jpg",
@@ -34,28 +48,64 @@ function makeImageFromFixture(path: string) {
 
 describe("receipt OCR provider", () => {
   const originalOpenAiKey = process.env.OPENAI_API_KEY;
+  const originalOpenAiEnabled = process.env.RECEIPT_OCR_OPENAI_ENABLED;
   const originalFetch = global.fetch;
 
   afterEach(() => {
     process.env.OPENAI_API_KEY = originalOpenAiKey;
+    process.env.RECEIPT_OCR_OPENAI_ENABLED = originalOpenAiEnabled;
     global.fetch = originalFetch;
     vi.useRealTimers();
     vi.restoreAllMocks();
+    tesseractMocks.createWorker.mockReset();
+    tesseractMocks.recognize.mockReset();
+    tesseractMocks.setParameters.mockReset();
+    tesseractMocks.terminate.mockReset();
   });
 
-  it("returns extraction_unavailable without provider credentials", async () => {
+  function mockTesseractText(text: string | null) {
+    tesseractMocks.recognize.mockResolvedValue({ data: { text: text ?? "" } });
+    tesseractMocks.setParameters.mockResolvedValue(undefined);
+    tesseractMocks.terminate.mockResolvedValue(undefined);
+    tesseractMocks.createWorker.mockResolvedValue({
+      recognize: tesseractMocks.recognize,
+      setParameters: tesseractMocks.setParameters,
+      terminate: tesseractMocks.terminate,
+    });
+  }
+
+  function mockTesseractFailure() {
+    tesseractMocks.recognize.mockRejectedValue(new Error("Local OCR failed."));
+    tesseractMocks.setParameters.mockResolvedValue(undefined);
+    tesseractMocks.terminate.mockResolvedValue(undefined);
+    tesseractMocks.createWorker.mockResolvedValue({
+      recognize: tesseractMocks.recognize,
+      setParameters: tesseractMocks.setParameters,
+      terminate: tesseractMocks.terminate,
+    });
+  }
+
+  it("calls local Tesseract OCR when OpenAI credentials are unavailable", async () => {
     delete process.env.OPENAI_API_KEY;
+    mockTesseractText("MEGA IMAGE\nTOTAL 35,24 Lei");
     const fetchMock = vi.fn();
     global.fetch = fetchMock;
 
     await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
-      status: "extraction_unavailable",
-      text: null,
+      status: "extraction_success",
+      text: "MEGA IMAGE\nTOTAL 35,24 Lei",
       fields: null,
-      provider: "none",
-      internalCode: "receipt_ocr_provider_unavailable",
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_text_extracted",
     });
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(tesseractMocks.createWorker).toHaveBeenCalledWith(
+      "eng",
+      1,
+      expect.objectContaining({
+        cachePath: "/tmp/tesseract-cache",
+      }),
+    );
   });
 
   it("extracts plain receipt text through the server-side provider", async () => {
@@ -105,6 +155,7 @@ describe("receipt OCR provider", () => {
   it("fails calmly when the provider returns an error", async () => {
     process.env.OPENAI_API_KEY = "test-key";
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockTesseractFailure();
     global.fetch = vi.fn(async () => ({
       ok: false,
       status: 500,
@@ -125,8 +176,8 @@ describe("receipt OCR provider", () => {
       status: "extraction_failed",
       text: null,
       fields: null,
-      provider: "openai",
-      internalCode: "receipt_ocr_provider_response_failed",
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_provider_failed",
     });
   });
 
@@ -184,6 +235,7 @@ describe("receipt OCR provider", () => {
   it("retries one short rate-limit response and then falls back calmly", async () => {
     process.env.OPENAI_API_KEY = "test-key";
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockTesseractFailure();
     const rateLimitResponse = () => ({
       ok: false,
       status: 429,
@@ -206,15 +258,49 @@ describe("receipt OCR provider", () => {
       status: "extraction_failed",
       text: null,
       fields: null,
-      provider: "openai",
-      internalCode: "receipt_ocr_provider_rate_limited",
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_provider_failed",
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(tesseractMocks.createWorker).toHaveBeenCalledOnce();
   });
 
-  it("does not retry quota or billing failures", async () => {
+  it("uses local Tesseract when OpenAI returns a 429 rate limit", async () => {
     process.env.OPENAI_API_KEY = "test-key";
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockTesseractText("VASCAR S.A.\nTOTAL LEI 20.80");
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      statusText: "Too Many Requests",
+      headers: { get: vi.fn(() => "0.001") },
+      text: vi.fn(async () =>
+        JSON.stringify({
+          error: {
+            type: "insufficient_quota",
+            code: "insufficient_quota",
+            message: "You exceeded your current quota. Check billing details.",
+          },
+        }),
+      ),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+      status: "extraction_success",
+      text: "VASCAR S.A.\nTOTAL LEI 20.80",
+      fields: null,
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_text_extracted",
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(tesseractMocks.createWorker).toHaveBeenCalledOnce();
+  });
+
+  it("does not retry quota or billing failures before local fallback", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockTesseractFailure();
     const fetchMock = vi.fn(async () => ({
       ok: false,
       status: 429,
@@ -236,15 +322,17 @@ describe("receipt OCR provider", () => {
       status: "extraction_failed",
       text: null,
       fields: null,
-      provider: "openai",
-      internalCode: "receipt_ocr_provider_quota_exceeded",
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_provider_failed",
     });
     expect(fetchMock).toHaveBeenCalledOnce();
+    expect(tesseractMocks.createWorker).toHaveBeenCalledOnce();
   });
 
   it("falls back calmly when the provider request times out", async () => {
     process.env.OPENAI_API_KEY = "test-key";
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockTesseractFailure();
     const timeoutError = new DOMException("The operation was aborted.", "TimeoutError");
     const fetchMock = vi.fn(async () => {
       throw timeoutError;
@@ -255,8 +343,8 @@ describe("receipt OCR provider", () => {
       status: "extraction_failed",
       text: null,
       fields: null,
-      provider: "openai",
-      internalCode: "receipt_ocr_provider_exception",
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_provider_failed",
     });
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -289,13 +377,14 @@ describe("receipt OCR provider", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const fetchMock = vi.fn();
     global.fetch = fetchMock;
+    mockTesseractFailure();
 
     await expect(extractReceiptTextFromImage(makeLargeInvalidImage())).resolves.toEqual({
       status: "extraction_failed",
       text: null,
       fields: null,
-      provider: "openai",
-      internalCode: "receipt_ocr_image_optimization_required",
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_provider_failed",
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });

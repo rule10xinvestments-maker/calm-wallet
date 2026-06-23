@@ -300,7 +300,19 @@ function getReceiptOcrStatus(args: {
   candidateAmountMinor?: number | null;
 }): ReceiptOcrFailureStatus {
   if (args.candidateAmountMinor || args.amountMinor) {
+    if (args.extractionResult.provider === "local_tesseract") {
+      return "local_ocr_success";
+    }
+
     return "extraction_success";
+  }
+
+  if (args.extractionResult.provider === "local_tesseract") {
+    if (args.extractionResult.text || args.extractionResult.fields) {
+      return "local_ocr_partial";
+    }
+
+    return "local_ocr_failed";
   }
 
   if (args.extractionResult.internalCode === "receipt_ocr_provider_unavailable") {
@@ -344,8 +356,12 @@ function getReceiptOcrStatus(args: {
 }
 
 function getReceiptOcrReviewMessage(status: ReceiptOcrFailureStatus) {
-  if (status === "extraction_success") {
-    return "Receipt total was extracted automatically. Please review before saving.";
+  if (status === "extraction_success" || status === "local_ocr_success") {
+    return "We found a total. Please review before saving.";
+  }
+
+  if (status === "extraction_partial" || status === "local_ocr_partial") {
+    return "We found some details. Add the missing amount before saving.";
   }
 
   return "We couldn't read the total. Add amount before saving.";
