@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { extractReceiptTextFromImage } from "@/lib/server/receipt-ocr";
 
 const tesseractMocks = vi.hoisted(() => ({
@@ -85,13 +85,24 @@ describe("receipt OCR provider", () => {
     });
   }
 
+  function mockTesseractTimeout() {
+    tesseractMocks.recognize.mockRejectedValue(new Error("Local Tesseract OCR timed out."));
+    tesseractMocks.setParameters.mockResolvedValue(undefined);
+    tesseractMocks.terminate.mockResolvedValue(undefined);
+    tesseractMocks.createWorker.mockResolvedValue({
+      recognize: tesseractMocks.recognize,
+      setParameters: tesseractMocks.setParameters,
+      terminate: tesseractMocks.terminate,
+    });
+  }
+
   it("calls local Tesseract OCR when OpenAI credentials are unavailable", async () => {
     delete process.env.OPENAI_API_KEY;
     mockTesseractText("MEGA IMAGE\nTOTAL 35,24 Lei");
     const fetchMock = vi.fn();
     global.fetch = fetchMock;
 
-    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toMatchObject({
       status: "extraction_success",
       text: "MEGA IMAGE\nTOTAL 35,24 Lei",
       fields: null,
@@ -106,6 +117,24 @@ describe("receipt OCR provider", () => {
         cachePath: "/tmp/tesseract-cache",
       }),
     );
+  });
+
+  it("returns a safe no-text diagnostic when local OCR reads an empty result", async () => {
+    delete process.env.OPENAI_API_KEY;
+    mockTesseractText("");
+    global.fetch = vi.fn();
+
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toMatchObject({
+      status: "extraction_unavailable",
+      text: null,
+      fields: null,
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_text_empty",
+      diagnostics: {
+        localOcrStatus: "empty",
+        localOcrTextLength: 0,
+      },
+    });
   });
 
   it("extracts plain receipt text through the server-side provider", async () => {
@@ -129,7 +158,7 @@ describe("receipt OCR provider", () => {
       storagePath: "user-1/receipt_image/2026/06/281.jpg",
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       status: "extraction_success",
       text: "MEGA IMAGE\nTOTAL 35,24 Lei",
       fields: {
@@ -172,7 +201,7 @@ describe("receipt OCR provider", () => {
       ),
     })) as unknown as typeof fetch;
 
-    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toMatchObject({
       status: "extraction_failed",
       text: null,
       fields: null,
@@ -218,7 +247,7 @@ describe("receipt OCR provider", () => {
     const result = await extractReceiptTextFromImage(makeImage());
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       status: "extraction_success",
       text: "TOTAL LEI 20.80",
       fields: {
@@ -254,7 +283,7 @@ describe("receipt OCR provider", () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(rateLimitResponse()).mockResolvedValueOnce(rateLimitResponse());
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toMatchObject({
       status: "extraction_failed",
       text: null,
       fields: null,
@@ -286,7 +315,7 @@ describe("receipt OCR provider", () => {
     }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toMatchObject({
       status: "extraction_success",
       text: "VASCAR S.A.\nTOTAL LEI 20.80",
       fields: null,
@@ -318,7 +347,7 @@ describe("receipt OCR provider", () => {
     }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toMatchObject({
       status: "extraction_failed",
       text: null,
       fields: null,
@@ -327,6 +356,26 @@ describe("receipt OCR provider", () => {
     });
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(tesseractMocks.createWorker).toHaveBeenCalledOnce();
+  });
+
+  it("returns a safe timeout diagnostic when local OCR times out", async () => {
+    delete process.env.OPENAI_API_KEY;
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockTesseractTimeout();
+
+    const result = await extractReceiptTextFromImage(makeImage());
+
+    expect(result).toMatchObject({
+      status: "extraction_failed",
+      text: null,
+      fields: null,
+      provider: "local_tesseract",
+      internalCode: "receipt_ocr_local_timeout",
+      diagnostics: expect.objectContaining({
+        localOcrStatus: "timed_out",
+        localOcrTextLength: 0,
+      }),
+    });
   });
 
   it("falls back calmly when the provider request times out", async () => {
@@ -339,7 +388,7 @@ describe("receipt OCR provider", () => {
     });
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(extractReceiptTextFromImage(makeImage())).resolves.toEqual({
+    await expect(extractReceiptTextFromImage(makeImage())).resolves.toMatchObject({
       status: "extraction_failed",
       text: null,
       fields: null,
@@ -379,7 +428,7 @@ describe("receipt OCR provider", () => {
     global.fetch = fetchMock;
     mockTesseractFailure();
 
-    await expect(extractReceiptTextFromImage(makeLargeInvalidImage())).resolves.toEqual({
+    await expect(extractReceiptTextFromImage(makeLargeInvalidImage())).resolves.toMatchObject({
       status: "extraction_failed",
       text: null,
       fields: null,
@@ -393,6 +442,9 @@ describe("receipt OCR provider", () => {
     process.env.OPENAI_API_KEY = "test-key";
     const fixturePath =
       "C:/xw/.codex-remote-attachments/019ec7ef-af02-7161-9db1-f0ceb6e9b30b/718cebcb-5512-4c91-8861-955c8dd7b570/1-Photo-1.jpg";
+    if (!existsSync(fixturePath)) {
+      return;
+    }
     const image = makeImageFromFixture(fixturePath);
     const originalBase64Length = Buffer.from(readFileSync(fixturePath)).toString("base64").length;
     const fetchMock = vi.fn(async () => ({

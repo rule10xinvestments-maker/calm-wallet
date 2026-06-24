@@ -220,11 +220,17 @@ describe("receipt import actions", () => {
       }),
     );
     expect(result.message).not.toContain("OCR provider key missing");
-    expect(persistReceiptOcrStatus).toHaveBeenCalledWith({
-      userId: "user-1",
-      importRecordId: "11111111-1111-1111-1111-111111111111",
-      status: "provider_failed",
-    });
+    expect(persistReceiptOcrStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        importRecordId: "11111111-1111-1111-1111-111111111111",
+        status: "provider_failed",
+        trace: expect.objectContaining({
+          image_load_status: "loaded",
+          final_ocr_status: "provider_failed",
+        }),
+      }),
+    );
   });
 
   it("rejects PDFs through the receipt image action", async () => {

@@ -725,6 +725,7 @@ describe("transactions overview", () => {
                 merchantGuess: "No merchant guess",
                 reviewState: "needs_attention",
                 acceptanceState: "pending",
+                ocrStatusLabel: "OCR: no readable total",
                 canAccept: false,
               },
             ],
@@ -772,6 +773,7 @@ describe("transactions overview", () => {
                 categoryId: "cat-groceries",
                 reviewState: "needs_attention",
                 acceptanceState: "pending",
+                ocrStatusLabel: "OCR: no readable total",
                 canAccept: false,
               },
             ],
@@ -786,6 +788,7 @@ describe("transactions overview", () => {
     expect(within(movementCard).getByText("Receipt image: receipt.jpg")).toBeInTheDocument();
     expect(within(movementCard).getByText(/Amount unavailable/)).toBeInTheDocument();
     expect(within(movementCard).getByText("We couldn't read the total. Add amount before saving.")).toBeInTheDocument();
+    expect(within(movementCard).getByText("OCR: no readable total")).toBeInTheDocument();
     expect(screen.queryByText("No transactions found for this signed-in account.")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "All transactions" }));
@@ -831,6 +834,7 @@ describe("transactions overview", () => {
                 categoryId: "cat-groceries",
                 reviewState: "pending_review",
                 acceptanceState: "pending",
+                ocrStatusLabel: "OCR: prefill saved",
                 canAccept: true,
               },
             ],
@@ -846,6 +850,7 @@ describe("transactions overview", () => {
     expect(screen.getByLabelText("Currency")).toHaveValue("RON");
     expect(screen.getByLabelText("Merchant")).toHaveValue("Mega Image");
     expect(screen.getByLabelText("Category")).toHaveValue("cat-groceries");
+    expect(screen.getByText("OCR: prefill saved")).toBeInTheDocument();
     expect(screen.queryByText("We couldn't read the total. Add amount before saving.")).not.toBeInTheDocument();
   });
 

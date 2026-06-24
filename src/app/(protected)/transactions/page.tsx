@@ -15,6 +15,7 @@ import { loadStagedImportList } from "@/lib/server/imports-list";
 import { loadStagedImportReviewProgress } from "@/lib/server/imports-review-progress";
 import { loadTransactionsPageData, type TransactionsView } from "@/lib/server/transactions-read-model";
 import type { StagedImportCandidateItem } from "@/lib/server/imports-read-model";
+import { getReceiptOcrTraceLabel, parseReceiptOcrTrace } from "@/lib/server/receipt-ocr-trace";
 import {
   getFallbackTransactionsPageData,
   logProtectedRouteLoadFailure,
@@ -146,6 +147,12 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
           categoryId: candidate.categoryId,
           reviewState: candidate.reviewState,
           acceptanceState: candidate.acceptanceState,
+          ocrStatusLabel:
+            item.importType === "receipt_image"
+              ? getReceiptOcrTraceLabel(
+                  parseReceiptOcrTrace(stagedImportBundles[index]?.importRecord.failureReason ?? item.failureReason),
+                )
+              : null,
           canAccept: Boolean(candidate.transactionType && candidate.amountMinor && candidate.currency && candidate.occurredAt),
         })),
       },

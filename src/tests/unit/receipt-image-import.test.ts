@@ -223,11 +223,17 @@ describe("receipt image import upload", () => {
         uncertaintyReason: "We couldn't read the total. Add amount before saving.",
       }),
     );
-    expect(persistReceiptOcrStatus).toHaveBeenCalledWith({
-      userId: "user-1",
-      importRecordId: "11111111-1111-1111-1111-111111111111",
-      status: "image_load_failed",
-    });
+    expect(persistReceiptOcrStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        importRecordId: "11111111-1111-1111-1111-111111111111",
+        status: "image_load_failed",
+        trace: expect.objectContaining({
+          image_load_status: "failed",
+          final_ocr_status: "image_load_failed",
+        }),
+      }),
+    );
   });
 
   it("persists provider_rate_limited while keeping a manual review candidate", async () => {
@@ -287,11 +293,18 @@ describe("receipt image import upload", () => {
         uncertaintyReason: "We couldn't read the total. Add amount before saving.",
       }),
     );
-    expect(persistReceiptOcrStatus).toHaveBeenCalledWith({
-      userId: "user-1",
-      importRecordId: "11111111-1111-1111-1111-111111111111",
-      status: "provider_rate_limited",
-    });
+    expect(persistReceiptOcrStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        importRecordId: "11111111-1111-1111-1111-111111111111",
+        status: "provider_rate_limited",
+        trace: expect.objectContaining({
+          image_load_status: "loaded",
+          parser_found_amount: false,
+          final_ocr_status: "provider_rate_limited",
+        }),
+      }),
+    );
   });
 
   it("persists local_ocr_success and stages prefilled receipt fields from Tesseract text", async () => {
@@ -359,11 +372,20 @@ describe("receipt image import upload", () => {
         uncertaintyReason: "We found a total. Please review before saving.",
       }),
     );
-    expect(persistReceiptOcrStatus).toHaveBeenCalledWith({
-      userId: "user-1",
-      importRecordId: "11111111-1111-1111-1111-111111111111",
-      status: "local_ocr_success",
-    });
+    expect(persistReceiptOcrStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        importRecordId: "11111111-1111-1111-1111-111111111111",
+        status: "local_ocr_success",
+        trace: expect.objectContaining({
+          image_load_status: "loaded",
+          parser_status: "found_total",
+          parser_found_amount: true,
+          candidate_prefill_status: "saved",
+          final_ocr_status: "local_ocr_success",
+        }),
+      }),
+    );
     expect(consoleInfo).toHaveBeenCalledWith(
       "receipt_ocr_stage",
       expect.objectContaining({

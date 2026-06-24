@@ -125,6 +125,7 @@ type CandidatePreview = {
   categoryId?: string | null;
   reviewState: string;
   acceptanceState: string;
+  ocrStatusLabel?: string | null;
   canAccept: boolean;
 };
 
@@ -396,6 +397,9 @@ function CandidateReviewEntry({
             <p className="w-fit rounded-full bg-white px-2 py-1 text-xs font-medium text-amber-700">
               We couldn&apos;t read the total. Add amount before saving.
             </p>
+          ) : null}
+          {candidate.importType === "receipt_image" && candidate.ocrStatusLabel ? (
+            <p className="text-[11px] font-medium text-slate-500">{candidate.ocrStatusLabel}</p>
           ) : null}
         </div>
         <p className="shrink-0 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700">
