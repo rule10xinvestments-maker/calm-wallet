@@ -10,11 +10,21 @@ vi.mock("@/components/transactions/transaction-item-card", () => ({
   TransactionItemCard: ({ item }: { item: TransactionListItem }) => <div>{item.title}</div>,
 }));
 
+function dateInCurrentMonth(day: number) {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), day, 10, 0, 0)).toISOString();
+}
+
+function dateInLastMonth(day: number) {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, day, 10, 0, 0)).toISOString();
+}
+
 function makeTransactionItem(overrides: Partial<TransactionListItem> = {}): TransactionListItem {
   return {
     id: "txn-1",
     title: "Market",
-    subtitle: "Apr 22",
+    subtitle: "This month",
     amountMinor: 1200,
     amountDisplay: "$12.00",
     amountTone: "expense",
@@ -24,7 +34,7 @@ function makeTransactionItem(overrides: Partial<TransactionListItem> = {}): Tran
     itemName: "Market",
     merchant: "Market",
     note: null,
-    occurredAt: "2026-04-22T10:00:00.000Z",
+    occurredAt: dateInCurrentMonth(10),
     deletedAt: null,
     categoryId: null,
     reviewState: "reviewed",
@@ -115,6 +125,199 @@ describe("transactions overview", () => {
     expect(screen.getByPlaceholderText("Search entries")).toHaveValue("coffee");
     expect(screen.getByRole("button", { name: "Search entries" })).toHaveAttribute("type", "submit");
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
+  });
+
+  it("defaults Activity to this month and summarizes visible saved entries", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "current-expense",
+            title: "current rent",
+            amountMinor: 120000,
+            amountDisplay: "-RON 1,200.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(5),
+          }),
+          makeTransactionItem({
+            id: "current-income",
+            title: "current salary",
+            amountMinor: 30000,
+            amountDisplay: "+RON 300.00",
+            amountTone: "income",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(6),
+          }),
+          makeTransactionItem({
+            id: "last-expense",
+            title: "last rent",
+            amountMinor: 50000,
+            amountDisplay: "-RON 500.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInLastMonth(5),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "This month" })).toHaveClass("bg-sky-600");
+    expect(screen.getByText("current rent")).toBeInTheDocument();
+    expect(screen.getByText("current salary")).toBeInTheDocument();
+    expect(screen.queryByText("last rent")).not.toBeInTheDocument();
+    expect(screen.getByText("2 entries shown")).toBeInTheDocument();
+    expect(screen.getByText("Spend: RON 1,200.00 · Income: RON 300.00 · Net: -RON 900.00")).toBeInTheDocument();
+  });
+
+  it("filters Activity to last month without route navigation", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "current",
+            title: "current groceries",
+            occurredAt: dateInCurrentMonth(7),
+          }),
+          makeTransactionItem({
+            id: "previous",
+            title: "previous groceries",
+            occurredAt: dateInLastMonth(7),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Last month" }));
+
+    expect(screen.queryByText("current groceries")).not.toBeInTheDocument();
+    expect(screen.getByText("previous groceries")).toBeInTheDocument();
+  });
+
+  it("filters Activity by custom inclusive dates", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "before",
+            title: "before range",
+            occurredAt: "2026-06-01T10:00:00.000Z",
+          }),
+          makeTransactionItem({
+            id: "inside-start",
+            title: "inside start",
+            occurredAt: "2026-06-10T10:00:00.000Z",
+          }),
+          makeTransactionItem({
+            id: "inside-end",
+            title: "inside end",
+            occurredAt: "2026-06-12T10:00:00.000Z",
+          }),
+          makeTransactionItem({
+            id: "after",
+            title: "after range",
+            occurredAt: "2026-06-13T10:00:00.000Z",
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-06-10" } });
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-06-12" } });
+
+    expect(screen.queryByText("before range")).not.toBeInTheDocument();
+    expect(screen.getByText("inside start")).toBeInTheDocument();
+    expect(screen.getByText("inside end")).toBeInTheDocument();
+    expect(screen.queryByText("after range")).not.toBeInTheDocument();
+  });
+
+  it("keeps search and type filters composed with the selected period", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "current-expense",
+            title: "zile health",
+            itemName: "zile health",
+            amountTone: "expense",
+            occurredAt: dateInCurrentMonth(8),
+          }),
+          makeTransactionItem({
+            id: "current-income",
+            title: "zile salary",
+            itemName: "zile salary",
+            amountTone: "income",
+            occurredAt: dateInCurrentMonth(8),
+          }),
+          makeTransactionItem({
+            id: "last-income",
+            title: "zile old salary",
+            itemName: "zile old salary",
+            amountTone: "income",
+            occurredAt: dateInLastMonth(8),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Search entries"), { target: { value: "zile" } });
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.queryByText("zile health")).not.toBeInTheDocument();
+    expect(screen.getByText("zile salary")).toBeInTheDocument();
+    expect(screen.queryByText("zile old salary")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Last month" }));
+    expect(screen.queryByText("zile salary")).not.toBeInTheDocument();
+    expect(screen.getByText("zile old salary")).toBeInTheDocument();
+  });
+
+  it("shows mixed currency Activity summary separately without forcing a combined net", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "ron-expense",
+            title: "rent",
+            amountMinor: 120000,
+            amountDisplay: "-RON 1,200.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+          makeTransactionItem({
+            id: "usd-income",
+            title: "refund",
+            amountMinor: 900,
+            amountDisplay: "+$9.00",
+            amountTone: "income",
+            currency: "USD",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    expect(screen.getByText("Spend: RON 1,200.00 · Income: RON 0.00 · Net: -RON 1,200.00")).toBeInTheDocument();
+    expect(screen.getByText("Spend: $0.00 · Income: $9.00 · Net: $9.00")).toBeInTheDocument();
+    expect(screen.getByText("Mixed currencies shown separately.")).toBeInTheDocument();
+    expect(screen.queryByText(/RON 1,200\.00 RON/)).not.toBeInTheDocument();
   });
 
   it("renders the Activity label and compact Recent money movement card", () => {

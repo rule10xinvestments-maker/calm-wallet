@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 import { FileSpreadsheet, History, Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
@@ -111,7 +111,7 @@ export function AssistantComposer({
 }: AssistantComposerProps) {
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
   const [selectedAction, setSelectedAction] = useState<
-    "create_transaction" | "update_transaction" | "delete_transaction" | "recategorize_transaction" | "summarize_spending"
+    "create_transaction" | "update_transaction" | "delete_transaction" | "recategorize_transaction"
   >("create_transaction");
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -119,9 +119,6 @@ export function AssistantComposer({
   const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const [selectedTargetTransactionId, setSelectedTargetTransactionId] = useState("");
   const [selectedManualCategoryId, setSelectedManualCategoryId] = useState("");
-  const [lastManualAction, setLastManualAction] = useState<typeof selectedAction | null>(null);
-  const manualActionSelectRef = useRef<HTMLSelectElement | null>(null);
-  const manualSummaryResultRef = useRef<HTMLDivElement | null>(null);
   const manualTargetItems = recentItems.length ? recentItems : state.recentItems;
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
   const selectedTargetItem = manualTargetItems.find((item) => item.id === selectedTargetTransactionId) ?? null;
@@ -134,25 +131,6 @@ export function AssistantComposer({
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
   const isManualPanelOpen = openPanel === "manual";
-  const shouldShowManualSummaryResult =
-    isManualPanelOpen &&
-    selectedAction === "summarize_spending" &&
-    lastManualAction === "summarize_spending" &&
-    state.status === "success" &&
-    Boolean(state.message);
-
-  useEffect(() => {
-    if (!shouldShowManualSummaryResult) {
-      return;
-    }
-
-    if (manualActionSelectRef.current && manualActionSelectRef.current.value !== selectedAction) {
-      manualActionSelectRef.current.value = selectedAction;
-    }
-
-    manualSummaryResultRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-    manualSummaryResultRef.current?.focus({ preventScroll: true });
-  }, [selectedAction, shouldShowManualSummaryResult, state.message]);
 
   function togglePanel(panel: ActionPanel) {
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
@@ -299,7 +277,6 @@ export function AssistantComposer({
 
       <form
         action={(formData) => {
-          setLastManualAction(null);
           return formAction(formData);
         }}
         className="space-y-3"
@@ -326,7 +303,6 @@ export function AssistantComposer({
             return (
               <form
                 action={(formData) => {
-                  setLastManualAction(null);
                   return formAction(formData);
                 }}
                 key={id}
@@ -537,7 +513,6 @@ export function AssistantComposer({
 
           <form
             action={(formData) => {
-              setLastManualAction(selectedAction);
               return formAction(formData);
             }}
             className="space-y-3"
@@ -556,14 +531,12 @@ export function AssistantComposer({
               setSelectedTargetTransactionId("");
               setSelectedManualCategoryId("");
             }}
-            ref={manualActionSelectRef}
             value={selectedAction}
           >
             <option value="create_transaction">Create transaction</option>
             <option value="update_transaction">Update transaction</option>
             <option value="delete_transaction">Delete transaction</option>
             <option value="recategorize_transaction">Recategorize transaction</option>
-            <option value="summarize_spending">Summarize spending</option>
           </select>
         </label>
 
@@ -722,40 +695,6 @@ export function AssistantComposer({
           null
         ) : null}
 
-        {selectedAction === "summarize_spending" ? (
-          <>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Intent</span>
-              <select
-                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                defaultValue="expense"
-                name="transactionType"
-              >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-              </select>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">From</span>
-                <input
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                  name="occurredFrom"
-                  type="date"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">To</span>
-                <input
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                  name="occurredTo"
-                  type="date"
-                />
-              </label>
-            </div>
-          </>
-        ) : null}
-
         <Button className="w-full" disabled={isPending || !canSubmitManualAction} type="submit">
           {isPending
             ? "Working..."
@@ -765,22 +704,8 @@ export function AssistantComposer({
                 ? "Update selected item"
                 : selectedAction === "delete_transaction"
                   ? "Delete selected item"
-                  : selectedAction === "recategorize_transaction"
-                    ? "Update selected item category"
-                    : "Run summary"}
+                  : "Update selected item category"}
         </Button>
-        {shouldShowManualSummaryResult ? (
-          <div
-            aria-live="polite"
-            className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800"
-            ref={manualSummaryResultRef}
-            role="status"
-            tabIndex={-1}
-          >
-            <p className="font-medium">Summary ready</p>
-            <p className="mt-1 text-xs leading-5 text-slate-700">{state.message}</p>
-          </div>
-        ) : null}
           </form>
           </div>
         </div>

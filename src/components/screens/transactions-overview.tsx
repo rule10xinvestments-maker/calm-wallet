@@ -24,6 +24,7 @@ type ImportReviewActionHandler = (
 ) => Promise<ImportCandidateReviewDecisionActionState>;
 
 type ActivityFilterView = TransactionsView | "deleted";
+type ActivityPeriod = "this-month" | "last-month" | "custom";
 
 type ActivityFilterTab = {
   value: ActivityFilterView;
@@ -101,6 +102,139 @@ function filterTransactionsForActiveView(items: TransactionListItem[], view: Act
   }
 
   return items;
+}
+
+function toDateInputValue(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getMonthBounds(offset: 0 | -1, now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+
+  return {
+    from: toDateInputValue(start),
+    to: toDateInputValue(end),
+  };
+}
+
+function getPeriodBounds(period: ActivityPeriod, customFrom: string, customTo: string) {
+  if (period === "this-month") {
+    return getMonthBounds(0);
+  }
+
+  if (period === "last-month") {
+    return getMonthBounds(-1);
+  }
+
+  return {
+    from: customFrom,
+    to: customTo,
+  };
+}
+
+function getDateKey(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return toDateInputValue(date);
+}
+
+function filterTransactionsForPeriod(
+  items: TransactionListItem[],
+  period: ActivityPeriod,
+  customFrom: string,
+  customTo: string,
+) {
+  const { from, to } = getPeriodBounds(period, customFrom, customTo);
+
+  return items.filter((item) => {
+    const dateKey = getDateKey(item.occurredAt);
+
+    if (!dateKey) {
+      return false;
+    }
+
+    if (from && dateKey < from) {
+      return false;
+    }
+
+    if (to && dateKey > to) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function getPeriodLabel(period: ActivityPeriod, customFrom: string, customTo: string) {
+  if (period === "this-month") {
+    return `${new Date().toLocaleDateString("en-US", { month: "long" })} activity`;
+  }
+
+  if (period === "last-month") {
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+    return `${lastMonth.toLocaleDateString("en-US", { month: "long" })} activity`;
+  }
+
+  if (customFrom || customTo) {
+    return `${customFrom || "Start"} to ${customTo || "Today"}`;
+  }
+
+  return "Custom activity";
+}
+
+function formatMoneyMinor(amountMinor: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(amountMinor / 100);
+}
+
+function formatSignedMinor(amountMinor: number, currency: string) {
+  if (amountMinor < 0) {
+    return `-${formatMoneyMinor(Math.abs(amountMinor), currency)}`;
+  }
+
+  return formatMoneyMinor(amountMinor, currency);
+}
+
+function buildActivitySummary(items: TransactionListItem[]) {
+  const totals = new Map<string, { spend: number; income: number }>();
+
+  for (const item of items) {
+    const current = totals.get(item.currency) ?? { spend: 0, income: 0 };
+
+    if (item.amountTone === "income") {
+      current.income += item.amountMinor;
+    } else {
+      current.spend += item.amountMinor;
+    }
+
+    totals.set(item.currency, current);
+  }
+
+  return Array.from(totals.entries())
+    .sort(([leftCurrency], [rightCurrency]) => leftCurrency.localeCompare(rightCurrency))
+    .map(([currency, total]) => ({
+      currency,
+      spend: total.spend,
+      income: total.income,
+      net: total.income - total.spend,
+    }));
 }
 
 function formatImportDate(value: string) {
@@ -832,6 +966,9 @@ export function TransactionsOverview({
 }: TransactionsOverviewProps) {
   const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
+  const [activePeriod, setActivePeriod] = useState<ActivityPeriod>("this-month");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
   const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
@@ -854,17 +991,26 @@ export function TransactionsOverview({
     setPendingCandidates(flattenPendingCandidates(nextDetails));
   }, [importsEnabled, stagedImportDetails]);
 
-  const filteredItems = useMemo(
-    () =>
-      activeView === "deleted"
-        ? filterTransactions(deletedItems, searchQuery)
-        : filterTransactions(filterTransactionsForActiveView(activeItems, activeView), searchQuery),
-    [activeItems, activeView, deletedItems, searchQuery],
+  const periodItems = useMemo(
+    () => filterTransactionsForPeriod(activeItems, activePeriod, customFrom, customTo),
+    [activeItems, activePeriod, customFrom, customTo],
   );
+  const filteredActiveItems = useMemo(
+    () => filterTransactions(filterTransactionsForActiveView(periodItems, activeView), searchQuery),
+    [activeView, periodItems, searchQuery],
+  );
+  const filteredDeletedItems = useMemo(
+    () => filterTransactions(deletedItems, searchQuery),
+    [deletedItems, searchQuery],
+  );
+  const filteredItems = activeView === "deleted" ? filteredDeletedItems : filteredActiveItems;
   const filteredPendingCandidates = useMemo(
     () => (activeView === "needs-review" ? filterCandidates(pendingCandidates, searchQuery) : []),
     [activeView, pendingCandidates, searchQuery],
   );
+  const activitySummary = useMemo(() => buildActivitySummary(filteredActiveItems), [filteredActiveItems]);
+  const hasMixedCurrencies = activitySummary.length > 1;
+  const periodLabel = getPeriodLabel(activePeriod, customFrom, customTo);
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
   const hasDeletedItems = deletedItems.length > 0;
@@ -992,6 +1138,77 @@ export function TransactionsOverview({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
+          {!isDeletedView ? (
+            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Period</p>
+                <p className="text-xs font-medium text-slate-700">{periodLabel}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
+                {[
+                  { value: "this-month" as const, label: "This month" },
+                  { value: "last-month" as const, label: "Last month" },
+                  { value: "custom" as const, label: "Custom" },
+                ].map((period) => {
+                  const isActive = activePeriod === period.value;
+
+                  return (
+                    <button
+                      className={`min-h-9 rounded-lg px-2 py-1 text-xs font-medium transition ${
+                        isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                      key={period.value}
+                      onClick={() => setActivePeriod(period.value)}
+                      type="button"
+                    >
+                      {period.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {activePeriod === "custom" ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="space-y-1 text-xs font-medium text-slate-600">
+                    From
+                    <input
+                      className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                      onChange={(event) => setCustomFrom(event.target.value)}
+                      type="date"
+                      value={customFrom}
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs font-medium text-slate-600">
+                    To
+                    <input
+                      className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                      onChange={(event) => setCustomTo(event.target.value)}
+                      type="date"
+                      value={customTo}
+                    />
+                  </label>
+                </div>
+              ) : null}
+              <div className="rounded-xl bg-white px-3 py-2">
+                <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
+                {activitySummary.length ? (
+                  <div className="mt-1 space-y-1 text-sm font-medium text-slate-800">
+                    {activitySummary.map((summary) => (
+                      <p key={summary.currency}>
+                        Spend: {formatMoneyMinor(summary.spend, summary.currency)} · Income:{" "}
+                        {formatMoneyMinor(summary.income, summary.currency)} · Net:{" "}
+                        {formatSignedMinor(summary.net, summary.currency)}
+                      </p>
+                    ))}
+                    {hasMixedCurrencies ? (
+                      <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
+                )}
+              </div>
+            </div>
+          ) : null}
           <form
             action="/transactions"
             aria-label="Search transactions"
