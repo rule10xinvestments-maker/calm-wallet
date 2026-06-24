@@ -88,8 +88,8 @@ const OPENAI_RECEIPT_OCR_MAX_ATTEMPTS = 2;
 const OPENAI_RECEIPT_OCR_MAX_OUTPUT_TOKENS = 220;
 const OPENAI_RECEIPT_OCR_TIMEOUT_MS = 12000;
 const LOCAL_TESSERACT_OCR_TIMEOUT_MS = 14000;
-const RECEIPT_OCR_MAX_IMAGE_EDGE = 900;
-const RECEIPT_OCR_JPEG_QUALITY = 48;
+const RECEIPT_OCR_MAX_IMAGE_EDGE = 1200;
+const RECEIPT_OCR_JPEG_QUALITY = 70;
 const RECEIPT_OCR_MAX_UNOPTIMIZED_PROVIDER_BYTES = 1_500_000;
 
 function getOpenAiApiKey() {
@@ -112,6 +112,9 @@ function logReceiptOcrStage(args: {
   stage:
     | "ocr_env_available"
     | "ocr_env_missing"
+    | "local_ocr_started"
+    | "local_ocr_completed"
+    | "local_ocr_failed"
     | "ocr_local_provider_called"
     | "ocr_local_provider_returned"
     | "ocr_provider_called"
@@ -155,6 +158,7 @@ async function prepareReceiptImageForOcr(image: ReceiptOcrImage): Promise<Prepar
       })
       .grayscale()
       .normalize()
+      .sharpen()
       .jpeg({
         quality: RECEIPT_OCR_JPEG_QUALITY,
         mozjpeg: true,
@@ -387,6 +391,14 @@ async function extractReceiptTextWithLocalTesseract(
     const language = getTesseractLanguage();
 
     logReceiptOcrStage({
+      stage: "local_ocr_started",
+      provider: "local_tesseract",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model: language,
+    });
+
+    logReceiptOcrStage({
       stage: "ocr_local_provider_called",
       provider: "local_tesseract",
       importRecordId: context.importRecordId,
@@ -414,6 +426,17 @@ async function extractReceiptTextWithLocalTesseract(
     const status: ReceiptExtractionStatus = text ? "extraction_success" : "extraction_unavailable";
 
     logReceiptOcrStage({
+      stage: "local_ocr_completed",
+      provider: "local_tesseract",
+      status,
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model: language,
+      textPresent: Boolean(text),
+      fieldsPresent: false,
+    });
+
+    logReceiptOcrStage({
       stage: "ocr_local_provider_returned",
       provider: "local_tesseract",
       status,
@@ -432,6 +455,16 @@ async function extractReceiptTextWithLocalTesseract(
       internalCode: text ? "receipt_ocr_local_text_extracted" : "receipt_ocr_local_text_empty",
     };
   } catch (error) {
+    logReceiptOcrStage({
+      stage: "local_ocr_failed",
+      provider: "local_tesseract",
+      status: "extraction_failed",
+      importRecordId: context.importRecordId,
+      storagePath: context.storagePath,
+      model: getTesseractLanguage(),
+      textPresent: false,
+      fieldsPresent: false,
+    });
     logReceiptOcrFailure({
       code: "receipt_ocr_local_provider_failed",
       status: "extraction_failed",

@@ -423,7 +423,7 @@ describe("receipt OCR provider", () => {
 
     expect(imageInput?.image_url).toMatch(/^data:image\/jpeg;base64,/);
     expect(encodedImage.length).toBeLessThan(originalBase64Length);
-    expect(encodedImage.length).toBeLessThan(55_000);
+    expect(encodedImage.length).toBeLessThan(120_000);
     expect(result.fields).toEqual({
       merchant: "Vascar",
       totalText: "20.80",

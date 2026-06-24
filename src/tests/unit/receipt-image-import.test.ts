@@ -295,7 +295,7 @@ describe("receipt image import upload", () => {
   });
 
   it("persists local_ocr_success and stages prefilled receipt fields from Tesseract text", async () => {
-    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const groceriesCategory = {
       id: "33333333-3333-3333-3333-333333333333",
       slug: "groceries",
@@ -364,5 +364,24 @@ describe("receipt image import upload", () => {
       importRecordId: "11111111-1111-1111-1111-111111111111",
       status: "local_ocr_success",
     });
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "receipt_ocr_stage",
+      expect.objectContaining({
+        stage: "local_ocr_parse_success",
+        amountMinor: 2080,
+        currency: "RON",
+        merchant: "Vascar",
+      }),
+    );
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "receipt_ocr_stage",
+      expect.objectContaining({
+        stage: "local_ocr_candidate_prefill_success",
+        amountMinor: 2080,
+        currency: "RON",
+        merchant: "Vascar",
+        ocrStatus: "local_ocr_success",
+      }),
+    );
   });
 });

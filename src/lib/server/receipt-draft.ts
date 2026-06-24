@@ -53,7 +53,7 @@ const totalLinePatterns = [
 ];
 
 const paymentLinePatterns = [
-  /\b(?:plata|payment|electronic|card|tichete?)\b[^\d]{0,60}(\d{1,6}(?:[.,]\d{1,2})?)\s*(?:lei|ron)\b/i,
+  /\b(?:plat[ar]?|payment|electronic|card|tichete?)\b[^\d]{0,60}(\d{1,6}(?:[.,]\d{1,2})?)\s*(?:lei|le[il1\]]?|ron)\b/i,
 ];
 
 const totalExclusionPattern = /\b(?:tva|vat|tax|subtotal|sub\s*total|rest|change|cash|card|visa|mastercard)\b/i;
@@ -161,6 +161,10 @@ function normalizeMerchant(value: string | null | undefined) {
   }
 
   if (/^vascar(?:\s+s\.?\s*a\.?)?$/i.test(normalized)) {
+    return "Vascar";
+  }
+
+  if (/^(?:ursca[fr]|vrsc[ae]r|vrs)\b/i.test(normalized)) {
     return "Vascar";
   }
 

@@ -182,7 +182,16 @@ async function persistReceiptOcrStatus(input: {
       errorCode: result.error.code,
       errorMessage: result.error.message,
     });
+    return;
   }
+
+  console.info("receipt_ocr_stage", {
+    stage: "ocr_status_persisted",
+    code: "receipt_ocr_status_persisted",
+    provider: "none",
+    importRecordId: input.importRecordId,
+    ocrStatus: input.status,
+  });
 }
 
 async function loadReceiptDefaultCurrency(userId: string) {
@@ -453,6 +462,25 @@ export async function uploadReceiptImageAndPrepareDraft(
     extractionResult,
     amountMinor: draft.amountMinor,
   });
+  if (extractionResult.provider === "local_tesseract") {
+    console.info("receipt_ocr_stage", {
+      stage: draft.amountMinor
+        ? "local_ocr_parse_success"
+        : extractionResult.text || extractionResult.fields
+          ? "local_ocr_parse_partial"
+          : "local_ocr_parse_failed",
+      code: draft.amountMinor ? "receipt_ocr_local_parse_success" : extractionResult.internalCode,
+      extractionStatus: extractionResult.status,
+      provider: extractionResult.provider,
+      importRecordId: upload.importRecordId,
+      storagePath: upload.storagePath,
+      amountPresent: Boolean(draft.amountMinor),
+      amountMinor: draft.amountMinor,
+      currency: draft.currency,
+      merchant: draft.merchantGuess,
+      categoryResolvedIdPresent: Boolean(draft.categoryId),
+    });
+  }
   console.info("receipt_ocr_stage", {
     stage: draft.amountMinor ? "ocr_parse_success" : extractionResult.text || extractionResult.fields ? "ocr_parse_partial" : "ocr_candidate_prefill_failed",
     code: draft.amountMinor ? "receipt_ocr_draft_prefill_ready" : extractionResult.internalCode,
@@ -524,6 +552,27 @@ export async function uploadReceiptImageAndPrepareDraft(
     categoryResolvedIdPresent: Boolean(candidate?.categoryId),
     ocrStatus: finalOcrStatus,
   });
+  if (extractionResult.provider === "local_tesseract") {
+    console.info("receipt_ocr_stage", {
+      stage: candidate?.amountMinor
+        ? "local_ocr_candidate_prefill_success"
+        : "local_ocr_candidate_prefill_failed",
+      code: candidate?.amountMinor
+        ? "receipt_ocr_local_candidate_prefill_success"
+        : "receipt_ocr_local_candidate_prefill_failed",
+      extractionStatus: extractionResult.status,
+      provider: extractionResult.provider,
+      importRecordId: upload.importRecordId,
+      importCandidateId: candidate?.id ?? null,
+      storagePath: upload.storagePath,
+      amountPresent: Boolean(candidate?.amountMinor),
+      amountMinor: candidate?.amountMinor ?? null,
+      currency: candidate?.currency ?? null,
+      merchant: candidate?.merchantGuess ?? null,
+      categoryResolvedIdPresent: Boolean(candidate?.categoryId),
+      ocrStatus: finalOcrStatus,
+    });
+  }
 
   return {
     upload,

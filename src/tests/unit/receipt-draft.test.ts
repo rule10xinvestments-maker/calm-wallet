@@ -99,6 +99,20 @@ describe("receipt draft extraction", () => {
     expect(draft.categoryId).toBe(groceriesCategory.id);
   });
 
+  it("extracts dot-decimal TOTAL amount when currency follows the value", () => {
+    const draft = buildReceiptDraft({
+      extractedText: "VASCAR S.A.\nTOTAL 20.80 LEI",
+      originalFilename: "receipt.jpg",
+      defaultCurrency: "USD",
+      categories: [groceriesCategory],
+      now: new Date("2026-06-21T08:39:00.000Z"),
+    });
+
+    expect(draft.amountMinor).toBe(2080);
+    expect(draft.currency).toBe("RON");
+    expect(draft.merchantGuess).toBe("Vascar");
+  });
+
   it("uses Romanian electronic payment as fallback when total is unavailable", () => {
     const draft = buildReceiptDraft({
       extractedText: "VASCAR S.A.\nPLATA MODERNA: ELECTRONIC 20.8 LEI",
@@ -111,6 +125,21 @@ describe("receipt draft extraction", () => {
     expect(draft.amountMinor).toBe(2080);
     expect(draft.currency).toBe("RON");
     expect(draft.merchantGuess).toBe("Vascar");
+  });
+
+  it("handles common Tesseract OCR slips on Vascar electronic payment lines", () => {
+    const draft = buildReceiptDraft({
+      extractedText: "URSCAF\nCR COLA 2 SGR\nLAYS SARE 1256\nTOTAL LEI\nPLATR MODERNA: ELECTRONIC 20.8 LE",
+      originalFilename: "10824.jpg",
+      defaultCurrency: "USD",
+      categories: [groceriesCategory],
+      now: new Date("2026-06-21T08:39:00.000Z"),
+    });
+
+    expect(draft.amountMinor).toBe(2080);
+    expect(draft.currency).toBe("RON");
+    expect(draft.merchantGuess).toBe("Vascar");
+    expect(draft.categoryId).toBe(groceriesCategory.id);
   });
 
   it("maps structured Mega Image OCR fields into a staged grocery draft", () => {
