@@ -89,6 +89,7 @@ function makeOverviewProps() {
     initialActionState: { status: "idle" as const, message: null },
     reviewAction: vi.fn(async () => initialImportCandidateReviewDecisionActionState),
     initialReviewActionState: initialImportCandidateReviewDecisionActionState,
+    importsEnabled: true,
   };
 }
 
@@ -699,6 +700,22 @@ describe("transactions overview", () => {
     expect(screen.getByText("$8.00")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Accept candidate" })).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: "Reject candidate" })).toHaveLength(2);
+  });
+
+  it("hides staged import candidates and OCR status when imports are disabled for beta", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        currentView="needs-review"
+        importsEnabled={false}
+        items={[makeTransactionItem({ title: "Saved receipt expense" })]}
+      />,
+    );
+
+    expect(screen.queryByText("Staged imports")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lunch receipt")).not.toBeInTheDocument();
+    expect(screen.queryByText(/OCR:/)).not.toBeInTheDocument();
+    expect(screen.getByText("Saved receipt expense")).toBeInTheDocument();
   });
 
   it("keeps incomplete receipt drafts reviewable without enabling save", () => {

@@ -30,15 +30,21 @@ function renderComposer(
   recentItems: AssistantActionState["recentItems"] = [],
   action: AssistantActionHandler = async () => initialState,
   categoryOptions: ControlledCategoryOption[] = [],
+  importsEnabled = false,
 ) {
   return render(
     <AssistantComposer
       action={action}
       categoryOptions={categoryOptions}
       initialState={initialState}
+      importsEnabled={importsEnabled}
       recentItems={recentItems}
     />,
   );
+}
+
+function renderComposerWithImports() {
+  return renderComposer(undefined, [], undefined, [], true);
 }
 
 function openImportUpload() {
@@ -68,8 +74,8 @@ describe("assistant composer", () => {
     expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Required transaction id")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("From")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Receipt" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Statement" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Receipt" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Statement" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
@@ -240,7 +246,7 @@ describe("assistant composer", () => {
         amountDisplay: "$5.00",
         needsReview: false,
       },
-    ]);
+    ], undefined, [], true);
 
     fireEvent.click(screen.getByRole("button", { name: "Receipt" }));
     expect(screen.getByText("Receipt import")).toBeInTheDocument();
@@ -480,7 +486,7 @@ describe("assistant composer", () => {
   });
 
   it("splits receipt and statement import controls into their action panels", () => {
-    renderComposer();
+    renderComposerWithImports();
     openImportUpload();
 
     expect(screen.getByText("Receipt import")).toBeInTheDocument();
@@ -498,7 +504,7 @@ describe("assistant composer", () => {
   });
 
   it("collapses staged import controls after opening them", () => {
-    renderComposer();
+    renderComposerWithImports();
 
     openImportUpload();
     expect(screen.getByText("Receipt import")).toBeInTheDocument();
@@ -554,7 +560,7 @@ describe("assistant composer", () => {
         }),
     );
 
-    renderComposer();
+    renderComposerWithImports();
     openImportUpload();
 
     const fileInput = screen.getByLabelText("File");
@@ -601,7 +607,7 @@ describe("assistant composer", () => {
       },
     });
 
-    renderComposer();
+    renderComposerWithImports();
     fireEvent.click(screen.getByRole("button", { name: "Statement" }));
 
     const fileInput = screen.getByLabelText("File");
@@ -616,7 +622,7 @@ describe("assistant composer", () => {
   });
 
   it("shows a clean error state for an unsupported file or failed upload", async () => {
-    renderComposer();
+    renderComposerWithImports();
     openImportUpload();
 
     const fileInput = screen.getByLabelText("File");
@@ -675,7 +681,7 @@ describe("assistant composer", () => {
       new Error("An unexpected response was received from the server."),
     );
 
-    renderComposer();
+    renderComposerWithImports();
     openImportUpload();
 
     const fileInput = screen.getByLabelText("File");
@@ -696,7 +702,7 @@ describe("assistant composer", () => {
       candidate: null,
     });
 
-    renderComposer();
+    renderComposerWithImports();
     openImportUpload();
 
     const fileInput = screen.getByLabelText("File");

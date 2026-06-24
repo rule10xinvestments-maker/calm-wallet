@@ -12,6 +12,7 @@ import {
   initialCsvBankStatementUploadActionState,
   initialReceiptImageUploadActionState,
 } from "@/lib/actions/imports-state";
+import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { CSV_IMPORT_MAX_BYTES } from "@/lib/imports/storage";
 import type { AssistantActionState } from "@/lib/server/assistant";
 
@@ -22,6 +23,7 @@ type AssistantComposerProps = {
   initialState: AssistantActionState;
   recentItems?: AssistantActionState["recentItems"];
   categoryOptions?: ControlledCategoryOption[];
+  importsEnabled?: boolean;
 };
 
 type UploadFlowState = {
@@ -80,7 +82,7 @@ function getReceiptUploadFailureMessage(error: unknown) {
   return "Receipt upload is not available right now. Please try again later.";
 }
 
-const actionPanelItems: Array<{
+const importActionPanelItems: Array<{
   id: ActionPanel;
   label: string;
   Icon: typeof Receipt;
@@ -91,11 +93,21 @@ const actionPanelItems: Array<{
   { id: "manual", label: "Manual", Icon: Plus },
 ];
 
+const betaActionPanelItems: Array<{
+  id: ActionPanel;
+  label: string;
+  Icon: typeof Receipt;
+}> = [
+  { id: "recent", label: "Recent", Icon: History },
+  { id: "manual", label: "Manual", Icon: Plus },
+];
+
 export function AssistantComposer({
   action,
   initialState,
   recentItems = [],
   categoryOptions = [],
+  importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
   const [selectedAction, setSelectedAction] = useState<
@@ -153,6 +165,16 @@ export function AssistantComposer({
 
   async function handleImportUploadSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!importsEnabled) {
+      setUploadState({
+        status: "error",
+        message: "Import is not available right now.",
+        importType: null,
+        filename: selectedFile?.name ?? null,
+      });
+      return;
+    }
 
     if (!selectedFile) {
       setUploadState({
@@ -296,8 +318,8 @@ export function AssistantComposer({
         </Button>
       </form>
 
-      <div className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-50 p-1">
-        {actionPanelItems.map(({ id, label, Icon }) => {
+      <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-4" : "grid-cols-2"}`}>
+        {(importsEnabled ? importActionPanelItems : betaActionPanelItems).map(({ id, label, Icon }) => {
           const isOpen = openPanel === id;
 
           if (id === "recent") {

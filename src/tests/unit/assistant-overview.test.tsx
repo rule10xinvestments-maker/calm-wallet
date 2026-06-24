@@ -64,10 +64,12 @@ describe("assistant overview", () => {
     expect(screen.getByText('Examples: "Coffee 12", "Groceries 85".')).toBeInTheDocument();
     expect(screen.queryByText(/narrow, trusted path/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/approved tracked-item actions/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Receipt" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Statement" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Receipt" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Statement" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
+    expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
+    expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Light reminders are optional, calm, and user-controlled.")).not.toBeInTheDocument();
     expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();

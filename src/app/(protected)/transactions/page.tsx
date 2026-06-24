@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/transactions";
 import { initialTransactionMutationState } from "@/lib/actions/transactions-state";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
+import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { loadAuthenticatedStagedImportBundle } from "@/lib/server/imports-loader";
 import { loadStagedImportList } from "@/lib/server/imports-list";
 import { loadStagedImportReviewProgress } from "@/lib/server/imports-review-progress";
@@ -90,21 +91,23 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   let stagedImports: Awaited<ReturnType<typeof loadStagedImportList>> = [];
   let stagedImportBundles: Awaited<ReturnType<typeof loadAuthenticatedStagedImportBundle>>[] = [];
   let stagedImportProgress: Awaited<ReturnType<typeof loadStagedImportReviewProgress>>[] = [];
+  const importsEnabled = areImportsEnabled();
 
   try {
-    [data, stagedImports] = await Promise.all([
-      loadTransactionsPageData({
-        userId: user.id,
-        view: "all",
-      }),
-      loadStagedImportList(),
-    ]);
-    stagedImportBundles = await Promise.all(
-      (stagedImports ?? []).map((item) => loadAuthenticatedStagedImportBundle(item.importRecordId)),
-    );
-    stagedImportProgress = await Promise.all(
-      (stagedImports ?? []).map((item) => loadStagedImportReviewProgress(item.importRecordId)),
-    );
+    data = await loadTransactionsPageData({
+      userId: user.id,
+      view: "all",
+    });
+
+    if (importsEnabled) {
+      stagedImports = await loadStagedImportList();
+      stagedImportBundles = await Promise.all(
+        (stagedImports ?? []).map((item) => loadAuthenticatedStagedImportBundle(item.importRecordId)),
+      );
+      stagedImportProgress = await Promise.all(
+        (stagedImports ?? []).map((item) => loadStagedImportReviewProgress(item.importRecordId)),
+      );
+    }
   } catch (error) {
     loadError = true;
     stagedImports = [];
@@ -173,6 +176,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       recentlyDeletedItems={data.recentlyDeletedItems}
       restoreAction={restoreTransactionAction}
       reviewAction={reviewImportCandidateAction}
+      importsEnabled={importsEnabled}
       stagedImportDetails={stagedImportDetails}
       stagedImports={stagedImports ?? []}
       updateAction={updateTransactionAction}

@@ -158,6 +158,7 @@ type TransactionsOverviewProps = {
   recentlyDeletedItems: TransactionListItem[];
   reviewAction: ImportReviewActionHandler;
   initialReviewActionState: ImportCandidateReviewDecisionActionState;
+  importsEnabled?: boolean;
   loadError?: boolean;
 };
 
@@ -826,14 +827,17 @@ export function TransactionsOverview({
   initialActionState,
   reviewAction,
   initialReviewActionState,
+  importsEnabled = false,
   loadError = false,
 }: TransactionsOverviewProps) {
   const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
-  const [stagedDetails, setStagedDetails] = useState(stagedImportDetails);
-  const [pendingCandidates, setPendingCandidates] = useState(() => flattenPendingCandidates(stagedImportDetails));
+  const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
+  const betaStagedImports = importsEnabled ? stagedImports : [];
+  const [stagedDetails, setStagedDetails] = useState(betaStagedImportDetails);
+  const [pendingCandidates, setPendingCandidates] = useState(() => flattenPendingCandidates(betaStagedImportDetails));
   const [expandedDeletedItemId, setExpandedDeletedItemId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -845,9 +849,10 @@ export function TransactionsOverview({
   }, [recentlyDeletedItems]);
 
   useEffect(() => {
-    setStagedDetails(stagedImportDetails);
-    setPendingCandidates(flattenPendingCandidates(stagedImportDetails));
-  }, [stagedImportDetails]);
+    const nextDetails = importsEnabled ? stagedImportDetails : {};
+    setStagedDetails(nextDetails);
+    setPendingCandidates(flattenPendingCandidates(nextDetails));
+  }, [importsEnabled, stagedImportDetails]);
 
   const filteredItems = useMemo(
     () =>
@@ -1065,14 +1070,14 @@ export function TransactionsOverview({
           )}
         </CardContent>
       </Card>
-      {stagedImports.length ? (
+      {betaStagedImports.length ? (
         <Card>
           <CardHeader>
             <CardTitle>Staged imports</CardTitle>
             <CardDescription>Recent private uploads staged for review, completion, or safe parse status.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {stagedImports.map((item) => (
+            {betaStagedImports.map((item) => (
               <StagedImportCard
                 key={item.importRecordId}
                 detail={stagedDetails[item.importRecordId]}
