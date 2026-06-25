@@ -1438,7 +1438,13 @@ export function TransactionsOverview({
                       {monthOptions.map((month) => {
                         const isSelected = activePeriod === "month" && selectedMonthKey === month.monthKey;
                         const isCurrent = currentMonthKey === month.monthKey;
-                        const indicatorClass =
+                        const unselectedToneClass =
+                          month.tone === "positive"
+                            ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                            : month.tone === "negative"
+                              ? "bg-rose-50 text-rose-800 hover:bg-rose-100"
+                              : "bg-white text-slate-600 hover:bg-slate-50";
+                        const selectedIndicatorClass =
                           month.tone === "positive"
                             ? "bg-emerald-500"
                             : month.tone === "negative"
@@ -1451,7 +1457,7 @@ export function TransactionsOverview({
                             className={`relative min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
                               isSelected
                                 ? `bg-sky-600 text-white shadow-sm ring-1 ring-sky-700 ${isCurrent ? "outline outline-2 outline-offset-1 outline-sky-200" : ""}`
-                                : `bg-white text-slate-600 hover:bg-slate-50 ${isCurrent ? "ring-2 ring-sky-200" : ""}`
+                                : `${unselectedToneClass} ${isCurrent ? "ring-2 ring-sky-200" : ""}`
                             }`}
                             key={month.monthKey}
                             onClick={() => {
@@ -1463,10 +1469,10 @@ export function TransactionsOverview({
                             type="button"
                           >
                             <span>{month.shortLabel}</span>
-                            {indicatorClass ? (
+                            {isSelected && selectedIndicatorClass ? (
                               <span
                                 aria-hidden="true"
-                                className={`absolute bottom-1 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full ${indicatorClass}`}
+                                className={`absolute bottom-1 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full ${selectedIndicatorClass}`}
                               />
                             ) : null}
                           </button>

@@ -349,10 +349,11 @@ describe("transactions overview", () => {
     expect(screen.getByRole("button", { name: `Select ${lastMonthLabel()}` })).toHaveClass("bg-sky-600");
     const currentButton = screen.getByRole("button", { name: `Select ${currentMonthLabel()}` });
     expect(currentButton).toHaveClass("ring-sky-200");
-    expect(hasIndicator(currentButton, "bg-rose-500")).toBe(true);
+    expect(currentButton).toHaveClass("bg-rose-50");
+    expect(hasIndicator(currentButton, "bg-rose-500")).toBe(false);
   });
 
-  it("uses separate net indicators for positive, negative, and empty months", () => {
+  it("shades unselected positive, negative, and empty months without indicators", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -397,10 +398,10 @@ describe("transactions overview", () => {
     const negativeButton = screen.getByRole("button", { name: `Select February ${currentYear()}` });
     const neutralButton = screen.getByRole("button", { name: `Select March ${currentYear()}` });
 
-    expect(positiveButton).toHaveClass("bg-white");
-    expect(hasIndicator(positiveButton, "bg-emerald-500")).toBe(true);
-    expect(negativeButton).toHaveClass("bg-white");
-    expect(hasIndicator(negativeButton, "bg-rose-500")).toBe(true);
+    expect(positiveButton).toHaveClass("bg-emerald-50");
+    expect(hasIndicator(positiveButton, "bg-emerald-500")).toBe(false);
+    expect(negativeButton).toHaveClass("bg-rose-50");
+    expect(hasIndicator(negativeButton, "bg-rose-500")).toBe(false);
     expect(neutralButton).toHaveClass("bg-white");
     expect(hasIndicator(neutralButton, "bg-emerald-500")).toBe(false);
     expect(hasIndicator(neutralButton, "bg-rose-500")).toBe(false);
@@ -532,6 +533,50 @@ describe("transactions overview", () => {
     expect(hasIndicator(aprilButton, "bg-rose-500")).toBe(false);
   });
 
+  it("keeps current month highlight visible with unselected positive and negative shading", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="USD"
+        items={[
+          makeTransactionItem({
+            id: "current-income",
+            title: "current income",
+            amountMinor: 10000,
+            amountDisplay: "+$100.00",
+            amountTone: "income",
+            currency: "USD",
+            occurredAt: dateInCurrentMonth(8),
+          }),
+          makeTransactionItem({
+            id: "jan-spend",
+            title: "january spend",
+            amountMinor: 3000,
+            amountDisplay: "-$30.00",
+            amountTone: "expense",
+            currency: "USD",
+            occurredAt: dateInMonth(currentYear(), 0, 9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: `Select January ${currentYear()}` }));
+    fireEvent.click(screen.getByRole("button", { name: `January ${currentYear()}` }));
+
+    const currentButton = screen.getByRole("button", { name: `Select ${currentMonthLabel()}` });
+    const negativeButton = screen.getByRole("button", { name: `Select January ${currentYear()}` });
+
+    expect(currentButton).toHaveClass("ring-sky-200");
+    expect(currentButton).toHaveClass("bg-emerald-50");
+    expect(hasIndicator(currentButton, "bg-emerald-500")).toBe(false);
+    expect(negativeButton).toHaveClass("bg-sky-600");
+    expect(hasIndicator(negativeButton, "bg-rose-500")).toBe(true);
+  });
+
   it("filters Activity by custom inclusive dates", () => {
     render(
       <TransactionsOverview
@@ -573,6 +618,9 @@ describe("transactions overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
     expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("bg-white");
     expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toHaveClass("bg-rose-50");
+    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toHaveClass("bg-emerald-50");
+    expect(hasIndicator(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` }), "bg-rose-500")).toBe(false);
+    expect(hasIndicator(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` }), "bg-emerald-500")).toBe(false);
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-06-10" } });
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-06-12" } });
 
