@@ -36,6 +36,8 @@ export type TransactionCategoryOption = {
   direction?: "expense" | "income" | "both";
 };
 
+export type DisplayFxRate = FxRate;
+
 export type ControlledCategoryOption = TransactionCategoryOption & {
   slug: string;
   direction: "expense" | "income" | "both";
@@ -927,6 +929,21 @@ function createEurRateLookup(rates: FxRate[]) {
   return newestByQuote;
 }
 
+function buildActivityAvailableDisplayCurrencies(transactions: Transaction[], displayCurrency: string) {
+  const normalizedDisplayCurrency = normalizeCurrency(displayCurrency);
+  const currencies = new Set<string>([normalizedDisplayCurrency, "EUR", "RON", "USD"]);
+
+  for (const transaction of transactions) {
+    currencies.add(normalizeCurrency(transaction.currency));
+  }
+
+  return Array.from(currencies).sort((a, b) => {
+    if (a === normalizedDisplayCurrency) return -1;
+    if (b === normalizedDisplayCurrency) return 1;
+    return a.localeCompare(b);
+  });
+}
+
 function getConversionRate(sourceCurrency: string, displayCurrency: string, rateLookup: Map<string, FxRate>) {
   if (sourceCurrency === displayCurrency) {
     return 1;
@@ -1643,6 +1660,12 @@ export async function loadTransactionsPageData(args: {
   ]);
   const recoverableDeletedAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const recentlyDeletedTransactions = await service.listRecoverableDeletedTransactions(args.userId, recoverableDeletedAfter, 25);
+  const availableDisplayCurrencies = buildActivityAvailableDisplayCurrencies([...transactions, ...recentlyDeletedTransactions], currency);
+  const fxRates = await loadInsightsSupportingData(
+    "fx_rates",
+    () => loadFxRatesForDisplay(availableDisplayCurrencies),
+    [] as FxRate[],
+  );
 
   const filtered = filterTransactionsForView(transactions, args.view, args.query);
   console.info("transactions:list-load", {
@@ -1655,6 +1678,9 @@ export async function loadTransactionsPageData(args: {
     view: args.view,
     query: args.query ?? "",
     currency,
+    displayCurrency: currency,
+    availableDisplayCurrencies,
+    fxRates,
     items: mapTransactionsToListItems(filtered, categoryLabels, currency),
     recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency),
     categories: await loadCategoryOptions(),

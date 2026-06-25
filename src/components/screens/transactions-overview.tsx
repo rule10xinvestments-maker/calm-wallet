@@ -10,6 +10,7 @@ import type {
 } from "@/lib/actions/imports-state";
 import type { StagedImportListItem } from "@/lib/server/imports-list";
 import type {
+  DisplayFxRate,
   TransactionCategoryOption,
   TransactionListItem,
   TransactionsView,
@@ -25,6 +26,7 @@ type ImportReviewActionHandler = (
 
 type ActivityFilterView = TransactionsView | "deleted";
 type ActivityPeriod = "this-month" | "last-month" | "custom";
+type ActivitySummaryMode = "all" | "spend" | "income" | "context";
 
 type ActivityFilterTab = {
   value: ActivityFilterView;
@@ -197,6 +199,10 @@ function getPeriodLabel(period: ActivityPeriod, customFrom: string, customTo: st
   return "Custom activity";
 }
 
+function normalizeCurrency(currency: string) {
+  return currency.trim().toUpperCase();
+}
+
 function formatMoneyMinor(amountMinor: number, currency: string) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -204,19 +210,65 @@ function formatMoneyMinor(amountMinor: number, currency: string) {
   }).format(amountMinor / 100);
 }
 
-function formatSignedMinor(amountMinor: number, currency: string) {
-  if (amountMinor < 0) {
-    return `-${formatMoneyMinor(Math.abs(amountMinor), currency)}`;
-  }
-
-  return formatMoneyMinor(amountMinor, currency);
+function formatDisplayAmount(amountMinor: number, currency: string, isConverted: boolean) {
+  return `${isConverted ? "≈ " : ""}${formatMoneyMinor(amountMinor, currency)}`;
 }
 
-function buildActivitySummary(items: TransactionListItem[]) {
+function formatDisplaySignedAmount(amountMinor: number, currency: string, isConverted: boolean) {
+  if (amountMinor < 0) {
+    return `${isConverted ? "≈ " : ""}-${formatMoneyMinor(Math.abs(amountMinor), currency)}`;
+  }
+
+  return `${isConverted ? "≈ " : ""}${formatMoneyMinor(amountMinor, currency)}`;
+}
+
+function createEurRateLookup(rates: DisplayFxRate[]) {
+  const newestByQuote = new Map<string, DisplayFxRate>();
+
+  for (const rate of rates) {
+    if (rate.baseCurrency !== "EUR" || !Number.isFinite(rate.rate) || rate.rate <= 0) {
+      continue;
+    }
+
+    const currency = normalizeCurrency(rate.quoteCurrency);
+    const previous = newestByQuote.get(currency);
+
+    if (!previous || rate.rateDate > previous.rateDate) {
+      newestByQuote.set(currency, { ...rate, quoteCurrency: currency });
+    }
+  }
+
+  return newestByQuote;
+}
+
+function getConversionRate(sourceCurrency: string, displayCurrency: string, rateLookup: Map<string, DisplayFxRate>) {
+  const source = normalizeCurrency(sourceCurrency);
+  const display = normalizeCurrency(displayCurrency);
+
+  if (source === display) {
+    return 1;
+  }
+
+  const sourceRate = rateLookup.get(source);
+  const displayRate = rateLookup.get(display);
+
+  if (!sourceRate || !displayRate) {
+    return null;
+  }
+
+  return displayRate.rate / sourceRate.rate;
+}
+
+function convertMinor(amountMinor: number, conversionRate: number) {
+  return Math.round(amountMinor * conversionRate);
+}
+
+function buildOriginalActivitySummary(items: TransactionListItem[]) {
   const totals = new Map<string, { spend: number; income: number }>();
 
   for (const item of items) {
-    const current = totals.get(item.currency) ?? { spend: 0, income: 0 };
+    const currency = normalizeCurrency(item.currency);
+    const current = totals.get(currency) ?? { spend: 0, income: 0 };
 
     if (item.amountTone === "income") {
       current.income += item.amountMinor;
@@ -224,7 +276,7 @@ function buildActivitySummary(items: TransactionListItem[]) {
       current.spend += item.amountMinor;
     }
 
-    totals.set(item.currency, current);
+    totals.set(currency, current);
   }
 
   return Array.from(totals.entries())
@@ -234,7 +286,81 @@ function buildActivitySummary(items: TransactionListItem[]) {
       spend: total.spend,
       income: total.income,
       net: total.income - total.spend,
+      isConverted: false,
     }));
+}
+
+function buildDisplayActivitySummary(
+  items: TransactionListItem[],
+  displayCurrency: string,
+  fxRates: DisplayFxRate[],
+) {
+  const normalizedDisplayCurrency = normalizeCurrency(displayCurrency);
+  const rateLookup = createEurRateLookup(fxRates);
+  let spend = 0;
+  let income = 0;
+  let hasConverted = false;
+  let hasMissingRate = false;
+
+  for (const item of items) {
+    const sourceCurrency = normalizeCurrency(item.currency);
+    const conversionRate = getConversionRate(sourceCurrency, normalizedDisplayCurrency, rateLookup);
+
+    if (conversionRate === null) {
+      hasMissingRate = true;
+      continue;
+    }
+
+    const convertedAmount = convertMinor(item.amountMinor, conversionRate);
+
+    if (sourceCurrency !== normalizedDisplayCurrency) {
+      hasConverted = true;
+    }
+
+    if (item.amountTone === "income") {
+      income += convertedAmount;
+    } else {
+      spend += convertedAmount;
+    }
+  }
+
+  if (hasMissingRate) {
+    return {
+      summaries: buildOriginalActivitySummary(items),
+      hasConverted: false,
+      usedFallback: true,
+    };
+  }
+
+  return {
+    summaries: [
+      {
+        currency: normalizedDisplayCurrency,
+        spend,
+        income,
+        net: income - spend,
+        isConverted: hasConverted,
+      },
+    ],
+    hasConverted,
+    usedFallback: false,
+  };
+}
+
+function getSummaryMode(view: ActivityFilterView): ActivitySummaryMode {
+  if (view === "expenses") {
+    return "spend";
+  }
+
+  if (view === "income") {
+    return "income";
+  }
+
+  if (view === "needs-review" || view === "deleted") {
+    return "context";
+  }
+
+  return "all";
 }
 
 function formatImportDate(value: string) {
@@ -294,6 +420,9 @@ type TransactionsOverviewProps = {
   initialReviewActionState: ImportCandidateReviewDecisionActionState;
   importsEnabled?: boolean;
   loadError?: boolean;
+  displayCurrency: string;
+  availableDisplayCurrencies: string[];
+  fxRates: DisplayFxRate[];
 };
 
 function ReviewActionMessage({ state }: { state: ImportCandidateReviewDecisionActionState }) {
@@ -886,7 +1015,7 @@ function RecentlyDeletedEntry({
             {item.categoryLabel} · {item.subtitle}
           </p>
         </div>
-        <p className={`shrink-0 text-sm font-semibold ${item.amountTone === "income" ? "text-emerald-700" : "text-slate-800"}`}>
+        <p className={`shrink-0 text-sm font-semibold ${item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}`}>
           {item.amountDisplay}
         </p>
       </button>
@@ -963,12 +1092,16 @@ export function TransactionsOverview({
   initialReviewActionState,
   importsEnabled = false,
   loadError = false,
+  displayCurrency,
+  availableDisplayCurrencies,
+  fxRates,
 }: TransactionsOverviewProps) {
   const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
   const [activePeriod, setActivePeriod] = useState<ActivityPeriod>("this-month");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
   const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
@@ -1008,8 +1141,13 @@ export function TransactionsOverview({
     () => (activeView === "needs-review" ? filterCandidates(pendingCandidates, searchQuery) : []),
     [activeView, pendingCandidates, searchQuery],
   );
-  const activitySummary = useMemo(() => buildActivitySummary(filteredActiveItems), [filteredActiveItems]);
+  const summaryResult = useMemo(
+    () => buildDisplayActivitySummary(filteredActiveItems, activeDisplayCurrency, fxRates),
+    [activeDisplayCurrency, filteredActiveItems, fxRates],
+  );
+  const activitySummary = summaryResult.summaries;
   const hasMixedCurrencies = activitySummary.length > 1;
+  const summaryMode = getSummaryMode(activeView);
   const periodLabel = getPeriodLabel(activePeriod, customFrom, customTo);
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
@@ -1019,6 +1157,11 @@ export function TransactionsOverview({
   const cardSubtitle = isDeletedView
     ? "Tap an entry to restore or delete forever."
     : "Tap an entry to edit, add a note, or review details.";
+  const normalizedDisplayCurrencies = Array.from(
+    new Set((availableDisplayCurrencies.length ? availableDisplayCurrencies : [displayCurrency]).map(normalizeCurrency)),
+  );
+  const contextEntryCount =
+    activeView === "deleted" ? filteredDeletedItems.length : filteredActiveItems.length + filteredPendingCandidates.length;
 
   function handleItemDeleted(item: TransactionListItem) {
     setActiveItems((current) => current.filter((activeItem) => activeItem.id !== item.id));
@@ -1138,77 +1281,136 @@ export function TransactionsOverview({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
-          {!isDeletedView ? (
-            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Period</p>
-                <p className="text-xs font-medium text-slate-700">{periodLabel}</p>
-              </div>
-              <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
-                {[
-                  { value: "this-month" as const, label: "This month" },
-                  { value: "last-month" as const, label: "Last month" },
-                  { value: "custom" as const, label: "Custom" },
-                ].map((period) => {
-                  const isActive = activePeriod === period.value;
-
-                  return (
-                    <button
-                      className={`min-h-9 rounded-lg px-2 py-1 text-xs font-medium transition ${
-                        isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
-                      }`}
-                      key={period.value}
-                      onClick={() => setActivePeriod(period.value)}
-                      type="button"
-                    >
-                      {period.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {activePeriod === "custom" ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="space-y-1 text-xs font-medium text-slate-600">
-                    From
-                    <input
-                      className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                      onChange={(event) => setCustomFrom(event.target.value)}
-                      type="date"
-                      value={customFrom}
-                    />
-                  </label>
-                  <label className="space-y-1 text-xs font-medium text-slate-600">
-                    To
-                    <input
-                      className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                      onChange={(event) => setCustomTo(event.target.value)}
-                      type="date"
-                      value={customTo}
-                    />
-                  </label>
-                </div>
-              ) : null}
-              <div className="rounded-xl bg-white px-3 py-2">
-                <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
-                {activitySummary.length ? (
-                  <div className="mt-1 space-y-1 text-sm font-medium text-slate-800">
-                    {activitySummary.map((summary) => (
-                      <p key={summary.currency}>
-                        Spend: {formatMoneyMinor(summary.spend, summary.currency)} · Income:{" "}
-                        {formatMoneyMinor(summary.income, summary.currency)} · Net:{" "}
-                        {formatSignedMinor(summary.net, summary.currency)}
-                      </p>
-                    ))}
-                    {hasMixedCurrencies ? (
-                      <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
-                )}
-              </div>
+          <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {isDeletedView ? "Display" : "Period"}
+              </p>
+              <p className="text-xs font-medium text-slate-700">{isDeletedView ? "Recently deleted" : periodLabel}</p>
             </div>
-          ) : null}
+            {!isDeletedView ? (
+              <>
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
+                  {[
+                    { value: "this-month" as const, label: "This month" },
+                    { value: "last-month" as const, label: "Last month" },
+                    { value: "custom" as const, label: "Custom" },
+                  ].map((period) => {
+                    const isActive = activePeriod === period.value;
+
+                    return (
+                      <button
+                        className={`min-h-9 rounded-lg px-2 py-1 text-xs font-medium transition ${
+                          isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                        }`}
+                        key={period.value}
+                        onClick={() => setActivePeriod(period.value)}
+                        type="button"
+                      >
+                        {period.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {activePeriod === "custom" ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      From
+                      <input
+                        className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                        onChange={(event) => setCustomFrom(event.target.value)}
+                        type="date"
+                        value={customFrom}
+                      />
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-slate-600">
+                      To
+                      <input
+                        className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                        onChange={(event) => setCustomTo(event.target.value)}
+                        type="date"
+                        value={customTo}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+            <div aria-label="Display currency" className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
+              {normalizedDisplayCurrencies.map((currency) => {
+                const isActive = activeDisplayCurrency === currency;
+
+                return (
+                  <button
+                    className={`min-h-8 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                      isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                    key={currency}
+                    onClick={() => setActiveDisplayCurrency(currency)}
+                    type="button"
+                  >
+                    {currency}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="rounded-xl bg-white px-3 py-2">
+              {summaryMode === "context" ? (
+                <>
+                  <p className="text-xs font-medium text-slate-500">
+                    {isDeletedView ? `${contextEntryCount} recoverable entries shown` : "Needs review"}
+                  </p>
+                  {!isDeletedView ? (
+                    <p className="mt-1 text-sm font-medium text-amber-700">{contextEntryCount} review entries shown</p>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
+                  {activitySummary.length ? (
+                    <div className="mt-2 grid gap-2 text-sm font-semibold">
+                      {activitySummary.map((summary) => {
+                        const isConverted = summary.isConverted;
+                        const netTone =
+                          summary.net > 0 ? "text-emerald-700" : summary.net < 0 ? "text-rose-700" : "text-slate-700";
+
+                        return (
+                          <div className="grid gap-1" key={summary.currency}>
+                            {(summaryMode === "all" || summaryMode === "spend") ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-slate-500">Spend</span>
+                                <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted)}</span>
+                              </div>
+                            ) : null}
+                            {(summaryMode === "all" || summaryMode === "income") ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-slate-500">Income</span>
+                                <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted)}</span>
+                              </div>
+                            ) : null}
+                            {summaryMode === "all" ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-slate-500">Net</span>
+                                <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted)}</span>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                      {summaryResult.hasConverted ? (
+                        <p className="text-xs font-normal text-slate-500">Converted for display. Originals stay unchanged.</p>
+                      ) : null}
+                      {summaryResult.usedFallback || hasMixedCurrencies ? (
+                        <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
           <form
             action="/transactions"
             aria-label="Search transactions"

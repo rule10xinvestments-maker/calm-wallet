@@ -167,6 +167,9 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       categories={data.categories}
       currentView={safeView}
       deleteAction={deleteTransactionAction}
+      displayCurrency={data.displayCurrency}
+      availableDisplayCurrencies={data.availableDisplayCurrencies}
+      fxRates={data.fxRates}
       initialActionState={initialTransactionMutationState}
       initialReviewActionState={initialImportCandidateReviewDecisionActionState}
       items={data.items}

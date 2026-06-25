@@ -485,7 +485,7 @@ export function TransactionItemCard({
           ) : null}
         </span>
         <span className="grid justify-items-end gap-1">
-          <span className={`shrink-0 text-sm font-semibold ${displayItem.amountTone === "income" ? "text-emerald-700" : "text-slate-800"}`}>
+          <span className={`shrink-0 text-sm font-semibold ${displayItem.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}`}>
             {displayItem.amountDisplay}
           </span>
           {needsReview ? (

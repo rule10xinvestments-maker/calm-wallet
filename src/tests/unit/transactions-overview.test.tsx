@@ -7,7 +7,12 @@ import type { TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { StagedImportListItem } from "@/lib/server/imports-list";
 
 vi.mock("@/components/transactions/transaction-item-card", () => ({
-  TransactionItemCard: ({ item }: { item: TransactionListItem }) => <div>{item.title}</div>,
+  TransactionItemCard: ({ item }: { item: TransactionListItem }) => (
+    <div>
+      <span>{item.title}</span>
+      <span className={item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}>{item.amountDisplay}</span>
+    </div>
+  ),
 }));
 
 function dateInCurrentMonth(day: number) {
@@ -100,6 +105,34 @@ function makeOverviewProps() {
     reviewAction: vi.fn(async () => initialImportCandidateReviewDecisionActionState),
     initialReviewActionState: initialImportCandidateReviewDecisionActionState,
     importsEnabled: true,
+    displayCurrency: "USD",
+    availableDisplayCurrencies: ["USD", "EUR", "RON"],
+    fxRates: [
+      {
+        baseCurrency: "EUR",
+        quoteCurrency: "EUR",
+        rate: 1,
+        rateDate: "2026-06-01",
+        source: "test",
+        fetchedAt: "2026-06-01T00:00:00.000Z",
+      },
+      {
+        baseCurrency: "EUR",
+        quoteCurrency: "USD",
+        rate: 1.1,
+        rateDate: "2026-06-01",
+        source: "test",
+        fetchedAt: "2026-06-01T00:00:00.000Z",
+      },
+      {
+        baseCurrency: "EUR",
+        quoteCurrency: "RON",
+        rate: 5,
+        rateDate: "2026-06-01",
+        source: "test",
+        fetchedAt: "2026-06-01T00:00:00.000Z",
+      },
+    ],
   };
 }
 
@@ -162,6 +195,7 @@ describe("transactions overview", () => {
         ]}
         stagedImports={[]}
         stagedImportDetails={{}}
+        displayCurrency="RON"
       />,
     );
 
@@ -170,7 +204,13 @@ describe("transactions overview", () => {
     expect(screen.getByText("current salary")).toBeInTheDocument();
     expect(screen.queryByText("last rent")).not.toBeInTheDocument();
     expect(screen.getByText("2 entries shown")).toBeInTheDocument();
-    expect(screen.getByText("Spend: RON 1,200.00 · Income: RON 300.00 · Net: -RON 900.00")).toBeInTheDocument();
+    const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+    expect(within(movementCard).getByText("Spend")).toBeInTheDocument();
+    expect(within(movementCard).getByText("RON 1,200.00")).toHaveClass("text-rose-700");
+    expect(within(movementCard).getByText("Income")).toBeInTheDocument();
+    expect(within(movementCard).getByText("RON 300.00")).toHaveClass("text-emerald-700");
+    expect(within(movementCard).getByText("Net")).toBeInTheDocument();
+    expect(within(movementCard).getByText("-RON 900.00")).toHaveClass("text-rose-700");
   });
 
   it("filters Activity to last month without route navigation", () => {
@@ -314,9 +354,212 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByText("Spend: RON 1,200.00 · Income: RON 0.00 · Net: -RON 1,200.00")).toBeInTheDocument();
-    expect(screen.getByText("Spend: $0.00 · Income: $9.00 · Net: $9.00")).toBeInTheDocument();
-    expect(screen.getByText("Mixed currencies shown separately.")).toBeInTheDocument();
+    expect(screen.getByText("≈ $264.00")).toHaveClass("text-rose-700");
+    expect(screen.getByText("≈ $9.00")).toHaveClass("text-emerald-700");
+    expect(screen.getByText("≈ -$255.00")).toHaveClass("text-rose-700");
+    expect(screen.getByText("Converted for display. Originals stay unchanged.")).toBeInTheDocument();
+    expect(screen.queryByText(/RON 1,200\.00 RON/)).not.toBeInTheDocument();
+  });
+
+  it("renders a positive net in green", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="RON"
+        items={[
+          makeTransactionItem({
+            id: "expense",
+            title: "groceries",
+            amountMinor: 5000,
+            amountDisplay: "-RON 50.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+          makeTransactionItem({
+            id: "income",
+            title: "salary",
+            amountMinor: 10000,
+            amountDisplay: "+RON 100.00",
+            amountTone: "income",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    const fiftyRonAmounts = screen.getAllByText("RON 50.00");
+    expect(fiftyRonAmounts.some((element) => element.className.includes("text-rose-700"))).toBe(true);
+    expect(fiftyRonAmounts.some((element) => element.className.includes("text-emerald-700"))).toBe(true);
+    expect(screen.getByText("RON 100.00")).toHaveClass("text-emerald-700");
+  });
+
+  it("shows Spend only on the Spend filter", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="RON"
+        items={[
+          makeTransactionItem({
+            id: "expense",
+            title: "rent",
+            amountMinor: 120000,
+            amountDisplay: "-RON 1,200.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+          makeTransactionItem({
+            id: "income",
+            title: "salary",
+            amountMinor: 30000,
+            amountDisplay: "+RON 300.00",
+            amountTone: "income",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
+    const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+
+    expect(within(movementCard).getByText("Spend")).toBeInTheDocument();
+    expect(within(movementCard).getByText("RON 1,200.00")).toHaveClass("text-rose-700");
+    expect(within(movementCard).queryByText("Income")).not.toBeInTheDocument();
+    expect(within(movementCard).queryByText("Net")).not.toBeInTheDocument();
+    expect(within(movementCard).getByRole("button", { name: "RON" })).toBeInTheDocument();
+  });
+
+  it("shows Income only on the Income filter", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="RON"
+        items={[
+          makeTransactionItem({
+            id: "expense",
+            title: "rent",
+            amountMinor: 120000,
+            amountDisplay: "-RON 1,200.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+          makeTransactionItem({
+            id: "income",
+            title: "salary",
+            amountMinor: 30000,
+            amountDisplay: "+RON 300.00",
+            amountTone: "income",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+
+    expect(within(movementCard).queryByText("Spend")).not.toBeInTheDocument();
+    expect(within(movementCard).getByText("Income")).toBeInTheDocument();
+    expect(within(movementCard).getByText("RON 300.00")).toHaveClass("text-emerald-700");
+    expect(within(movementCard).queryByText("Net")).not.toBeInTheDocument();
+    expect(within(movementCard).getByRole("button", { name: "RON" })).toBeInTheDocument();
+  });
+
+  it("shows review context without period net", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        currentView="needs-review"
+        items={[
+          makeTransactionItem({
+            id: "review-expense",
+            title: "tigari",
+            amountDisplay: "-RON 5.00",
+            amountTone: "expense",
+            currency: "RON",
+            categoryId: null,
+            categoryLabel: "Uncategorized",
+            reviewState: "needs_attention",
+            reviewLabel: "Needs review",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+
+    expect(within(movementCard).getByText("Needs review")).toBeInTheDocument();
+    expect(within(movementCard).getByText("1 review entries shown")).toBeInTheDocument();
+    expect(within(movementCard).queryByText("Net")).not.toBeInTheDocument();
+    expect(within(movementCard).getByRole("button", { name: "USD" })).toBeInTheDocument();
+  });
+
+  it("shows bin context without period net", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        recentlyDeletedItems={[
+          makeTransactionItem({
+            id: "deleted-1",
+            title: "old market",
+            amountDisplay: "-RON 12.00",
+            amountTone: "expense",
+            currency: "RON",
+            deletedAt: "2026-06-01T10:00:00.000Z",
+          }),
+        ]}
+        stagedImports={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
+    const movementCard = screen.getByRole("heading", { name: "Recently deleted" }).closest(".rounded-3xl") as HTMLElement;
+
+    expect(within(movementCard).getByText("1 recoverable entries shown")).toBeInTheDocument();
+    expect(within(movementCard).queryByText("Net")).not.toBeInTheDocument();
+    expect(within(movementCard).getByRole("button", { name: "USD" })).toBeInTheDocument();
+  });
+
+  it("switches display currency without mutating transaction row amounts", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="USD"
+        items={[
+          makeTransactionItem({
+            id: "ron-expense",
+            title: "rent",
+            amountMinor: 120000,
+            amountDisplay: "-RON 1,200.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInCurrentMonth(9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "RON" }));
+
+    expect(screen.getByText("RON 1,200.00")).toHaveClass("text-rose-700");
+    expect(screen.getAllByText("-RON 1,200.00").some((element) => element.className.includes("text-rose-700"))).toBe(true);
     expect(screen.queryByText(/RON 1,200\.00 RON/)).not.toBeInTheDocument();
   });
 
