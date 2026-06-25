@@ -25,6 +25,28 @@ function dateInLastMonth(day: number) {
   return new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, day, 10, 0, 0)).toISOString();
 }
 
+function dateInMonth(year: number, monthIndex: number, day: number) {
+  return new Date(Date.UTC(year, monthIndex, day, 10, 0, 0)).toISOString();
+}
+
+function monthLabel(year: number, monthIndex: number) {
+  return new Date(year, monthIndex, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function currentMonthLabel() {
+  const now = new Date();
+  return monthLabel(now.getFullYear(), now.getMonth());
+}
+
+function lastMonthLabel() {
+  const now = new Date();
+  return monthLabel(now.getFullYear(), now.getMonth() - 1);
+}
+
+function currentYear() {
+  return new Date().getFullYear();
+}
+
 function makeTransactionItem(overrides: Partial<TransactionListItem> = {}): TransactionListItem {
   return {
     id: "txn-1",
@@ -170,9 +192,10 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "June activity" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: currentMonthLabel() })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "Summary" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Last month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
     expect(screen.queryByText("entries shown")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
@@ -189,16 +212,19 @@ describe("transactions overview", () => {
       />,
     );
 
-    const timeframeButton = screen.getByRole("button", { name: "June activity" });
+    const timeframeButton = screen.getByRole("button", { name: currentMonthLabel() });
     const summaryButton = screen.getByRole("button", { name: "Summary" });
 
     fireEvent.click(timeframeButton);
     expect(timeframeButton).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "This month" })).toBeInTheDocument();
+    expect(screen.getByText(String(currentYear()))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use custom range" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
 
     fireEvent.click(timeframeButton);
     expect(timeframeButton).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toBeInTheDocument();
 
     fireEvent.click(summaryButton);
     expect(summaryButton).toHaveAttribute("aria-expanded", "true");
@@ -209,6 +235,27 @@ describe("transactions overview", () => {
     expect(summaryButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("1 entries shown")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
+  });
+
+  it("moves between years in the month picker", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "visible history" })]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous year" }));
+
+    expect(screen.getByText(String(currentYear() - 1))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Select January ${currentYear() - 1}` })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next year" }));
+
+    expect(screen.getByText(String(currentYear()))).toBeInTheDocument();
   });
 
   it("defaults Activity to this month and summarizes visible saved entries", () => {
@@ -265,7 +312,7 @@ describe("transactions overview", () => {
     expect(within(movementCard).getByText("-RON 900.00")).toHaveClass("text-rose-700");
   });
 
-  it("filters Activity to last month without route navigation", () => {
+  it("selects a month from the calendar without route navigation", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -286,12 +333,102 @@ describe("transactions overview", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "June activity" }));
-    expect(screen.getByRole("button", { name: "This month" })).toHaveClass("bg-sky-600");
-    fireEvent.click(screen.getByRole("button", { name: "Last month" }));
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("bg-sky-600");
+    fireEvent.click(screen.getByRole("button", { name: `Select ${lastMonthLabel()}` }));
 
     expect(screen.queryByText("current groceries")).not.toBeInTheDocument();
     expect(screen.getByText("previous groceries")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: lastMonthLabel() })).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: lastMonthLabel() }));
+    expect(screen.getByRole("button", { name: `Select ${lastMonthLabel()}` })).toHaveClass("bg-sky-600");
+    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("ring-sky-200");
+  });
+
+  it("uses subtle month net shading for positive, negative, and empty months", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="USD"
+        items={[
+          makeTransactionItem({
+            id: "jan-income",
+            title: "january income",
+            amountMinor: 10000,
+            amountDisplay: "+$100.00",
+            amountTone: "income",
+            currency: "USD",
+            occurredAt: dateInMonth(currentYear(), 0, 8),
+          }),
+          makeTransactionItem({
+            id: "jan-spend",
+            title: "january spend",
+            amountMinor: 2000,
+            amountDisplay: "-$20.00",
+            amountTone: "expense",
+            currency: "USD",
+            occurredAt: dateInMonth(currentYear(), 0, 9),
+          }),
+          makeTransactionItem({
+            id: "feb-spend",
+            title: "february spend",
+            amountMinor: 3000,
+            amountDisplay: "-$30.00",
+            amountTone: "expense",
+            currency: "USD",
+            occurredAt: dateInMonth(currentYear(), 1, 9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+
+    expect(screen.getByRole("button", { name: `Select January ${currentYear()}` })).toHaveClass("bg-emerald-50");
+    expect(screen.getByRole("button", { name: `Select February ${currentYear()}` })).toHaveClass("bg-rose-50");
+    expect(screen.getByRole("button", { name: `Select March ${currentYear()}` })).toHaveClass("bg-white");
+  });
+
+  it("keeps mixed-currency month shading neutral when conversion falls back to original currencies", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="USD"
+        fxRates={[]}
+        items={[
+          makeTransactionItem({
+            id: "april-income",
+            title: "april income",
+            amountMinor: 10000,
+            amountDisplay: "+$100.00",
+            amountTone: "income",
+            currency: "USD",
+            occurredAt: dateInMonth(currentYear(), 3, 8),
+          }),
+          makeTransactionItem({
+            id: "april-spend",
+            title: "april spend",
+            amountMinor: 10000,
+            amountDisplay: "-RON 100.00",
+            amountTone: "expense",
+            currency: "RON",
+            occurredAt: dateInMonth(currentYear(), 3, 9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+
+    const aprilButton = screen.getByRole("button", { name: `Select April ${currentYear()}` });
+    expect(aprilButton).toHaveClass("bg-white");
+    expect(aprilButton).not.toHaveClass("bg-emerald-50");
+    expect(aprilButton).not.toHaveClass("bg-rose-50");
   });
 
   it("filters Activity by custom inclusive dates", () => {
@@ -325,11 +462,14 @@ describe("transactions overview", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "June activity" }));
-    fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
+    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("bg-white");
+    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toHaveClass("bg-rose-50");
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-06-10" } });
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-06-12" } });
 
+    expect(screen.getByRole("button", { name: "Use custom range" })).toHaveClass("bg-sky-600");
     expect(screen.queryByText("before range")).not.toBeInTheDocument();
     expect(screen.getByText("inside start")).toBeInTheDocument();
     expect(screen.getByText("inside end")).toBeInTheDocument();
@@ -375,8 +515,8 @@ describe("transactions overview", () => {
     expect(screen.getByText("zile salary")).toBeInTheDocument();
     expect(screen.queryByText("zile old salary")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "June activity" }));
-    fireEvent.click(screen.getByRole("button", { name: "Last month" }));
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: `Select ${lastMonthLabel()}` }));
     expect(screen.queryByText("zile salary")).not.toBeInTheDocument();
     expect(screen.getByText("zile old salary")).toBeInTheDocument();
   });

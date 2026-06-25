@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CalendarDays, ChevronDown, List, MinusCircle, PlusCircle, Search, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, List, MinusCircle, PlusCircle, Search, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,7 @@ type ImportReviewActionHandler = (
 ) => Promise<ImportCandidateReviewDecisionActionState>;
 
 type ActivityFilterView = TransactionsView | "deleted";
-type ActivityPeriod = "this-month" | "last-month" | "custom";
+type ActivityPeriod = "month" | "custom";
 type ActivitySummaryMode = "all" | "spend" | "income" | "context";
 
 type ActivityFilterTab = {
@@ -114,9 +114,9 @@ function toDateInputValue(value: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function getMonthBounds(offset: 0 | -1, now = new Date()) {
-  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+function getMonthBounds(year: number, monthIndex: number) {
+  const start = new Date(year, monthIndex, 1);
+  const end = new Date(year, monthIndex + 1, 0);
 
   return {
     from: toDateInputValue(start),
@@ -124,13 +124,23 @@ function getMonthBounds(offset: 0 | -1, now = new Date()) {
   };
 }
 
-function getPeriodBounds(period: ActivityPeriod, customFrom: string, customTo: string) {
-  if (period === "this-month") {
-    return getMonthBounds(0);
-  }
+function getMonthKey(year: number, monthIndex: number) {
+  return `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+}
 
-  if (period === "last-month") {
-    return getMonthBounds(-1);
+function getCurrentMonthKey(now = new Date()) {
+  return getMonthKey(now.getFullYear(), now.getMonth());
+}
+
+function getPeriodBounds(
+  period: ActivityPeriod,
+  selectedYear: number,
+  selectedMonthIndex: number,
+  customFrom: string,
+  customTo: string,
+) {
+  if (period === "month") {
+    return getMonthBounds(selectedYear, selectedMonthIndex);
   }
 
   return {
@@ -156,10 +166,12 @@ function getDateKey(value: string | null) {
 function filterTransactionsForPeriod(
   items: TransactionListItem[],
   period: ActivityPeriod,
+  selectedYear: number,
+  selectedMonthIndex: number,
   customFrom: string,
   customTo: string,
 ) {
-  const { from, to } = getPeriodBounds(period, customFrom, customTo);
+  const { from, to } = getPeriodBounds(period, selectedYear, selectedMonthIndex, customFrom, customTo);
 
   return items.filter((item) => {
     const dateKey = getDateKey(item.occurredAt);
@@ -180,23 +192,19 @@ function filterTransactionsForPeriod(
   });
 }
 
-function getPeriodLabel(period: ActivityPeriod, customFrom: string, customTo: string) {
-  if (period === "this-month") {
-    return `${new Date().toLocaleDateString("en-US", { month: "long" })} activity`;
+function getMonthLabel(year: number, monthIndex: number, format: "short" | "long" = "long") {
+  return new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+    month: format,
+    year: "numeric",
+  });
+}
+
+function getPeriodLabel(period: ActivityPeriod, selectedYear: number, selectedMonthIndex: number) {
+  if (period === "month") {
+    return getMonthLabel(selectedYear, selectedMonthIndex);
   }
 
-  if (period === "last-month") {
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-
-    return `${lastMonth.toLocaleDateString("en-US", { month: "long" })} activity`;
-  }
-
-  if (customFrom || customTo) {
-    return `${customFrom || "Start"} to ${customTo || "Today"}`;
-  }
-
-  return "Custom activity";
+  return "Custom range";
 }
 
 function normalizeCurrency(currency: string) {
@@ -345,6 +353,40 @@ function buildDisplayActivitySummary(
     hasConverted,
     usedFallback: false,
   };
+}
+
+type MonthNetTone = "positive" | "negative" | "neutral";
+
+function getMonthNetTone(
+  items: TransactionListItem[],
+  year: number,
+  monthIndex: number,
+  displayCurrency: string,
+  fxRates: DisplayFxRate[],
+) {
+  const monthItems = filterTransactionsForPeriod(items, "month", year, monthIndex, "", "");
+
+  if (!monthItems.length) {
+    return "neutral" satisfies MonthNetTone;
+  }
+
+  const summaryResult = buildDisplayActivitySummary(monthItems, displayCurrency, fxRates);
+
+  if (summaryResult.usedFallback && summaryResult.summaries.length !== 1) {
+    return "neutral" satisfies MonthNetTone;
+  }
+
+  const net = summaryResult.summaries[0]?.net ?? 0;
+
+  if (net > 0) {
+    return "positive" satisfies MonthNetTone;
+  }
+
+  if (net < 0) {
+    return "negative" satisfies MonthNetTone;
+  }
+
+  return "neutral" satisfies MonthNetTone;
 }
 
 function getSummaryMode(view: ActivityFilterView): ActivitySummaryMode {
@@ -1096,9 +1138,15 @@ export function TransactionsOverview({
   availableDisplayCurrencies,
   fxRates,
 }: TransactionsOverviewProps) {
+  const currentDate = useMemo(() => new Date(), []);
   const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
-  const [activePeriod, setActivePeriod] = useState<ActivityPeriod>("this-month");
+  const [activePeriod, setActivePeriod] = useState<ActivityPeriod>("month");
+  const [selectedMonth, setSelectedMonth] = useState(() => ({
+    year: currentDate.getFullYear(),
+    monthIndex: currentDate.getMonth(),
+  }));
+  const [visiblePickerYear, setVisiblePickerYear] = useState(() => currentDate.getFullYear());
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
@@ -1127,8 +1175,8 @@ export function TransactionsOverview({
   }, [importsEnabled, stagedImportDetails]);
 
   const periodItems = useMemo(
-    () => filterTransactionsForPeriod(activeItems, activePeriod, customFrom, customTo),
-    [activeItems, activePeriod, customFrom, customTo],
+    () => filterTransactionsForPeriod(activeItems, activePeriod, selectedMonth.year, selectedMonth.monthIndex, customFrom, customTo),
+    [activeItems, activePeriod, customFrom, customTo, selectedMonth.monthIndex, selectedMonth.year],
   );
   const filteredActiveItems = useMemo(
     () => filterTransactions(filterTransactionsForActiveView(periodItems, activeView), searchQuery),
@@ -1151,7 +1199,26 @@ export function TransactionsOverview({
   const hasMixedCurrencies = activitySummary.length > 1;
   const summaryMode = getSummaryMode(activeView);
   const shouldShowSummaryControl = summaryMode !== "context";
-  const periodLabel = getPeriodLabel(activePeriod, customFrom, customTo);
+  const periodLabel = getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex);
+  const currentMonthKey = getCurrentMonthKey(currentDate);
+  const selectedMonthKey = getMonthKey(selectedMonth.year, selectedMonth.monthIndex);
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, monthIndex) => {
+        const fullLabel = getMonthLabel(visiblePickerYear, monthIndex);
+        return {
+          monthIndex,
+          shortLabel: new Date(visiblePickerYear, monthIndex, 1).toLocaleDateString("en-US", { month: "short" }),
+          fullLabel,
+          monthKey: getMonthKey(visiblePickerYear, monthIndex),
+          tone:
+            activePeriod === "custom"
+              ? ("neutral" as const)
+              : getMonthNetTone(activeItems, visiblePickerYear, monthIndex, activeDisplayCurrency, fxRates),
+        };
+      }),
+    [activeDisplayCurrency, activeItems, activePeriod, fxRates, visiblePickerYear],
+  );
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
   const hasDeletedItems = deletedItems.length > 0;
@@ -1339,28 +1406,67 @@ export function TransactionsOverview({
                 </div>
                 {isTimeframeOpen ? (
                   <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
+                    <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-2 py-1.5">
+                      <button
+                        aria-label="Previous year"
+                        className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                        onClick={() => setVisiblePickerYear((year) => year - 1)}
+                        type="button"
+                      >
+                        <ChevronLeft aria-hidden="true" size={16} strokeWidth={2.2} />
+                      </button>
+                      <p className="text-sm font-semibold text-slate-900">{visiblePickerYear}</p>
+                      <button
+                        aria-label="Next year"
+                        className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                        onClick={() => setVisiblePickerYear((year) => year + 1)}
+                        type="button"
+                      >
+                        <ChevronRight aria-hidden="true" size={16} strokeWidth={2.2} />
+                      </button>
+                    </div>
                     <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
-                      {[
-                        { value: "this-month" as const, label: "This month" },
-                        { value: "last-month" as const, label: "Last month" },
-                        { value: "custom" as const, label: "Custom" },
-                      ].map((period) => {
-                        const isActive = activePeriod === period.value;
+                      {monthOptions.map((month) => {
+                        const isSelected = activePeriod === "month" && selectedMonthKey === month.monthKey;
+                        const isCurrent = currentMonthKey === month.monthKey;
+                        const toneClass =
+                          month.tone === "positive"
+                            ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                            : month.tone === "negative"
+                              ? "bg-rose-50 text-rose-800 hover:bg-rose-100"
+                              : "bg-white text-slate-600 hover:bg-slate-50";
 
                         return (
                           <button
-                            className={`min-h-9 rounded-lg px-2 py-1 text-xs font-medium transition ${
-                              isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                            aria-label={`Select ${month.fullLabel}`}
+                            className={`min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                              isSelected
+                                ? "bg-sky-600 text-white shadow-sm ring-1 ring-sky-700"
+                                : `${toneClass} ${isCurrent ? "ring-2 ring-sky-200" : ""}`
                             }`}
-                            key={period.value}
-                            onClick={() => setActivePeriod(period.value)}
+                            key={month.monthKey}
+                            onClick={() => {
+                              setSelectedMonth({ year: visiblePickerYear, monthIndex: month.monthIndex });
+                              setActivePeriod("month");
+                              setIsTimeframeOpen(false);
+                            }}
                             type="button"
                           >
-                            {period.label}
+                            {month.shortLabel}
                           </button>
                         );
                       })}
                     </div>
+                    <button
+                      aria-label="Use custom range"
+                      className={`min-h-9 w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
+                        activePeriod === "custom" ? "bg-sky-600 text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                      onClick={() => setActivePeriod("custom")}
+                      type="button"
+                    >
+                      Custom range
+                    </button>
                     {activePeriod === "custom" ? (
                       <div className="grid grid-cols-2 gap-2">
                         <label className="space-y-1 text-xs font-medium text-slate-600">
