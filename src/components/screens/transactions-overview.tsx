@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { AlertCircle, List, MinusCircle, PlusCircle, Search, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarDays, ChevronDown, List, MinusCircle, PlusCircle, Search, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1102,6 +1102,8 @@ export function TransactionsOverview({
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
+  const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
   const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
@@ -1281,135 +1283,172 @@ export function TransactionsOverview({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
-          <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {isDeletedView ? "Display" : "Period"}
-              </p>
-              <p className="text-xs font-medium text-slate-700">{isDeletedView ? "Recently deleted" : periodLabel}</p>
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                aria-expanded={isTimeframeOpen}
+                className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                onClick={() => setIsTimeframeOpen((isOpen) => !isOpen)}
+                type="button"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <CalendarDays aria-hidden="true" className="shrink-0 text-slate-500" size={15} strokeWidth={2.2} />
+                  <span className="truncate">{isDeletedView ? "Recently deleted" : periodLabel}</span>
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={`shrink-0 text-slate-500 transition ${isTimeframeOpen ? "rotate-180" : ""}`}
+                  size={15}
+                  strokeWidth={2.2}
+                />
+              </button>
+              <button
+                aria-expanded={isSummaryOpen}
+                className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                onClick={() => setIsSummaryOpen((isOpen) => !isOpen)}
+                type="button"
+              >
+                <span className="truncate">Summary</span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={`shrink-0 text-slate-500 transition ${isSummaryOpen ? "rotate-180" : ""}`}
+                  size={15}
+                  strokeWidth={2.2}
+                />
+              </button>
             </div>
-            {!isDeletedView ? (
-              <>
-                <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
-                  {[
-                    { value: "this-month" as const, label: "This month" },
-                    { value: "last-month" as const, label: "Last month" },
-                    { value: "custom" as const, label: "Custom" },
-                  ].map((period) => {
-                    const isActive = activePeriod === period.value;
+            {isTimeframeOpen ? (
+              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
+                {isDeletedView ? (
+                  <p className="text-xs font-medium text-slate-500">Bin shows recoverable entries from the last 30 days.</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
+                      {[
+                        { value: "this-month" as const, label: "This month" },
+                        { value: "last-month" as const, label: "Last month" },
+                        { value: "custom" as const, label: "Custom" },
+                      ].map((period) => {
+                        const isActive = activePeriod === period.value;
+
+                        return (
+                          <button
+                            className={`min-h-9 rounded-lg px-2 py-1 text-xs font-medium transition ${
+                              isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                            }`}
+                            key={period.value}
+                            onClick={() => setActivePeriod(period.value)}
+                            type="button"
+                          >
+                            {period.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {activePeriod === "custom" ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="space-y-1 text-xs font-medium text-slate-600">
+                          From
+                          <input
+                            className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                            onChange={(event) => setCustomFrom(event.target.value)}
+                            type="date"
+                            value={customFrom}
+                          />
+                        </label>
+                        <label className="space-y-1 text-xs font-medium text-slate-600">
+                          To
+                          <input
+                            className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                            onChange={(event) => setCustomTo(event.target.value)}
+                            type="date"
+                            value={customTo}
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            ) : null}
+            {isSummaryOpen ? (
+              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
+                <div aria-label="Display currency" className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
+                  {normalizedDisplayCurrencies.map((currency) => {
+                    const isActive = activeDisplayCurrency === currency;
 
                     return (
                       <button
-                        className={`min-h-9 rounded-lg px-2 py-1 text-xs font-medium transition ${
+                        className={`min-h-8 rounded-lg px-2 py-1 text-xs font-semibold transition ${
                           isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
                         }`}
-                        key={period.value}
-                        onClick={() => setActivePeriod(period.value)}
+                        key={currency}
+                        onClick={() => setActiveDisplayCurrency(currency)}
                         type="button"
                       >
-                        {period.label}
+                        {currency}
                       </button>
                     );
                   })}
                 </div>
-                {activePeriod === "custom" ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="space-y-1 text-xs font-medium text-slate-600">
-                      From
-                      <input
-                        className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                        onChange={(event) => setCustomFrom(event.target.value)}
-                        type="date"
-                        value={customFrom}
-                      />
-                    </label>
-                    <label className="space-y-1 text-xs font-medium text-slate-600">
-                      To
-                      <input
-                        className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                        onChange={(event) => setCustomTo(event.target.value)}
-                        type="date"
-                        value={customTo}
-                      />
-                    </label>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-            <div aria-label="Display currency" className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
-              {normalizedDisplayCurrencies.map((currency) => {
-                const isActive = activeDisplayCurrency === currency;
-
-                return (
-                  <button
-                    className={`min-h-8 rounded-lg px-2 py-1 text-xs font-semibold transition ${
-                      isActive ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
-                    }`}
-                    key={currency}
-                    onClick={() => setActiveDisplayCurrency(currency)}
-                    type="button"
-                  >
-                    {currency}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="rounded-xl bg-white px-3 py-2">
-              {summaryMode === "context" ? (
-                <>
-                  <p className="text-xs font-medium text-slate-500">
-                    {isDeletedView ? `${contextEntryCount} recoverable entries shown` : "Needs review"}
-                  </p>
-                  {!isDeletedView ? (
-                    <p className="mt-1 text-sm font-medium text-amber-700">{contextEntryCount} review entries shown</p>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
-                  {activitySummary.length ? (
-                    <div className="mt-2 grid gap-2 text-sm font-semibold">
-                      {activitySummary.map((summary) => {
-                        const isConverted = summary.isConverted;
-                        const netTone =
-                          summary.net > 0 ? "text-emerald-700" : summary.net < 0 ? "text-rose-700" : "text-slate-700";
-
-                        return (
-                          <div className="grid gap-1" key={summary.currency}>
-                            {(summaryMode === "all" || summaryMode === "spend") ? (
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-slate-500">Spend</span>
-                                <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted)}</span>
-                              </div>
-                            ) : null}
-                            {(summaryMode === "all" || summaryMode === "income") ? (
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-slate-500">Income</span>
-                                <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted)}</span>
-                              </div>
-                            ) : null}
-                            {summaryMode === "all" ? (
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-slate-500">Net</span>
-                                <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted)}</span>
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                      {summaryResult.hasConverted ? (
-                        <p className="text-xs font-normal text-slate-500">Converted for display. Originals stay unchanged.</p>
+                <div className="rounded-xl bg-white px-3 py-2">
+                  {summaryMode === "context" ? (
+                    <>
+                      <p className="text-xs font-medium text-slate-500">
+                        {isDeletedView ? `${contextEntryCount} recoverable entries shown` : "Needs review"}
+                      </p>
+                      {!isDeletedView ? (
+                        <p className="mt-1 text-sm font-medium text-amber-700">{contextEntryCount} review entries shown</p>
                       ) : null}
-                      {summaryResult.usedFallback || hasMixedCurrencies ? (
-                        <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
-                      ) : null}
-                    </div>
+                    </>
                   ) : (
-                    <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
+                    <>
+                      <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
+                      {activitySummary.length ? (
+                        <div className="mt-2 grid gap-2 text-sm font-semibold">
+                          {activitySummary.map((summary) => {
+                            const isConverted = summary.isConverted;
+                            const netTone =
+                              summary.net > 0 ? "text-emerald-700" : summary.net < 0 ? "text-rose-700" : "text-slate-700";
+
+                            return (
+                              <div className="grid gap-1" key={summary.currency}>
+                                {(summaryMode === "all" || summaryMode === "spend") ? (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-slate-500">Spend</span>
+                                    <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted)}</span>
+                                  </div>
+                                ) : null}
+                                {(summaryMode === "all" || summaryMode === "income") ? (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-slate-500">Income</span>
+                                    <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted)}</span>
+                                  </div>
+                                ) : null}
+                                {summaryMode === "all" ? (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-slate-500">Net</span>
+                                    <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted)}</span>
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                          {summaryResult.hasConverted ? (
+                            <p className="text-xs font-normal text-slate-500">Converted for display. Originals stay unchanged.</p>
+                          ) : null}
+                          {summaryResult.usedFallback || hasMixedCurrencies ? (
+                            <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            ) : null}
           </div>
           <form
             action="/transactions"

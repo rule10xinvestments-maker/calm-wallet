@@ -160,6 +160,57 @@ describe("transactions overview", () => {
     expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
   });
 
+  it("renders compact timeframe and Summary buttons by default", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "visible history" })]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "June activity" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Summary" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
+    expect(screen.queryByText("entries shown")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
+    expect(screen.getByText("visible history")).toBeInTheDocument();
+  });
+
+  it("expands and collapses timeframe and Summary controls", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "visible history" })]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    const timeframeButton = screen.getByRole("button", { name: "June activity" });
+    const summaryButton = screen.getByRole("button", { name: "Summary" });
+
+    fireEvent.click(timeframeButton);
+    expect(timeframeButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "This month" })).toBeInTheDocument();
+
+    fireEvent.click(timeframeButton);
+    expect(timeframeButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
+
+    fireEvent.click(summaryButton);
+    expect(summaryButton).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("1 entries shown")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "USD" })).toBeInTheDocument();
+
+    fireEvent.click(summaryButton);
+    expect(summaryButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("1 entries shown")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
+  });
+
   it("defaults Activity to this month and summarizes visible saved entries", () => {
     render(
       <TransactionsOverview
@@ -199,10 +250,11 @@ describe("transactions overview", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "This month" })).toHaveClass("bg-sky-600");
     expect(screen.getByText("current rent")).toBeInTheDocument();
     expect(screen.getByText("current salary")).toBeInTheDocument();
     expect(screen.queryByText("last rent")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 entries shown")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Summary" }));
     expect(screen.getByText("2 entries shown")).toBeInTheDocument();
     const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
     expect(within(movementCard).getByText("Spend")).toBeInTheDocument();
@@ -234,6 +286,8 @@ describe("transactions overview", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "June activity" }));
+    expect(screen.getByRole("button", { name: "This month" })).toHaveClass("bg-sky-600");
     fireEvent.click(screen.getByRole("button", { name: "Last month" }));
 
     expect(screen.queryByText("current groceries")).not.toBeInTheDocument();
@@ -271,6 +325,7 @@ describe("transactions overview", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "June activity" }));
     fireEvent.click(screen.getByRole("button", { name: "Custom" }));
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-06-10" } });
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-06-12" } });
@@ -320,6 +375,7 @@ describe("transactions overview", () => {
     expect(screen.getByText("zile salary")).toBeInTheDocument();
     expect(screen.queryByText("zile old salary")).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "June activity" }));
     fireEvent.click(screen.getByRole("button", { name: "Last month" }));
     expect(screen.queryByText("zile salary")).not.toBeInTheDocument();
     expect(screen.getByText("zile old salary")).toBeInTheDocument();
@@ -354,6 +410,8 @@ describe("transactions overview", () => {
       />,
     );
 
+    expect(screen.queryByText("Converted for display. Originals stay unchanged.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Summary" }));
     expect(screen.getByText("≈ $264.00")).toHaveClass("text-rose-700");
     expect(screen.getByText("≈ $9.00")).toHaveClass("text-emerald-700");
     expect(screen.getByText("≈ -$255.00")).toHaveClass("text-rose-700");
@@ -391,6 +449,7 @@ describe("transactions overview", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Summary" }));
     const fiftyRonAmounts = screen.getAllByText("RON 50.00");
     expect(fiftyRonAmounts.some((element) => element.className.includes("text-rose-700"))).toBe(true);
     expect(fiftyRonAmounts.some((element) => element.className.includes("text-emerald-700"))).toBe(true);
@@ -429,6 +488,7 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Expenses" }));
     const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+    fireEvent.click(within(movementCard).getByRole("button", { name: "Summary" }));
 
     expect(within(movementCard).getByText("Spend")).toBeInTheDocument();
     expect(within(movementCard).getByText("RON 1,200.00")).toHaveClass("text-rose-700");
@@ -469,6 +529,7 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
     const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+    fireEvent.click(within(movementCard).getByRole("button", { name: "Summary" }));
 
     expect(within(movementCard).queryByText("Spend")).not.toBeInTheDocument();
     expect(within(movementCard).getByText("Income")).toBeInTheDocument();
@@ -502,6 +563,7 @@ describe("transactions overview", () => {
     );
 
     const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
+    fireEvent.click(within(movementCard).getByRole("button", { name: "Summary" }));
 
     expect(within(movementCard).getByText("Needs review")).toBeInTheDocument();
     expect(within(movementCard).getByText("1 review entries shown")).toBeInTheDocument();
@@ -529,6 +591,7 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
     const movementCard = screen.getByRole("heading", { name: "Recently deleted" }).closest(".rounded-3xl") as HTMLElement;
+    fireEvent.click(within(movementCard).getByRole("button", { name: "Summary" }));
 
     expect(within(movementCard).getByText("1 recoverable entries shown")).toBeInTheDocument();
     expect(within(movementCard).queryByText("Net")).not.toBeInTheDocument();
@@ -556,6 +619,7 @@ describe("transactions overview", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Summary" }));
     fireEvent.click(screen.getByRole("button", { name: "RON" }));
 
     expect(screen.getByText("RON 1,200.00")).toHaveClass("text-rose-700");
