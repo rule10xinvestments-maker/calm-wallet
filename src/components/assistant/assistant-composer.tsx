@@ -110,9 +110,9 @@ export function AssistantComposer({
   importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
-  const [selectedAction, setSelectedAction] = useState<
-    "create_transaction" | "update_transaction" | "delete_transaction" | "recategorize_transaction"
-  >("create_transaction");
+  const [selectedAction, setSelectedAction] = useState<"create_transaction" | "update_transaction" | "delete_transaction">(
+    "create_transaction",
+  );
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
@@ -123,9 +123,7 @@ export function AssistantComposer({
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
   const selectedTargetItem = manualTargetItems.find((item) => item.id === selectedTargetTransactionId) ?? null;
   const selectedActionTargetsExistingItem =
-    selectedAction === "update_transaction" ||
-    selectedAction === "delete_transaction" ||
-    selectedAction === "recategorize_transaction";
+    selectedAction === "update_transaction" || selectedAction === "delete_transaction";
   const canSubmitManualAction = !selectedActionTargetsExistingItem || Boolean(selectedTargetTransactionId);
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
@@ -536,7 +534,6 @@ export function AssistantComposer({
             <option value="create_transaction">Create transaction</option>
             <option value="update_transaction">Update transaction</option>
             <option value="delete_transaction">Delete transaction</option>
-            <option value="recategorize_transaction">Recategorize transaction</option>
           </select>
         </label>
 
@@ -621,7 +618,7 @@ export function AssistantComposer({
           </div>
         ) : null}
 
-        {selectedAction === "update_transaction" || selectedAction === "recategorize_transaction" ? (
+        {selectedAction === "update_transaction" ? (
           <label className="block space-y-2">
             <span className="text-sm font-medium text-slate-700">Category</span>
             <select
@@ -629,7 +626,7 @@ export function AssistantComposer({
               onChange={(event) => setSelectedManualCategoryId(event.target.value)}
               value={selectedManualCategoryId}
             >
-              <option value="">{selectedAction === "update_transaction" ? "Leave unchanged" : "Uncategorized"}</option>
+              <option value="">Leave unchanged</option>
               {categoryOptions.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.label}
@@ -637,9 +634,6 @@ export function AssistantComposer({
               ))}
             </select>
             {selectedAction === "update_transaction" && selectedManualCategoryId ? (
-              <input name="categoryId" type="hidden" value={selectedManualCategoryId} />
-            ) : null}
-            {selectedAction === "recategorize_transaction" ? (
               <input name="categoryId" type="hidden" value={selectedManualCategoryId} />
             ) : null}
           </label>
@@ -691,10 +685,6 @@ export function AssistantComposer({
           </p>
         ) : null}
 
-        {selectedAction === "recategorize_transaction" ? (
-          null
-        ) : null}
-
         <Button className="w-full" disabled={isPending || !canSubmitManualAction} type="submit">
           {isPending
             ? "Working..."
@@ -704,7 +694,7 @@ export function AssistantComposer({
                 ? "Update selected item"
                 : selectedAction === "delete_transaction"
                   ? "Delete selected item"
-                  : "Update selected item category"}
+                  : "Update selected item"}
         </Button>
           </form>
           </div>

@@ -111,14 +111,8 @@ describe("assistant composer", () => {
     expect(screen.getAllByText("No recent items to choose from yet.").length).toBeGreaterThan(0);
     expect(screen.queryByPlaceholderText("Required transaction id")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Occurred date")).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "recategorize_transaction" } });
-    expect(screen.getByRole("button", { name: "Update selected item category" })).toBeDisabled();
-    expect(screen.getByLabelText("Choose recent item")).toBeInTheDocument();
-    expect(screen.getByLabelText("Category")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Uncategorized" })).toBeInTheDocument();
-    expect(screen.queryByText("Category ID")).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/category id/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Recategorize transaction" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Update selected item category" })).not.toBeInTheDocument();
   });
 
   it("keeps spending summary out of Manual", () => {
@@ -319,58 +313,6 @@ describe("assistant composer", () => {
     expect(submittedFormData.get("toolName")).toBe("update_transaction");
     expect(submittedFormData.get("transactionId")).toBe("transaction-1");
     expect(submittedFormData.get("categoryId")).toBe("category-dining");
-  });
-
-  it("uses category labels for recategorize without asking for a raw category id", async () => {
-    const action = vi.fn(
-      async (state: AssistantActionState, formData: FormData): Promise<AssistantActionState> => {
-        void state;
-        void formData;
-
-        return {
-          status: "success",
-          message: "Updated selected item category.",
-          reviewState: null,
-          latestTransaction: null,
-          recentItems: [],
-        };
-      },
-    );
-    const recentItems: AssistantActionState["recentItems"] = [
-      {
-        id: "transaction-1",
-        title: "paine",
-        subtitle: "Groceries - May 27",
-        amountDisplay: "RON 5.00",
-        needsReview: false,
-      },
-    ];
-    const categoryOptions: ControlledCategoryOption[] = [
-      { id: "category-groceries", slug: "groceries", label: "Groceries", direction: "expense" },
-      { id: "category-housing", slug: "housing", label: "Housing", direction: "expense" },
-    ];
-
-    renderComposer(undefined, recentItems, action, categoryOptions);
-    openManualEntry();
-
-    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "recategorize_transaction" } });
-
-    expect(screen.queryByText("Category ID")).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/category id/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Category")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Groceries" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Housing" })).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("Choose recent item"), { target: { value: "transaction-1" } });
-    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "category-housing" } });
-    fireEvent.click(screen.getByRole("button", { name: "Update selected item category" }));
-
-    await waitFor(() => expect(action).toHaveBeenCalled());
-    const submittedFormData = action.mock.calls[0]![1];
-
-    expect(submittedFormData.get("toolName")).toBe("recategorize_transaction");
-    expect(submittedFormData.get("transactionId")).toBe("transaction-1");
-    expect(submittedFormData.get("categoryId")).toBe("category-housing");
   });
 
   it("opens and closes the manual entry controls without showing them by default", () => {
