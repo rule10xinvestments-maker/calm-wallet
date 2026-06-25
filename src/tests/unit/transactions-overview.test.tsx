@@ -538,7 +538,7 @@ describe("transactions overview", () => {
     expect(within(movementCard).getByRole("button", { name: "RON" })).toBeInTheDocument();
   });
 
-  it("shows review context without period net", () => {
+  it("shows review context without Summary or currency controls", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -563,15 +563,17 @@ describe("transactions overview", () => {
     );
 
     const movementCard = screen.getByRole("heading", { name: "Recent money movement" }).closest(".rounded-3xl") as HTMLElement;
-    fireEvent.click(within(movementCard).getByRole("button", { name: "Summary" }));
 
-    expect(within(movementCard).getByText("Needs review")).toBeInTheDocument();
-    expect(within(movementCard).getByText("1 review entries shown")).toBeInTheDocument();
+    expect(within(movementCard).queryByRole("button", { name: "Summary" })).not.toBeInTheDocument();
+    expect(within(movementCard).queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
+    expect(within(movementCard).getByText("1 review entry shown")).toBeInTheDocument();
+    expect(within(movementCard).getByText("tigari")).toBeInTheDocument();
+    expect(within(movementCard).queryByText("Spend")).not.toBeInTheDocument();
+    expect(within(movementCard).queryByText("Income")).not.toBeInTheDocument();
     expect(within(movementCard).queryByText("Net")).not.toBeInTheDocument();
-    expect(within(movementCard).getByRole("button", { name: "USD" })).toBeInTheDocument();
   });
 
-  it("shows bin context without period net", () => {
+  it("shows bin context without Summary or currency controls", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -591,11 +593,14 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Recently deleted" }));
     const movementCard = screen.getByRole("heading", { name: "Recently deleted" }).closest(".rounded-3xl") as HTMLElement;
-    fireEvent.click(within(movementCard).getByRole("button", { name: "Summary" }));
 
-    expect(within(movementCard).getByText("1 recoverable entries shown")).toBeInTheDocument();
+    expect(within(movementCard).queryByRole("button", { name: "Summary" })).not.toBeInTheDocument();
+    expect(within(movementCard).queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
+    expect(within(movementCard).getByText("1 recoverable entry shown")).toBeInTheDocument();
+    expect(within(movementCard).getByText("Old market")).toBeInTheDocument();
+    expect(within(movementCard).queryByText("Spend")).not.toBeInTheDocument();
+    expect(within(movementCard).queryByText("Income")).not.toBeInTheDocument();
     expect(within(movementCard).queryByText("Net")).not.toBeInTheDocument();
-    expect(within(movementCard).getByRole("button", { name: "USD" })).toBeInTheDocument();
   });
 
   it("switches display currency without mutating transaction row amounts", () => {

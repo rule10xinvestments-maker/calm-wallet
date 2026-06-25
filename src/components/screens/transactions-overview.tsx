@@ -1150,6 +1150,7 @@ export function TransactionsOverview({
   const activitySummary = summaryResult.summaries;
   const hasMixedCurrencies = activitySummary.length > 1;
   const summaryMode = getSummaryMode(activeView);
+  const shouldShowSummaryControl = summaryMode !== "context";
   const periodLabel = getPeriodLabel(activePeriod, customFrom, customTo);
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
@@ -1164,6 +1165,16 @@ export function TransactionsOverview({
   );
   const contextEntryCount =
     activeView === "deleted" ? filteredDeletedItems.length : filteredActiveItems.length + filteredPendingCandidates.length;
+  const contextEntryLabel =
+    activeView === "deleted"
+      ? `${contextEntryCount} recoverable ${contextEntryCount === 1 ? "entry" : "entries"} shown`
+      : `${contextEntryCount} review ${contextEntryCount === 1 ? "entry" : "entries"} shown`;
+
+  useEffect(() => {
+    if (!shouldShowSummaryControl) {
+      setIsSummaryOpen(false);
+    }
+  }, [shouldShowSummaryControl]);
 
   function handleItemDeleted(item: TransactionListItem) {
     setActiveItems((current) => current.filter((activeItem) => activeItem.id !== item.id));
@@ -1284,7 +1295,7 @@ export function TransactionsOverview({
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-2" : "grid-cols-1"}`}>
               <button
                 aria-expanded={isTimeframeOpen}
                 className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
@@ -1302,20 +1313,22 @@ export function TransactionsOverview({
                   strokeWidth={2.2}
                 />
               </button>
-              <button
-                aria-expanded={isSummaryOpen}
-                className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
-                onClick={() => setIsSummaryOpen((isOpen) => !isOpen)}
-                type="button"
-              >
-                <span className="truncate">Summary</span>
-                <ChevronDown
-                  aria-hidden="true"
-                  className={`shrink-0 text-slate-500 transition ${isSummaryOpen ? "rotate-180" : ""}`}
-                  size={15}
-                  strokeWidth={2.2}
-                />
-              </button>
+              {shouldShowSummaryControl ? (
+                <button
+                  aria-expanded={isSummaryOpen}
+                  className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                  onClick={() => setIsSummaryOpen((isOpen) => !isOpen)}
+                  type="button"
+                >
+                  <span className="truncate">Summary</span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={`shrink-0 text-slate-500 transition ${isSummaryOpen ? "rotate-180" : ""}`}
+                    size={15}
+                    strokeWidth={2.2}
+                  />
+                </button>
+              ) : null}
             </div>
             {isTimeframeOpen ? (
               <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
@@ -1371,7 +1384,7 @@ export function TransactionsOverview({
                 )}
               </div>
             ) : null}
-            {isSummaryOpen ? (
+            {shouldShowSummaryControl && isSummaryOpen ? (
               <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
                 <div aria-label="Display currency" className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
                   {normalizedDisplayCurrencies.map((currency) => {
@@ -1392,62 +1405,52 @@ export function TransactionsOverview({
                   })}
                 </div>
                 <div className="rounded-xl bg-white px-3 py-2">
-                  {summaryMode === "context" ? (
-                    <>
-                      <p className="text-xs font-medium text-slate-500">
-                        {isDeletedView ? `${contextEntryCount} recoverable entries shown` : "Needs review"}
-                      </p>
-                      {!isDeletedView ? (
-                        <p className="mt-1 text-sm font-medium text-amber-700">{contextEntryCount} review entries shown</p>
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
-                      {activitySummary.length ? (
-                        <div className="mt-2 grid gap-2 text-sm font-semibold">
-                          {activitySummary.map((summary) => {
-                            const isConverted = summary.isConverted;
-                            const netTone =
-                              summary.net > 0 ? "text-emerald-700" : summary.net < 0 ? "text-rose-700" : "text-slate-700";
+                  <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
+                  {activitySummary.length ? (
+                    <div className="mt-2 grid gap-2 text-sm font-semibold">
+                      {activitySummary.map((summary) => {
+                        const isConverted = summary.isConverted;
+                        const netTone =
+                          summary.net > 0 ? "text-emerald-700" : summary.net < 0 ? "text-rose-700" : "text-slate-700";
 
-                            return (
-                              <div className="grid gap-1" key={summary.currency}>
-                                {(summaryMode === "all" || summaryMode === "spend") ? (
-                                  <div className="flex items-center justify-between gap-3">
-                                    <span className="text-slate-500">Spend</span>
-                                    <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted)}</span>
-                                  </div>
-                                ) : null}
-                                {(summaryMode === "all" || summaryMode === "income") ? (
-                                  <div className="flex items-center justify-between gap-3">
-                                    <span className="text-slate-500">Income</span>
-                                    <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted)}</span>
-                                  </div>
-                                ) : null}
-                                {summaryMode === "all" ? (
-                                  <div className="flex items-center justify-between gap-3">
-                                    <span className="text-slate-500">Net</span>
-                                    <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted)}</span>
-                                  </div>
-                                ) : null}
+                        return (
+                          <div className="grid gap-1" key={summary.currency}>
+                            {(summaryMode === "all" || summaryMode === "spend") ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-slate-500">Spend</span>
+                                <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted)}</span>
                               </div>
-                            );
-                          })}
-                          {summaryResult.hasConverted ? (
-                            <p className="text-xs font-normal text-slate-500">Converted for display. Originals stay unchanged.</p>
-                          ) : null}
-                          {summaryResult.usedFallback || hasMixedCurrencies ? (
-                            <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
-                      )}
-                    </>
+                            ) : null}
+                            {(summaryMode === "all" || summaryMode === "income") ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-slate-500">Income</span>
+                                <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted)}</span>
+                              </div>
+                            ) : null}
+                            {summaryMode === "all" ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-slate-500">Net</span>
+                                <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted)}</span>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                      {summaryResult.hasConverted ? (
+                        <p className="text-xs font-normal text-slate-500">Converted for display. Originals stay unchanged.</p>
+                      ) : null}
+                      {summaryResult.usedFallback || hasMixedCurrencies ? (
+                        <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
                   )}
                 </div>
               </div>
+            ) : null}
+            {!shouldShowSummaryControl ? (
+              <p className="px-1 text-xs font-medium text-slate-500">{contextEntryLabel}</p>
             ) : null}
           </div>
           <form
