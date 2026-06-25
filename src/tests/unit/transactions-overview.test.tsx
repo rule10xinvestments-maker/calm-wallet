@@ -595,8 +595,11 @@ describe("transactions overview", () => {
     const movementCard = screen.getByRole("heading", { name: "Recently deleted" }).closest(".rounded-3xl") as HTMLElement;
 
     expect(within(movementCard).queryByRole("button", { name: "Summary" })).not.toBeInTheDocument();
+    expect(within(movementCard).queryByRole("button", { name: "Recently deleted" })).not.toBeInTheDocument();
     expect(within(movementCard).queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
     expect(within(movementCard).getByText("1 recoverable entry shown")).toBeInTheDocument();
+    expect(within(movementCard).getByText("Recoverable for 30 days.")).toBeInTheDocument();
+    expect(within(movementCard).queryByText("Bin shows recoverable entries from the last 30 days.")).not.toBeInTheDocument();
     expect(within(movementCard).getByText("Old market")).toBeInTheDocument();
     expect(within(movementCard).queryByText("Spend")).not.toBeInTheDocument();
     expect(within(movementCard).queryByText("Income")).not.toBeInTheDocument();

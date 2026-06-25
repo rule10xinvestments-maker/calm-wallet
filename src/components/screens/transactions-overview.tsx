@@ -1295,47 +1295,50 @@ export function TransactionsOverview({
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
           <div className="space-y-2">
-            <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-2" : "grid-cols-1"}`}>
-              <button
-                aria-expanded={isTimeframeOpen}
-                className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
-                onClick={() => setIsTimeframeOpen((isOpen) => !isOpen)}
-                type="button"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <CalendarDays aria-hidden="true" className="shrink-0 text-slate-500" size={15} strokeWidth={2.2} />
-                  <span className="truncate">{isDeletedView ? "Recently deleted" : periodLabel}</span>
-                </span>
-                <ChevronDown
-                  aria-hidden="true"
-                  className={`shrink-0 text-slate-500 transition ${isTimeframeOpen ? "rotate-180" : ""}`}
-                  size={15}
-                  strokeWidth={2.2}
-                />
-              </button>
-              {shouldShowSummaryControl ? (
-                <button
-                  aria-expanded={isSummaryOpen}
-                  className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
-                  onClick={() => setIsSummaryOpen((isOpen) => !isOpen)}
-                  type="button"
-                >
-                  <span className="truncate">Summary</span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className={`shrink-0 text-slate-500 transition ${isSummaryOpen ? "rotate-180" : ""}`}
-                    size={15}
-                    strokeWidth={2.2}
-                  />
-                </button>
-              ) : null}
-            </div>
-            {isTimeframeOpen ? (
-              <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
-                {isDeletedView ? (
-                  <p className="text-xs font-medium text-slate-500">Bin shows recoverable entries from the last 30 days.</p>
-                ) : (
-                  <>
+            {isDeletedView ? (
+              <div className="px-1 text-xs font-medium text-slate-500">
+                <p>{contextEntryLabel}</p>
+                <p className="mt-0.5">Recoverable for 30 days.</p>
+              </div>
+            ) : (
+              <>
+                <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-2" : "grid-cols-1"}`}>
+                  <button
+                    aria-expanded={isTimeframeOpen}
+                    className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                    onClick={() => setIsTimeframeOpen((isOpen) => !isOpen)}
+                    type="button"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <CalendarDays aria-hidden="true" className="shrink-0 text-slate-500" size={15} strokeWidth={2.2} />
+                      <span className="truncate">{periodLabel}</span>
+                    </span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={`shrink-0 text-slate-500 transition ${isTimeframeOpen ? "rotate-180" : ""}`}
+                      size={15}
+                      strokeWidth={2.2}
+                    />
+                  </button>
+                  {shouldShowSummaryControl ? (
+                    <button
+                      aria-expanded={isSummaryOpen}
+                      className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                      onClick={() => setIsSummaryOpen((isOpen) => !isOpen)}
+                      type="button"
+                    >
+                      <span className="truncate">Summary</span>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={`shrink-0 text-slate-500 transition ${isSummaryOpen ? "rotate-180" : ""}`}
+                        size={15}
+                        strokeWidth={2.2}
+                      />
+                    </button>
+                  ) : null}
+                </div>
+                {isTimeframeOpen ? (
+                  <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
                     <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
                       {[
                         { value: "this-month" as const, label: "This month" },
@@ -1380,10 +1383,10 @@ export function TransactionsOverview({
                         </label>
                       </div>
                     ) : null}
-                  </>
-                )}
-              </div>
-            ) : null}
+                  </div>
+                ) : null}
+              </>
+            )}
             {shouldShowSummaryControl && isSummaryOpen ? (
               <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
                 <div aria-label="Display currency" className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
@@ -1449,7 +1452,7 @@ export function TransactionsOverview({
                 </div>
               </div>
             ) : null}
-            {!shouldShowSummaryControl ? (
+            {!shouldShowSummaryControl && !isDeletedView ? (
               <p className="px-1 text-xs font-medium text-slate-500">{contextEntryLabel}</p>
             ) : null}
           </div>
