@@ -1149,6 +1149,7 @@ export function TransactionsOverview({
   const [visiblePickerYear, setVisiblePickerYear] = useState(() => currentDate.getFullYear());
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [isCustomRangeEditorOpen, setIsCustomRangeEditorOpen] = useState(false);
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
   const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
@@ -1373,7 +1374,15 @@ export function TransactionsOverview({
                   <button
                     aria-expanded={isTimeframeOpen}
                     className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
-                    onClick={() => setIsTimeframeOpen((isOpen) => !isOpen)}
+                    onClick={() => {
+                      setIsTimeframeOpen((isOpen) => {
+                        if (isOpen && activePeriod !== "custom") {
+                          setIsCustomRangeEditorOpen(false);
+                        }
+
+                        return !isOpen;
+                      });
+                    }}
                     type="button"
                   >
                     <span className="flex min-w-0 items-center gap-2">
@@ -1429,45 +1438,56 @@ export function TransactionsOverview({
                       {monthOptions.map((month) => {
                         const isSelected = activePeriod === "month" && selectedMonthKey === month.monthKey;
                         const isCurrent = currentMonthKey === month.monthKey;
-                        const toneClass =
+                        const indicatorClass =
                           month.tone === "positive"
-                            ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                            ? "bg-emerald-500"
                             : month.tone === "negative"
-                              ? "bg-rose-50 text-rose-800 hover:bg-rose-100"
-                              : "bg-white text-slate-600 hover:bg-slate-50";
+                              ? "bg-rose-500"
+                              : "";
 
                         return (
                           <button
                             aria-label={`Select ${month.fullLabel}`}
-                            className={`min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                            className={`relative min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
                               isSelected
-                                ? "bg-sky-600 text-white shadow-sm ring-1 ring-sky-700"
-                                : `${toneClass} ${isCurrent ? "ring-2 ring-sky-200" : ""}`
+                                ? `bg-sky-600 text-white shadow-sm ring-1 ring-sky-700 ${isCurrent ? "outline outline-2 outline-offset-1 outline-sky-200" : ""}`
+                                : `bg-white text-slate-600 hover:bg-slate-50 ${isCurrent ? "ring-2 ring-sky-200" : ""}`
                             }`}
                             key={month.monthKey}
                             onClick={() => {
                               setSelectedMonth({ year: visiblePickerYear, monthIndex: month.monthIndex });
                               setActivePeriod("month");
+                              setIsCustomRangeEditorOpen(false);
                               setIsTimeframeOpen(false);
                             }}
                             type="button"
                           >
-                            {month.shortLabel}
+                            <span>{month.shortLabel}</span>
+                            {indicatorClass ? (
+                              <span
+                                aria-hidden="true"
+                                className={`absolute bottom-1 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full ${indicatorClass}`}
+                              />
+                            ) : null}
                           </button>
                         );
                       })}
                     </div>
                     <button
                       aria-label="Use custom range"
+                      aria-expanded={activePeriod === "custom" && isCustomRangeEditorOpen}
                       className={`min-h-9 w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
                         activePeriod === "custom" ? "bg-sky-600 text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
                       }`}
-                      onClick={() => setActivePeriod("custom")}
+                      onClick={() => {
+                        setActivePeriod("custom");
+                        setIsCustomRangeEditorOpen((isOpen) => (activePeriod === "custom" ? !isOpen : true));
+                      }}
                       type="button"
                     >
                       Custom range
                     </button>
-                    {activePeriod === "custom" ? (
+                    {activePeriod === "custom" && isCustomRangeEditorOpen ? (
                       <div className="grid grid-cols-2 gap-2">
                         <label className="space-y-1 text-xs font-medium text-slate-600">
                           From

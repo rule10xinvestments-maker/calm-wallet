@@ -47,6 +47,10 @@ function currentYear() {
   return new Date().getFullYear();
 }
 
+function hasIndicator(element: HTMLElement, className: string) {
+  return Array.from(element.querySelectorAll("span")).some((span) => span.className.includes(className));
+}
+
 function makeTransactionItem(overrides: Partial<TransactionListItem> = {}): TransactionListItem {
   return {
     id: "txn-1",
@@ -343,10 +347,12 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: lastMonthLabel() }));
     expect(screen.getByRole("button", { name: `Select ${lastMonthLabel()}` })).toHaveClass("bg-sky-600");
-    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("ring-sky-200");
+    const currentButton = screen.getByRole("button", { name: `Select ${currentMonthLabel()}` });
+    expect(currentButton).toHaveClass("ring-sky-200");
+    expect(hasIndicator(currentButton, "bg-rose-500")).toBe(true);
   });
 
-  it("uses subtle month net shading for positive, negative, and empty months", () => {
+  it("uses separate net indicators for positive, negative, and empty months", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -387,9 +393,104 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
 
-    expect(screen.getByRole("button", { name: `Select January ${currentYear()}` })).toHaveClass("bg-emerald-50");
-    expect(screen.getByRole("button", { name: `Select February ${currentYear()}` })).toHaveClass("bg-rose-50");
-    expect(screen.getByRole("button", { name: `Select March ${currentYear()}` })).toHaveClass("bg-white");
+    const positiveButton = screen.getByRole("button", { name: `Select January ${currentYear()}` });
+    const negativeButton = screen.getByRole("button", { name: `Select February ${currentYear()}` });
+    const neutralButton = screen.getByRole("button", { name: `Select March ${currentYear()}` });
+
+    expect(positiveButton).toHaveClass("bg-white");
+    expect(hasIndicator(positiveButton, "bg-emerald-500")).toBe(true);
+    expect(negativeButton).toHaveClass("bg-white");
+    expect(hasIndicator(negativeButton, "bg-rose-500")).toBe(true);
+    expect(neutralButton).toHaveClass("bg-white");
+    expect(hasIndicator(neutralButton, "bg-emerald-500")).toBe(false);
+    expect(hasIndicator(neutralButton, "bg-rose-500")).toBe(false);
+  });
+
+  it("keeps the selected month net indicator visible for positive and negative months", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="USD"
+        items={[
+          makeTransactionItem({
+            id: "jan-income",
+            title: "january income",
+            amountMinor: 10000,
+            amountDisplay: "+$100.00",
+            amountTone: "income",
+            currency: "USD",
+            occurredAt: dateInMonth(currentYear(), 0, 8),
+          }),
+          makeTransactionItem({
+            id: "feb-spend",
+            title: "february spend",
+            amountMinor: 3000,
+            amountDisplay: "-$30.00",
+            amountTone: "expense",
+            currency: "USD",
+            occurredAt: dateInMonth(currentYear(), 1, 9),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: `Select January ${currentYear()}` }));
+    fireEvent.click(screen.getByRole("button", { name: `January ${currentYear()}` }));
+
+    const selectedPositiveButton = screen.getByRole("button", { name: `Select January ${currentYear()}` });
+    expect(selectedPositiveButton).toHaveClass("bg-sky-600");
+    expect(hasIndicator(selectedPositiveButton, "bg-emerald-500")).toBe(true);
+
+    fireEvent.click(selectedPositiveButton);
+    fireEvent.click(screen.getByRole("button", { name: `January ${currentYear()}` }));
+    fireEvent.click(screen.getByRole("button", { name: `Select February ${currentYear()}` }));
+    fireEvent.click(screen.getByRole("button", { name: `February ${currentYear()}` }));
+
+    const selectedNegativeButton = screen.getByRole("button", { name: `Select February ${currentYear()}` });
+    expect(selectedNegativeButton).toHaveClass("bg-sky-600");
+    expect(hasIndicator(selectedNegativeButton, "bg-rose-500")).toBe(true);
+
+    fireEvent.click(selectedNegativeButton);
+    fireEvent.click(screen.getByRole("button", { name: `February ${currentYear()}` }));
+    fireEvent.click(screen.getByRole("button", { name: `Select March ${currentYear()}` }));
+    fireEvent.click(screen.getByRole("button", { name: `March ${currentYear()}` }));
+
+    const selectedNeutralButton = screen.getByRole("button", { name: `Select March ${currentYear()}` });
+    expect(selectedNeutralButton).toHaveClass("bg-sky-600");
+    expect(hasIndicator(selectedNeutralButton, "bg-emerald-500")).toBe(false);
+    expect(hasIndicator(selectedNeutralButton, "bg-rose-500")).toBe(false);
+  });
+
+  it("keeps current month highlight visible when selected with a net indicator", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        displayCurrency="USD"
+        items={[
+          makeTransactionItem({
+            id: "current-income",
+            title: "current income",
+            amountMinor: 10000,
+            amountDisplay: "+$100.00",
+            amountTone: "income",
+            currency: "USD",
+            occurredAt: dateInCurrentMonth(8),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+
+    const currentButton = screen.getByRole("button", { name: `Select ${currentMonthLabel()}` });
+    expect(currentButton).toHaveClass("bg-sky-600");
+    expect(currentButton).toHaveClass("outline-sky-200");
+    expect(hasIndicator(currentButton, "bg-emerald-500")).toBe(true);
   });
 
   it("keeps mixed-currency month shading neutral when conversion falls back to original currencies", () => {
@@ -427,8 +528,8 @@ describe("transactions overview", () => {
 
     const aprilButton = screen.getByRole("button", { name: `Select April ${currentYear()}` });
     expect(aprilButton).toHaveClass("bg-white");
-    expect(aprilButton).not.toHaveClass("bg-emerald-50");
-    expect(aprilButton).not.toHaveClass("bg-rose-50");
+    expect(hasIndicator(aprilButton, "bg-emerald-500")).toBe(false);
+    expect(hasIndicator(aprilButton, "bg-rose-500")).toBe(false);
   });
 
   it("filters Activity by custom inclusive dates", () => {
@@ -464,6 +565,12 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
+    expect(screen.getByLabelText("From")).toBeInTheDocument();
+    expect(screen.getByLabelText("To")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
+    expect(screen.queryByLabelText("From")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("To")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
     expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("bg-white");
     expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toHaveClass("bg-rose-50");
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-06-10" } });
@@ -474,6 +581,33 @@ describe("transactions overview", () => {
     expect(screen.getByText("inside start")).toBeInTheDocument();
     expect(screen.getByText("inside end")).toBeInTheDocument();
     expect(screen.queryByText("after range")).not.toBeInTheDocument();
+  });
+
+  it("selecting a month closes custom range fields", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "custom-start",
+            title: "custom start",
+            occurredAt: dateInCurrentMonth(10),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
+    expect(screen.getByLabelText("From")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` }));
+
+    expect(screen.getByRole("button", { name: currentMonthLabel() })).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    expect(screen.queryByLabelText("From")).not.toBeInTheDocument();
   });
 
   it("keeps search and type filters composed with the selected period", () => {
