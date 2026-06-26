@@ -131,6 +131,10 @@ function getCategoryIcon(label: string, transactionType: "expense" | "income"): 
     return AlertCircle;
   }
 
+  if (normalized.includes("other")) {
+    return Tag;
+  }
+
   if (transactionType === "income" || normalized.includes("income") || normalized.includes("salary") || normalized.includes("pay")) {
     return Wallet;
   }
@@ -723,30 +727,29 @@ export function AssistantComposer({
                 </label>
               </div>
 
-              <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
-                {[
-                  { type: "expense" as const, label: "Spend", Icon: ReceiptText },
-                  { type: "income" as const, label: "Income", Icon: Wallet },
-                ].map(({ type, label, Icon: IntentIcon }) => {
-                  return (
-                  <button
-                    aria-pressed={manualTransactionType === type}
-                    className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
-                      manualTransactionType === type
-                        ? type === "income"
-                          ? "bg-emerald-600 text-white shadow-sm"
-                          : "bg-rose-600 text-white shadow-sm"
-                        : "text-slate-600 hover:bg-white"
-                    }`}
-                    key={type}
-                    onClick={() => chooseManualTransactionType(type)}
-                    type="button"
-                  >
-                    <IntentIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                    <span>{label}</span>
-                  </button>
-                  );
-                })}
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] gap-1 rounded-xl bg-slate-50 p-1">
+                <button
+                  aria-checked={manualTransactionType === "income"}
+                  aria-label={`Transaction type: ${manualTransactionType === "income" ? "Income" : "Spend"}`}
+                  className={`flex min-h-14 items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                    manualTransactionType === "income" ? "bg-emerald-600 text-white shadow-sm" : "bg-rose-600 text-white shadow-sm"
+                  }`}
+                  onClick={() => chooseManualTransactionType(manualTransactionType === "income" ? "expense" : "income")}
+                  role="switch"
+                  type="button"
+                >
+                  <span className="flex items-center gap-1.5">
+                    {manualTransactionType === "income" ? (
+                      <Wallet aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                    ) : (
+                      <ReceiptText aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                    )}
+                    {manualTransactionType === "income" ? "Income" : "Spend"}
+                  </span>
+                  <span className="rounded-full bg-white/20 px-2 py-1 text-[0.68rem] font-bold leading-none">
+                    {manualTransactionType === "income" ? "Green" : "Red"}
+                  </span>
+                </button>
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
                   aria-label={`Category: ${selectedCategoryLabel}`}

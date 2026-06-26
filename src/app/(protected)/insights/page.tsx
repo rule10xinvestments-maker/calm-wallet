@@ -1,7 +1,7 @@
 import { InsightsOverview } from "@/components/screens/insights-overview";
 import { deleteMonthlyCategoryBudgetAction, upsertMonthlyCategoryBudgetAction } from "@/lib/actions/budgets";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
-import { generateDueRecurringTransactionsForUser } from "@/domain/recurring/service";
+import { generateDueRecurringTransactionsForUserSafely } from "@/domain/recurring/service";
 import { loadInsightsPageData, normalizeInsightsChartMode, normalizeInsightsTimeframe, type InsightsData } from "@/lib/server/transactions-read-model";
 import { getFallbackInsightsData, logProtectedRouteLoadFailure } from "@/lib/server/protected-route-fallbacks";
 import { redirect } from "next/navigation";
@@ -37,7 +37,7 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
   let data: InsightsData = getFallbackInsightsData();
 
   try {
-    await generateDueRecurringTransactionsForUser(user.id);
+    await generateDueRecurringTransactionsForUserSafely(user.id);
     data = await loadInsightsPageData(
       user.id,
       normalizeRequestedCurrency(resolvedSearchParams.currency),

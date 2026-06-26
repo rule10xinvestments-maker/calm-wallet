@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRecurringService, shiftRecurringDate, type RecurringServiceAdapter } from "@/domain/recurring/service";
+import {
+  createRecurringService,
+  generateDueRecurringTransactionsForUserSafely,
+  shiftRecurringDate,
+  type RecurringServiceAdapter,
+} from "@/domain/recurring/service";
 import type { RecurringRuleRow } from "@/domain/recurring/types";
 import type { TransactionService } from "@/domain/transactions/service";
 
@@ -130,6 +135,22 @@ describe("recurring service", () => {
     expect(result.generatedCount).toBe(0);
     expect(transactionService.createTransaction).not.toHaveBeenCalled();
     expect(adapter.updateRecurringRule).toHaveBeenCalled();
+  });
+
+  it("safe generation does not throw when the recurring backend is unavailable", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const result = await generateDueRecurringTransactionsForUserSafely("user-1", async () => {
+      throw new Error("relation recurring_rules does not exist");
+    });
+
+    expect(result).toEqual({ generatedCount: 0 });
+    expect(warnSpy).toHaveBeenCalledWith("[recurring-generation-skipped]", {
+      authenticatedUserPresent: true,
+      errorName: "Error",
+      hasMessage: true,
+    });
+    warnSpy.mockRestore();
   });
 
   it("does not generate paused or ended rules", async () => {

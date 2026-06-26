@@ -206,3 +206,20 @@ export async function generateDueRecurringTransactionsForUser(userId: string) {
   const service = await createSupabaseRecurringService();
   return service.generateDueRecurringTransactions(userId);
 }
+
+export async function generateDueRecurringTransactionsForUserSafely(
+  userId: string,
+  generator: (scopedUserId: string) => Promise<{ generatedCount: number }> = generateDueRecurringTransactionsForUser,
+) {
+  try {
+    return await generator(userId);
+  } catch (error) {
+    console.warn("[recurring-generation-skipped]", {
+      authenticatedUserPresent: Boolean(userId),
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      hasMessage: error instanceof Error && Boolean(error.message),
+    });
+
+    return { generatedCount: 0 };
+  }
+}

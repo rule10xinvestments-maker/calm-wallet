@@ -106,8 +106,9 @@ describe("assistant composer", () => {
     expect(screen.queryByText("Create transaction")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Spend" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Income" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Transaction type: Spend" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Spend" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Date" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Merchant" })).toBeInTheDocument();
@@ -276,14 +277,16 @@ describe("assistant composer", () => {
 
     openManualEntry();
 
-    for (const label of ["Spend", "Income", "Category: Other", "Date", "Merchant", "Note"]) {
+    expect(screen.getByRole("switch", { name: "Transaction type: Spend" })).toHaveClass("bg-rose-600");
+
+    for (const label of ["Category: Other", "Date", "Merchant", "Note"]) {
       const button = screen.getByRole("button", { name: label });
       expect(button).toHaveClass("flex-col");
       expect(button.querySelector(".truncate")).toBeNull();
     }
   });
 
-  it("updates the default category icon when switching Spend and Income", () => {
+  it("keeps the default Other category chip visually stable when switching Spend and Income", () => {
     const categoryOptions: ControlledCategoryOption[] = [
       { id: "category-other", slug: "other", label: "Other", direction: "both" },
       { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
@@ -293,8 +296,9 @@ describe("assistant composer", () => {
     openManualEntry();
 
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Income" }));
-    expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-wallet")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
+    expect(screen.getByRole("switch", { name: "Transaction type: Income" })).toHaveClass("bg-emerald-600");
+    expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
   });
 
   it("resets a manually selected category only when it is invalid for the new intent", () => {
@@ -310,7 +314,7 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
     expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
   });
 
@@ -373,7 +377,7 @@ describe("assistant composer", () => {
     const { container } = renderComposer(undefined, [], undefined, categoryOptions);
 
     openManualEntry();
-    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
     fireEvent.click(screen.getByRole("button", { name: "Note" }));
     fireEvent.change(screen.getByPlaceholderText("Optional note"), { target: { value: "payroll deposit" } });
     expect(screen.getByRole("button", { name: "Category: Salary" })).toBeInTheDocument();
@@ -411,7 +415,7 @@ describe("assistant composer", () => {
     expect(action.mock.calls[0]![1].get("toolName")).toBe("create_transaction");
     expect(action.mock.calls[0]![1].get("transactionType")).toBe("expense");
 
-    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(2));

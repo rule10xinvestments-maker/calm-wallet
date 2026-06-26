@@ -10,7 +10,7 @@ import {
 } from "@/lib/actions/transactions";
 import { initialTransactionMutationState } from "@/lib/actions/transactions-state";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
-import { generateDueRecurringTransactionsForUser } from "@/domain/recurring/service";
+import { generateDueRecurringTransactionsForUserSafely } from "@/domain/recurring/service";
 import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { loadAuthenticatedStagedImportBundle } from "@/lib/server/imports-loader";
 import { loadStagedImportList } from "@/lib/server/imports-list";
@@ -95,7 +95,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   const importsEnabled = areImportsEnabled();
 
   try {
-    await generateDueRecurringTransactionsForUser(user.id);
+    await generateDueRecurringTransactionsForUserSafely(user.id);
     data = await loadTransactionsPageData({
       userId: user.id,
       view: "all",

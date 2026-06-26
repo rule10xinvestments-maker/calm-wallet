@@ -1661,7 +1661,9 @@ export function TransactionsOverview({
                   : "No recently deleted entries."
                 : hasSearchQuery
                   ? "No tracked transactions match that search."
-                  : "No transactions found for this signed-in account."}
+                  : loadError
+                    ? "Transactions could not be shown right now."
+                    : "No transactions found for this signed-in account."}
             </div>
           )}
         </CardContent>

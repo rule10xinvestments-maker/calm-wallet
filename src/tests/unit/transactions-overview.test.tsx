@@ -1348,7 +1348,8 @@ describe("transactions overview", () => {
 
     expect(screen.getByText("Latest data could not load")).toBeInTheDocument();
     expect(screen.getByText("Try again from the bottom navigation. No financial details were changed.")).toBeInTheDocument();
-    expect(screen.getByText("No transactions found for this signed-in account.")).toBeInTheDocument();
+    expect(screen.getByText("Transactions could not be shown right now.")).toBeInTheDocument();
+    expect(screen.queryByText("No transactions found for this signed-in account.")).not.toBeInTheDocument();
   });
 
   it("renders pending candidates as reviewable work", () => {

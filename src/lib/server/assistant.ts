@@ -555,38 +555,45 @@ export async function runAssistantCommand(args: {
 }) {
   let request: AiToolRequest = buildAssistantToolRequest(args.input);
 
+  let recurringSetupFailed = false;
+
   if (request.toolName === "create_transaction" && args.input.recurringEnabled) {
     const createRequest = request as AiToolRequest<"create_transaction">;
 
-    if (!args.input.recurringFrequency) {
-      throw new Error("Choose how often this repeats.");
+    if (args.input.recurringFrequency && args.recurringService) {
+      try {
+        const startDate = args.input.recurringStartDate?.trim() || createRequest.input.occurredAt.slice(0, 10);
+        const rule = await args.recurringService.createRecurringRule(args.userId, {
+          transactionType: createRequest.input.transactionType,
+          amountMinor: createRequest.input.amountMinor,
+          currency: createRequest.input.currency,
+          categoryId: createRequest.input.categoryId ?? null,
+          merchant: createRequest.input.merchant ?? null,
+          note: createRequest.input.note ?? null,
+          frequency: args.input.recurringFrequency,
+          startDate,
+          endDate: args.input.recurringEndDate?.trim() || null,
+        });
+
+        request = {
+          toolName: "create_transaction",
+          input: {
+            ...createRequest.input,
+            recurringRuleId: rule.id,
+            recurringOccurrenceDate: createRequest.input.occurredAt.slice(0, 10),
+          },
+        } satisfies AiToolRequest<"create_transaction">;
+      } catch (error) {
+        recurringSetupFailed = true;
+        console.warn("[recurring-setup-skipped]", {
+          authenticatedUserPresent: Boolean(args.userId),
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          hasMessage: error instanceof Error && Boolean(error.message),
+        });
+      }
+    } else {
+      recurringSetupFailed = true;
     }
-
-    if (!args.recurringService) {
-      throw new Error("Recurring setup is not available right now.");
-    }
-
-    const startDate = args.input.recurringStartDate?.trim() || createRequest.input.occurredAt.slice(0, 10);
-    const rule = await args.recurringService.createRecurringRule(args.userId, {
-      transactionType: createRequest.input.transactionType,
-      amountMinor: createRequest.input.amountMinor,
-      currency: createRequest.input.currency,
-      categoryId: createRequest.input.categoryId ?? null,
-      merchant: createRequest.input.merchant ?? null,
-      note: createRequest.input.note ?? null,
-      frequency: args.input.recurringFrequency,
-      startDate,
-      endDate: args.input.recurringEndDate?.trim() || null,
-    });
-
-    request = {
-      toolName: "create_transaction",
-      input: {
-        ...createRequest.input,
-        recurringRuleId: rule.id,
-        recurringOccurrenceDate: createRequest.input.occurredAt.slice(0, 10),
-      },
-    } satisfies AiToolRequest<"create_transaction">;
   }
 
   const execution = await executeAssistantToolRequest({
@@ -597,6 +604,13 @@ export async function runAssistantCommand(args: {
   });
 
   const result = summarizeAssistantResult(execution.result);
+
+  if (recurringSetupFailed && result.status === "success") {
+    return {
+      ...result,
+      message: "Saved. Recurring could not be set up right now.",
+    };
+  }
 
   if (args.input.recurringEnabled && result.status === "success" && args.input.recurringFrequency) {
     return {

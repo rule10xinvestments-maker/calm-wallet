@@ -12,6 +12,7 @@ import {
   canSoftDeleteTransaction,
 } from "@/domain/transactions/policy";
 import { createTransactionService, type TransactionServiceAdapter } from "@/domain/transactions/service";
+import { mapTransactionRowToDomain } from "@/domain/transactions/mappers";
 import type { TransactionRow } from "@/domain/transactions/types";
 
 function makeTransactionRow(overrides: Partial<TransactionRow> = {}): TransactionRow {
@@ -137,6 +138,18 @@ describe("transaction schemas", () => {
     });
 
     expect(result.limit).toBe(20);
+  });
+
+  it("keeps old transaction rows valid when recurring metadata is absent", () => {
+    const legacyRow = makeTransactionRow() as Record<string, unknown>;
+    delete legacyRow.recurring_rule_id;
+    delete legacyRow.recurring_occurrence_date;
+
+    const transaction = mapTransactionRowToDomain(legacyRow as TransactionRow);
+
+    expect(transaction.id).toBe("11111111-1111-1111-1111-111111111111");
+    expect(transaction.recurringRuleId).toBeUndefined();
+    expect(transaction.recurringOccurrenceDate).toBeUndefined();
   });
 
   it("requires a UUID transaction id before restore", () => {
