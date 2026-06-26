@@ -105,6 +105,8 @@ describe("assistant composer", () => {
     expect(screen.queryByLabelText("Action")).not.toBeInTheDocument();
     expect(screen.queryByText("Create transaction")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Coffee, Groceries, Rent")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Salary/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Transaction type" })).toBeInTheDocument();
@@ -288,8 +290,14 @@ describe("assistant composer", () => {
 
     const transactionTypeGroup = screen.getByRole("group", { name: "Transaction type" });
     expect(transactionTypeGroup).toHaveClass("grid-cols-2");
+    expect(transactionTypeGroup.parentElement).toHaveClass("grid-cols-1");
+    expect(transactionTypeGroup.parentElement).toHaveClass("min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]");
     expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("bg-rose-600");
+    expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("flex-col");
+    expect(screen.getByRole("button", { name: "Spend" }).querySelector(".lucide-receipt-text")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Income" })).toHaveClass("bg-white");
+    expect(screen.getByRole("button", { name: "Income" })).toHaveClass("flex-col");
+    expect(screen.getByRole("button", { name: "Income" }).querySelector(".lucide-wallet")).toBeInTheDocument();
 
     for (const label of ["Category: Other", "Date", "Merchant", "Note"]) {
       const button = screen.getByRole("button", { name: label });

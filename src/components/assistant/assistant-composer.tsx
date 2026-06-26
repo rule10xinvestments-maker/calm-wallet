@@ -755,7 +755,7 @@ export function AssistantComposer({
                   className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                   name="itemName"
                   onChange={(event) => setManualName(event.target.value)}
-                  placeholder="Coffee, Groceries, Rent, Salary"
+                  placeholder="Coffee, Groceries, Rent"
                   value={manualName}
                 />
               </label>
@@ -789,31 +789,33 @@ export function AssistantComposer({
                 </label>
               </div>
 
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] gap-1 rounded-xl bg-slate-50 p-1">
+              <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
                 <div
                   aria-label="Transaction type"
-                  className="grid min-h-14 grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  className="grid min-h-16 grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white"
                   role="group"
                 >
                   <button
                     aria-pressed={manualTransactionType === "expense"}
-                    className={`min-w-0 px-2 py-2 text-center text-sm font-bold transition ${
+                    className={`flex min-w-0 flex-col items-center justify-center gap-1 px-2 py-2 text-center text-[0.82rem] font-bold leading-none transition ${
                       manualTransactionType === "expense" ? "bg-rose-600 text-white" : "bg-white text-slate-600 hover:bg-rose-50"
                     }`}
                     onClick={() => chooseManualTransactionType("expense")}
                     type="button"
                   >
-                    Spend
+                    <ReceiptText aria-hidden="true" className="size-5 shrink-0" strokeWidth={2.1} />
+                    <span className="whitespace-nowrap">Spend</span>
                   </button>
                   <button
                     aria-pressed={manualTransactionType === "income"}
-                    className={`min-w-0 border-l border-slate-200 px-2 py-2 text-center text-sm font-bold transition ${
+                    className={`flex min-w-0 flex-col items-center justify-center gap-1 border-l border-slate-200 px-2 py-2 text-center text-[0.82rem] font-bold leading-none transition ${
                       manualTransactionType === "income" ? "bg-emerald-600 text-white" : "bg-white text-slate-600 hover:bg-emerald-50"
                     }`}
                     onClick={() => chooseManualTransactionType("income")}
                     type="button"
                   >
-                    Income
+                    <Wallet aria-hidden="true" className="size-5 shrink-0" strokeWidth={2.1} />
+                    <span className="whitespace-nowrap">Income</span>
                   </button>
                 </div>
                 <button
