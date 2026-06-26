@@ -104,9 +104,14 @@ describe("assistant composer", () => {
     expect(screen.queryByRole("button", { name: "Delete recent" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action")).not.toBeInTheDocument();
     expect(screen.queryByText("Create transaction")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Transaction type: Spend" })).toBeInTheDocument();
+    expect(screen.getByText("Spend")).toBeInTheDocument();
+    expect(screen.getByText("Income")).toBeInTheDocument();
+    expect(screen.queryByText("Red")).not.toBeInTheDocument();
+    expect(screen.queryByText("Green")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Spend" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
@@ -203,6 +208,7 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByText("Manual").length).toBeGreaterThan(0);
     expect(screen.queryByText("Add manually")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save item" })).toBeInTheDocument();
 
@@ -217,6 +223,7 @@ describe("assistant composer", () => {
     const { container } = renderComposer();
 
     openManualEntry();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Coffee" } });
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "12.50" } });
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "ron" } });
     fireEvent.click(screen.getByRole("button", { name: "Merchant" }));
@@ -234,8 +241,10 @@ describe("assistant composer", () => {
 
     expect(formData.get("toolName")).toBe("create_transaction");
     expect(formData.get("transactionType")).toBe("expense");
+    expect(formData.get("itemName")).toBe("Coffee");
     expect(formData.get("amount")).toBe("12.50");
     expect(formData.get("currency")).toBe("RON");
+    expect(formData.get("categoryLabel")).toBe("Other");
     expect(formData.get("merchant")).toBe("Market");
     expect(formData.get("note")).toBe("Lunch");
   });
@@ -277,7 +286,7 @@ describe("assistant composer", () => {
 
     openManualEntry();
 
-    expect(screen.getByRole("switch", { name: "Transaction type: Spend" })).toHaveClass("bg-rose-600");
+    expect(screen.getByRole("switch", { name: "Transaction type: Spend" })).toHaveClass("bg-rose-50");
 
     for (const label of ["Category: Other", "Date", "Merchant", "Note"]) {
       const button = screen.getByRole("button", { name: label });
@@ -297,7 +306,7 @@ describe("assistant composer", () => {
 
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
-    expect(screen.getByRole("switch", { name: "Transaction type: Income" })).toHaveClass("bg-emerald-600");
+    expect(screen.getByRole("switch", { name: "Transaction type: Income" })).toHaveClass("bg-emerald-50");
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
   });
 
@@ -389,7 +398,7 @@ describe("assistant composer", () => {
     expect(formData.get("categoryId")).toBe("category-salary");
   });
 
-  it("submits Spend and Income manual saves while keeping missing amount disabled", async () => {
+  it("submits Spend and Income manual saves while showing local save feedback", async () => {
     const action = vi.fn(async (state: AssistantActionState, formData: FormData): Promise<AssistantActionState> => {
       void state;
       void formData;
@@ -406,20 +415,45 @@ describe("assistant composer", () => {
     renderComposer(undefined, [], action);
     openManualEntry();
 
-    expect(screen.getByRole("button", { name: "Save item" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save item" }));
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByText("Add an amount before saving.")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText("Saved.")).toBeInTheDocument());
     expect(action.mock.calls[0]![1].get("toolName")).toBe("create_transaction");
     expect(action.mock.calls[0]![1].get("transactionType")).toBe("expense");
 
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "44.00" } });
     fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(2));
     expect(action.mock.calls[1]![1].get("transactionType")).toBe("income");
+  });
+
+  it("shows manual save failures beside the Save item button", async () => {
+    const action = vi.fn(async (): Promise<AssistantActionState> => ({
+      status: "error",
+      message: "Assistant action could not be completed.",
+      reviewState: null,
+      latestTransaction: null,
+      recentItems: [],
+    }));
+
+    renderComposer(undefined, [], action);
+    openManualEntry();
+
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save item" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Couldn't save this item. Please check the amount and try again.")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Couldn't save this item. Please check the amount and try again.").closest("form")).not.toBeNull();
   });
 
   it("splits receipt and statement import controls into their action panels", () => {

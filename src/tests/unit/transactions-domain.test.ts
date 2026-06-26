@@ -197,6 +197,50 @@ describe("transaction service", () => {
     expect(result.eventCreated).toBe(true);
   });
 
+  it("omits recurring metadata columns for one-time transaction inserts", async () => {
+    const insertTransaction = vi.fn(async (row) => ({ data: makeTransactionRow(row), error: null }));
+    const adapter = makeAdapter({ insertTransaction });
+    const service = createTransactionService(adapter);
+
+    await service.createTransaction("22222222-2222-2222-2222-222222222222", {
+      transactionType: "income",
+      amountMinor: 5000,
+      currency: "USD",
+      occurredAt: "2026-04-20T10:00:00.000Z",
+      source: "manual",
+    });
+
+    expect(insertTransaction).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        recurring_rule_id: expect.anything(),
+        recurring_occurrence_date: expect.anything(),
+      }),
+    );
+  });
+
+  it("includes recurring metadata columns only when a recurring occurrence is supplied", async () => {
+    const insertTransaction = vi.fn(async (row) => ({ data: makeTransactionRow(row), error: null }));
+    const adapter = makeAdapter({ insertTransaction });
+    const service = createTransactionService(adapter);
+
+    await service.createTransaction("22222222-2222-2222-2222-222222222222", {
+      transactionType: "expense",
+      amountMinor: 5000,
+      currency: "USD",
+      occurredAt: "2026-04-20T10:00:00.000Z",
+      source: "manual",
+      recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      recurringOccurrenceDate: "2026-04-20",
+    });
+
+    expect(insertTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recurring_rule_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurring_occurrence_date: "2026-04-20",
+      }),
+    );
+  });
+
   it("does not create a transaction when no numeric amount exists", async () => {
     const adapter = makeAdapter();
     const service = createTransactionService(adapter);

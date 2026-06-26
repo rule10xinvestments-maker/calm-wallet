@@ -324,7 +324,11 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
       currency: input.currency ?? "USD",
       occurredAt: input.occurredAt !== undefined ? parseAssistantOccurredAt(input.occurredAt) : new Date().toISOString(),
       ...(input.categoryId !== undefined ? { categoryId: toNullableText(input.categoryId) } : {}),
-      itemName: input.itemName?.trim() || input.merchant?.trim() || null,
+      itemName:
+        input.itemName?.trim() ||
+        input.merchant?.trim() ||
+        input.categoryLabel?.trim() ||
+        (input.transactionType === "income" ? "Manual income" : "Manual expense"),
       merchant: input.merchant?.trim() || null,
       note: input.note?.trim() || null,
       source: DEFAULT_TRANSACTION_SOURCE,
@@ -596,12 +600,34 @@ export async function runAssistantCommand(args: {
     }
   }
 
-  const execution = await executeAssistantToolRequest({
+  let execution = await executeAssistantToolRequest({
     userId: args.userId,
     request,
     transactionService: args.transactionService,
     persistRuntimeLog: args.persistRuntimeLog,
   });
+
+  if (
+    request.toolName === "create_transaction" &&
+    !execution.result.ok &&
+    "recurringRuleId" in request.input &&
+    request.input.recurringRuleId
+  ) {
+    recurringSetupFailed = true;
+    const { recurringRuleId: _recurringRuleId, recurringOccurrenceDate: _recurringOccurrenceDate, ...oneTimeInput } = request.input;
+    void _recurringRuleId;
+    void _recurringOccurrenceDate;
+
+    execution = await executeAssistantToolRequest({
+      userId: args.userId,
+      request: {
+        toolName: "create_transaction",
+        input: oneTimeInput,
+      },
+      transactionService: args.transactionService,
+      persistRuntimeLog: args.persistRuntimeLog,
+    });
+  }
 
   const result = summarizeAssistantResult(execution.result);
 

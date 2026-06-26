@@ -173,6 +173,43 @@ describe("assistant server integration", () => {
     }
   });
 
+  it("uses Name first and falls back to category/type labels for manual item titles", () => {
+    const namedRequest = buildAssistantToolRequest({
+      toolName: "create_transaction",
+      transactionType: "expense",
+      itemName: "Coffee",
+      amount: "4.50",
+      merchant: "Corner Cafe",
+      categoryLabel: "Dining",
+    });
+    const fallbackRequest = buildAssistantToolRequest({
+      toolName: "create_transaction",
+      transactionType: "income",
+      amount: "2500",
+      categoryLabel: "Salary",
+    });
+    const typeFallbackRequest = buildAssistantToolRequest({
+      toolName: "create_transaction",
+      transactionType: "expense",
+      amount: "12",
+    });
+
+    expect(namedRequest.toolName).toBe("create_transaction");
+    expect(fallbackRequest.toolName).toBe("create_transaction");
+    expect(typeFallbackRequest.toolName).toBe("create_transaction");
+
+    if (
+      namedRequest.toolName === "create_transaction" &&
+      fallbackRequest.toolName === "create_transaction" &&
+      typeFallbackRequest.toolName === "create_transaction"
+    ) {
+      expect(namedRequest.input.itemName).toBe("Coffee");
+      expect(namedRequest.input.merchant).toBe("Corner Cafe");
+      expect(fallbackRequest.input.itemName).toBe("Salary");
+      expect(typeFallbackRequest.input.itemName).toBe("Manual expense");
+    }
+  });
+
   it("uses a selected manual date when building a create_transaction request", () => {
     const request = buildAssistantToolRequest({
       toolName: "create_transaction",
@@ -273,6 +310,62 @@ describe("assistant server integration", () => {
       { actorType: "ai" },
     );
     expect(result.message).toBe("Saved and set to repeat monthly.");
+  });
+
+  it("falls back to a one-time save if recurring transaction metadata is unavailable", async () => {
+    const services = makeTransactionServices();
+    services.createTransaction = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Column recurring_rule_id does not exist"))
+      .mockResolvedValueOnce(makeMutationResult({ merchant: "Rent", itemName: "Rent" }));
+    const recurringService = {
+      createRecurringRule: vi.fn(async () => ({
+        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        userId: "user-1",
+        transactionType: "expense" as const,
+        amountMinor: 2400,
+        currency: "USD",
+        categoryId: null,
+        merchant: "Rent",
+        note: null,
+        frequency: "monthly" as const,
+        startDate: "2026-06-01",
+        endDate: null,
+        nextOccurrenceDate: "2026-06-01",
+        pausedAt: null,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      })),
+    };
+
+    const result = await runAssistantCommand({
+      userId: "user-1",
+      input: {
+        toolName: "create_transaction",
+        transactionType: "expense",
+        amount: "24.00",
+        merchant: "Rent",
+        occurredAt: "2026-06-01",
+        recurringEnabled: true,
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-01",
+      },
+      transactionService: services,
+      recurringService,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledTimes(2);
+    expect(services.createTransaction).toHaveBeenNthCalledWith(
+      2,
+      "user-1",
+      expect.not.objectContaining({
+        recurringRuleId: expect.anything(),
+        recurringOccurrenceDate: expect.anything(),
+      }),
+      { actorType: "ai" },
+    );
+    expect(result.status).toBe("success");
+    expect(result.message).toBe("Saved. Recurring could not be set up right now.");
   });
 
   it("builds an update_transaction request with only the submitted fields", () => {

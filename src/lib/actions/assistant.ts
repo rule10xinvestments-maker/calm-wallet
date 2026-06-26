@@ -96,6 +96,7 @@ export async function assistantAction(_prevState: AssistantActionState, formData
       transactionId: getOptionalFormString(formData, "transactionId"),
       transactionType: (formData.get("transactionType") as "expense" | "income" | null) ?? undefined,
       amount: getOptionalFormString(formData, "amount"),
+      itemName: getOptionalFormString(formData, "itemName"),
       merchant: getOptionalFormString(formData, "merchant"),
       note: getOptionalFormString(formData, "note"),
       currency: getOptionalFormString(formData, "currency"),

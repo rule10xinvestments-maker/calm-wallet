@@ -56,6 +56,7 @@ type UploadFlowState = {
 
 type ActionPanel = "receipt" | "statement" | "recent" | "manual";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
+type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
 
 const initialUploadFlowState: UploadFlowState = {
   status: "idle",
@@ -223,6 +224,7 @@ export function AssistantComposer({
   importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
+  const [manualName, setManualName] = useState("");
   const [manualTransactionType, setManualTransactionType] = useState<"expense" | "income">("expense");
   const [manualAmount, setManualAmount] = useState("");
   const [manualCurrency, setManualCurrency] = useState("USD");
@@ -236,6 +238,8 @@ export function AssistantComposer({
   const [manualRecurringFrequency, setManualRecurringFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
   const [manualRecurringStartDate, setManualRecurringStartDate] = useState("");
   const [manualRecurringEndDate, setManualRecurringEndDate] = useState("");
+  const [manualFeedback, setManualFeedback] = useState<ManualFeedback>({ status: "idle", message: null });
+  const [manualLastSubmitted, setManualLastSubmitted] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
@@ -251,7 +255,6 @@ export function AssistantComposer({
   const selectedCategory = categoryOptions.find((category) => category.id === effectiveManualCategoryId) ?? null;
   const selectedCategoryLabel = selectedCategory?.label ?? "Other";
   const SelectedCategoryIcon = getCategoryIcon(selectedCategoryLabel, manualTransactionType);
-  const canSubmitManualAction = manualAmount.trim().length > 0;
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
@@ -262,6 +265,38 @@ export function AssistantComposer({
       setManualCategoryId(guessedManualCategoryId);
     }
   }, [guessedManualCategoryId, manualCategoryWasSelected]);
+
+  useEffect(() => {
+    if (!manualLastSubmitted || state.status === "idle") {
+      return;
+    }
+
+    if (state.status === "success") {
+      setManualFeedback({
+        status: "success",
+        message: state.message?.startsWith("Saved and set") ? state.message : "Saved.",
+      });
+      setManualName("");
+      setManualAmount("");
+      setManualDate("");
+      setManualMerchant("");
+      setManualNote("");
+      setManualRecurringEnabled(false);
+      setManualRecurringEndDate("");
+      setManualOptionalPanel(null);
+      setManualCategoryWasSelected(false);
+      setManualLastSubmitted(false);
+      return;
+    }
+
+    if (state.status === "error") {
+      setManualFeedback({
+        status: "error",
+        message: "Couldn't save this item. Please check the amount and try again.",
+      });
+      setManualLastSubmitted(false);
+    }
+  }, [manualLastSubmitted, state.message, state.status]);
 
   function togglePanel(panel: ActionPanel) {
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
@@ -685,13 +720,22 @@ export function AssistantComposer({
           <div className="space-y-3 rounded-2xl bg-white p-3">
             <form
               action={(formData) => {
-                return formAction(formData);
+                if (!manualAmount.trim()) {
+                  setManualFeedback({ status: "error", message: "Add an amount before saving." });
+                  setManualLastSubmitted(false);
+                  return;
+                }
+
+                setManualFeedback({ status: "pending", message: "Saving..." });
+                setManualLastSubmitted(true);
+                formAction(formData);
               }}
               className="space-y-3"
             >
               <input name="toolName" type="hidden" value="create_transaction" />
               <input name="transactionType" type="hidden" value={manualTransactionType} />
               {effectiveManualCategoryId ? <input name="categoryId" type="hidden" value={effectiveManualCategoryId} /> : null}
+              <input name="categoryLabel" type="hidden" value={selectedCategoryLabel} />
               {manualDate ? <input name="occurredAt" type="hidden" value={manualDate} /> : null}
               {manualMerchant.trim() ? <input name="merchant" type="hidden" value={manualMerchant} /> : null}
               {manualNote.trim() ? <input name="note" type="hidden" value={manualNote} /> : null}
@@ -703,6 +747,17 @@ export function AssistantComposer({
                   {manualRecurringEndDate ? <input name="recurringEndDate" type="hidden" value={manualRecurringEndDate} /> : null}
                 </>
               ) : null}
+
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">Name</span>
+                <input
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                  name="itemName"
+                  onChange={(event) => setManualName(event.target.value)}
+                  placeholder="Coffee, Groceries, Rent, Salary"
+                  value={manualName}
+                />
+              </label>
 
               <div className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
                 <label className="block space-y-1">
@@ -731,23 +786,34 @@ export function AssistantComposer({
                 <button
                   aria-checked={manualTransactionType === "income"}
                   aria-label={`Transaction type: ${manualTransactionType === "income" ? "Income" : "Spend"}`}
-                  className={`flex min-h-14 items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-                    manualTransactionType === "income" ? "bg-emerald-600 text-white shadow-sm" : "bg-rose-600 text-white shadow-sm"
+                  className={`relative grid min-h-14 grid-cols-2 overflow-hidden rounded-lg border p-1 text-xs font-bold transition ${
+                    manualTransactionType === "income" ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"
                   }`}
                   onClick={() => chooseManualTransactionType(manualTransactionType === "income" ? "expense" : "income")}
                   role="switch"
                   type="button"
                 >
-                  <span className="flex items-center gap-1.5">
-                    {manualTransactionType === "income" ? (
-                      <Wallet aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                    ) : (
-                      <ReceiptText aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                    )}
-                    {manualTransactionType === "income" ? "Income" : "Spend"}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-md shadow-sm transition-transform ${
+                      manualTransactionType === "income" ? "translate-x-[calc(100%+0.25rem)] bg-emerald-600" : "translate-x-0 bg-rose-600"
+                    }`}
+                  />
+                  <span
+                    className={`relative z-10 flex items-center justify-center gap-1.5 rounded-md px-1 ${
+                      manualTransactionType === "expense" ? "text-white" : "text-slate-600"
+                    }`}
+                  >
+                    <ReceiptText aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                    Spend
                   </span>
-                  <span className="rounded-full bg-white/20 px-2 py-1 text-[0.68rem] font-bold leading-none">
-                    {manualTransactionType === "income" ? "Green" : "Red"}
+                  <span
+                    className={`relative z-10 flex items-center justify-center gap-1.5 rounded-md px-1 ${
+                      manualTransactionType === "income" ? "text-white" : "text-slate-600"
+                    }`}
+                  >
+                    <Wallet aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                    Income
                   </span>
                 </button>
                 <button
@@ -911,8 +977,21 @@ export function AssistantComposer({
                   </div>
                 ) : null}
               </div>
-              <Button className="w-full" disabled={isPending || !canSubmitManualAction} type="submit">
-                {isPending ? "Working..." : "Save item"}
+              {manualFeedback.message ? (
+                <p
+                  className={`rounded-xl px-3 py-2 text-sm ${
+                    manualFeedback.status === "error"
+                      ? "bg-rose-50 text-rose-700"
+                      : manualFeedback.status === "success"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-slate-50 text-slate-600"
+                  }`}
+                >
+                  {manualFeedback.message}
+                </p>
+              ) : null}
+              <Button className="w-full" disabled={isPending} type="submit">
+                {isPending && manualLastSubmitted ? "Saving..." : "Save item"}
               </Button>
             </form>
           </div>

@@ -136,7 +136,7 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
       }
 
       const reviewDecision = normalizeReviewDecision(parsed);
-      const insertResult = await adapter.insertTransaction({
+      const insertRow: Database["public"]["Tables"]["transactions"]["Insert"] = {
         user_id: userId,
         transaction_type: parsed.transactionType,
         amount_minor: parsed.amountMinor,
@@ -151,9 +151,17 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         uncertainty_reason: reviewDecision.uncertaintyReason,
         import_record_id: parsed.importRecordId ?? null,
         import_candidate_id: parsed.importCandidateId ?? null,
-        recurring_rule_id: parsed.recurringRuleId ?? null,
-        recurring_occurrence_date: parsed.recurringOccurrenceDate ?? null,
-      });
+      };
+
+      if (parsed.recurringRuleId) {
+        insertRow.recurring_rule_id = parsed.recurringRuleId;
+      }
+
+      if (parsed.recurringOccurrenceDate) {
+        insertRow.recurring_occurrence_date = parsed.recurringOccurrenceDate;
+      }
+
+      const insertResult = await adapter.insertTransaction(insertRow);
 
       const row = assertResult(insertResult, "Unable to create transaction.");
       const transaction = mapTransactionRowToDomain(row);
