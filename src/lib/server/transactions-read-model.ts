@@ -28,6 +28,7 @@ export type TransactionListItem = {
   categoryId: string | null;
   reviewState: ReviewState;
   uncertaintyReason: string | null;
+  isRecurring?: boolean;
 };
 
 export type TransactionCategoryOption = {
@@ -375,10 +376,10 @@ export function mapTransactionsToListItems(
     return {
       id: transaction.id,
       title: getTransactionDisplayTitle(transaction),
-      subtitle: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+      subtitle: `${transaction.recurringRuleId ? "Recurring - " : ""}${new Date(transaction.occurredAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-      }),
+      })}`,
       amountMinor: transaction.amountMinor,
       amountDisplay: formatSignedMoney(transaction.amountMinor, transaction.currency || currencyFallback, transaction.transactionType),
       amountTone: transaction.transactionType,
@@ -393,6 +394,7 @@ export function mapTransactionsToListItems(
       categoryId: transaction.categoryId,
       reviewState: transaction.reviewState,
       uncertaintyReason: transaction.uncertaintyReason,
+      isRecurring: Boolean(transaction.recurringRuleId),
     };
   });
 }

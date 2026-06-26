@@ -22,6 +22,8 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     uncertaintyReason: null,
     importRecordId: null,
     importCandidateId: null,
+    recurringRuleId: null,
+    recurringOccurrenceDate: null,
     deletedAt: null,
     deletedForeverAt: null,
     createdAt: "2026-04-21T00:00:00.000Z",
@@ -213,6 +215,64 @@ describe("assistant server integration", () => {
 
     expect(services.createTransaction).toHaveBeenCalledOnce();
     expect(result.status).toBe("success");
+  });
+
+  it("creates a recurring rule and tags the first manual transaction when recurring is enabled", async () => {
+    const services = makeTransactionServices();
+    const recurringService = {
+      createRecurringRule: vi.fn(async () => ({
+        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        userId: "user-1",
+        transactionType: "expense" as const,
+        amountMinor: 2400,
+        currency: "USD",
+        categoryId: null,
+        merchant: "Rent",
+        note: null,
+        frequency: "monthly" as const,
+        startDate: "2026-06-01",
+        endDate: null,
+        nextOccurrenceDate: "2026-06-01",
+        pausedAt: null,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      })),
+    };
+
+    const result = await runAssistantCommand({
+      userId: "user-1",
+      input: {
+        toolName: "create_transaction",
+        transactionType: "expense",
+        amount: "24.00",
+        merchant: "Rent",
+        occurredAt: "2026-06-01",
+        recurringEnabled: true,
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-01",
+      },
+      transactionService: services,
+      recurringService,
+    });
+
+    expect(recurringService.createRecurringRule).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: 2400,
+        frequency: "monthly",
+        startDate: "2026-06-01",
+      }),
+    );
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-01",
+      }),
+      { actorType: "ai" },
+    );
+    expect(result.message).toBe("Saved and set to repeat monthly.");
   });
 
   it("builds an update_transaction request with only the submitted fields", () => {

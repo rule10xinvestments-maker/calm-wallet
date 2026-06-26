@@ -271,6 +271,71 @@ describe("assistant composer", () => {
     expect(formData.get("occurredAt")).toBe("2026-06-26");
   });
 
+  it("renders manual action chips with vertical icons and readable labels", () => {
+    renderComposer();
+
+    openManualEntry();
+
+    for (const label of ["Spend", "Income", "Category: Other", "Date", "Merchant", "Note"]) {
+      const button = screen.getByRole("button", { name: label });
+      expect(button).toHaveClass("flex-col");
+      expect(button.querySelector(".truncate")).toBeNull();
+    }
+  });
+
+  it("updates the default category icon when switching Spend and Income", () => {
+    const categoryOptions: ControlledCategoryOption[] = [
+      { id: "category-other", slug: "other", label: "Other", direction: "both" },
+      { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
+    ];
+    renderComposer(undefined, [], undefined, categoryOptions);
+
+    openManualEntry();
+
+    expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-wallet")).toBeInTheDocument();
+  });
+
+  it("resets a manually selected category only when it is invalid for the new intent", () => {
+    const categoryOptions: ControlledCategoryOption[] = [
+      { id: "category-other", slug: "other", label: "Other", direction: "both" },
+      { id: "category-groceries", slug: "groceries", label: "Groceries", direction: "expense" },
+      { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
+    ];
+    renderComposer(undefined, [], undefined, categoryOptions);
+
+    openManualEntry();
+    fireEvent.click(screen.getByRole("button", { name: "Category: Other" }));
+    fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
+  });
+
+  it("keeps recurring off by default and submits compact recurrence fields when enabled", () => {
+    const { container } = renderComposer();
+
+    openManualEntry();
+    expect(screen.getByLabelText("Recurring")).not.toBeChecked();
+    expect(screen.queryByText("Repeats automatically as tracked entries.")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
+    fireEvent.click(screen.getByLabelText("Recurring"));
+    expect(screen.getByText("Repeats automatically as tracked entries.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "monthly" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "weekly" }));
+
+    const forms = container.querySelectorAll("form");
+    const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"][value="create_transaction"]'));
+    const formData = new FormData(form!);
+
+    expect(formData.get("recurringEnabled")).toBe("on");
+    expect(formData.get("recurringFrequency")).toBe("weekly");
+    expect(formData.get("recurringStartDate")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it("guesses categories from merchant or note unless the user selected one", () => {
     const categoryOptions: ControlledCategoryOption[] = [
       { id: "category-other", slug: "other", label: "Other", direction: "both" },

@@ -31,6 +31,8 @@ function makeTransactionRow(overrides: Partial<TransactionRow> = {}): Transactio
     uncertainty_reason: null,
     import_record_id: null,
     import_candidate_id: null,
+    recurring_rule_id: null,
+    recurring_occurrence_date: null,
     deleted_at: null,
     deleted_forever_at: null,
     created_at: "2026-04-20T10:00:00.000Z",

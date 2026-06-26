@@ -18,8 +18,10 @@ import { executeAiTool } from "@/domain/ai/tool-executor";
 import type { AiToolExecutionResult, AiToolRequest } from "@/domain/ai/tool-types";
 import { isReviewStateNeedingReview } from "@/domain/transactions/policy";
 import type { TransactionService } from "@/domain/transactions/service";
+import type { RecurringService } from "@/domain/recurring/service";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
 import { formatMoney } from "@/lib/server/transactions-read-model";
+import type { RecurringFrequency } from "@/lib/db/types";
 
 export type AssistantCommandInput = {
   toolName:
@@ -52,6 +54,10 @@ export type AssistantCommandInput = {
   occurredTo?: string;
   reviewState?: ReviewState;
   uncertaintyReason?: string;
+  recurringEnabled?: boolean;
+  recurringFrequency?: RecurringFrequency;
+  recurringStartDate?: string;
+  recurringEndDate?: string;
 };
 
 export type AssistantActionState = {
@@ -544,9 +550,45 @@ export async function runAssistantCommand(args: {
   userId: string;
   input: AssistantCommandInput;
   transactionService: AssistantTransactionService;
+  recurringService?: Pick<RecurringService, "createRecurringRule">;
   persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
 }) {
-  const request = buildAssistantToolRequest(args.input);
+  let request: AiToolRequest = buildAssistantToolRequest(args.input);
+
+  if (request.toolName === "create_transaction" && args.input.recurringEnabled) {
+    const createRequest = request as AiToolRequest<"create_transaction">;
+
+    if (!args.input.recurringFrequency) {
+      throw new Error("Choose how often this repeats.");
+    }
+
+    if (!args.recurringService) {
+      throw new Error("Recurring setup is not available right now.");
+    }
+
+    const startDate = args.input.recurringStartDate?.trim() || createRequest.input.occurredAt.slice(0, 10);
+    const rule = await args.recurringService.createRecurringRule(args.userId, {
+      transactionType: createRequest.input.transactionType,
+      amountMinor: createRequest.input.amountMinor,
+      currency: createRequest.input.currency,
+      categoryId: createRequest.input.categoryId ?? null,
+      merchant: createRequest.input.merchant ?? null,
+      note: createRequest.input.note ?? null,
+      frequency: args.input.recurringFrequency,
+      startDate,
+      endDate: args.input.recurringEndDate?.trim() || null,
+    });
+
+    request = {
+      toolName: "create_transaction",
+      input: {
+        ...createRequest.input,
+        recurringRuleId: rule.id,
+        recurringOccurrenceDate: createRequest.input.occurredAt.slice(0, 10),
+      },
+    } satisfies AiToolRequest<"create_transaction">;
+  }
+
   const execution = await executeAssistantToolRequest({
     userId: args.userId,
     request,
@@ -554,7 +596,16 @@ export async function runAssistantCommand(args: {
     persistRuntimeLog: args.persistRuntimeLog,
   });
 
-  return summarizeAssistantResult(execution.result);
+  const result = summarizeAssistantResult(execution.result);
+
+  if (args.input.recurringEnabled && result.status === "success" && args.input.recurringFrequency) {
+    return {
+      ...result,
+      message: `Saved and set to repeat ${args.input.recurringFrequency}.`,
+    };
+  }
+
+  return result;
 }
 
 async function executeAssistantToolRequest(args: {

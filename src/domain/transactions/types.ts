@@ -38,6 +38,8 @@ export type Transaction = {
   uncertaintyReason: string | null;
   importRecordId: string | null;
   importCandidateId: string | null;
+  recurringRuleId?: string | null;
+  recurringOccurrenceDate?: string | null;
   deletedAt: string | null;
   deletedForeverAt: string | null;
   createdAt: string;
@@ -58,6 +60,8 @@ export type CreateTransactionInput = {
   uncertaintyReason?: string | null;
   importRecordId?: string | null;
   importCandidateId?: string | null;
+  recurringRuleId?: string | null;
+  recurringOccurrenceDate?: string | null;
 };
 
 export type UpdateTransactionInput = {

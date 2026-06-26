@@ -3,11 +3,13 @@
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import type { AiActionLogInsert } from "@/domain/ai/runtime-log";
+import { createSupabaseRecurringService } from "@/domain/recurring/service";
 import { createSupabaseTransactionService } from "@/domain/transactions/service";
 import { createSupabaseCategoryMemoryService } from "@/domain/category-memory/service";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
 import { logSafeAssistantActionError } from "@/lib/server/safe-error-logging";
 import { loadControlledCategoryOptions } from "@/lib/server/transactions-read-model";
+import type { RecurringFrequency } from "@/lib/db/types";
 import {
   type AssistantActionState,
   runAssistantCommand,
@@ -20,6 +22,10 @@ function getOptionalFormString(formData: FormData, name: string) {
 
 function getSafeTransactionType(value: FormDataEntryValue | null) {
   return value === "expense" || value === "income" ? value : null;
+}
+
+function getSafeRecurringFrequency(value: FormDataEntryValue | null): RecurringFrequency | undefined {
+  return value === "weekly" || value === "monthly" || value === "yearly" ? value : undefined;
 }
 
 async function persistAssistantRuntimeLog(payload: AiActionLogInsert) {
@@ -82,36 +88,50 @@ export async function assistantAction(_prevState: AssistantActionState, formData
       });
     }
 
+    const recurringEnabled = formData.get("recurringEnabled") === "on";
+    const recurringService = recurringEnabled ? await createSupabaseRecurringService() : undefined;
+
+    const assistantInput = {
+      toolName: manualToolName,
+      transactionId: getOptionalFormString(formData, "transactionId"),
+      transactionType: (formData.get("transactionType") as "expense" | "income" | null) ?? undefined,
+      amount: getOptionalFormString(formData, "amount"),
+      merchant: getOptionalFormString(formData, "merchant"),
+      note: getOptionalFormString(formData, "note"),
+      currency: getOptionalFormString(formData, "currency"),
+      occurredAt: getOptionalFormString(formData, "occurredAt"),
+      occurredFrom: getOptionalFormString(formData, "occurredFrom"),
+      occurredTo: getOptionalFormString(formData, "occurredTo"),
+      categoryId: getOptionalFormString(formData, "categoryId"),
+      categoryLabel: getOptionalFormString(formData, "categoryLabel"),
+      questionKind:
+        (formData.get("questionKind") as
+          | "monthly_spending_total"
+          | "monthly_income_total"
+          | "category_spending_total"
+          | "recent_largest_expense"
+          | "needs_review_summary"
+          | "recent_transactions_summary"
+          | null) ?? undefined,
+      reviewState:
+        (formData.get("reviewState") as "pending_review" | "reviewed" | "needs_attention" | null) ?? undefined,
+      uncertaintyReason:
+        typeof formData.get("uncertaintyReason") === "string" ? String(formData.get("uncertaintyReason")) : undefined,
+      ...(recurringEnabled
+        ? {
+            recurringEnabled,
+            recurringFrequency: getSafeRecurringFrequency(formData.get("recurringFrequency")),
+            recurringStartDate: getOptionalFormString(formData, "recurringStartDate"),
+            recurringEndDate: getOptionalFormString(formData, "recurringEndDate"),
+          }
+        : {}),
+    };
+
     return await runAssistantCommand({
       userId: user.id,
-      input: {
-        toolName: manualToolName,
-        transactionId: getOptionalFormString(formData, "transactionId"),
-        transactionType: (formData.get("transactionType") as "expense" | "income" | null) ?? undefined,
-        amount: getOptionalFormString(formData, "amount"),
-        merchant: getOptionalFormString(formData, "merchant"),
-        note: getOptionalFormString(formData, "note"),
-        currency: getOptionalFormString(formData, "currency"),
-        occurredAt: getOptionalFormString(formData, "occurredAt"),
-        occurredFrom: getOptionalFormString(formData, "occurredFrom"),
-        occurredTo: getOptionalFormString(formData, "occurredTo"),
-        categoryId: getOptionalFormString(formData, "categoryId"),
-        categoryLabel: getOptionalFormString(formData, "categoryLabel"),
-        questionKind:
-          (formData.get("questionKind") as
-            | "monthly_spending_total"
-            | "monthly_income_total"
-            | "category_spending_total"
-            | "recent_largest_expense"
-            | "needs_review_summary"
-            | "recent_transactions_summary"
-            | null) ?? undefined,
-        reviewState:
-          (formData.get("reviewState") as "pending_review" | "reviewed" | "needs_attention" | null) ?? undefined,
-        uncertaintyReason:
-          typeof formData.get("uncertaintyReason") === "string" ? String(formData.get("uncertaintyReason")) : undefined,
-      },
+      input: assistantInput,
       transactionService,
+      ...(recurringService ? { recurringService } : {}),
       persistRuntimeLog: persistAssistantRuntimeLog,
     });
   } catch (error) {

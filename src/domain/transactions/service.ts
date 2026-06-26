@@ -151,6 +151,8 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         uncertainty_reason: reviewDecision.uncertaintyReason,
         import_record_id: parsed.importRecordId ?? null,
         import_candidate_id: parsed.importCandidateId ?? null,
+        recurring_rule_id: parsed.recurringRuleId ?? null,
+        recurring_occurrence_date: parsed.recurringOccurrenceDate ?? null,
       });
 
       const row = assertResult(insertResult, "Unable to create transaction.");

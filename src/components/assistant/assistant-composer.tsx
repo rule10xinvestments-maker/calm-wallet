@@ -11,6 +11,7 @@ import {
   Plus,
   Receipt,
   ReceiptText,
+  Repeat2,
   ShoppingBag,
   ShoppingBasket,
   StickyNote,
@@ -227,6 +228,10 @@ export function AssistantComposer({
   const [manualDate, setManualDate] = useState("");
   const [manualMerchant, setManualMerchant] = useState("");
   const [manualNote, setManualNote] = useState("");
+  const [manualRecurringEnabled, setManualRecurringEnabled] = useState(false);
+  const [manualRecurringFrequency, setManualRecurringFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const [manualRecurringStartDate, setManualRecurringStartDate] = useState("");
+  const [manualRecurringEndDate, setManualRecurringEndDate] = useState("");
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
@@ -273,6 +278,11 @@ export function AssistantComposer({
     return new Date(`${manualDate}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  function getTodayDateKey() {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  }
+
   function getMerchantButtonLabel() {
     const trimmed = manualMerchant.trim();
 
@@ -281,6 +291,21 @@ export function AssistantComposer({
     }
 
     return trimmed.length <= 16 ? trimmed : "Merchant added";
+  }
+
+  function chooseManualTransactionType(type: "expense" | "income") {
+    setManualTransactionType(type);
+
+    if (!manualCategoryWasSelected) {
+      return;
+    }
+
+    const selected = categoryOptions.find((category) => category.id === manualCategoryId);
+    const categoryStillValid = selected && (!selected.direction || selected.direction === "both" || selected.direction === type);
+
+    if (!categoryStillValid) {
+      setManualCategoryWasSelected(false);
+    }
   }
 
   function chooseImportFile(importType: "receipt_image" | "csv_import", file: File | null) {
@@ -666,6 +691,14 @@ export function AssistantComposer({
               {manualDate ? <input name="occurredAt" type="hidden" value={manualDate} /> : null}
               {manualMerchant.trim() ? <input name="merchant" type="hidden" value={manualMerchant} /> : null}
               {manualNote.trim() ? <input name="note" type="hidden" value={manualNote} /> : null}
+              {manualRecurringEnabled ? (
+                <>
+                  <input name="recurringEnabled" type="hidden" value="on" />
+                  <input name="recurringFrequency" type="hidden" value={manualRecurringFrequency} />
+                  <input name="recurringStartDate" type="hidden" value={manualRecurringStartDate || manualDate || getTodayDateKey()} />
+                  {manualRecurringEndDate ? <input name="recurringEndDate" type="hidden" value={manualRecurringEndDate} /> : null}
+                </>
+              ) : null}
 
               <div className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
                 <label className="block space-y-1">
@@ -690,14 +723,15 @@ export function AssistantComposer({
                 </label>
               </div>
 
-              <div className="grid grid-cols-[1fr_1fr_minmax(0,1.45fr)] gap-1 rounded-xl bg-slate-50 p-1">
+              <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
                 {[
-                  ["expense", "Spend"],
-                  ["income", "Income"],
-                ].map(([type, label]) => (
+                  { type: "expense" as const, label: "Spend", Icon: ReceiptText },
+                  { type: "income" as const, label: "Income", Icon: Wallet },
+                ].map(({ type, label, Icon: IntentIcon }) => {
+                  return (
                   <button
                     aria-pressed={manualTransactionType === type}
-                    className={`min-h-10 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                    className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
                       manualTransactionType === type
                         ? type === "income"
                           ? "bg-emerald-600 text-white shadow-sm"
@@ -705,23 +739,26 @@ export function AssistantComposer({
                         : "text-slate-600 hover:bg-white"
                     }`}
                     key={type}
-                    onClick={() => setManualTransactionType(type as "expense" | "income")}
+                    onClick={() => chooseManualTransactionType(type)}
                     type="button"
                   >
-                    {label}
+                    <IntentIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                    <span>{label}</span>
                   </button>
-                ))}
+                  );
+                })}
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
                   aria-label={`Category: ${selectedCategoryLabel}`}
-                  className={`flex min-h-10 items-center justify-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                  className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1.5 text-center text-xs font-semibold transition ${
                     manualOptionalPanel === "category" ? "bg-white text-sky-700 shadow-sm" : "bg-white text-slate-900 hover:text-sky-700"
                   }`}
                   onClick={() => setManualOptionalPanel((current) => (current === "category" ? null : "category"))}
                   type="button"
                 >
                   <SelectedCategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                  <span className="truncate">Category: {selectedCategoryLabel}</span>
+                  <span>Category</span>
+                  <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight text-slate-500">{selectedCategoryLabel}</span>
                 </button>
               </div>
 
@@ -764,7 +801,7 @@ export function AssistantComposer({
                   return (
                     <button
                       aria-expanded={manualOptionalPanel === panel}
-                      className={`flex min-h-10 items-center justify-center gap-1 rounded-lg px-1.5 py-1 text-xs font-semibold transition ${
+                      className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-1.5 text-center text-xs font-semibold transition ${
                         manualOptionalPanel === panel
                           ? "bg-white text-sky-700 shadow-sm"
                           : isFilled
@@ -776,7 +813,7 @@ export function AssistantComposer({
                       type="button"
                     >
                       <ChipIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                      <span className="truncate">{label as string}</span>
+                      <span className="max-w-full break-words leading-tight">{label as string}</span>
                     </button>
                   );
                 })}
@@ -817,6 +854,60 @@ export function AssistantComposer({
                       />
                     </label>
                   ) : null}
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-2">
+                <label className="flex min-h-11 items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Repeat2 aria-hidden="true" className="size-4 text-slate-500" strokeWidth={2.1} />
+                    Recurring
+                  </span>
+                  <input
+                    checked={manualRecurringEnabled}
+                    className="size-5 accent-sky-600"
+                    onChange={(event) => setManualRecurringEnabled(event.target.checked)}
+                    type="checkbox"
+                  />
+                </label>
+                {manualRecurringEnabled ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500">Repeats automatically as tracked entries.</p>
+                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
+                      {(["weekly", "monthly", "yearly"] as const).map((frequency) => (
+                        <button
+                          aria-pressed={manualRecurringFrequency === frequency}
+                          className={`min-h-10 rounded-lg px-2 py-1 text-xs font-semibold capitalize transition ${
+                            manualRecurringFrequency === frequency ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                          }`}
+                          key={frequency}
+                          onClick={() => setManualRecurringFrequency(frequency)}
+                          type="button"
+                        >
+                          {frequency}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="block space-y-1">
+                        <span className="text-xs font-medium text-slate-600">Start date</span>
+                        <input
+                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                          onChange={(event) => setManualRecurringStartDate(event.target.value)}
+                          type="date"
+                          value={manualRecurringStartDate || manualDate || getTodayDateKey()}
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <span className="text-xs font-medium text-slate-600">End date</span>
+                        <input
+                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                          onChange={(event) => setManualRecurringEndDate(event.target.value)}
+                          type="date"
+                          value={manualRecurringEndDate}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               <Button className="w-full" disabled={isPending || !canSubmitManualAction} type="submit">
                 {isPending ? "Working..." : "Save item"}
               </Button>

@@ -13,6 +13,7 @@ export type ImportRecordStatus = "uploaded" | "parsing" | "parsed" | "failed" | 
 export type ParseQuality = "unknown" | "low" | "medium" | "high";
 export type AcceptanceState = "pending" | "accepted" | "rejected";
 export type UserCategorySignalType = "merchant" | "phrase" | "import_description";
+export type RecurringFrequency = "weekly" | "monthly" | "yearly";
 
 export type Database = {
   public: {
@@ -116,6 +117,59 @@ export type Database = {
           updated_at?: string;
         };
       };
+      recurring_rules: {
+        Row: {
+          id: string;
+          user_id: string;
+          transaction_type: TransactionType;
+          amount_minor: number;
+          currency: string;
+          category_id: string | null;
+          merchant: string | null;
+          note: string | null;
+          frequency: RecurringFrequency;
+          start_date: string;
+          end_date: string | null;
+          next_occurrence_date: string;
+          paused_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          transaction_type: TransactionType;
+          amount_minor: number;
+          currency: string;
+          category_id?: string | null;
+          merchant?: string | null;
+          note?: string | null;
+          frequency: RecurringFrequency;
+          start_date: string;
+          end_date?: string | null;
+          next_occurrence_date: string;
+          paused_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          transaction_type?: TransactionType;
+          amount_minor?: number;
+          currency?: string;
+          category_id?: string | null;
+          merchant?: string | null;
+          note?: string | null;
+          frequency?: RecurringFrequency;
+          start_date?: string;
+          end_date?: string | null;
+          next_occurrence_date?: string;
+          paused_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       transactions: {
         Row: {
           id: string;
@@ -133,6 +187,8 @@ export type Database = {
           uncertainty_reason: string | null;
           import_record_id: string | null;
           import_candidate_id: string | null;
+          recurring_rule_id: string | null;
+          recurring_occurrence_date: string | null;
           deleted_at: string | null;
           deleted_forever_at: string | null;
           created_at: string;
@@ -154,6 +210,8 @@ export type Database = {
           uncertainty_reason?: string | null;
           import_record_id?: string | null;
           import_candidate_id?: string | null;
+          recurring_rule_id?: string | null;
+          recurring_occurrence_date?: string | null;
           deleted_at?: string | null;
           deleted_forever_at?: string | null;
           created_at?: string;
@@ -175,6 +233,8 @@ export type Database = {
           uncertainty_reason?: string | null;
           import_record_id?: string | null;
           import_candidate_id?: string | null;
+          recurring_rule_id?: string | null;
+          recurring_occurrence_date?: string | null;
           deleted_at?: string | null;
           deleted_forever_at?: string | null;
           created_at?: string;
