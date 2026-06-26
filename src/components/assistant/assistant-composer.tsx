@@ -789,39 +789,39 @@ export function AssistantComposer({
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+              <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]">
                 <div
                   aria-label="Transaction type"
-                  className="grid min-h-16 grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  className="grid min-h-[3.5rem] grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white"
                   role="group"
                 >
                   <button
                     aria-pressed={manualTransactionType === "expense"}
-                    className={`flex min-w-0 flex-col items-center justify-center gap-1 px-2 py-2 text-center text-[0.82rem] font-bold leading-none transition ${
+                    className={`flex min-w-0 flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 text-center text-xs font-bold leading-none transition ${
                       manualTransactionType === "expense" ? "bg-rose-600 text-white" : "bg-white text-slate-600 hover:bg-rose-50"
                     }`}
                     onClick={() => chooseManualTransactionType("expense")}
                     type="button"
                   >
-                    <ReceiptText aria-hidden="true" className="size-5 shrink-0" strokeWidth={2.1} />
+                    <ReceiptText aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
                     <span className="whitespace-nowrap">Spend</span>
                   </button>
                   <button
                     aria-pressed={manualTransactionType === "income"}
-                    className={`flex min-w-0 flex-col items-center justify-center gap-1 border-l border-slate-200 px-2 py-2 text-center text-[0.82rem] font-bold leading-none transition ${
+                    className={`flex min-w-0 flex-col items-center justify-center gap-0.5 border-l border-slate-200 px-1.5 py-1.5 text-center text-xs font-bold leading-none transition ${
                       manualTransactionType === "income" ? "bg-emerald-600 text-white" : "bg-white text-slate-600 hover:bg-emerald-50"
                     }`}
                     onClick={() => chooseManualTransactionType("income")}
                     type="button"
                   >
-                    <Wallet aria-hidden="true" className="size-5 shrink-0" strokeWidth={2.1} />
+                    <Wallet aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
                     <span className="whitespace-nowrap">Income</span>
                   </button>
                 </div>
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
                   aria-label={`Category: ${selectedCategoryLabel}`}
-                  className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1.5 text-center text-xs font-semibold transition ${
+                  className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1.5 text-center text-xs font-semibold transition ${
                     manualOptionalPanel === "category" ? "bg-white text-sky-700 shadow-sm" : "bg-white text-slate-900 hover:text-sky-700"
                   }`}
                   onClick={() => setManualOptionalPanel((current) => (current === "category" ? null : "category"))}
@@ -956,11 +956,11 @@ export function AssistantComposer({
                         </button>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
                       <label className="block space-y-1">
                         <span className="text-xs font-medium text-slate-600">Start date</span>
                         <input
-                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                           onChange={(event) => setManualRecurringStartDate(event.target.value)}
                           type="date"
                           value={manualRecurringStartDate || manualDate || getTodayDateKey()}
@@ -969,7 +969,7 @@ export function AssistantComposer({
                       <label className="block space-y-1">
                         <span className="text-xs font-medium text-slate-600">End date</span>
                         <input
-                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                           onChange={(event) => setManualRecurringEndDate(event.target.value)}
                           type="date"
                           value={manualRecurringEndDate}

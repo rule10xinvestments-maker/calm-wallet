@@ -376,10 +376,10 @@ export function mapTransactionsToListItems(
     return {
       id: transaction.id,
       title: getTransactionDisplayTitle(transaction),
-      subtitle: `${transaction.recurringRuleId ? "Recurring - " : ""}${new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+      subtitle: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-      })}`,
+      }),
       amountMinor: transaction.amountMinor,
       amountDisplay: formatSignedMoney(transaction.amountMinor, transaction.currency || currencyFallback, transaction.transactionType),
       amountTone: transaction.transactionType,

@@ -10,6 +10,7 @@ import {
   HeartPulse,
   Pencil,
   ReceiptText,
+  Repeat2,
   ShoppingBag,
   ShoppingBasket,
   StickyNote,
@@ -473,6 +474,12 @@ export function TransactionItemCard({
           <span className="block text-xs leading-5 text-slate-500">
             {displayItem.categoryLabel} · {displayItem.subtitle}
           </span>
+          {displayItem.isRecurring ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium leading-5 text-sky-700">
+              <Repeat2 aria-hidden="true" className="size-3" strokeWidth={2.2} />
+              Recurring
+            </span>
+          ) : null}
           {displayItem.note ? (
             <span className="block truncate text-xs leading-5 text-slate-500" title={`Note: ${displayItem.note}`}>
               Note: {displayItem.note}

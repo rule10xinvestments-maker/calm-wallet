@@ -88,6 +88,35 @@ describe("transaction item card", () => {
     expect(screen.getByText("Note: bought for home")).toBeInTheDocument();
   });
 
+  it("shows a calm recurring indicator only on recurring rows", () => {
+    const { rerender } = render(
+      <TransactionItemCard
+        categories={categories}
+        deleteAction={vi.fn(async () => initialState)}
+        initialState={initialState}
+        item={makeItem({ isRecurring: true })}
+        recategorizeAction={vi.fn(async () => initialState)}
+        updateAction={vi.fn(async () => initialState)}
+      />,
+    );
+
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Recurring").closest("span")?.querySelector(".lucide-repeat-2")).toBeInTheDocument();
+
+    rerender(
+      <TransactionItemCard
+        categories={categories}
+        deleteAction={vi.fn(async () => initialState)}
+        initialState={initialState}
+        item={makeItem({ id: "txn-2", isRecurring: false })}
+        recategorizeAction={vi.fn(async () => initialState)}
+        updateAction={vi.fn(async () => initialState)}
+      />,
+    );
+
+    expect(screen.queryByText("Recurring")).not.toBeInTheDocument();
+  });
+
   it("shows merchant as secondary metadata instead of the row title", () => {
     renderCard({ item: makeItem({ title: "mustar", itemName: "mustar", merchant: "CCC" }) });
 

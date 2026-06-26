@@ -93,6 +93,21 @@ describe("transactions read model", () => {
     expect(items[0]?.reviewLabel).toBe("Reviewed");
   });
 
+  it("keeps recurring status separate from the Activity date label", () => {
+    const items = mapTransactionsToListItems(
+      [
+        makeTransaction({
+          recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          recurringOccurrenceDate: "2026-04-10",
+        }),
+      ],
+      {},
+    );
+
+    expect(items[0]?.subtitle).toBe("Apr 10");
+    expect(items[0]?.isRecurring).toBe(true);
+  });
+
   it("uses item name as the primary title and keeps merchant separate", () => {
     const items = mapTransactionsToListItems([makeTransaction({ itemName: "mustar", merchant: "CCC", note: "for home" })], {});
 

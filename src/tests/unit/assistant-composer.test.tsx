@@ -291,7 +291,8 @@ describe("assistant composer", () => {
     const transactionTypeGroup = screen.getByRole("group", { name: "Transaction type" });
     expect(transactionTypeGroup).toHaveClass("grid-cols-2");
     expect(transactionTypeGroup.parentElement).toHaveClass("grid-cols-1");
-    expect(transactionTypeGroup.parentElement).toHaveClass("min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]");
+    expect(transactionTypeGroup.parentElement).toHaveClass("min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]");
+    expect(transactionTypeGroup).toHaveClass("min-h-[3.5rem]");
     expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("bg-rose-600");
     expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("flex-col");
     expect(screen.getByRole("button", { name: "Spend" }).querySelector(".lucide-receipt-text")).toBeInTheDocument();
@@ -350,6 +351,10 @@ describe("assistant composer", () => {
     expect(screen.getByText("Repeats automatically as tracked entries.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "monthly" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "weekly" }));
+    expect(screen.getByLabelText("Start date").parentElement?.parentElement).toHaveClass("grid-cols-1");
+    expect(screen.getByLabelText("Start date").parentElement?.parentElement).toHaveClass("min-[420px]:grid-cols-2");
+    expect(screen.getByLabelText("Start date")).toHaveClass("px-3");
+    expect(screen.getByLabelText("End date")).toHaveClass("px-3");
 
     const forms = container.querySelectorAll("form");
     const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"][value="create_transaction"]'));
