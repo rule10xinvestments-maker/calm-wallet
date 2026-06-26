@@ -124,6 +124,7 @@ describe("transactions read model", () => {
           frequency: "monthly",
           startDate: "2026-04-10",
           endDate: null,
+          pausedAt: null,
         },
       },
     );

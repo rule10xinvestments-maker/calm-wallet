@@ -36,6 +36,7 @@ type TransactionItemCardProps = {
   deleteAction: TransactionActionHandler;
   initialState: TransactionMutationState;
   onDeleted?: (item: TransactionListItem) => void;
+  recurringMode?: boolean;
 };
 
 const REVIEW_STATE_OPTIONS: Array<{ label: string; value: TransactionListItem["reviewState"] }> = [
@@ -106,6 +107,16 @@ function getRecurringDetailsText(item: TransactionListItem) {
   const endLabel = item.recurringEndDate ? `Ends ${formatReadableDate(item.recurringEndDate)}` : "No end date";
 
   return `${frequencyLabel} - Starts ${startLabel} - ${endLabel}`;
+}
+
+function getRowMetadata(item: TransactionListItem, recurringMode: boolean) {
+  if (recurringMode && item.isRecurring) {
+    return `${item.categoryLabel} · ${getRecurringFrequencyLabel(item.recurringFrequency)} · ${
+      item.recurringPausedAt ? "Paused" : "🔁 Recurring"
+    }`;
+  }
+
+  return `${item.categoryLabel} · ${item.subtitle}${item.isRecurring ? " · 🔁 Recurring" : ""}`;
 }
 
 function ActionMessage({ state }: { state: TransactionMutationState }) {
@@ -208,11 +219,13 @@ export function TransactionItemCard({
   deleteAction,
   initialState,
   onDeleted,
+  recurringMode = false,
 }: TransactionItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isStopRecurringConfirmOpen, setIsStopRecurringConfirmOpen] = useState(false);
   const [isNotePanelOpen, setIsNotePanelOpen] = useState(false);
   const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | "note" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
@@ -226,6 +239,8 @@ export function TransactionItemCard({
     item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10),
   );
   const [selectedRecurringEndDate, setSelectedRecurringEndDate] = useState(item.recurringEndDate ?? "");
+  const [selectedRecurringPaused, setSelectedRecurringPaused] = useState(Boolean(item.recurringPausedAt));
+  const [selectedRecurringManageIntent, setSelectedRecurringManageIntent] = useState<"update" | "pause" | "resume" | "stop">("update");
   const [pendingRecategorizedItem, setPendingRecategorizedItem] = useState<TransactionListItem | null>(null);
   const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -234,6 +249,7 @@ export function TransactionItemCard({
   const previousRecategorizeItemRef = useRef<TransactionListItem | null>(null);
   const previousItemRef = useRef(item);
   const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const detailsFormRef = useRef<HTMLFormElement | null>(null);
   const deleteNotifiedRef = useRef(false);
   const [recategorizeState, recategorizeFormAction] = useActionState(recategorizeAction, initialState);
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
@@ -296,6 +312,7 @@ export function TransactionItemCard({
       pendingDetailsItemRef.current = null;
       setPendingDetailsItem(null);
       setIsEditingDetails(false);
+      setSubmittedUpdateIntent(null);
     }
 
     if (updateState.status === "success" && submittedUpdateIntent === "note") {
@@ -308,6 +325,7 @@ export function TransactionItemCard({
       pendingDetailsItemRef.current = null;
       setPendingDetailsItem(null);
       setIsNotePanelOpen(false);
+      setSubmittedUpdateIntent(null);
     }
 
     if (updateState.status === "error" && (submittedUpdateIntent === "details" || submittedUpdateIntent === "note")) {
@@ -322,6 +340,7 @@ export function TransactionItemCard({
         reviewLabel: "Reviewed",
         uncertaintyReason: null,
       }));
+      setSubmittedUpdateIntent(null);
     }
   }, [displayItem, pendingDetailsItem, submittedUpdateIntent, updateState.status, updateState.transaction]);
 
@@ -338,9 +357,12 @@ export function TransactionItemCard({
       setSelectedRecurringFrequency(item.recurringFrequency ?? "monthly");
       setSelectedRecurringStartDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10));
       setSelectedRecurringEndDate(item.recurringEndDate ?? "");
+      setSelectedRecurringPaused(Boolean(item.recurringPausedAt));
+      setSelectedRecurringManageIntent("update");
       setIsNotePanelOpen(false);
       setIsCategoryPickerOpen(false);
       setIsDeleteConfirmOpen(false);
+      setIsStopRecurringConfirmOpen(false);
       deleteNotifiedRef.current = false;
     }
   }, [item]);
@@ -477,6 +499,20 @@ export function TransactionItemCard({
       : displayItem.recurringStartDate ?? displayItem.recurringOccurrenceDate ?? occurredAt.slice(0, 10);
     const recurringEndDateValue = String(formData.get("recurringEndDate") ?? "").trim();
     const recurringEndDate = recurringEndDateValue && /^\d{4}-\d{2}-\d{2}$/.test(recurringEndDateValue) ? recurringEndDateValue : null;
+    const recurringManageIntentValue = String(formData.get("recurringManageIntent") ?? "update");
+    const recurringManageIntent =
+      recurringManageIntentValue === "pause" || recurringManageIntentValue === "resume" || recurringManageIntentValue === "stop"
+        ? recurringManageIntentValue
+        : "update";
+    const nextIsRecurring = recurringEnabled && recurringManageIntent !== "stop";
+    const nextRecurringPaused =
+      nextIsRecurring && recurringManageIntent === "pause"
+        ? new Date().toISOString()
+        : nextIsRecurring && recurringManageIntent === "resume"
+          ? null
+          : nextIsRecurring
+            ? displayItem.recurringPausedAt ?? null
+            : null;
 
     const nextItem: TransactionListItem = {
       ...displayItem,
@@ -498,12 +534,13 @@ export function TransactionItemCard({
       reviewState: nextReviewState,
       reviewLabel: getReviewLabel(nextReviewState),
       uncertaintyReason,
-      isRecurring: recurringEnabled,
-      recurringRuleId: recurringEnabled ? displayItem.recurringRuleId ?? null : null,
-      recurringOccurrenceDate: recurringEnabled ? occurredAt.slice(0, 10) : null,
-      recurringFrequency: recurringEnabled ? recurringFrequency : null,
-      recurringStartDate: recurringEnabled ? recurringStartDate : null,
-      recurringEndDate: recurringEnabled ? recurringEndDate : null,
+      isRecurring: nextIsRecurring,
+      recurringRuleId: nextIsRecurring ? displayItem.recurringRuleId ?? null : null,
+      recurringOccurrenceDate: nextIsRecurring ? occurredAt.slice(0, 10) : null,
+      recurringFrequency: nextIsRecurring ? recurringFrequency : null,
+      recurringStartDate: nextIsRecurring ? recurringStartDate : null,
+      recurringEndDate: nextIsRecurring ? recurringEndDate : null,
+      recurringPausedAt: nextRecurringPaused,
     };
 
     pendingDetailsItemRef.current = nextItem;
@@ -513,10 +550,13 @@ export function TransactionItemCard({
     setSelectedCategoryId(categoryId ?? "");
     setSelectedReviewState(nextReviewState);
     setUncertaintyNote(uncertaintyReason ?? "");
-    setSelectedRecurringEnabled(recurringEnabled);
+    setSelectedRecurringEnabled(nextIsRecurring);
     setSelectedRecurringFrequency(recurringFrequency);
     setSelectedRecurringStartDate(recurringStartDate);
     setSelectedRecurringEndDate(recurringEndDate ?? "");
+    setSelectedRecurringPaused(Boolean(nextRecurringPaused));
+    setSelectedRecurringManageIntent("update");
+    setIsStopRecurringConfirmOpen(false);
   }
 
   function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
@@ -554,15 +594,7 @@ export function TransactionItemCard({
         </span>
         <span className="min-w-0 space-y-0.5">
           <span className="block break-words text-sm font-medium leading-5 text-slate-900">{formatTransactionTitleForDisplay(displayItem.title)}</span>
-          <span className="block text-xs leading-5 text-slate-500">
-            {displayItem.categoryLabel} · {displayItem.subtitle}
-          </span>
-          {displayItem.isRecurring ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium leading-5 text-sky-700">
-              <Repeat2 aria-hidden="true" className="size-3" strokeWidth={2.2} />
-              Recurring
-            </span>
-          ) : null}
+          <span className="block text-xs leading-5 text-slate-500">{getRowMetadata(displayItem, recurringMode)}</span>
           {displayItem.note ? (
             <span className="block truncate text-xs leading-5 text-slate-500" title={`Note: ${displayItem.note}`}>
               Note: {displayItem.note}
@@ -700,6 +732,43 @@ export function TransactionItemCard({
             </div>
           ) : null}
 
+          {isStopRecurringConfirmOpen ? (
+            <div
+              aria-labelledby={`stop-recurring-title-${item.id}`}
+              aria-modal="true"
+              className="fixed inset-0 z-50 grid place-items-center bg-slate-950/30 px-4 py-6"
+              role="dialog"
+            >
+              <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                <h2 className="text-base font-semibold text-slate-950" id={`stop-recurring-title-${item.id}`}>
+                  Stop recurring?
+                </h2>
+                <p className="mt-2 text-sm leading-5 text-slate-600">This saved item will stay in Activity.</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+                    onClick={() => setIsStopRecurringConfirmOpen(false)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="min-h-11 rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
+                    onClick={() => {
+                      setSelectedRecurringEnabled(false);
+                      setSelectedRecurringManageIntent("stop");
+                      setIsStopRecurringConfirmOpen(false);
+                      window.setTimeout(() => detailsFormRef.current?.requestSubmit(), 0);
+                    }}
+                    type="button"
+                  >
+                    Stop future repeats
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <ActionMessage state={recategorizeState} />
           <ActionMessage
             state={
@@ -772,6 +841,7 @@ export function TransactionItemCard({
               action={updateFormAction}
               className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 pb-24"
               onSubmit={handleDetailsSubmit}
+              ref={detailsFormRef}
             >
               <input name="transactionId" type="hidden" value={item.id} />
               <input name="note" type="hidden" value={displayItem.note ?? ""} />
@@ -780,6 +850,7 @@ export function TransactionItemCard({
               <input name="recurringFrequency" type="hidden" value={selectedRecurringFrequency} />
               <input name="recurringStartDate" type="hidden" value={selectedRecurringStartDate || displayItem.occurredAt.slice(0, 10)} />
               <input name="recurringEndDate" type="hidden" value={selectedRecurringEndDate} />
+              <input name="recurringManageIntent" type="hidden" value={selectedRecurringManageIntent} />
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Transaction type</legend>
                 <div className="grid grid-cols-2 gap-2">
@@ -869,16 +940,25 @@ export function TransactionItemCard({
                     <Repeat2 aria-hidden="true" className="size-4 text-sky-700" strokeWidth={2.2} />
                     Recurring
                   </legend>
-                  <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
-                    <span>{selectedRecurringEnabled ? "On" : "Off"}</span>
-                    <input
-                      aria-label="Recurring"
-                      checked={selectedRecurringEnabled}
-                      className="size-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                      onChange={(event) => setSelectedRecurringEnabled(event.currentTarget.checked)}
-                      type="checkbox"
-                    />
-                  </label>
+                  {displayItem.isRecurring ? (
+                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${selectedRecurringPaused ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                      {selectedRecurringPaused ? "Paused" : "Active"}
+                    </span>
+                  ) : (
+                    <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                      <span>{selectedRecurringEnabled ? "On" : "Off"}</span>
+                      <input
+                        aria-label="Recurring"
+                        checked={selectedRecurringEnabled}
+                        className="size-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                        onChange={(event) => {
+                          setSelectedRecurringEnabled(event.currentTarget.checked);
+                          setSelectedRecurringManageIntent("update");
+                        }}
+                        type="checkbox"
+                      />
+                    </label>
+                  )}
                 </div>
                 {selectedRecurringEnabled ? (
                   <div className="grid gap-2">
@@ -926,6 +1006,28 @@ export function TransactionItemCard({
                     >
                       No end date
                     </button>
+                    {displayItem.isRecurring ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          className="min-h-9 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                          onClick={() => {
+                            const nextPaused = !selectedRecurringPaused;
+                            setSelectedRecurringPaused(nextPaused);
+                            setSelectedRecurringManageIntent(nextPaused ? "pause" : "resume");
+                          }}
+                          type="button"
+                        >
+                          {selectedRecurringPaused ? "Resume recurring" : "Pause recurring"}
+                        </button>
+                        <button
+                          className="min-h-9 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                          onClick={() => setIsStopRecurringConfirmOpen(true)}
+                          type="button"
+                        >
+                          Stop recurring
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </fieldset>

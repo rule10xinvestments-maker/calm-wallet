@@ -7,8 +7,8 @@ import type { TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { StagedImportListItem } from "@/lib/server/imports-list";
 
 vi.mock("@/components/transactions/transaction-item-card", () => ({
-  TransactionItemCard: ({ item }: { item: TransactionListItem }) => (
-    <div>
+  TransactionItemCard: ({ item, recurringMode }: { item: TransactionListItem; recurringMode?: boolean }) => (
+    <div data-recurring-mode={recurringMode ? "true" : "false"}>
       <span>{item.title}</span>
       {item.isRecurring ? <span>Recurring</span> : null}
       <span className={item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}>{item.amountDisplay}</span>
@@ -177,9 +177,12 @@ describe("transactions overview", () => {
     expect(screen.getByRole("button", { name: "Expenses" })).toHaveAttribute("type", "button");
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("type", "button");
     expect(screen.getByRole("button", { name: "Needs review" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Recurring transactions" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "Recently deleted" })).toHaveAttribute("type", "button");
     expect(screen.getByText("All")).toBeInTheDocument();
     expect(screen.getByText("Spend")).toBeInTheDocument();
     expect(screen.getByText("Review")).toBeInTheDocument();
+    expect(screen.getByText("Bin")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "All" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search entries")).toHaveValue("coffee");
@@ -207,7 +210,7 @@ describe("transactions overview", () => {
     expect(screen.getByText("visible history")).toBeInTheDocument();
   });
 
-  it("filters recurring entries with a local Activity refinement", () => {
+  it("filters recurring entries through the sixth top filter and hides month controls", () => {
     render(
       <TransactionsOverview
         {...makeOverviewProps()}
@@ -236,10 +239,14 @@ describe("transactions overview", () => {
     expect(screen.getByText("Bill")).toBeInTheDocument();
     expect(screen.getByText("Coffee")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Recurring" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recurring transactions" }));
 
     expect(screen.getByText("Bill")).toBeInTheDocument();
     expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: currentMonthLabel() })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Summary" })).not.toBeInTheDocument();
+    expect(screen.getByText("Recurring mode is not limited to the selected month.")).toBeInTheDocument();
+    expect(screen.getByText("Bill").closest("div")).toHaveAttribute("data-recurring-mode", "true");
 
     fireEvent.change(screen.getByPlaceholderText("Search entries"), { target: { value: "bill" } });
     expect(screen.getByText("Bill")).toBeInTheDocument();
@@ -259,7 +266,7 @@ describe("transactions overview", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Recurring" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recurring transactions" }));
 
     expect(screen.getByText("No recurring items yet.")).toBeInTheDocument();
     expect(screen.getByText("Recurring payments and income you save will show here.")).toBeInTheDocument();
@@ -1039,11 +1046,11 @@ describe("transactions overview", () => {
     expect(searchForm.parentElement).toHaveClass("pt-2");
   });
 
-  it("hides Recently deleted when there are no recoverable entries", () => {
+  it("keeps Bin available while hiding the deleted list when there are no recoverable entries", () => {
     render(<TransactionsOverview {...makeOverviewProps()} />);
 
     expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Recently deleted" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recently deleted" })).toBeInTheDocument();
   });
 
   it("shows recoverable deleted entries through the Deleted filter and restores them into the normal list", async () => {
@@ -1132,7 +1139,7 @@ describe("transactions overview", () => {
     await waitFor(() => expect(permanentlyDeleteAction).toHaveBeenCalledOnce());
     await waitFor(() => expect(screen.queryByText("Old market")).not.toBeInTheDocument());
     expect(screen.queryByRole("heading", { name: "Recently deleted" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Recently deleted" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recently deleted" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Recent money movement" })).toBeInTheDocument();
   });
 

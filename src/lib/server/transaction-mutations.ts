@@ -233,11 +233,23 @@ export async function executeUpdateTransaction(args: {
   const recurringTouched = args.formData.has("recurringEnabled");
   const existingRecurringRuleId = toNullableString(args.formData.get("recurringRuleId"));
   const recurringEnabled = String(args.formData.get("recurringEnabled") ?? "off") === "on";
+  const recurringManageIntent = String(args.formData.get("recurringManageIntent") ?? "update");
   let recurringRuleId = existingRecurringRuleId;
   let recurringOccurrenceDate: string | null | undefined;
 
   if (recurringTouched) {
-    if (recurringEnabled) {
+    if (recurringManageIntent === "stop") {
+      if (existingRecurringRuleId) {
+        if (!args.recurringService) {
+          throw new Error("Recurring is unavailable right now.");
+        }
+
+        await args.recurringService.pauseRecurringRule(args.userId, existingRecurringRuleId);
+      }
+
+      recurringRuleId = null;
+      recurringOccurrenceDate = null;
+    } else if (recurringEnabled) {
       if (!args.recurringService) {
         throw new Error("Recurring is unavailable right now.");
       }
@@ -261,7 +273,7 @@ export async function executeUpdateTransaction(args: {
         startDate,
         endDate,
         nextOccurrenceDate: startDate,
-        pausedAt: null,
+        pausedAt: recurringManageIntent === "pause" ? new Date().toISOString() : null,
       };
 
       if (existingRecurringRuleId) {
@@ -272,17 +284,9 @@ export async function executeUpdateTransaction(args: {
       }
 
       recurringOccurrenceDate = occurredAt.slice(0, 10);
-    } else {
-      if (existingRecurringRuleId) {
-        if (!args.recurringService) {
-          throw new Error("Recurring is unavailable right now.");
-        }
-
-        await args.recurringService.pauseRecurringRule(args.userId, existingRecurringRuleId);
-      }
-
-      recurringRuleId = null;
-      recurringOccurrenceDate = null;
+    } else if (existingRecurringRuleId) {
+      recurringRuleId = existingRecurringRuleId;
+      recurringOccurrenceDate = occurredAt.slice(0, 10);
     }
   }
 

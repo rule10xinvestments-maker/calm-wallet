@@ -35,6 +35,7 @@ export type TransactionListItem = {
   recurringFrequency?: RecurringFrequency | null;
   recurringStartDate?: string | null;
   recurringEndDate?: string | null;
+  recurringPausedAt?: string | null;
 };
 
 export type TransactionCategoryOption = {
@@ -48,6 +49,7 @@ type RecurringRuleSummary = {
   frequency: RecurringFrequency;
   startDate: string;
   endDate: string | null;
+  pausedAt: string | null;
 };
 
 export type DisplayFxRate = FxRate;
@@ -415,6 +417,7 @@ export function mapTransactionsToListItems(
       recurringFrequency: recurringRule?.frequency ?? null,
       recurringStartDate: recurringRule?.startDate ?? null,
       recurringEndDate: recurringRule?.endDate ?? null,
+      recurringPausedAt: recurringRule?.pausedAt ?? null,
     };
   });
 }
@@ -1650,7 +1653,7 @@ async function loadRecurringRuleSummaries(userId: string, ruleIds: string[]): Pr
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from("recurring_rules")
-      .select("id,frequency,start_date,end_date")
+      .select("id,frequency,start_date,end_date,paused_at")
       .eq("user_id", userId)
       .in("id", uniqueRuleIds);
 
@@ -1666,6 +1669,7 @@ async function loadRecurringRuleSummaries(userId: string, ruleIds: string[]): Pr
           frequency: rule.frequency,
           startDate: rule.start_date,
           endDate: rule.end_date,
+          pausedAt: rule.paused_at,
         },
       ]),
     );

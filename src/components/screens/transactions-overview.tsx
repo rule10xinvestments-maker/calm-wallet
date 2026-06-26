@@ -24,7 +24,7 @@ type ImportReviewActionHandler = (
   formData: FormData,
 ) => Promise<ImportCandidateReviewDecisionActionState>;
 
-type ActivityFilterView = TransactionsView | "deleted";
+type ActivityFilterView = TransactionsView | "recurring" | "deleted";
 type ActivityPeriod = "month" | "custom";
 type ActivitySummaryMode = "all" | "spend" | "income" | "context";
 
@@ -42,6 +42,14 @@ const tabs: ActivityFilterTab[] = [
   { value: "income", label: "Income", accessibilityLabel: "Income", Icon: PlusCircle },
   { value: "needs-review", label: "Review", accessibilityLabel: "Needs review", Icon: AlertCircle, tone: "attention" },
 ];
+
+const ENABLE_RECURRING_TOP_FILTER = true;
+const recurringTab: ActivityFilterTab = {
+  value: "recurring",
+  label: "Recurring",
+  accessibilityLabel: "Recurring transactions",
+  Icon: Repeat2,
+};
 
 const deletedTab: ActivityFilterTab = {
   value: "deleted" as const,
@@ -399,7 +407,7 @@ function getSummaryMode(view: ActivityFilterView): ActivitySummaryMode {
     return "income";
   }
 
-  if (view === "needs-review" || view === "deleted") {
+  if (view === "needs-review" || view === "recurring" || view === "deleted") {
     return "context";
   }
 
@@ -1154,7 +1162,6 @@ export function TransactionsOverview({
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
   const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [showRecurringOnly, setShowRecurringOnly] = useState(false);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
   const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
@@ -1182,10 +1189,13 @@ export function TransactionsOverview({
     [activeItems, activePeriod, customFrom, customTo, selectedMonth.monthIndex, selectedMonth.year],
   );
   const filteredActiveItems = useMemo(() => {
+    if (activeView === "recurring") {
+      return filterTransactions(activeItems.filter((item) => item.isRecurring), searchQuery);
+    }
+
     const viewItems = filterTransactionsForActiveView(periodItems, activeView);
-    const recurringItems = showRecurringOnly ? viewItems.filter((item) => item.isRecurring) : viewItems;
-    return filterTransactions(recurringItems, searchQuery);
-  }, [activeView, periodItems, searchQuery, showRecurringOnly]);
+    return filterTransactions(viewItems, searchQuery);
+  }, [activeItems, activeView, periodItems, searchQuery]);
   const filteredDeletedItems = useMemo(
     () => filterTransactions(deletedItems, searchQuery),
     [deletedItems, searchQuery],
@@ -1202,7 +1212,7 @@ export function TransactionsOverview({
   const activitySummary = summaryResult.summaries;
   const hasMixedCurrencies = activitySummary.length > 1;
   const summaryMode = getSummaryMode(activeView);
-  const shouldShowSummaryControl = summaryMode !== "context";
+  const shouldShowSummaryControl = summaryMode !== "context" && activeView !== "recurring";
   const periodLabel = getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex);
   const currentMonthKey = getCurrentMonthKey(currentDate);
   const selectedMonthKey = getMonthKey(selectedMonth.year, selectedMonth.monthIndex);
@@ -1225,11 +1235,13 @@ export function TransactionsOverview({
   );
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
-  const hasDeletedItems = deletedItems.length > 0;
-  const visibleTabs = hasDeletedItems ? [...tabs, deletedTab] : tabs;
-  const cardTitle = isDeletedView ? "Recently deleted" : "Recent money movement";
+  const isRecurringView = activeView === "recurring";
+  const visibleTabs = [...tabs, ...(ENABLE_RECURRING_TOP_FILTER ? [recurringTab] : []), deletedTab];
+  const cardTitle = isDeletedView ? "Recently deleted" : isRecurringView ? "Recurring items" : "Recent money movement";
   const cardSubtitle = isDeletedView
     ? "Tap an entry to restore or delete forever."
+    : isRecurringView
+      ? "Review repeating payments and income."
     : "Tap an entry to edit, add a note, or review details.";
   const normalizedDisplayCurrencies = Array.from(
     new Set((availableDisplayCurrencies.length ? availableDisplayCurrencies : [displayCurrency]).map(normalizeCurrency)),
@@ -1239,6 +1251,8 @@ export function TransactionsOverview({
   const contextEntryLabel =
     activeView === "deleted"
       ? `${contextEntryCount} recoverable ${contextEntryCount === 1 ? "entry" : "entries"} shown`
+      : activeView === "recurring"
+        ? `${contextEntryCount} recurring ${contextEntryCount === 1 ? "item" : "items"} shown`
       : `${contextEntryCount} review ${contextEntryCount === 1 ? "entry" : "entries"} shown`;
 
   useEffect(() => {
@@ -1330,7 +1344,10 @@ export function TransactionsOverview({
           </CardHeader>
         </Card>
       ) : null}
-      <div className={`grid gap-1 rounded-2xl bg-white p-1 ring-1 ring-slate-200 ${hasDeletedItems ? "grid-cols-5" : "grid-cols-4"}`}>
+      <div
+        className="grid gap-0.5 rounded-2xl bg-white p-1 ring-1 ring-slate-200"
+        style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
+      >
         {visibleTabs.map((tab) => {
           const isActive = activeView === tab.value;
           const isAttention = tab.tone === "attention";
@@ -1340,18 +1357,18 @@ export function TransactionsOverview({
             <button
               aria-label={tab.accessibilityLabel}
               key={tab.value}
-              className={`flex min-h-10 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-medium leading-none transition ${
+              className={`flex min-h-10 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 font-medium leading-none transition ${
                 isActive
                   ? "bg-sky-600 text-white shadow-sm"
                   : isAttention
                     ? "text-amber-700 hover:bg-amber-50 hover:text-amber-800"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
+              } ${visibleTabs.length >= 6 ? "text-[10px]" : "text-[11px]"}`}
               onClick={() => setActiveView(tab.value)}
               title={tab.accessibilityLabel}
               type="button"
             >
-              <Icon aria-hidden="true" size={15} strokeWidth={2.2} />
+              <Icon aria-hidden="true" size={visibleTabs.length >= 6 ? 14 : 15} strokeWidth={2.2} />
               <span className="truncate">{tab.label}</span>
             </button>
           );
@@ -1366,10 +1383,12 @@ export function TransactionsOverview({
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-2 sm:space-y-4 sm:p-6 sm:pt-0">
           <div className="space-y-2">
-            {isDeletedView ? (
+            {isDeletedView || isRecurringView ? (
               <div className="px-1 text-xs font-medium text-slate-500">
                 <p>{contextEntryLabel}</p>
-                <p className="mt-0.5">Recoverable for 30 days.</p>
+                <p className="mt-0.5">
+                  {isDeletedView ? "Recoverable for 30 days." : "Recurring mode is not limited to the selected month."}
+                </p>
               </div>
             ) : (
               <>
@@ -1615,23 +1634,6 @@ export function TransactionsOverview({
               <Search aria-hidden="true" size={16} strokeWidth={2.2} />
             </button>
           </form>
-          {!isDeletedView ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                aria-pressed={showRecurringOnly}
-                className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  showRecurringOnly
-                    ? "border-sky-200 bg-sky-600 text-white shadow-sm"
-                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
-                }`}
-                onClick={() => setShowRecurringOnly((current) => !current)}
-                type="button"
-              >
-                <Repeat2 aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
-                Recurring
-              </button>
-            </div>
-          ) : null}
           {filteredItems.length || filteredPendingCandidates.length ? (
             isDeletedView ? (
               filteredItems.map((item) => (
@@ -1668,6 +1670,7 @@ export function TransactionsOverview({
                     item={item}
                     onDeleted={handleItemDeleted}
                     recategorizeAction={recategorizeAction}
+                    recurringMode={isRecurringView}
                     updateAction={updateAction}
                   />
                 ))}
@@ -1679,7 +1682,7 @@ export function TransactionsOverview({
                 ? hasSearchQuery
                   ? "No deleted entries match that search."
                   : "No recently deleted entries."
-                : showRecurringOnly && !hasSearchQuery
+                : isRecurringView && !hasSearchQuery
                   ? (
                     <span className="block">
                       <span className="block font-medium text-slate-700">No recurring items yet.</span>

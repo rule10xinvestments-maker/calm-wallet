@@ -353,6 +353,7 @@ describe("transaction mutation helpers", () => {
     formData.set("uncertaintyReason", "");
     formData.set("recurringRuleId", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     formData.set("recurringEnabled", "on");
+    formData.set("recurringManageIntent", "update");
     formData.set("recurringFrequency", "weekly");
     formData.set("recurringStartDate", "2026-04-22");
     formData.set("recurringEndDate", "");
@@ -385,6 +386,53 @@ describe("transaction mutation helpers", () => {
     );
   });
 
+  it("pauses recurring without clearing the transaction recurrence link", async () => {
+    const services = makeMutationServices();
+    const recurringService = makeRecurringService();
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "expense");
+    formData.set("amount", "12");
+    formData.set("currency", "USD");
+    formData.set("itemName", "Bill");
+    formData.set("merchant", "");
+    formData.set("note", "");
+    formData.set("occurredAt", "2026-04-21");
+    formData.set("categoryId", "");
+    formData.set("reviewState", "reviewed");
+    formData.set("uncertaintyReason", "");
+    formData.set("recurringRuleId", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    formData.set("recurringEnabled", "on");
+    formData.set("recurringManageIntent", "pause");
+    formData.set("recurringFrequency", "monthly");
+    formData.set("recurringStartDate", "2026-04-21");
+    formData.set("recurringEndDate", "");
+
+    await executeUpdateTransaction({
+      userId: "user-1",
+      formData,
+      transactionService: services,
+      recurringService,
+    });
+
+    expect(recurringService.updateRecurringRule).toHaveBeenCalledWith(
+      "user-1",
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      expect.objectContaining({
+        pausedAt: expect.any(String),
+      }),
+    );
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-04-21",
+      }),
+      { actorType: "user" },
+    );
+  });
+
   it("stops recurring while keeping the transaction update path intact", async () => {
     const services = makeMutationServices();
     const recurringService = makeRecurringService();
@@ -402,6 +450,7 @@ describe("transaction mutation helpers", () => {
     formData.set("uncertaintyReason", "");
     formData.set("recurringRuleId", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     formData.set("recurringEnabled", "off");
+    formData.set("recurringManageIntent", "stop");
     formData.set("recurringFrequency", "monthly");
     formData.set("recurringStartDate", "2026-04-21");
     formData.set("recurringEndDate", "");

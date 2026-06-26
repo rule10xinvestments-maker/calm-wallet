@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+﻿import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
@@ -41,6 +41,7 @@ function makeItem(overrides: Partial<TransactionListItem> = {}): TransactionList
 
 function renderCard(args: {
   item?: TransactionListItem;
+  recurringMode?: boolean;
   recategorizeAction?: (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
   updateAction?: (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
   deleteAction?: (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
@@ -56,6 +57,7 @@ function renderCard(args: {
       initialState={initialState}
       item={args.item ?? makeItem()}
       recategorizeAction={recategorizeAction}
+      recurringMode={args.recurringMode}
       updateAction={updateAction}
     />,
   );
@@ -88,7 +90,7 @@ describe("transaction item card", () => {
     expect(screen.getByText("Note: bought for home")).toBeInTheDocument();
   });
 
-  it("shows a calm recurring indicator only on recurring rows", () => {
+  it("shows the required inline recurring marker only on recurring rows", () => {
     const { rerender } = render(
       <TransactionItemCard
         categories={categories}
@@ -100,8 +102,7 @@ describe("transaction item card", () => {
       />,
     );
 
-    expect(screen.getByText("Recurring")).toBeInTheDocument();
-    expect(screen.getByText("Recurring").closest("span")?.querySelector(".lucide-repeat-2")).toBeInTheDocument();
+    expect(screen.getByText("Dining · May 5 · 🔁 Recurring")).toBeInTheDocument();
 
     rerender(
       <TransactionItemCard
@@ -114,7 +115,20 @@ describe("transaction item card", () => {
       />,
     );
 
-    expect(screen.queryByText("Recurring")).not.toBeInTheDocument();
+    expect(screen.queryByText(/🔁 Recurring/)).not.toBeInTheDocument();
+  });
+
+  it("shows frequency and paused state in Recurring mode rows", () => {
+    renderCard({
+      recurringMode: true,
+      item: makeItem({
+        isRecurring: true,
+        recurringFrequency: "monthly",
+        recurringPausedAt: "2026-06-26T12:00:00.000Z",
+      }),
+    });
+
+    expect(screen.getByText("Dining · Monthly · Paused")).toBeInTheDocument();
   });
 
   it("shows recurring details when a recurring row is expanded", () => {
@@ -129,12 +143,14 @@ describe("transaction item card", () => {
         title: "Bill",
         itemName: "Bill",
         categoryLabel: "Utilities",
+        subtitle: "Jun 26",
       }),
     });
 
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
 
-    expect(screen.getAllByText("Recurring")).toHaveLength(2);
+    expect(screen.getByText("Utilities · Jun 26 · 🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
     expect(screen.getByText("Monthly - Starts Jun 26, 2026 - No end date")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit details" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete transaction" })).toBeInTheDocument();
@@ -155,13 +171,14 @@ describe("transaction item card", () => {
         recurringEndDate: null,
         title: "Bill",
         itemName: "Bill",
+        subtitle: "Jun 26",
       }),
       updateAction,
     });
 
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    expect(screen.getByLabelText("Recurring")).toBeChecked();
+    expect(screen.getByText("Active")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
     fireEvent.change(screen.getByLabelText("Start"), { target: { value: "2026-06-27" } });
@@ -173,13 +190,14 @@ describe("transaction item card", () => {
 
     expect(formData.get("recurringRuleId")).toBe("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     expect(formData.get("recurringEnabled")).toBe("on");
+    expect(formData.get("recurringManageIntent")).toBe("update");
     expect(formData.get("recurringFrequency")).toBe("weekly");
     expect(formData.get("recurringStartDate")).toBe("2026-06-27");
     expect(formData.get("recurringEndDate")).toBe("2026-12-31");
     expect(await screen.findByText("Weekly - Starts Jun 27, 2026 - Ends Dec 31, 2026")).toBeInTheDocument();
   });
 
-  it("lets a recurring transaction be stopped without removing the row", async () => {
+  it("pauses recurring without clearing the row marker", async () => {
     const updateAction = vi.fn(async () => ({
       status: "success" as const,
       message: "Changes saved.",
@@ -193,20 +211,91 @@ describe("transaction item card", () => {
         recurringStartDate: "2026-06-26",
         title: "Bill",
         itemName: "Bill",
+        subtitle: "Jun 26",
       }),
       updateAction,
     });
 
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    fireEvent.click(screen.getByLabelText("Recurring"));
+    fireEvent.click(screen.getByRole("button", { name: "Pause recurring" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
     const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
 
-    expect(formData.get("recurringEnabled")).toBe("off");
+    expect(formData.get("recurringEnabled")).toBe("on");
+    expect(formData.get("recurringManageIntent")).toBe("pause");
     expect(formData.get("recurringRuleId")).toBe("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    expect(await screen.findByText("Bill")).toBeInTheDocument();
+    expect(screen.getByText("Dining · Jun 26 · 🔁 Recurring")).toBeInTheDocument();
+  });
+
+  it("resumes a paused recurring transaction from the edit flow", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-26",
+        recurringPausedAt: "2026-06-27T10:00:00.000Z",
+        title: "Bill",
+        itemName: "Bill",
+        subtitle: "Jun 26",
+      }),
+      updateAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /bill/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    expect(await screen.findByText("Paused")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Resume recurring" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
+    const [, resumeFormData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+    expect(resumeFormData.get("recurringManageIntent")).toBe("resume");
+  });
+
+  it("asks for confirmation before stopping recurring and keeps the saved row", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-26",
+        title: "Bill",
+        itemName: "Bill",
+        subtitle: "Jun 26",
+      }),
+      updateAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /bill/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    fireEvent.click(screen.getByRole("button", { name: "Stop recurring" }));
+
+    expect(screen.getByRole("dialog", { name: "Stop recurring?" })).toBeInTheDocument();
+    expect(screen.getByText("This saved item will stay in Activity.")).toBeInTheDocument();
+    expect(updateAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Stop future repeats" }));
+
+    await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
+    const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+
+    expect(formData.get("recurringEnabled")).toBe("off");
+    expect(formData.get("recurringManageIntent")).toBe("stop");
     expect(await screen.findByText("Bill")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText("Monthly - Starts Jun 26, 2026 - No end date")).not.toBeInTheDocument();
@@ -745,3 +834,4 @@ describe("transaction item card", () => {
     expect(screen.queryByText("Tracked")).not.toBeInTheDocument();
   });
 });
+
