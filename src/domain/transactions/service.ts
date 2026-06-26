@@ -209,6 +209,9 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
         note: mapOptionalTextUpdate(allowedUpdates.note),
         review_state: reviewDecision.reviewState,
         uncertainty_reason: reviewDecision.uncertaintyReason,
+        recurring_rule_id: allowedUpdates.recurringRuleId === undefined ? undefined : allowedUpdates.recurringRuleId,
+        recurring_occurrence_date:
+          allowedUpdates.recurringOccurrenceDate === undefined ? undefined : allowedUpdates.recurringOccurrenceDate,
       });
 
       const row = assertResult(updateResult, "Unable to update transaction.");

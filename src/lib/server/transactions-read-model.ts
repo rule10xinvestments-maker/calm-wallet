@@ -5,6 +5,7 @@ import { createSupabaseBudgetService } from "@/domain/budgets/service";
 import { loadFxRatesForDisplay, type FxRate } from "@/lib/server/fx-rates";
 import type { Budget } from "@/domain/budgets/types";
 import type { ReviewState, Transaction } from "@/domain/transactions/types";
+import type { RecurringFrequency } from "@/lib/db/types";
 
 export type TransactionsView = "all" | "expenses" | "income" | "needs-review";
 export type InsightsTimeframePreset = "1M" | "3M" | "6M" | "1Y" | "All";
@@ -29,12 +30,24 @@ export type TransactionListItem = {
   reviewState: ReviewState;
   uncertaintyReason: string | null;
   isRecurring?: boolean;
+  recurringRuleId?: string | null;
+  recurringOccurrenceDate?: string | null;
+  recurringFrequency?: RecurringFrequency | null;
+  recurringStartDate?: string | null;
+  recurringEndDate?: string | null;
 };
 
 export type TransactionCategoryOption = {
   id: string;
   label: string;
   direction?: "expense" | "income" | "both";
+};
+
+type RecurringRuleSummary = {
+  id: string;
+  frequency: RecurringFrequency;
+  startDate: string;
+  endDate: string | null;
 };
 
 export type DisplayFxRate = FxRate;
@@ -369,9 +382,11 @@ export function mapTransactionsToListItems(
   transactions: Transaction[],
   categoryLabels: Record<string, string>,
   currencyFallback = "USD",
+  recurringRules: Record<string, RecurringRuleSummary> = {},
 ): TransactionListItem[] {
   return transactions.map((transaction) => {
     const reviewMeta = getReviewStateMeta(transaction.reviewState);
+    const recurringRule = transaction.recurringRuleId ? recurringRules[transaction.recurringRuleId] : null;
 
     return {
       id: transaction.id,
@@ -395,6 +410,11 @@ export function mapTransactionsToListItems(
       reviewState: transaction.reviewState,
       uncertaintyReason: transaction.uncertaintyReason,
       isRecurring: Boolean(transaction.recurringRuleId),
+      recurringRuleId: transaction.recurringRuleId ?? null,
+      recurringOccurrenceDate: transaction.recurringOccurrenceDate ?? null,
+      recurringFrequency: recurringRule?.frequency ?? null,
+      recurringStartDate: recurringRule?.startDate ?? null,
+      recurringEndDate: recurringRule?.endDate ?? null,
     };
   });
 }
@@ -1619,6 +1639,47 @@ async function loadDefaultCurrency(userId: string) {
   return data?.default_currency ?? "USD";
 }
 
+async function loadRecurringRuleSummaries(userId: string, ruleIds: string[]): Promise<Record<string, RecurringRuleSummary>> {
+  const uniqueRuleIds = Array.from(new Set(ruleIds.filter(Boolean)));
+
+  if (!uniqueRuleIds.length) {
+    return {};
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("recurring_rules")
+      .select("id,frequency,start_date,end_date")
+      .eq("user_id", userId)
+      .in("id", uniqueRuleIds);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return Object.fromEntries(
+      (data ?? []).map((rule) => [
+        rule.id,
+        {
+          id: rule.id,
+          frequency: rule.frequency,
+          startDate: rule.start_date,
+          endDate: rule.end_date,
+        },
+      ]),
+    );
+  } catch (error) {
+    console.warn("[activity-recurring-rule-fallback]", {
+      hasRuleIds: uniqueRuleIds.length > 0,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      hasMessage: error instanceof Error && Boolean(error.message),
+    });
+
+    return {};
+  }
+}
+
 function logInsightsSupportingDataFailure(source: "categories" | "controlled_categories" | "default_currency" | "budgets" | "fx_rates", error: unknown) {
   console.warn("[insights-supporting-data-fallback]", {
     source,
@@ -1670,6 +1731,10 @@ export async function loadTransactionsPageData(args: {
   );
 
   const filtered = filterTransactionsForView(transactions, args.view, args.query);
+  const recurringRules = await loadRecurringRuleSummaries(
+    args.userId,
+    [...filtered, ...recentlyDeletedTransactions].map((transaction) => transaction.recurringRuleId ?? "").filter(Boolean),
+  );
   console.info("transactions:list-load", {
     hasAuthenticatedUser: Boolean(args.userId),
     loadedCount: transactions.length,
@@ -1683,8 +1748,8 @@ export async function loadTransactionsPageData(args: {
     displayCurrency: currency,
     availableDisplayCurrencies,
     fxRates,
-    items: mapTransactionsToListItems(filtered, categoryLabels, currency),
-    recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency),
+    items: mapTransactionsToListItems(filtered, categoryLabels, currency, recurringRules),
+    recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency, recurringRules),
     categories: await loadCategoryOptions(),
   };
 }

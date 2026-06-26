@@ -48,6 +48,11 @@ const TRANSACTION_TYPE_OPTIONS: Array<{ label: string; value: TransactionListIte
   { label: "Expense", value: "expense" },
   { label: "Income", value: "income" },
 ];
+const RECURRING_FREQUENCY_OPTIONS = [
+  { label: "Weekly", value: "weekly" },
+  { label: "Monthly", value: "monthly" },
+  { label: "Yearly", value: "yearly" },
+] as const;
 
 function formatAmountInput(amountMinor: number) {
   return (amountMinor / 100).toFixed(2);
@@ -63,6 +68,44 @@ function formatMoney(amountMinor: number, currency: string) {
 function formatSignedAmount(amountMinor: number, currency: string, tone: TransactionListItem["amountTone"]) {
   const formatted = formatMoney(amountMinor, currency);
   return tone === "income" ? `+${formatted}` : `-${formatted}`;
+}
+
+function formatReadableDate(dateKey: string | null | undefined) {
+  if (!dateKey) {
+    return "date not set";
+  }
+
+  const date = new Date(`${dateKey.slice(0, 10)}T12:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    return "date not set";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getRecurringFrequencyLabel(frequency: TransactionListItem["recurringFrequency"]) {
+  if (frequency === "weekly") {
+    return "Weekly";
+  }
+
+  if (frequency === "yearly") {
+    return "Yearly";
+  }
+
+  return "Monthly";
+}
+
+function getRecurringDetailsText(item: TransactionListItem) {
+  const frequencyLabel = getRecurringFrequencyLabel(item.recurringFrequency);
+  const startLabel = formatReadableDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10));
+  const endLabel = item.recurringEndDate ? `Ends ${formatReadableDate(item.recurringEndDate)}` : "No end date";
+
+  return `${frequencyLabel} - Starts ${startLabel} - ${endLabel}`;
 }
 
 function ActionMessage({ state }: { state: TransactionMutationState }) {
@@ -177,6 +220,12 @@ export function TransactionItemCard({
   const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionListItem["amountTone"]>(item.amountTone);
   const [selectedReviewState, setSelectedReviewState] = useState<TransactionListItem["reviewState"]>(getEditableReviewState(item.reviewState));
   const [uncertaintyNote, setUncertaintyNote] = useState(item.uncertaintyReason ?? "");
+  const [selectedRecurringEnabled, setSelectedRecurringEnabled] = useState(Boolean(item.isRecurring));
+  const [selectedRecurringFrequency, setSelectedRecurringFrequency] = useState(item.recurringFrequency ?? "monthly");
+  const [selectedRecurringStartDate, setSelectedRecurringStartDate] = useState(
+    item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10),
+  );
+  const [selectedRecurringEndDate, setSelectedRecurringEndDate] = useState(item.recurringEndDate ?? "");
   const [pendingRecategorizedItem, setPendingRecategorizedItem] = useState<TransactionListItem | null>(null);
   const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -231,7 +280,17 @@ export function TransactionItemCard({
       const completedItem = pendingDetailsItemRef.current ?? pendingDetailsItem;
 
       if (completedItem) {
-        setOptimisticItem(completedItem);
+        setOptimisticItem({
+          ...completedItem,
+          recurringRuleId:
+            updateState.transaction?.id === completedItem.id
+              ? updateState.transaction.recurringRuleId ?? null
+              : completedItem.recurringRuleId,
+          recurringOccurrenceDate:
+            updateState.transaction?.id === completedItem.id
+              ? updateState.transaction.recurringOccurrenceDate ?? null
+              : completedItem.recurringOccurrenceDate,
+        });
       }
 
       pendingDetailsItemRef.current = null;
@@ -264,7 +323,7 @@ export function TransactionItemCard({
         uncertaintyReason: null,
       }));
     }
-  }, [displayItem, pendingDetailsItem, submittedUpdateIntent, updateState.status]);
+  }, [displayItem, pendingDetailsItem, submittedUpdateIntent, updateState.status, updateState.transaction]);
 
   useEffect(() => {
     if (previousItemRef.current !== item) {
@@ -275,6 +334,10 @@ export function TransactionItemCard({
       setSelectedTransactionType(item.amountTone);
       setSelectedReviewState(getEditableReviewState(item.reviewState));
       setUncertaintyNote(item.uncertaintyReason ?? "");
+      setSelectedRecurringEnabled(Boolean(item.isRecurring));
+      setSelectedRecurringFrequency(item.recurringFrequency ?? "monthly");
+      setSelectedRecurringStartDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10));
+      setSelectedRecurringEndDate(item.recurringEndDate ?? "");
       setIsNotePanelOpen(false);
       setIsCategoryPickerOpen(false);
       setIsDeleteConfirmOpen(false);
@@ -404,6 +467,16 @@ export function TransactionItemCard({
         ? null
         : String(formData.get("uncertaintyReason") ?? "").trim() || (categoryWasCleared ? "Category needs review." : "Marked for review.");
     const occurredAt = /^\d{4}-\d{2}-\d{2}$/.test(occurredDate) ? `${occurredDate}T12:00:00.000Z` : displayItem.occurredAt;
+    const recurringEnabled = String(formData.get("recurringEnabled") ?? "off") === "on";
+    const recurringFrequencyValue = String(formData.get("recurringFrequency") ?? displayItem.recurringFrequency ?? "monthly");
+    const recurringFrequency =
+      recurringFrequencyValue === "weekly" || recurringFrequencyValue === "yearly" ? recurringFrequencyValue : "monthly";
+    const recurringStartDateValue = String(formData.get("recurringStartDate") ?? "").trim();
+    const recurringStartDate = /^\d{4}-\d{2}-\d{2}$/.test(recurringStartDateValue)
+      ? recurringStartDateValue
+      : displayItem.recurringStartDate ?? displayItem.recurringOccurrenceDate ?? occurredAt.slice(0, 10);
+    const recurringEndDateValue = String(formData.get("recurringEndDate") ?? "").trim();
+    const recurringEndDate = recurringEndDateValue && /^\d{4}-\d{2}-\d{2}$/.test(recurringEndDateValue) ? recurringEndDateValue : null;
 
     const nextItem: TransactionListItem = {
       ...displayItem,
@@ -425,6 +498,12 @@ export function TransactionItemCard({
       reviewState: nextReviewState,
       reviewLabel: getReviewLabel(nextReviewState),
       uncertaintyReason,
+      isRecurring: recurringEnabled,
+      recurringRuleId: recurringEnabled ? displayItem.recurringRuleId ?? null : null,
+      recurringOccurrenceDate: recurringEnabled ? occurredAt.slice(0, 10) : null,
+      recurringFrequency: recurringEnabled ? recurringFrequency : null,
+      recurringStartDate: recurringEnabled ? recurringStartDate : null,
+      recurringEndDate: recurringEnabled ? recurringEndDate : null,
     };
 
     pendingDetailsItemRef.current = nextItem;
@@ -434,6 +513,10 @@ export function TransactionItemCard({
     setSelectedCategoryId(categoryId ?? "");
     setSelectedReviewState(nextReviewState);
     setUncertaintyNote(uncertaintyReason ?? "");
+    setSelectedRecurringEnabled(recurringEnabled);
+    setSelectedRecurringFrequency(recurringFrequency);
+    setSelectedRecurringStartDate(recurringStartDate);
+    setSelectedRecurringEndDate(recurringEndDate ?? "");
   }
 
   function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
@@ -628,6 +711,16 @@ export function TransactionItemCard({
             }
           />
 
+          {displayItem.isRecurring ? (
+            <div className="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-slate-700">
+              <p className="flex items-center gap-2 font-semibold text-sky-800">
+                <Repeat2 aria-hidden="true" className="size-4" strokeWidth={2.2} />
+                Recurring
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{getRecurringDetailsText(displayItem)}</p>
+            </div>
+          ) : null}
+
           {isNotePanelOpen ? (
             <form
               action={updateFormAction}
@@ -682,6 +775,11 @@ export function TransactionItemCard({
             >
               <input name="transactionId" type="hidden" value={item.id} />
               <input name="note" type="hidden" value={displayItem.note ?? ""} />
+              <input name="recurringRuleId" type="hidden" value={displayItem.recurringRuleId ?? ""} />
+              <input name="recurringEnabled" type="hidden" value={selectedRecurringEnabled ? "on" : "off"} />
+              <input name="recurringFrequency" type="hidden" value={selectedRecurringFrequency} />
+              <input name="recurringStartDate" type="hidden" value={selectedRecurringStartDate || displayItem.occurredAt.slice(0, 10)} />
+              <input name="recurringEndDate" type="hidden" value={selectedRecurringEndDate} />
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Transaction type</legend>
                 <div className="grid grid-cols-2 gap-2">
@@ -765,6 +863,72 @@ export function TransactionItemCard({
                   type="date"
                 />
               </label>
+              <fieldset className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <legend className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Repeat2 aria-hidden="true" className="size-4 text-sky-700" strokeWidth={2.2} />
+                    Recurring
+                  </legend>
+                  <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                    <span>{selectedRecurringEnabled ? "On" : "Off"}</span>
+                    <input
+                      aria-label="Recurring"
+                      checked={selectedRecurringEnabled}
+                      className="size-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                      onChange={(event) => setSelectedRecurringEnabled(event.currentTarget.checked)}
+                      type="checkbox"
+                    />
+                  </label>
+                </div>
+                {selectedRecurringEnabled ? (
+                  <div className="grid gap-2">
+                    <div aria-label="Recurring frequency" className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1" role="group">
+                      {RECURRING_FREQUENCY_OPTIONS.map((option) => (
+                        <button
+                          aria-pressed={selectedRecurringFrequency === option.value}
+                          className={`min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                            selectedRecurringFrequency === option.value
+                              ? "bg-sky-600 text-white shadow-sm"
+                              : "text-slate-600 hover:bg-slate-50"
+                          }`}
+                          key={option.value}
+                          onClick={() => setSelectedRecurringFrequency(option.value)}
+                          type="button"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="grid gap-1">
+                        <span className="text-xs font-medium text-slate-600">Start</span>
+                        <input
+                          className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                          onChange={(event) => setSelectedRecurringStartDate(event.currentTarget.value)}
+                          type="date"
+                          value={selectedRecurringStartDate}
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        <span className="text-xs font-medium text-slate-600">End</span>
+                        <input
+                          className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                          onChange={(event) => setSelectedRecurringEndDate(event.currentTarget.value)}
+                          type="date"
+                          value={selectedRecurringEndDate}
+                        />
+                      </label>
+                    </div>
+                    <button
+                      className="justify-self-start rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800"
+                      onClick={() => setSelectedRecurringEndDate("")}
+                      type="button"
+                    >
+                      No end date
+                    </button>
+                  </div>
+                ) : null}
+              </fieldset>
               <input name="categoryId" type="hidden" value={selectedCategoryId} />
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Review state</legend>

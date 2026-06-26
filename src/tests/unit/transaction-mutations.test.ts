@@ -8,6 +8,8 @@ import {
 } from "@/lib/server/transaction-mutations";
 import type { Transaction, TransactionMutationResult } from "@/domain/transactions/types";
 import type { TransactionService } from "@/domain/transactions/service";
+import type { RecurringService } from "@/domain/recurring/service";
+import type { RecurringRule } from "@/domain/recurring/types";
 
 function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -72,6 +74,40 @@ function makeMutationServices(): Pick<
         occurredAt: "2026-04-21T12:00:00.000Z",
       }),
     ),
+  };
+}
+
+function makeRecurringService(): Pick<RecurringService, "createRecurringRule" | "updateRecurringRule" | "pauseRecurringRule"> {
+  const rule = (overrides: Partial<RecurringRule> = {}): RecurringRule => ({
+    id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    userId: "user-1",
+    transactionType: "expense",
+    amountMinor: 1200,
+    currency: "USD",
+    categoryId: null,
+    merchant: null,
+    note: null,
+    frequency: "monthly",
+    startDate: "2026-04-21",
+    endDate: null,
+    nextOccurrenceDate: "2026-04-21",
+    pausedAt: null,
+    createdAt: "2026-04-21T00:00:00.000Z",
+    updatedAt: "2026-04-21T00:00:00.000Z",
+    ...overrides,
+  });
+
+  return {
+    createRecurringRule: vi.fn(async () => rule({ id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })),
+    updateRecurringRule: vi.fn(async (_userId, ruleId) =>
+      rule({
+        id: ruleId,
+        frequency: "weekly",
+        startDate: "2026-04-22",
+        nextOccurrenceDate: "2026-04-22",
+      }),
+    ),
+    pauseRecurringRule: vi.fn(async (_userId, ruleId) => rule({ id: ruleId, pausedAt: "2026-04-22T00:00:00.000Z" })),
   };
 }
 
@@ -295,6 +331,95 @@ describe("transaction mutation helpers", () => {
       expect.objectContaining({
         transactionType: "income",
         amountMinor: 25000,
+      }),
+      { actorType: "user" },
+    );
+  });
+
+  it("updates recurring details when editing a recurring transaction", async () => {
+    const services = makeMutationServices();
+    const recurringService = makeRecurringService();
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "expense");
+    formData.set("amount", "12");
+    formData.set("currency", "USD");
+    formData.set("itemName", "Bill");
+    formData.set("merchant", "");
+    formData.set("note", "");
+    formData.set("occurredAt", "2026-04-21");
+    formData.set("categoryId", "");
+    formData.set("reviewState", "reviewed");
+    formData.set("uncertaintyReason", "");
+    formData.set("recurringRuleId", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    formData.set("recurringEnabled", "on");
+    formData.set("recurringFrequency", "weekly");
+    formData.set("recurringStartDate", "2026-04-22");
+    formData.set("recurringEndDate", "");
+
+    await executeUpdateTransaction({
+      userId: "user-1",
+      formData,
+      transactionService: services,
+      recurringService,
+    });
+
+    expect(recurringService.updateRecurringRule).toHaveBeenCalledWith(
+      "user-1",
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      expect.objectContaining({
+        frequency: "weekly",
+        startDate: "2026-04-22",
+        endDate: null,
+        pausedAt: null,
+      }),
+    );
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-04-21",
+      }),
+      { actorType: "user" },
+    );
+  });
+
+  it("stops recurring while keeping the transaction update path intact", async () => {
+    const services = makeMutationServices();
+    const recurringService = makeRecurringService();
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("transactionType", "expense");
+    formData.set("amount", "12");
+    formData.set("currency", "USD");
+    formData.set("itemName", "Bill");
+    formData.set("merchant", "");
+    formData.set("note", "");
+    formData.set("occurredAt", "2026-04-21");
+    formData.set("categoryId", "");
+    formData.set("reviewState", "reviewed");
+    formData.set("uncertaintyReason", "");
+    formData.set("recurringRuleId", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    formData.set("recurringEnabled", "off");
+    formData.set("recurringFrequency", "monthly");
+    formData.set("recurringStartDate", "2026-04-21");
+    formData.set("recurringEndDate", "");
+
+    await executeUpdateTransaction({
+      userId: "user-1",
+      formData,
+      transactionService: services,
+      recurringService,
+    });
+
+    expect(recurringService.pauseRecurringRule).toHaveBeenCalledWith("user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        recurringRuleId: null,
+        recurringOccurrenceDate: null,
       }),
       { actorType: "user" },
     );

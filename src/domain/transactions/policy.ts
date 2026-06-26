@@ -16,6 +16,8 @@ const ALLOWED_UPDATE_FIELDS = [
   "note",
   "reviewState",
   "uncertaintyReason",
+  "recurringRuleId",
+  "recurringOccurrenceDate",
 ] as const;
 
 export function canCreateFinancialTransaction(input: Pick<CreateTransactionInput, "amountMinor" | "transactionType">) {

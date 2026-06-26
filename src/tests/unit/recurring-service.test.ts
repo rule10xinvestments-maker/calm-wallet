@@ -137,6 +137,36 @@ describe("recurring service", () => {
     expect(adapter.updateRecurringRule).toHaveBeenCalled();
   });
 
+  it("updates and pauses recurring rules through user-scoped adapter calls", async () => {
+    const adapter = makeAdapter();
+    const service = createRecurringService(adapter, makeTransactionService() as TransactionService);
+
+    await service.updateRecurringRule("user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", {
+      frequency: "weekly",
+      startDate: "2026-06-08",
+      endDate: null,
+      nextOccurrenceDate: "2026-06-08",
+      pausedAt: null,
+    });
+    await service.pauseRecurringRule("user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "2026-06-26T12:00:00.000Z");
+
+    expect(adapter.updateRecurringRule).toHaveBeenNthCalledWith(
+      1,
+      "user-1",
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      expect.objectContaining({
+        frequency: "weekly",
+        start_date: "2026-06-08",
+        end_date: null,
+        next_occurrence_date: "2026-06-08",
+        paused_at: null,
+      }),
+    );
+    expect(adapter.updateRecurringRule).toHaveBeenNthCalledWith(2, "user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", {
+      paused_at: "2026-06-26T12:00:00.000Z",
+    });
+  });
+
   it("safe generation does not throw when the recurring backend is unavailable", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 

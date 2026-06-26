@@ -34,3 +34,8 @@ export type CreateRecurringRuleInput = {
   startDate: string;
   endDate?: string | null;
 };
+
+export type UpdateRecurringRuleInput = Partial<CreateRecurringRuleInput> & {
+  nextOccurrenceDate?: string;
+  pausedAt?: string | null;
+};

@@ -10,6 +10,7 @@ vi.mock("@/components/transactions/transaction-item-card", () => ({
   TransactionItemCard: ({ item }: { item: TransactionListItem }) => (
     <div>
       <span>{item.title}</span>
+      {item.isRecurring ? <span>Recurring</span> : null}
       <span className={item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}>{item.amountDisplay}</span>
     </div>
   ),
@@ -204,6 +205,65 @@ describe("transactions overview", () => {
     expect(screen.queryByText("entries shown")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
     expect(screen.getByText("visible history")).toBeInTheDocument();
+  });
+
+  it("filters recurring entries with a local Activity refinement", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "recurring-bill",
+            title: "Bill",
+            itemName: "Bill",
+            isRecurring: true,
+            recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            recurringFrequency: "monthly",
+            recurringStartDate: dateInCurrentMonth(10).slice(0, 10),
+          }),
+          makeTransactionItem({
+            id: "one-time-coffee",
+            title: "Coffee",
+            itemName: "Coffee",
+            isRecurring: false,
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    expect(screen.getByText("Bill")).toBeInTheDocument();
+    expect(screen.getByText("Coffee")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Recurring" }));
+
+    expect(screen.getByText("Bill")).toBeInTheDocument();
+    expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Search entries"), { target: { value: "bill" } });
+    expect(screen.getByText("Bill")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Search entries"), { target: { value: "coffee" } });
+    expect(screen.queryByText("Bill")).not.toBeInTheDocument();
+    expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
+  });
+
+  it("shows calm empty copy when the recurring refinement has no matches", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "Coffee", itemName: "Coffee", isRecurring: false })]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Recurring" }));
+
+    expect(screen.getByText("No recurring items yet.")).toBeInTheDocument();
+    expect(screen.getByText("Recurring payments and income you save will show here.")).toBeInTheDocument();
+    expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
   });
 
   it("expands and collapses timeframe and Summary controls", () => {

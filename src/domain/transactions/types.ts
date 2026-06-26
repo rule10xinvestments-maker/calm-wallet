@@ -75,6 +75,8 @@ export type UpdateTransactionInput = {
   note?: string | null;
   reviewState?: ReviewState;
   uncertaintyReason?: string | null;
+  recurringRuleId?: string | null;
+  recurringOccurrenceDate?: string | null;
 };
 
 export type DeleteTransactionInput = {

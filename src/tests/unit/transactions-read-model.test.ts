@@ -108,6 +108,36 @@ describe("transactions read model", () => {
     expect(items[0]?.isRecurring).toBe(true);
   });
 
+  it("maps recurring rule details when the Activity loader provides them", () => {
+    const items = mapTransactionsToListItems(
+      [
+        makeTransaction({
+          recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          recurringOccurrenceDate: "2026-04-10",
+        }),
+      ],
+      {},
+      "USD",
+      {
+        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa": {
+          id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          frequency: "monthly",
+          startDate: "2026-04-10",
+          endDate: null,
+        },
+      },
+    );
+
+    expect(items[0]).toMatchObject({
+      isRecurring: true,
+      recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      recurringOccurrenceDate: "2026-04-10",
+      recurringFrequency: "monthly",
+      recurringStartDate: "2026-04-10",
+      recurringEndDate: null,
+    });
+  });
+
   it("uses item name as the primary title and keeps merchant separate", () => {
     const items = mapTransactionsToListItems([makeTransaction({ itemName: "mustar", merchant: "CCC", note: "for home" })], {});
 

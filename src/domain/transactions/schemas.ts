@@ -59,6 +59,8 @@ export const updateTransactionSchema = z
     note: z.string().trim().max(500).nullable().optional(),
     reviewState: reviewStateSchema.optional(),
     uncertaintyReason: z.string().trim().max(240).nullable().optional(),
+    recurringRuleId: idSchema.nullable().optional(),
+    recurringOccurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Occurrence date must be a valid date.").nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Provide at least one field to update.",

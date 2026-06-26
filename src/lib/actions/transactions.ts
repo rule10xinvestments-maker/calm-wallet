@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
+import { createSupabaseRecurringService } from "@/domain/recurring/service";
 import { createSupabaseTransactionService } from "@/domain/transactions/service";
 import {
   executeDeleteTransaction,
@@ -165,10 +166,14 @@ export async function updateTransactionAction(
 
   try {
     const transactionService = await createSupabaseTransactionService();
+    const existingRecurringRuleId = typeof formData.get("recurringRuleId") === "string" ? String(formData.get("recurringRuleId")).trim() : "";
+    const shouldLoadRecurringService = formData.get("recurringEnabled") === "on" || Boolean(existingRecurringRuleId);
+    const recurringService = shouldLoadRecurringService ? await createSupabaseRecurringService() : undefined;
     const result = await executeUpdateTransaction({
       userId: user.id,
       formData,
       transactionService,
+      ...(recurringService ? { recurringService } : {}),
     });
 
     revalidatePath("/transactions");

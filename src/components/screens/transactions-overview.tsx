@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, List, MinusCircle, PlusCircle, Search, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, List, MinusCircle, PlusCircle, Repeat2, Search, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +63,7 @@ function getSearchableTransactionText(item: TransactionListItem) {
     item.note,
     item.categoryLabel,
     item.subtitle,
+    item.isRecurring ? "Recurring" : null,
   ]
     .filter(Boolean)
     .join(" ")
@@ -1153,6 +1154,7 @@ export function TransactionsOverview({
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
   const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [showRecurringOnly, setShowRecurringOnly] = useState(false);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
   const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
@@ -1179,10 +1181,11 @@ export function TransactionsOverview({
     () => filterTransactionsForPeriod(activeItems, activePeriod, selectedMonth.year, selectedMonth.monthIndex, customFrom, customTo),
     [activeItems, activePeriod, customFrom, customTo, selectedMonth.monthIndex, selectedMonth.year],
   );
-  const filteredActiveItems = useMemo(
-    () => filterTransactions(filterTransactionsForActiveView(periodItems, activeView), searchQuery),
-    [activeView, periodItems, searchQuery],
-  );
+  const filteredActiveItems = useMemo(() => {
+    const viewItems = filterTransactionsForActiveView(periodItems, activeView);
+    const recurringItems = showRecurringOnly ? viewItems.filter((item) => item.isRecurring) : viewItems;
+    return filterTransactions(recurringItems, searchQuery);
+  }, [activeView, periodItems, searchQuery, showRecurringOnly]);
   const filteredDeletedItems = useMemo(
     () => filterTransactions(deletedItems, searchQuery),
     [deletedItems, searchQuery],
@@ -1612,6 +1615,23 @@ export function TransactionsOverview({
               <Search aria-hidden="true" size={16} strokeWidth={2.2} />
             </button>
           </form>
+          {!isDeletedView ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                aria-pressed={showRecurringOnly}
+                className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  showRecurringOnly
+                    ? "border-sky-200 bg-sky-600 text-white shadow-sm"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+                }`}
+                onClick={() => setShowRecurringOnly((current) => !current)}
+                type="button"
+              >
+                <Repeat2 aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
+                Recurring
+              </button>
+            </div>
+          ) : null}
           {filteredItems.length || filteredPendingCandidates.length ? (
             isDeletedView ? (
               filteredItems.map((item) => (
@@ -1659,6 +1679,13 @@ export function TransactionsOverview({
                 ? hasSearchQuery
                   ? "No deleted entries match that search."
                   : "No recently deleted entries."
+                : showRecurringOnly && !hasSearchQuery
+                  ? (
+                    <span className="block">
+                      <span className="block font-medium text-slate-700">No recurring items yet.</span>
+                      <span className="mt-1 block">Recurring payments and income you save will show here.</span>
+                    </span>
+                  )
                 : hasSearchQuery
                   ? "No tracked transactions match that search."
                   : loadError

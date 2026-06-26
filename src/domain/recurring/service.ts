@@ -1,12 +1,13 @@
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import { createSupabaseTransactionService, type TransactionService } from "@/domain/transactions/service";
-import { createRecurringRuleSchema } from "@/domain/recurring/schemas";
+import { createRecurringRuleSchema, updateRecurringRuleSchema } from "@/domain/recurring/schemas";
 import type {
   CreateRecurringRuleInput,
   RecurringRule,
   RecurringRuleInsertRow,
   RecurringRuleRow,
   RecurringRuleUpdateRow,
+  UpdateRecurringRuleInput,
 } from "@/domain/recurring/types";
 
 type QueryError = {
@@ -103,6 +104,39 @@ export function createRecurringService(adapter: RecurringServiceAdapter, transac
           paused_at: null,
         }),
         "Unable to create recurring rule.",
+      );
+
+      return mapRule(row);
+    },
+
+    async updateRecurringRule(userId: string, ruleId: string, input: UpdateRecurringRuleInput): Promise<RecurringRule> {
+      const parsed = updateRecurringRuleSchema.parse(input);
+      const row = assertResult(
+        await adapter.updateRecurringRule(userId, ruleId, {
+          transaction_type: parsed.transactionType,
+          amount_minor: parsed.amountMinor,
+          currency: parsed.currency,
+          category_id: parsed.categoryId === undefined ? undefined : parsed.categoryId,
+          merchant: parsed.merchant === undefined ? undefined : parsed.merchant?.trim() || null,
+          note: parsed.note === undefined ? undefined : parsed.note?.trim() || null,
+          frequency: parsed.frequency,
+          start_date: parsed.startDate,
+          end_date: parsed.endDate === undefined ? undefined : parsed.endDate,
+          next_occurrence_date: parsed.nextOccurrenceDate,
+          paused_at: parsed.pausedAt === undefined ? undefined : parsed.pausedAt,
+        }),
+        "Unable to update recurring rule.",
+      );
+
+      return mapRule(row);
+    },
+
+    async pauseRecurringRule(userId: string, ruleId: string, pausedAt = new Date().toISOString()): Promise<RecurringRule> {
+      const row = assertResult(
+        await adapter.updateRecurringRule(userId, ruleId, {
+          paused_at: pausedAt,
+        }),
+        "Unable to stop recurring.",
       );
 
       return mapRule(row);
