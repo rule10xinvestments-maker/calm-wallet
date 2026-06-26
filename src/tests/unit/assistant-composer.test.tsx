@@ -107,13 +107,11 @@ describe("assistant composer", () => {
     expect(screen.getByLabelText("Name")).toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Transaction type: Spend" })).toBeInTheDocument();
-    expect(screen.getByText("Spend")).toBeInTheDocument();
-    expect(screen.getByText("Income")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Transaction type" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Spend" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByText("Red")).not.toBeInTheDocument();
     expect(screen.queryByText("Green")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Spend" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Date" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Merchant" })).toBeInTheDocument();
@@ -225,7 +223,9 @@ describe("assistant composer", () => {
     openManualEntry();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Coffee" } });
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "12.50" } });
-    fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "ron" } });
+    expect(screen.getByLabelText("Currency").tagName).toBe("SELECT");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["RON", "EUR", "USD", "GBP"]);
+    fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "EUR" } });
     fireEvent.click(screen.getByRole("button", { name: "Merchant" }));
     fireEvent.change(screen.getByPlaceholderText("Optional merchant"), { target: { value: "Market" } });
     expect(screen.getByRole("button", { name: "Market" })).toBeInTheDocument();
@@ -243,7 +243,7 @@ describe("assistant composer", () => {
     expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("itemName")).toBe("Coffee");
     expect(formData.get("amount")).toBe("12.50");
-    expect(formData.get("currency")).toBe("RON");
+    expect(formData.get("currency")).toBe("EUR");
     expect(formData.get("categoryLabel")).toBe("Other");
     expect(formData.get("merchant")).toBe("Market");
     expect(formData.get("note")).toBe("Lunch");
@@ -286,7 +286,10 @@ describe("assistant composer", () => {
 
     openManualEntry();
 
-    expect(screen.getByRole("switch", { name: "Transaction type: Spend" })).toHaveClass("bg-rose-50");
+    const transactionTypeGroup = screen.getByRole("group", { name: "Transaction type" });
+    expect(transactionTypeGroup).toHaveClass("grid-cols-2");
+    expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("bg-rose-600");
+    expect(screen.getByRole("button", { name: "Income" })).toHaveClass("bg-white");
 
     for (const label of ["Category: Other", "Date", "Merchant", "Note"]) {
       const button = screen.getByRole("button", { name: label });
@@ -305,8 +308,8 @@ describe("assistant composer", () => {
     openManualEntry();
 
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
-    expect(screen.getByRole("switch", { name: "Transaction type: Income" })).toHaveClass("bg-emerald-50");
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.getByRole("button", { name: "Income" })).toHaveClass("bg-emerald-600");
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
   });
 
@@ -323,7 +326,7 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
     expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
   });
 
@@ -386,7 +389,7 @@ describe("assistant composer", () => {
     const { container } = renderComposer(undefined, [], undefined, categoryOptions);
 
     openManualEntry();
-    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
     fireEvent.click(screen.getByRole("button", { name: "Note" }));
     fireEvent.change(screen.getByPlaceholderText("Optional note"), { target: { value: "payroll deposit" } });
     expect(screen.getByRole("button", { name: "Category: Salary" })).toBeInTheDocument();
@@ -428,7 +431,7 @@ describe("assistant composer", () => {
     expect(action.mock.calls[0]![1].get("transactionType")).toBe("expense");
 
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "44.00" } });
-    fireEvent.click(screen.getByRole("switch", { name: "Transaction type: Spend" }));
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(2));

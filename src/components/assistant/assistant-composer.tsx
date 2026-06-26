@@ -68,6 +68,7 @@ const initialUploadFlowState: UploadFlowState = {
 const receiptImageMaxBytes = 5 * 1024 * 1024;
 const safeReceiptImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const safeCsvMimeTypes = new Set(["text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"]);
+const manualCurrencyOptions = ["RON", "EUR", "USD", "GBP"] as const;
 
 function fileMatchesImportType(importType: "receipt_image" | "csv_import", file: File) {
   if (importType === "receipt_image") {
@@ -773,49 +774,48 @@ export function AssistantComposer({
                 </label>
                 <label className="block space-y-1">
                   <span className="text-xs font-medium text-slate-600">Currency</span>
-                  <input
-                    className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold uppercase text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                  <select
+                    className="min-h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold uppercase text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                     name="currency"
-                    onChange={(event) => setManualCurrency(event.target.value.toUpperCase())}
+                    onChange={(event) => setManualCurrency(event.target.value)}
                     value={manualCurrency}
-                  />
+                  >
+                    {manualCurrencyOptions.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
 
               <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] gap-1 rounded-xl bg-slate-50 p-1">
-                <button
-                  aria-checked={manualTransactionType === "income"}
-                  aria-label={`Transaction type: ${manualTransactionType === "income" ? "Income" : "Spend"}`}
-                  className={`relative grid min-h-14 grid-cols-2 overflow-hidden rounded-lg border p-1 text-xs font-bold transition ${
-                    manualTransactionType === "income" ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"
-                  }`}
-                  onClick={() => chooseManualTransactionType(manualTransactionType === "income" ? "expense" : "income")}
-                  role="switch"
-                  type="button"
+                <div
+                  aria-label="Transaction type"
+                  className="grid min-h-14 grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  role="group"
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-md shadow-sm transition-transform ${
-                      manualTransactionType === "income" ? "translate-x-[calc(100%+0.25rem)] bg-emerald-600" : "translate-x-0 bg-rose-600"
+                  <button
+                    aria-pressed={manualTransactionType === "expense"}
+                    className={`min-w-0 px-2 py-2 text-center text-sm font-bold transition ${
+                      manualTransactionType === "expense" ? "bg-rose-600 text-white" : "bg-white text-slate-600 hover:bg-rose-50"
                     }`}
-                  />
-                  <span
-                    className={`relative z-10 flex items-center justify-center gap-1.5 rounded-md px-1 ${
-                      manualTransactionType === "expense" ? "text-white" : "text-slate-600"
-                    }`}
+                    onClick={() => chooseManualTransactionType("expense")}
+                    type="button"
                   >
-                    <ReceiptText aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
                     Spend
-                  </span>
-                  <span
-                    className={`relative z-10 flex items-center justify-center gap-1.5 rounded-md px-1 ${
-                      manualTransactionType === "income" ? "text-white" : "text-slate-600"
+                  </button>
+                  <button
+                    aria-pressed={manualTransactionType === "income"}
+                    className={`min-w-0 border-l border-slate-200 px-2 py-2 text-center text-sm font-bold transition ${
+                      manualTransactionType === "income" ? "bg-emerald-600 text-white" : "bg-white text-slate-600 hover:bg-emerald-50"
                     }`}
+                    onClick={() => chooseManualTransactionType("income")}
+                    type="button"
                   >
-                    <Wallet aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
                     Income
-                  </span>
-                </button>
+                  </button>
+                </div>
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
                   aria-label={`Category: ${selectedCategoryLabel}`}
