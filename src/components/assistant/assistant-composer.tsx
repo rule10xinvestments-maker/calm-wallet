@@ -34,6 +34,8 @@ type UploadFlowState = {
 };
 
 type ActionPanel = "receipt" | "statement" | "recent" | "manual";
+type ManualMode = "add" | "edit" | "delete";
+type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 
 const initialUploadFlowState: UploadFlowState = {
   status: "idle",
@@ -110,21 +112,33 @@ export function AssistantComposer({
   importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
-  const [selectedAction, setSelectedAction] = useState<"create_transaction" | "update_transaction" | "delete_transaction">(
-    "create_transaction",
-  );
+  const [manualMode, setManualMode] = useState<ManualMode>("add");
+  const [manualTransactionType, setManualTransactionType] = useState<"expense" | "income">("expense");
+  const [manualAmount, setManualAmount] = useState("");
+  const [manualCurrency, setManualCurrency] = useState("USD");
+  const [manualOptionalPanel, setManualOptionalPanel] = useState<ManualOptionalPanel>(null);
+  const [manualCategoryId, setManualCategoryId] = useState("");
+  const [manualDate, setManualDate] = useState("");
+  const [manualMerchant, setManualMerchant] = useState("");
+  const [manualNote, setManualNote] = useState("");
+  const [isDeleteConfirmed, setIsDeleteConfirmed] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
   const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const [selectedTargetTransactionId, setSelectedTargetTransactionId] = useState("");
-  const [selectedManualCategoryId, setSelectedManualCategoryId] = useState("");
+  const [selectedUpdateCategoryId, setSelectedUpdateCategoryId] = useState("");
   const manualTargetItems = recentItems.length ? recentItems : state.recentItems;
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
   const selectedTargetItem = manualTargetItems.find((item) => item.id === selectedTargetTransactionId) ?? null;
-  const selectedActionTargetsExistingItem =
-    selectedAction === "update_transaction" || selectedAction === "delete_transaction";
-  const canSubmitManualAction = !selectedActionTargetsExistingItem || Boolean(selectedTargetTransactionId);
+  const selectedCategory = categoryOptions.find((category) => category.id === manualCategoryId) ?? null;
+  const selectedUpdateCategory = categoryOptions.find((category) => category.id === selectedUpdateCategoryId) ?? null;
+  const canSubmitManualAction =
+    manualMode === "add"
+      ? manualAmount.trim().length > 0
+      : manualMode === "edit"
+        ? Boolean(selectedTargetTransactionId)
+        : Boolean(selectedTargetTransactionId) && isDeleteConfirmed;
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
@@ -132,6 +146,39 @@ export function AssistantComposer({
 
   function togglePanel(panel: ActionPanel) {
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
+  }
+
+  function chooseManualMode(nextMode: ManualMode) {
+    setManualMode(nextMode);
+    setManualOptionalPanel(null);
+    setSelectedTargetTransactionId("");
+    setSelectedUpdateCategoryId("");
+    setIsDeleteConfirmed(false);
+  }
+
+  function getManualDateLabel() {
+    if (!manualDate) {
+      return "Date";
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    if (manualDate === todayKey) {
+      return "Today";
+    }
+
+    return new Date(`${manualDate}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  function getMerchantButtonLabel() {
+    const trimmed = manualMerchant.trim();
+
+    if (!trimmed) {
+      return "Merchant";
+    }
+
+    return trimmed.length <= 16 ? trimmed : "Merchant added";
   }
 
   function chooseImportFile(importType: "receipt_image" | "csv_import", file: File | null) {
@@ -494,7 +541,7 @@ export function AssistantComposer({
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-900">Manual</p>
-              <p className="text-xs text-slate-500">Use this when the message box is not precise enough.</p>
+              <p className="text-xs text-slate-500">Add, edit, or remove a recent tracked item.</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
@@ -505,198 +552,308 @@ export function AssistantComposer({
             </button>
           </div>
           <div className="space-y-3 rounded-2xl bg-white p-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Add manually</p>
-            </div>
-
-          <form
-            action={(formData) => {
-              return formAction(formData);
-            }}
-            className="space-y-3"
-          >
-            <input name="toolName" type="hidden" value={selectedAction} />
-            <input name="currency" type="hidden" value="USD" />
-
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Action</span>
-          <select
-            aria-label="Action"
-            className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-            name="assistantActionSelection"
-            onChange={(event) => {
-              setSelectedAction(event.target.value as typeof selectedAction);
-              setSelectedTargetTransactionId("");
-              setSelectedManualCategoryId("");
-            }}
-            value={selectedAction}
-          >
-            <option value="create_transaction">Create transaction</option>
-            <option value="update_transaction">Update transaction</option>
-            <option value="delete_transaction">Delete transaction</option>
-          </select>
-        </label>
-
-        {selectedAction === "create_transaction" ? (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">Intent</span>
-                <select
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                  defaultValue="expense"
-                  name="transactionType"
+            <div aria-label="Manual mode" className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
+              {[
+                ["add", "Add manually"],
+                ["edit", "Edit recent"],
+                ["delete", "Delete recent"],
+              ].map(([mode, label]) => (
+                <button
+                  aria-pressed={manualMode === mode}
+                  className={`min-h-10 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                    manualMode === mode ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                  }`}
+                  key={mode}
+                  onClick={() => chooseManualMode(mode as ManualMode)}
+                  type="button"
                 >
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
-                </select>
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">Amount</span>
-                <input
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                  inputMode="decimal"
-                  name="amount"
-                  placeholder="24.50"
-                />
-              </label>
-            </div>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Merchant</span>
-              <input
-                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                name="merchant"
-                placeholder="Optional merchant"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Note</span>
-              <textarea
-                className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                name="note"
-                placeholder="Optional note"
-              />
-            </label>
-          </>
-        ) : null}
-
-        {selectedActionTargetsExistingItem ? (
-          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Choose recent item</span>
-              <select
-                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none disabled:text-slate-400"
-                disabled={manualTargetItems.length === 0}
-                name="transactionId"
-                onChange={(event) => setSelectedTargetTransactionId(event.target.value)}
-                required={selectedActionTargetsExistingItem}
-                value={selectedTargetTransactionId}
-              >
-                <option value="">
-                  {manualTargetItems.length ? "Select an item" : "No recent items to choose from yet."}
-                </option>
-                {manualTargetItems.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {[item.title, item.amountDisplay, item.subtitle].filter(Boolean).join(" · ")}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {manualTargetItems.length ? null : (
-              <p className="text-xs leading-5 text-slate-500">No recent items to choose from yet.</p>
-            )}
-            {selectedTargetItem ? (
-              <div className="rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                <p className="font-medium text-slate-900">Selected item</p>
-                <p className="mt-1">
-                  {[selectedTargetItem.title, selectedTargetItem.amountDisplay, selectedTargetItem.subtitle].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {selectedAction === "update_transaction" ? (
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Category</span>
-            <select
-              className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-              onChange={(event) => setSelectedManualCategoryId(event.target.value)}
-              value={selectedManualCategoryId}
-            >
-              <option value="">Leave unchanged</option>
-              {categoryOptions.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
+                  {label}
+                </button>
               ))}
-            </select>
-            {selectedAction === "update_transaction" && selectedManualCategoryId ? (
-              <input name="categoryId" type="hidden" value={selectedManualCategoryId} />
-            ) : null}
-          </label>
-        ) : null}
-
-        {selectedAction === "update_transaction" ? (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">Amount</span>
-                <input
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                  inputMode="decimal"
-                  name="amount"
-                  placeholder="Optional amount"
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">Occurred date</span>
-                <input
-                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                  name="occurredAt"
-                  type="date"
-                />
-              </label>
             </div>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Merchant</span>
-              <input
-                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                name="merchant"
-                placeholder="Optional merchant"
-              />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Note</span>
-              <textarea
-                className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
-                name="note"
-                placeholder="Optional note"
-              />
-            </label>
-          </>
-        ) : null}
 
-        {selectedAction === "delete_transaction" ? (
-          <p className="rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-            Choose a recent item first so the deletion is intentional and recoverable.
-          </p>
-        ) : null}
+            <form
+              action={(formData) => {
+                return formAction(formData);
+              }}
+              className="space-y-3"
+            >
+              {manualMode === "add" ? (
+                <>
+                  <input name="toolName" type="hidden" value="create_transaction" />
+                  <input name="transactionType" type="hidden" value={manualTransactionType} />
+                  {manualCategoryId ? <input name="categoryId" type="hidden" value={manualCategoryId} /> : null}
+                  {manualDate ? <input name="occurredAt" type="hidden" value={manualDate} /> : null}
+                  {manualMerchant.trim() ? <input name="merchant" type="hidden" value={manualMerchant} /> : null}
+                  {manualNote.trim() ? <input name="note" type="hidden" value={manualNote} /> : null}
 
-        <Button className="w-full" disabled={isPending || !canSubmitManualAction} type="submit">
-          {isPending
-            ? "Working..."
-            : selectedAction === "create_transaction"
-              ? "Save item"
-              : selectedAction === "update_transaction"
-                ? "Update selected item"
-                : selectedAction === "delete_transaction"
-                  ? "Delete selected item"
-                  : "Update selected item"}
-        </Button>
-          </form>
+                  <div className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_10rem]">
+                    <label className="block space-y-1">
+                      <span className="text-xs font-medium text-slate-600">Amount</span>
+                      <input
+                        className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                        inputMode="decimal"
+                        name="amount"
+                        onChange={(event) => setManualAmount(event.target.value)}
+                        placeholder="24.50"
+                        value={manualAmount}
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-xs font-medium text-slate-600">Currency</span>
+                      <input
+                        className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold uppercase text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                        name="currency"
+                        onChange={(event) => setManualCurrency(event.target.value.toUpperCase())}
+                        value={manualCurrency}
+                      />
+                    </label>
+                    <div className="col-span-2 grid grid-cols-2 gap-1 rounded-xl bg-slate-50 p-1 sm:col-span-1 sm:self-end">
+                      {[
+                        ["expense", "Spend"],
+                        ["income", "Income"],
+                      ].map(([type, label]) => (
+                        <button
+                          aria-pressed={manualTransactionType === type}
+                          className={`min-h-10 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                            manualTransactionType === type
+                              ? type === "income"
+                                ? "bg-emerald-600 text-white shadow-sm"
+                                : "bg-rose-600 text-white shadow-sm"
+                              : "text-slate-600 hover:bg-white"
+                          }`}
+                          key={type}
+                          onClick={() => setManualTransactionType(type as "expense" | "income")}
+                          type="button"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1 rounded-xl bg-slate-50 p-1">
+                    {[
+                      ["category", selectedCategory?.label ?? "Category", Boolean(selectedCategory)],
+                      ["date", getManualDateLabel(), Boolean(manualDate)],
+                      ["merchant", getMerchantButtonLabel(), Boolean(manualMerchant.trim())],
+                      ["note", manualNote.trim() ? "Note added" : "Note", Boolean(manualNote.trim())],
+                    ].map(([panel, label, isFilled]) => (
+                      <button
+                        aria-expanded={manualOptionalPanel === panel}
+                        className={`min-h-10 rounded-lg px-1.5 py-1 text-xs font-semibold transition ${
+                          manualOptionalPanel === panel
+                            ? "bg-white text-sky-700 shadow-sm"
+                            : isFilled
+                              ? "bg-white text-slate-900"
+                              : "text-slate-600 hover:bg-white"
+                        }`}
+                        key={panel as string}
+                        onClick={() => setManualOptionalPanel((current) => (current === panel ? null : (panel as ManualOptionalPanel)))}
+                        type="button"
+                      >
+                        <span className="block truncate">{label as string}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {manualOptionalPanel === "category" ? (
+                    <div className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                      <button
+                        className={`min-h-10 rounded-lg px-2 py-1 text-left text-xs font-semibold ${!manualCategoryId ? "bg-slate-100 text-slate-900" : "text-slate-600"}`}
+                        onClick={() => {
+                          setManualCategoryId("");
+                          setManualOptionalPanel(null);
+                        }}
+                        type="button"
+                      >
+                        No category
+                      </button>
+                      {categoryOptions.map((category) => (
+                        <button
+                          className={`min-h-10 rounded-lg px-2 py-1 text-left text-xs font-semibold ${
+                            manualCategoryId === category.id ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-slate-50"
+                          }`}
+                          key={category.id}
+                          onClick={() => {
+                            setManualCategoryId(category.id);
+                            setManualOptionalPanel(null);
+                          }}
+                          type="button"
+                        >
+                          {category.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {manualOptionalPanel === "date" ? (
+                    <label className="block space-y-1 rounded-xl border border-slate-200 bg-white p-2">
+                      <span className="text-xs font-medium text-slate-600">Date</span>
+                      <input
+                        className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                        onChange={(event) => setManualDate(event.target.value)}
+                        type="date"
+                        value={manualDate}
+                      />
+                    </label>
+                  ) : null}
+
+                  {manualOptionalPanel === "merchant" ? (
+                    <label className="block space-y-1 rounded-xl border border-slate-200 bg-white p-2">
+                      <span className="text-xs font-medium text-slate-600">Merchant</span>
+                      <input
+                        className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                        onChange={(event) => setManualMerchant(event.target.value)}
+                        placeholder="Optional merchant"
+                        value={manualMerchant}
+                      />
+                    </label>
+                  ) : null}
+
+                  {manualOptionalPanel === "note" ? (
+                    <label className="block space-y-1 rounded-xl border border-slate-200 bg-white p-2">
+                      <span className="text-xs font-medium text-slate-600">Note</span>
+                      <textarea
+                        className="min-h-20 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                        onChange={(event) => setManualNote(event.target.value)}
+                        placeholder="Optional note"
+                        value={manualNote}
+                      />
+                    </label>
+                  ) : null}
+                </>
+              ) : null}
+
+              {manualMode === "edit" || manualMode === "delete" ? (
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
+                  <input name="toolName" type="hidden" value={manualMode === "edit" ? "update_transaction" : "delete_transaction"} />
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-slate-700">Choose recent item</span>
+                    <select
+                      className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none disabled:text-slate-400"
+                      disabled={manualTargetItems.length === 0}
+                      name="transactionId"
+                      onChange={(event) => {
+                        setSelectedTargetTransactionId(event.target.value);
+                        setIsDeleteConfirmed(false);
+                      }}
+                      required
+                      value={selectedTargetTransactionId}
+                    >
+                      <option value="">
+                        {manualTargetItems.length ? "Select an item" : "No recent items to choose from yet."}
+                      </option>
+                      {manualTargetItems.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {[item.title, item.amountDisplay, item.subtitle].filter(Boolean).join(" · ")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {manualTargetItems.length ? null : (
+                    <p className="text-xs leading-5 text-slate-500">No recent items to choose from yet.</p>
+                  )}
+                  {selectedTargetItem ? (
+                    <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      <p className="font-medium text-slate-900">Selected item</p>
+                      <p className="mt-1">
+                        {[selectedTargetItem.title, selectedTargetItem.amountDisplay, selectedTargetItem.subtitle].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {manualMode === "edit" ? (
+                <>
+                  {selectedUpdateCategoryId ? <input name="categoryId" type="hidden" value={selectedUpdateCategoryId} /> : null}
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block space-y-1">
+                      <span className="text-xs font-medium text-slate-600">Amount</span>
+                      <input
+                        className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none"
+                        inputMode="decimal"
+                        name="amount"
+                        placeholder="Optional"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-xs font-medium text-slate-600">Occurred date</span>
+                      <input
+                        className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none"
+                        name="occurredAt"
+                        type="date"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block space-y-1">
+                      <span className="text-xs font-medium text-slate-600">Merchant</span>
+                      <input
+                        className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none"
+                        name="merchant"
+                        placeholder="Optional merchant"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-xs font-medium text-slate-600">Note</span>
+                      <input
+                        className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none"
+                        name="note"
+                        placeholder="Optional note"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-50 p-1">
+                    <button
+                      className={`min-h-10 rounded-lg px-2 py-1 text-left text-xs font-semibold ${!selectedUpdateCategoryId ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}
+                      onClick={() => setSelectedUpdateCategoryId("")}
+                      type="button"
+                    >
+                      Leave category
+                    </button>
+                    {categoryOptions.map((category) => (
+                      <button
+                        className={`min-h-10 rounded-lg px-2 py-1 text-left text-xs font-semibold ${
+                          selectedUpdateCategoryId === category.id ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-white"
+                        }`}
+                        key={category.id}
+                        onClick={() => setSelectedUpdateCategoryId(category.id)}
+                        type="button"
+                      >
+                        {category.label}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedUpdateCategory ? (
+                    <p className="px-1 text-xs font-medium text-slate-500">Category: {selectedUpdateCategory.label}</p>
+                  ) : null}
+                </>
+              ) : null}
+
+              {manualMode === "delete" ? (
+                <label className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+                  <input
+                    checked={isDeleteConfirmed}
+                    className="mt-1"
+                    onChange={(event) => setIsDeleteConfirmed(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>Confirm delete. This moves the item to Bin so it can be restored.</span>
+                </label>
+              ) : null}
+
+              <Button className="w-full" disabled={isPending || !canSubmitManualAction} type="submit">
+                {isPending
+                  ? "Working..."
+                  : manualMode === "add"
+                    ? "Save item"
+                    : manualMode === "edit"
+                      ? "Update selected item"
+                      : "Delete selected item"}
+              </Button>
+            </form>
           </div>
         </div>
       ) : null}
@@ -721,3 +878,4 @@ export function AssistantComposer({
     </div>
   );
 }
+

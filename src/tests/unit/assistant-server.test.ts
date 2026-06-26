@@ -171,6 +171,20 @@ describe("assistant server integration", () => {
     }
   });
 
+  it("uses a selected manual date when building a create_transaction request", () => {
+    const request = buildAssistantToolRequest({
+      toolName: "create_transaction",
+      transactionType: "expense",
+      amount: "24.50",
+      occurredAt: "2026-06-26",
+    });
+
+    expect(request.toolName).toBe("create_transaction");
+    if (request.toolName === "create_transaction") {
+      expect(request.input.occurredAt).toBe("2026-06-26T12:00:00.000Z");
+    }
+  });
+
   it("does not create a financial record when no amount is present", () => {
     expect(() =>
       buildAssistantToolRequest({

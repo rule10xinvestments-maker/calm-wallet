@@ -316,7 +316,7 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
       transactionType: input.transactionType,
       amountMinor,
       currency: input.currency ?? "USD",
-      occurredAt: new Date().toISOString(),
+      occurredAt: input.occurredAt !== undefined ? parseAssistantOccurredAt(input.occurredAt) : new Date().toISOString(),
       ...(input.categoryId !== undefined ? { categoryId: toNullableText(input.categoryId) } : {}),
       itemName: input.itemName?.trim() || input.merchant?.trim() || null,
       merchant: input.merchant?.trim() || null,
