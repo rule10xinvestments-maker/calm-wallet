@@ -95,37 +95,27 @@ describe("assistant composer", () => {
     expect(formData.get("toolName")).toBeNull();
   });
 
-  it("shows the compact Manual mode row with Add selected by default", () => {
+  it("shows Manual as an add-only compact transaction fallback", () => {
     renderComposer();
     openManualEntry();
 
-    expect(screen.getByRole("button", { name: "Add manually" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Edit recent" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Delete recent" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: "Add manually" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit recent" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete recent" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action")).not.toBeInTheDocument();
     expect(screen.queryByText("Create transaction")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Spend" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Income" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Category" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Date" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Merchant" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Note" })).toBeInTheDocument();
     expect(screen.queryByText("More details")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit recent" }));
-    expect(screen.getByRole("button", { name: "Update selected item" })).toBeDisabled();
-    expect(screen.getByLabelText("Choose recent item")).toBeInTheDocument();
-    expect(screen.queryByText("Transaction ID")).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Required transaction id")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Occurred date")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete recent" }));
-    expect(screen.getByRole("button", { name: "Delete selected item" })).toBeDisabled();
-    expect(screen.getAllByText("No recent items to choose from yet.").length).toBeGreaterThan(0);
-    expect(screen.queryByPlaceholderText("Required transaction id")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Occurred date")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Choose recent item")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Update selected item" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete selected item" })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Recategorize transaction" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Update selected item category" })).not.toBeInTheDocument();
   });
@@ -205,149 +195,19 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Recent" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("uses a recent-item picker for delete and submits the selected internal id", async () => {
-    const action = vi.fn(
-      async (state: AssistantActionState, formData: FormData): Promise<AssistantActionState> => {
-        void state;
-        void formData;
-
-        return {
-          status: "success",
-          message: "Deleted selected item.",
-          reviewState: null,
-          latestTransaction: null,
-          recentItems: [],
-        };
-      },
-    );
-    const recentItems: AssistantActionState["recentItems"] = [
-      {
-        id: "transaction-1",
-        title: "paine",
-        subtitle: "Groceries - May 27",
-        amountDisplay: "RON 5.00",
-        needsReview: false,
-      },
-      {
-        id: "transaction-2",
-        title: "ketchup",
-        subtitle: "Groceries - May 27",
-        amountDisplay: "RON 50.00",
-        needsReview: false,
-      },
-    ];
-
-    renderComposer(undefined, recentItems, action);
-    openManualEntry();
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete recent" }));
-
-    expect(screen.queryByText("Transaction ID")).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Required transaction id")).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /paine.*RON 5\.00.*Groceries - May 27/ })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "paine · RON 5.00 · Groceries - May 27" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete selected item" })).toBeDisabled();
-
-    fireEvent.change(screen.getByLabelText("Choose recent item"), { target: { value: "transaction-1" } });
-
-    expect(screen.getByText("Selected item")).toBeInTheDocument();
-    expect(screen.getAllByText(/paine.*RON 5\.00.*Groceries - May 27/).length).toBeGreaterThan(0);
-    expect(screen.getByText("Confirm delete. This moves the item to Bin so it can be restored.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete selected item" })).toBeDisabled();
-
-    fireEvent.click(screen.getByRole("checkbox"));
-
-    expect(screen.getByRole("button", { name: "Delete selected item" })).toBeEnabled();
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete selected item" }));
-
-    await waitFor(() => expect(action).toHaveBeenCalled());
-    const submittedFormData = action.mock.calls[0]![1];
-
-    expect(submittedFormData.get("toolName")).toBe("delete_transaction");
-    expect(submittedFormData.get("transactionId")).toBe("transaction-1");
-  });
-
-  it("keeps delete disabled when there are no recent items to choose from", () => {
-    renderComposer();
-    openManualEntry();
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete recent" }));
-
-    expect(screen.getAllByText("No recent items to choose from yet.").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Choose recent item")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Delete selected item" })).toBeDisabled();
-    expect(screen.queryByPlaceholderText("Required transaction id")).not.toBeInTheDocument();
-  });
-
-  it("uses category labels for update and submits the selected internal category value", async () => {
-    const action = vi.fn(
-      async (state: AssistantActionState, formData: FormData): Promise<AssistantActionState> => {
-        void state;
-        void formData;
-
-        return {
-          status: "success",
-          message: "Updated selected item.",
-          reviewState: null,
-          latestTransaction: null,
-          recentItems: [],
-        };
-      },
-    );
-    const recentItems: AssistantActionState["recentItems"] = [
-      {
-        id: "transaction-1",
-        title: "ketchup",
-        subtitle: "Groceries - May 27",
-        amountDisplay: "RON 50.00",
-        needsReview: false,
-      },
-    ];
-    const categoryOptions: ControlledCategoryOption[] = [
-      { id: "category-groceries", slug: "groceries", label: "Groceries", direction: "expense" },
-      { id: "category-dining", slug: "dining", label: "Dining", direction: "expense" },
-      { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
-    ];
-
-    renderComposer(undefined, recentItems, action, categoryOptions);
-    openManualEntry();
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit recent" }));
-
-    expect(screen.queryByText("Category ID")).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText(/category id/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Leave category" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Groceries" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Dining" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Salary" })).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("Choose recent item"), { target: { value: "transaction-1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Dining" }));
-    fireEvent.click(screen.getByRole("button", { name: "Update selected item" }));
-
-    await waitFor(() => expect(action).toHaveBeenCalled());
-    const submittedFormData = action.mock.calls[0]![1];
-
-    expect(submittedFormData.get("toolName")).toBe("update_transaction");
-    expect(submittedFormData.get("transactionId")).toBe("transaction-1");
-    expect(submittedFormData.get("categoryId")).toBe("category-dining");
-  });
-
   it("opens and closes the manual entry controls without showing them by default", () => {
     renderComposer();
 
     openManualEntry();
     expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByText("Manual").length).toBeGreaterThan(0);
-    expect(screen.getByText("Add manually")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add manually" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("Add manually")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save item" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(screen.queryByText("Add manually")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "false");
   });
@@ -381,16 +241,23 @@ describe("assistant composer", () => {
 
   it("sets category and date filled states for pending manual transactions", () => {
     const categoryOptions: ControlledCategoryOption[] = [
+      { id: "category-other", slug: "other", label: "Other", direction: "both" },
       { id: "category-groceries", slug: "groceries", label: "Groceries", direction: "expense" },
       { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
     ];
     const { container } = renderComposer(undefined, [], undefined, categoryOptions);
 
     openManualEntry();
-    fireEvent.click(screen.getByRole("button", { name: "Category" }));
+    expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Category: Uncategorized" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Category: Other" }));
+    expect(screen.getByLabelText("Category picker")).toBeInTheDocument();
+    expect(screen.getByLabelText("Category picker").querySelector(".lucide-tag")).toBeInTheDocument();
+    expect(screen.getByLabelText("Category picker").querySelector(".lucide-shopping-basket")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Groceries" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
-    expect(screen.getByRole("button", { name: "Groceries" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Date" }));
     fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-06-26" } });
@@ -402,6 +269,55 @@ describe("assistant composer", () => {
 
     expect(formData.get("categoryId")).toBe("category-groceries");
     expect(formData.get("occurredAt")).toBe("2026-06-26");
+  });
+
+  it("guesses categories from merchant or note unless the user selected one", () => {
+    const categoryOptions: ControlledCategoryOption[] = [
+      { id: "category-other", slug: "other", label: "Other", direction: "both" },
+      { id: "category-groceries", slug: "groceries", label: "Groceries", direction: "expense" },
+      { id: "category-dining", slug: "dining", label: "Dining", direction: "expense" },
+      { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
+    ];
+    const { container } = renderComposer(undefined, [], undefined, categoryOptions);
+
+    openManualEntry();
+    fireEvent.click(screen.getByRole("button", { name: "Merchant" }));
+    fireEvent.change(screen.getByPlaceholderText("Optional merchant"), { target: { value: "Mega grocery market" } });
+    expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Category: Groceries" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dining" }));
+    expect(screen.getByRole("button", { name: "Category: Dining" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Merchant added" }));
+    fireEvent.change(screen.getByPlaceholderText("Optional merchant"), { target: { value: "Mega grocery market payroll" } });
+    expect(screen.getByRole("button", { name: "Category: Dining" })).toBeInTheDocument();
+
+    const forms = container.querySelectorAll("form");
+    const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"][value="create_transaction"]'));
+    const formData = new FormData(form!);
+
+    expect(formData.get("categoryId")).toBe("category-dining");
+  });
+
+  it("guesses income categories when Income is selected", () => {
+    const categoryOptions: ControlledCategoryOption[] = [
+      { id: "category-other", slug: "other", label: "Other", direction: "both" },
+      { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
+    ];
+    const { container } = renderComposer(undefined, [], undefined, categoryOptions);
+
+    openManualEntry();
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    fireEvent.click(screen.getByRole("button", { name: "Note" }));
+    fireEvent.change(screen.getByPlaceholderText("Optional note"), { target: { value: "payroll deposit" } });
+    expect(screen.getByRole("button", { name: "Category: Salary" })).toBeInTheDocument();
+
+    const forms = container.querySelectorAll("form");
+    const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"][value="create_transaction"]'));
+    const formData = new FormData(form!);
+
+    expect(formData.get("categoryId")).toBe("category-salary");
   });
 
   it("submits Spend and Income manual saves while keeping missing amount disabled", async () => {
@@ -665,4 +581,5 @@ describe("assistant composer", () => {
     expect(await screen.findByText("Please sign in again to upload receipts.")).toBeInTheDocument();
   });
 });
+
 

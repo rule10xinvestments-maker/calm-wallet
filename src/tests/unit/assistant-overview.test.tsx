@@ -77,13 +77,17 @@ describe("assistant overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Manual" }));
 
-    expect(screen.getByText("Add manually")).toBeInTheDocument();
+    expect(screen.getByLabelText("Amount")).toBeInTheDocument();
+    expect(screen.getByLabelText("Currency")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit recent" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete recent" })).not.toBeInTheDocument();
     expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
     expect(screen.queryByText("Monthly tracked review")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(screen.queryByText("Add manually")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
     expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
   });
 
