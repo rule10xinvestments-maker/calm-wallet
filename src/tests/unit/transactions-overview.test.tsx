@@ -10,7 +10,10 @@ vi.mock("@/components/transactions/transaction-item-card", () => ({
   TransactionItemCard: ({ item, recurringMode }: { item: TransactionListItem; recurringMode?: boolean }) => (
     <div data-recurring-mode={recurringMode ? "true" : "false"}>
       <span>{item.title}</span>
-      {item.isRecurring ? <span>Recurring</span> : null}
+      <span>
+        {item.categoryLabel} · {recurringMode && item.isRecurring ? item.recurringFrequency ?? "monthly" : item.subtitle}
+        {item.isRecurring ? " · 🔁 Recurring" : ""}
+      </span>
       <span className={item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}>{item.amountDisplay}</span>
     </div>
   ),
@@ -238,13 +241,17 @@ describe("transactions overview", () => {
 
     expect(screen.getByText("Bill")).toBeInTheDocument();
     expect(screen.getByText("Coffee")).toBeInTheDocument();
+    expect(screen.getByText("Groceries · This month · 🔁 Recurring")).toBeInTheDocument();
+    expect(screen.queryByText("Groceries · This month · 🔁 Recurring", { selector: "span" })?.parentElement).toHaveTextContent("Bill");
 
     fireEvent.click(screen.getByRole("button", { name: "Recurring transactions" }));
 
     expect(screen.getByText("Bill")).toBeInTheDocument();
     expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
+    expect(screen.getByText("Groceries · monthly · 🔁 Recurring")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: currentMonthLabel() })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Summary" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("1 recurring item shown")).toHaveLength(1);
     expect(screen.getByText("Recurring mode is not limited to the selected month.")).toBeInTheDocument();
     expect(screen.getByText("Bill").closest("div")).toHaveAttribute("data-recurring-mode", "true");
 

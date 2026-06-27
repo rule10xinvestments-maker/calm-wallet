@@ -271,8 +271,10 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
     expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
 
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     fireEvent.click(screen.getByRole("button", { name: "Date" }));
-    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-06-26" } });
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: todayKey } });
     expect(screen.getByRole("button", { name: "Today" })).toBeInTheDocument();
 
     const forms = container.querySelectorAll("form");
@@ -280,7 +282,7 @@ describe("assistant composer", () => {
     const formData = new FormData(form!);
 
     expect(formData.get("categoryId")).toBe("category-groceries");
-    expect(formData.get("occurredAt")).toBe("2026-06-26");
+    expect(formData.get("occurredAt")).toBe(todayKey);
   });
 
   it("renders manual action chips with vertical icons and readable labels", () => {

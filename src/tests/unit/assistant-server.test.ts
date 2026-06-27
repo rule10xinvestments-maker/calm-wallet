@@ -312,12 +312,20 @@ describe("assistant server integration", () => {
     expect(result.message).toBe("Saved and set to repeat monthly.");
   });
 
-  it("falls back to a one-time save if recurring transaction metadata is unavailable", async () => {
+  it("relinks the saved transaction if the first recurring metadata insert falls back", async () => {
     const services = makeTransactionServices();
     services.createTransaction = vi
       .fn()
       .mockRejectedValueOnce(new Error("Column recurring_rule_id does not exist"))
       .mockResolvedValueOnce(makeMutationResult({ merchant: "Rent", itemName: "Rent" }));
+    services.updateTransaction = vi.fn(async (_userId, _transactionId, updates) =>
+      makeMutationResult({
+        merchant: "Rent",
+        itemName: "Rent",
+        recurringRuleId: updates.recurringRuleId ?? null,
+        recurringOccurrenceDate: updates.recurringOccurrenceDate ?? null,
+      }),
+    );
     const recurringService = {
       createRecurringRule: vi.fn(async () => ({
         id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -364,8 +372,17 @@ describe("assistant server integration", () => {
       }),
       { actorType: "ai" },
     );
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      {
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-01",
+      },
+      { actorType: "ai" },
+    );
     expect(result.status).toBe("success");
-    expect(result.message).toBe("Saved. Recurring could not be set up right now.");
+    expect(result.message).toBe("Saved and set to repeat monthly.");
   });
 
   it("builds an update_transaction request with only the submitted fields", () => {

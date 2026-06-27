@@ -614,6 +614,8 @@ export async function runAssistantCommand(args: {
     request.input.recurringRuleId
   ) {
     recurringSetupFailed = true;
+    const recurringRuleId = request.input.recurringRuleId;
+    const recurringOccurrenceDate = request.input.recurringOccurrenceDate;
     const { recurringRuleId: _recurringRuleId, recurringOccurrenceDate: _recurringOccurrenceDate, ...oneTimeInput } = request.input;
     void _recurringRuleId;
     void _recurringOccurrenceDate;
@@ -627,6 +629,35 @@ export async function runAssistantCommand(args: {
       transactionService: args.transactionService,
       persistRuntimeLog: args.persistRuntimeLog,
     });
+
+    if (execution.result.ok && execution.result.toolName === "create_transaction" && "transaction" in execution.result.data) {
+      try {
+        const linked = await args.transactionService.updateTransaction(
+          args.userId,
+          execution.result.data.transaction.id,
+          {
+            recurringRuleId,
+            recurringOccurrenceDate,
+          },
+          { actorType: "ai" },
+        );
+
+        execution = {
+          ...execution,
+          result: {
+            ...execution.result,
+            data: linked,
+          },
+        };
+        recurringSetupFailed = false;
+      } catch (error) {
+        console.warn("[recurring-transaction-link-skipped]", {
+          authenticatedUserPresent: Boolean(args.userId),
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          hasMessage: error instanceof Error && Boolean(error.message),
+        });
+      }
+    }
   }
 
   const result = summarizeAssistantResult(execution.result);

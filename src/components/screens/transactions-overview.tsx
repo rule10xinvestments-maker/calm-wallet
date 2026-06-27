@@ -1606,7 +1606,7 @@ export function TransactionsOverview({
                 </div>
               </div>
             ) : null}
-            {!shouldShowSummaryControl && !isDeletedView ? (
+            {!shouldShowSummaryControl && !isDeletedView && !isRecurringView ? (
               <p className="px-1 text-xs font-medium text-slate-500">{contextEntryLabel}</p>
             ) : null}
           </div>
