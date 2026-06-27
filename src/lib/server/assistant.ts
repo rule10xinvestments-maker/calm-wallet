@@ -550,6 +550,14 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
   };
 }
 
+function recurringSetupErrorState(): AssistantActionState {
+  return {
+    ...initialAssistantActionState,
+    status: "error",
+    message: "Recurring could not be set up right now. Save without Recurring or try again.",
+  };
+}
+
 export async function runAssistantCommand(args: {
   userId: string;
   input: AssistantCommandInput;
@@ -598,9 +606,13 @@ export async function runAssistantCommand(args: {
     } else {
       recurringSetupFailed = true;
     }
+
+    if (recurringSetupFailed) {
+      return recurringSetupErrorState();
+    }
   }
 
-  let execution = await executeAssistantToolRequest({
+  const execution = await executeAssistantToolRequest({
     userId: args.userId,
     request,
     transactionService: args.transactionService,
@@ -613,51 +625,13 @@ export async function runAssistantCommand(args: {
     "recurringRuleId" in request.input &&
     request.input.recurringRuleId
   ) {
-    recurringSetupFailed = true;
-    const recurringRuleId = request.input.recurringRuleId;
-    const recurringOccurrenceDate = request.input.recurringOccurrenceDate;
-    const { recurringRuleId: _recurringRuleId, recurringOccurrenceDate: _recurringOccurrenceDate, ...oneTimeInput } = request.input;
-    void _recurringRuleId;
-    void _recurringOccurrenceDate;
-
-    execution = await executeAssistantToolRequest({
-      userId: args.userId,
-      request: {
-        toolName: "create_transaction",
-        input: oneTimeInput,
-      },
-      transactionService: args.transactionService,
-      persistRuntimeLog: args.persistRuntimeLog,
+    console.warn("[recurring-transaction-link-skipped]", {
+      authenticatedUserPresent: Boolean(args.userId),
+      errorName: "CreateRecurringTransactionFailed",
+      hasMessage: true,
     });
 
-    if (execution.result.ok && execution.result.toolName === "create_transaction" && "transaction" in execution.result.data) {
-      try {
-        const linked = await args.transactionService.updateTransaction(
-          args.userId,
-          execution.result.data.transaction.id,
-          {
-            recurringRuleId,
-            recurringOccurrenceDate,
-          },
-          { actorType: "ai" },
-        );
-
-        execution = {
-          ...execution,
-          result: {
-            ...execution.result,
-            data: linked,
-          },
-        };
-        recurringSetupFailed = false;
-      } catch (error) {
-        console.warn("[recurring-transaction-link-skipped]", {
-          authenticatedUserPresent: Boolean(args.userId),
-          errorName: error instanceof Error ? error.name : "UnknownError",
-          hasMessage: error instanceof Error && Boolean(error.message),
-        });
-      }
-    }
+    return recurringSetupErrorState();
   }
 
   const result = summarizeAssistantResult(execution.result);

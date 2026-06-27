@@ -63,6 +63,8 @@ function makeTransactionServices(): Pick<
         source: input.source,
         reviewState: input.reviewState ?? "reviewed",
         uncertaintyReason: input.uncertaintyReason ?? null,
+        recurringRuleId: input.recurringRuleId ?? null,
+        recurringOccurrenceDate: input.recurringOccurrenceDate ?? null,
       }),
     ),
     updateTransaction: vi.fn(),
@@ -312,20 +314,9 @@ describe("assistant server integration", () => {
     expect(result.message).toBe("Saved and set to repeat monthly.");
   });
 
-  it("relinks the saved transaction if the first recurring metadata insert falls back", async () => {
+  it("does not create an unmarked transaction when recurring metadata insert fails", async () => {
     const services = makeTransactionServices();
-    services.createTransaction = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("Column recurring_rule_id does not exist"))
-      .mockResolvedValueOnce(makeMutationResult({ merchant: "Rent", itemName: "Rent" }));
-    services.updateTransaction = vi.fn(async (_userId, _transactionId, updates) =>
-      makeMutationResult({
-        merchant: "Rent",
-        itemName: "Rent",
-        recurringRuleId: updates.recurringRuleId ?? null,
-        recurringOccurrenceDate: updates.recurringOccurrenceDate ?? null,
-      }),
-    );
+    services.createTransaction = vi.fn().mockRejectedValueOnce(new Error("Column recurring_rule_id does not exist"));
     const recurringService = {
       createRecurringRule: vi.fn(async () => ({
         id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -362,27 +353,49 @@ describe("assistant server integration", () => {
       recurringService,
     });
 
-    expect(services.createTransaction).toHaveBeenCalledTimes(2);
-    expect(services.createTransaction).toHaveBeenNthCalledWith(
-      2,
+    expect(services.createTransaction).toHaveBeenCalledOnce();
+    expect(services.createTransaction).toHaveBeenCalledWith(
       "user-1",
-      expect.not.objectContaining({
-        recurringRuleId: expect.anything(),
-        recurringOccurrenceDate: expect.anything(),
+      expect.objectContaining({
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-01",
       }),
       { actorType: "ai" },
     );
-    expect(services.updateTransaction).toHaveBeenCalledWith(
-      "user-1",
-      "txn-1",
-      {
-        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        recurringOccurrenceDate: "2026-06-01",
+    expect(services.updateTransaction).not.toHaveBeenCalled();
+    expect(result.status).toBe("error");
+    expect(result.message).toBe("Recurring could not be set up right now. Save without Recurring or try again.");
+  });
+
+  it("does not create a normal transaction when recurring rule setup fails", async () => {
+    const services = makeTransactionServices();
+    const recurringService = {
+      createRecurringRule: vi.fn(async () => {
+        throw new Error("Could not find the table 'public.recurring_rules' in the schema cache");
+      }),
+    };
+
+    const result = await runAssistantCommand({
+      userId: "user-1",
+      input: {
+        toolName: "create_transaction",
+        transactionType: "income",
+        amount: "18.00",
+        itemName: "Recurring 2",
+        currency: "USD",
+        recurringEnabled: true,
+        recurringFrequency: "weekly",
+        recurringStartDate: "2026-06-27",
+        recurringEndDate: "2026-07-27",
       },
-      { actorType: "ai" },
-    );
-    expect(result.status).toBe("success");
-    expect(result.message).toBe("Saved and set to repeat monthly.");
+      transactionService: services,
+      recurringService,
+    });
+
+    expect(recurringService.createRecurringRule).toHaveBeenCalledOnce();
+    expect(services.createTransaction).not.toHaveBeenCalled();
+    expect(result.status).toBe("error");
+    expect(result.message).toBe("Recurring could not be set up right now. Save without Recurring or try again.");
   });
 
   it("builds an update_transaction request with only the submitted fields", () => {
