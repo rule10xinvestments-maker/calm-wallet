@@ -1649,7 +1649,7 @@ describe("insights overview", () => {
     expect(within(donut).getByText("$15")).toBeInTheDocument();
     expect(within(donut).getByText("15%")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("slider", { name: "Drag to select a spending category" })).toHaveAttribute(
+    expect(screen.getByRole("slider", { name: "Selected spending category" })).toHaveAttribute(
       "aria-valuetext",
       "Groceries, $15, 15 percent of spending",
     );
@@ -1659,7 +1659,7 @@ describe("insights overview", () => {
     expect(within(donut).getByText("$18")).toBeInTheDocument();
     expect(within(donut).getByText("18%")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show Utilities entries" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("slider", { name: "Drag to select a spending category" })).toHaveAttribute(
+    expect(screen.getByRole("slider", { name: "Selected spending category" })).toHaveAttribute(
       "aria-valuetext",
       "Utilities, $18, 18 percent of spending",
     );
@@ -1686,10 +1686,10 @@ describe("insights overview", () => {
     expect(donut.querySelector("ellipse")).not.toBeInTheDocument();
     expect(donut.querySelector("circle[r='3.2']")).not.toBeInTheDocument();
     expect(donut.querySelector(".blur-md")).not.toBeInTheDocument();
-    expect(screen.getByRole("slider", { name: "Drag to select a spending category" })).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Selected spending category" })).toBeInTheDocument();
   });
 
-  it("scrubs Mix selection from the inner arrow", () => {
+  it("scrubs Mix selection from the whole chart box", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "mix",
@@ -1703,7 +1703,6 @@ describe("insights overview", () => {
 
     const donut = screen.getByRole("img", { name: "Expenses category share chart" });
     const svg = donut.querySelector("svg")!;
-    const scrubber = screen.getByRole("slider", { name: "Drag to select a spending category" });
     const box = {
       bottom: 120,
       height: 120,
@@ -1719,15 +1718,19 @@ describe("insights overview", () => {
     const releasePointerCapture = vi.fn();
 
     vi.spyOn(svg, "getBoundingClientRect").mockReturnValue(box);
-    Object.assign(scrubber, { releasePointerCapture, setPointerCapture });
+    Object.assign(donut, { releasePointerCapture, setPointerCapture });
 
-    dispatchPointerEvent(scrubber, "pointerdown", { clientX: 60, clientY: 18, pointerId: 1, pointerType: "touch" });
-    dispatchPointerEvent(scrubber, "pointermove", { clientX: 42, clientY: 35, pointerId: 1, pointerType: "touch" });
-    dispatchPointerEvent(scrubber, "pointerup", { pointerId: 1, pointerType: "touch" });
+    dispatchPointerEvent(donut, "pointerdown", { clientX: 60, clientY: 18, pointerId: 1, pointerType: "touch" });
+    dispatchPointerEvent(donut, "pointermove", { clientX: 42, clientY: 35, pointerId: 1, pointerType: "touch" });
+    dispatchPointerEvent(donut, "pointerup", { pointerId: 1, pointerType: "touch" });
 
     expect(within(donut).getByText("Utilities")).toBeInTheDocument();
     expect(within(donut).getByText("$18")).toBeInTheDocument();
     expect(within(donut).getByText("18%")).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Selected spending category" })).toHaveAttribute(
+      "aria-valuetext",
+      "Utilities, $18, 18 percent of spending",
+    );
     expect(setPointerCapture).toHaveBeenCalledWith(1);
     expect(releasePointerCapture).toHaveBeenCalledWith(1);
   });

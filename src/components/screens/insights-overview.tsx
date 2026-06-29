@@ -1431,7 +1431,36 @@ function SpendingMixSummaryChart({
 
   return (
     <div className="space-y-4 rounded-lg border border-slate-100 bg-slate-50/70 p-3">
-      <div className="relative mx-auto aspect-square w-full max-w-[180px]" aria-label={`${segment === "income" ? "Income" : "Expenses"} category share chart`} role="img">
+      <div
+        aria-label={`${segment === "income" ? "Income" : "Expenses"} category share chart`}
+        className="relative mx-auto aspect-square w-full max-w-[180px] cursor-grab touch-none active:cursor-grabbing"
+        onPointerCancel={(event) => {
+          if (scrubPointerIdRef.current === event.pointerId) {
+            scrubPointerIdRef.current = null;
+          }
+        }}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          scrubPointerIdRef.current = event.pointerId;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          selectNearestSegmentFromPointer(event.clientX, event.clientY);
+        }}
+        onPointerMove={(event) => {
+          if (scrubPointerIdRef.current !== event.pointerId) {
+            return;
+          }
+
+          event.preventDefault();
+          selectNearestSegmentFromPointer(event.clientX, event.clientY);
+        }}
+        onPointerUp={(event) => {
+          if (scrubPointerIdRef.current === event.pointerId) {
+            scrubPointerIdRef.current = null;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+        }}
+        role="img"
+      >
         <svg ref={svgRef} className="relative h-full w-full" shapeRendering="geometricPrecision" viewBox="0 0 120 120">
           <defs>
             <linearGradient id={`spending-mix-highlight-${segment}`} x1="25%" x2="75%" y1="10%" y2="90%">
@@ -1495,38 +1524,12 @@ function SpendingMixSummaryChart({
               aria-valuemin={1}
               aria-valuenow={selectedSegmentIndex + 1}
               aria-valuetext={`${selectedItem.label}, ${selectedItem.amountDisplay}, ${selectedItem.percent} percent of ${context}`}
-              aria-label={`Drag to select a ${context} category`}
-              className="cursor-grab touch-none focus:outline-none active:cursor-grabbing"
+              aria-label={`Selected ${context} category`}
+              className="pointer-events-none focus:outline-none"
               d={`M ${selectedArrowPoint.x} ${formatSvgNumber(selectedArrowPoint.y - 5)} L ${formatSvgNumber(selectedArrowPoint.x + 4.5)} ${formatSvgNumber(
                 selectedArrowPoint.y + 3,
               )} L ${formatSvgNumber(selectedArrowPoint.x - 4.5)} ${formatSvgNumber(selectedArrowPoint.y + 3)} Z`}
               fill={selectedItem.color}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                scrubPointerIdRef.current = event.pointerId;
-                event.currentTarget.setPointerCapture(event.pointerId);
-                selectNearestSegmentFromPointer(event.clientX, event.clientY);
-              }}
-              onPointerMove={(event) => {
-                if (scrubPointerIdRef.current !== event.pointerId) {
-                  return;
-                }
-
-                event.preventDefault();
-                selectNearestSegmentFromPointer(event.clientX, event.clientY);
-              }}
-              onPointerUp={(event) => {
-                if (scrubPointerIdRef.current === event.pointerId) {
-                  scrubPointerIdRef.current = null;
-                  event.currentTarget.releasePointerCapture(event.pointerId);
-                }
-              }}
-              onPointerCancel={(event) => {
-                if (scrubPointerIdRef.current === event.pointerId) {
-                  scrubPointerIdRef.current = null;
-                }
-              }}
               onKeyDown={(event) => {
                 if (event.key === "ArrowRight" || event.key === "ArrowDown") {
                   event.preventDefault();
