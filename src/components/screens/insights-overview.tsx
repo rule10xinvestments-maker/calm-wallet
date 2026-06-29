@@ -6,14 +6,12 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { ScreenHeader } from "@/components/shared/screen-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { initialBudgetActionState, type BudgetActionState } from "@/lib/actions/budgets-state";
-import { getCategoryIconByName } from "@/lib/category-icons";
+import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -39,46 +37,6 @@ type InsightsSelectionUpdate = {
   month?: string;
   timeframe?: InsightsData["selectedTimeframe"];
 };
-
-const spendingMixChartColors = [
-  "#0284c7",
-  "#16a34a",
-  "#ca8a04",
-  "#db2777",
-  "#7c3aed",
-  "#0891b2",
-  "#ea580c",
-  "#64748b",
-];
-
-const spendingCategoryColorByLabel: Array<{ pattern: string; color: string }> = [
-  { pattern: "needs", color: "#0284c7" },
-  { pattern: "uncategorized", color: "#0284c7" },
-  { pattern: "housing", color: "#16a34a" },
-  { pattern: "home", color: "#16a34a" },
-  { pattern: "rent", color: "#16a34a" },
-  { pattern: "transfer", color: "#ca8a04" },
-  { pattern: "dining", color: "#db2777" },
-  { pattern: "food", color: "#db2777" },
-  { pattern: "transport", color: "#7c3aed" },
-  { pattern: "taxi", color: "#7c3aed" },
-  { pattern: "car", color: "#7c3aed" },
-  { pattern: "travel", color: "#0891b2" },
-  { pattern: "flight", color: "#0891b2" },
-  { pattern: "plane", color: "#0891b2" },
-  { pattern: "grocer", color: "#ea580c" },
-];
-
-const incomeCategoryChartColors = [
-  "#059669",
-  "#14b8a6",
-  "#22c55e",
-  "#0d9488",
-  "#65a30d",
-  "#06b6d4",
-  "#84cc16",
-  "#64748b",
-];
 
 type InsightsOverviewProps = {
   data: InsightsData;
@@ -735,7 +693,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
 }
 
 function CategoryColorIcon({ label, color, className = "" }: { label: string; color: string; className?: string }) {
-  const CategoryIcon = getSpendingCategoryIcon(label);
+  const CategoryIcon = getCategoryVisualsByName(label).icon;
 
   return (
     <div
@@ -749,15 +707,8 @@ function CategoryColorIcon({ label, color, className = "" }: { label: string; co
   );
 }
 
-function getSpendingCategoryColor(item: { label: string }, index: number) {
-  const normalizedLabel = item.label.toLowerCase();
-  const matched = spendingCategoryColorByLabel.find((entry) => normalizedLabel.includes(entry.pattern));
-
-  return matched?.color ?? spendingMixChartColors[index % spendingMixChartColors.length]!;
-}
-
-function getIncomeCategoryColor(index: number) {
-  return incomeCategoryChartColors[index % incomeCategoryChartColors.length]!;
+function getCategoryChartColor(item: { label: string }) {
+  return getCategoryVisualsByName(item.label).primary;
 }
 
 function buildBarsIncomeCategoryBreakdown(data: InsightsData): SpendingMixCategoryItem[] {
@@ -805,20 +756,19 @@ function TimeframeBarsChart({
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
   const categoryItems = isIncome ? data.incomeCategoryBreakdown : data.categoryBreakdown;
-  const palette = isIncome ? incomeCategoryChartColors : spendingMixChartColors;
-  const categoryColorMap = new Map(categoryItems.map((item, index) => [item.key, isIncome ? getIncomeCategoryColor(index) : getSpendingCategoryColor(item, index)]));
+  const categoryColorMap = new Map(categoryItems.map((item) => [item.key, getCategoryChartColor(item)]));
   const activeBars = data.timeframeBars.filter((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor) > 0);
-  const getSegmentColor = (key: string, index: number) => categoryColorMap.get(key) ?? palette[index % palette.length]!;
+  const getSegmentColor = (key: string, label: string) => categoryColorMap.get(key) ?? getCategoryChartColor({ label });
   const activeLegendItems = Array.from(
     new Map(
       activeBars
         .flatMap((bar) => (isIncome ? bar.incomeSegments : bar.segments))
-        .map((segment, index) => [
+        .map((segment) => [
           segment.key,
           {
             key: segment.key,
             label: segment.label,
-            color: getSegmentColor(segment.key, index),
+            color: getSegmentColor(segment.key, segment.label),
           },
         ]),
     ).values(),
@@ -867,14 +817,14 @@ function TimeframeBarsChart({
                     className="flex h-full overflow-hidden rounded-lg"
                     style={{ width }}
                   >
-                    {segments.map((segment, index) => (
+                    {segments.map((segment) => (
                       <span
                         aria-label={`${label} ${segment.label} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
                         className="h-full"
                         key={segment.key}
                         role="img"
                         style={{
-                          backgroundColor: getSegmentColor(segment.key, index),
+                          backgroundColor: getSegmentColor(segment.key, segment.label),
                           flexBasis: `${Math.max(0, (segment.amountMinor / amountMinor) * 100)}%`,
                         }}
                       />
@@ -914,14 +864,14 @@ function TimeframeBarsChart({
                   style={{ height }}
                 >
                   {segments.length ? (
-                    segments.map((segment, index) => (
+                    segments.map((segment) => (
                       <span
                         aria-label={`${bar.label} ${segment.label} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
                         className="h-full"
                         key={segment.key}
                         role="img"
                         style={{
-                          backgroundColor: getSegmentColor(segment.key, index),
+                          backgroundColor: getSegmentColor(segment.key, segment.label),
                           flexBasis: `${Math.max(0, (segment.amountMinor / amountMinor) * 100)}%`,
                         }}
                       />
@@ -976,9 +926,9 @@ function TimeframeCategoryBreakdown({
 
   return (
     <div className="space-y-3">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
-        const chartColor = isIncome ? getIncomeCategoryColor(index) : getSpendingCategoryColor(item, index);
+        const chartColor = getCategoryChartColor(item);
         const isExpanded = expandedKey === item.key;
         const countLabel = `${percent}% of ${isIncome ? "income" : "spending"} - ${item.transactionCount} ${
           item.transactionCount === 1 ? "transaction" : "transactions"
@@ -1229,24 +1179,14 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   );
 }
 
-function getSpendingCategoryIcon(label: string): LucideIcon {
-  const normalizedLabel = label.toLowerCase();
-
-  if (normalizedLabel.includes("uncategorized") || normalizedLabel.includes("needs")) {
-    return CircleHelp;
-  }
-
-  return getCategoryIconByName(label);
-}
-
 function buildSpendingMixChartItems(items: SpendingMixCategoryItem[]) {
   const total = items.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
 
   return {
     total,
-    items: items.map((item, index) => ({
+    items: items.map((item) => ({
       ...item,
-      color: getSpendingCategoryColor(item, index),
+      color: getCategoryChartColor(item),
       percent: total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0,
     })),
   };
@@ -1422,11 +1362,11 @@ function SpendingMixRows({
 
   return (
     <>
-      {items.map((item, index) => {
+      {items.map((item) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
-        const CategoryIcon = getSpendingCategoryIcon(item.label);
+        const CategoryIcon = getCategoryVisualsByName(item.label).icon;
         const isExpanded = expandedKey === item.key;
-        const chartColor = getSpendingCategoryColor(item, index);
+        const chartColor = getCategoryChartColor(item);
 
         return (
           <div key={item.key} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">

@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
-import { getCategoryIconByName } from "@/lib/category-icons";
+import { getCategoryIconByName, getCategoryVisualsByName } from "@/lib/category-icons";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -215,6 +215,8 @@ export function TransactionItemCard({
   const categoryIconItem = { ...displayItem, categoryLabel: selectedCategoryLabel };
   const CategoryIcon = getCategoryIcon(displayItem);
   const ActionCategoryIcon = getCategoryIcon(categoryIconItem);
+  const categoryVisuals = getCategoryVisualsByName(displayItem.categoryLabel);
+  const actionCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
   const needsReview = displayItem.reviewLabel !== "Reviewed";
   const categoryIconNeedsAttention =
     displayItem.categoryLabel.toLowerCase().includes("uncategorized") || displayItem.categoryLabel.toLowerCase().includes("needs");
@@ -541,9 +543,14 @@ export function TransactionItemCard({
       >
         <span
           aria-label={`${displayItem.categoryLabel} category icon`}
-          className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white ${
+          className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl border ${
             categoryIconNeedsAttention ? "text-amber-700" : "text-sky-700"
           }`}
+          style={
+            categoryIconNeedsAttention
+              ? { backgroundColor: "#FFFFFF", borderColor: "#FDE68A" }
+              : { backgroundColor: categoryVisuals.bg, borderColor: categoryVisuals.border, color: categoryVisuals.primary }
+          }
         >
           <CategoryIcon aria-hidden="true" size={18} strokeWidth={2} />
         </span>
@@ -589,6 +596,15 @@ export function TransactionItemCard({
                     : "border-slate-200 text-sky-700 hover:border-sky-200 hover:bg-sky-50"
                 }`}
                 onClick={toggleCategoryPicker}
+                style={
+                  actionCategoryIconNeedsAttention
+                    ? undefined
+                    : {
+                        backgroundColor: actionCategoryVisuals.bg,
+                        borderColor: actionCategoryVisuals.border,
+                        color: actionCategoryVisuals.primary,
+                      }
+                }
                 type="button"
               >
                 <ActionCategoryIcon aria-hidden="true" size={19} strokeWidth={2.1} />

@@ -15,7 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getCategoryIconByName } from "@/lib/category-icons";
+import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import {
   uploadReceiptImageAction,
@@ -197,7 +197,8 @@ export function AssistantComposer({
   const effectiveManualCategoryId = manualCategoryWasSelected ? manualCategoryId : guessedManualCategoryId;
   const selectedCategory = categoryOptions.find((category) => category.id === effectiveManualCategoryId) ?? null;
   const selectedCategoryLabel = selectedCategory?.label ?? "Other";
-  const SelectedCategoryIcon = getCategoryIconByName(selectedCategoryLabel);
+  const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
+  const SelectedCategoryIcon = selectedCategoryVisuals.icon;
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
@@ -763,35 +764,46 @@ export function AssistantComposer({
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
                   aria-label={`Category: ${selectedCategoryLabel}`}
-                  className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1.5 text-center text-xs font-semibold transition ${
-                    manualOptionalPanel === "category" ? "bg-white text-sky-700 shadow-sm" : "bg-white text-slate-900 hover:text-sky-700"
+                  className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 py-1.5 text-center text-xs font-semibold transition ${
+                    manualOptionalPanel === "category" ? "shadow-sm" : ""
                   }`}
                   onClick={() => setManualOptionalPanel((current) => (current === "category" ? null : "category"))}
+                  style={{
+                    backgroundColor: manualOptionalPanel === "category" ? "#FFFFFF" : selectedCategoryVisuals.bg,
+                    borderColor: selectedCategoryVisuals.border,
+                    color: selectedCategoryVisuals.primary,
+                  }}
                   type="button"
                 >
                   <SelectedCategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
                   <span>Category</span>
-                  <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight text-slate-500">{selectedCategoryLabel}</span>
+                  <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight" style={{ color: selectedCategoryVisuals.primary }}>
+                    {selectedCategoryLabel}
+                  </span>
                 </button>
               </div>
 
               {manualOptionalPanel === "category" ? (
                 <div aria-label="Category picker" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1">
                   {categoryOptions.map((category) => {
-                    const CategoryIcon = getCategoryIconByName(category.label);
+                    const categoryVisuals = getCategoryVisualsByName(category.label);
+                    const CategoryIcon = categoryVisuals.icon;
                     const isSelected = effectiveManualCategoryId === category.id;
 
                     return (
                       <button
                         aria-pressed={isSelected}
-                        className={`flex min-h-10 items-center gap-2 rounded-lg px-2 py-1 text-left text-xs font-semibold ${
-                          isSelected ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-slate-50"
-                        }`}
+                        className="flex min-h-10 items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs font-semibold"
                         key={category.id}
                         onClick={() => {
                           setManualCategoryId(category.id);
                           setManualCategoryWasSelected(true);
                           setManualOptionalPanel(null);
+                        }}
+                        style={{
+                          backgroundColor: isSelected ? categoryVisuals.primary : categoryVisuals.bg,
+                          borderColor: categoryVisuals.border,
+                          color: isSelected ? "#FFFFFF" : categoryVisuals.primary,
                         }}
                         type="button"
                       >
