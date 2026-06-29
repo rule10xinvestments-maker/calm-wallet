@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSpendingMixDonutSegments,
+  clampCategorySharePercentage,
   getNearestTrendPointIndex,
   getMonthStatusClass,
   InsightsOverview,
@@ -326,7 +327,9 @@ function renderInsights(data: InsightsData, options: { loadError?: boolean } = {
 }
 
 function expectCategoryIcon(label: string, iconClass: string, index = 0) {
-  const icon = screen.getAllByRole("img", { name: `${label} chart color and category icon` })[index]!;
+  const icon = screen.getAllByRole("img", {
+    name: new RegExp(`^${label} (?:chart color and category icon|represents \\d+% of (?:spending|income))$`),
+  })[index]!;
 
   expect(icon.querySelector("svg")).toHaveClass(iconClass);
 }
@@ -345,6 +348,15 @@ describe("insights overview", () => {
     expect(getNearestTrendPointIndex(360, 0, 300, 4)).toBe(3);
     expect(getNearestTrendPointIndex(-20, 0, 300, 4)).toBe(0);
     expect(getNearestTrendPointIndex(20, 0, 0, 4)).toBe(0);
+  });
+
+  it("clamps category share ring percentages", () => {
+    expect(clampCategorySharePercentage(undefined)).toBe(0);
+    expect(clampCategorySharePercentage(null)).toBe(0);
+    expect(clampCategorySharePercentage(Number.NaN)).toBe(0);
+    expect(clampCategorySharePercentage(-12)).toBe(0);
+    expect(clampCategorySharePercentage(67)).toBe(67);
+    expect(clampCategorySharePercentage(140)).toBe(100);
   });
 
   beforeEach(() => {
@@ -991,7 +1003,7 @@ describe("insights overview", () => {
 
     expect(groceriesRow).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.click(within(groceriesRow).getByRole("img", { name: "Groceries chart color and category icon" }));
+    fireEvent.click(within(groceriesRow).getByRole("img", { name: "Groceries represents 100% of spending" }));
     expect(within(card).getByText("Market")).toBeInTheDocument();
     expect(within(card).getByText("Apr 21")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-expanded", "true");
@@ -1272,8 +1284,8 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getAllByRole("img", { name: "Needs category chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
-    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#e11d48" });
+    expect(screen.getByRole("img", { name: "Needs category represents 75% of spending" })).toHaveStyle({ color: "#0ea5e9" });
+    expect(screen.getByRole("img", { name: "Dining represents 25% of spending" })).toHaveStyle({ color: "#e11d48" });
     expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review");
     expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
     expect(screen.getByText("$75")).toBeInTheDocument();
@@ -1533,10 +1545,10 @@ describe("insights overview", () => {
     expect(screen.getAllByText("Dining")).toHaveLength(1);
     expect(screen.getAllByText("Transport")).toHaveLength(1);
     expect(screen.queryByLabelText("Expenses category legend")).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Needs category chart color and category icon" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Housing chart color and category icon" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Dining chart color and category icon" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Transport chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Needs category represents 33% of spending" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Housing represents 26% of spending" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Dining represents 22% of spending" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Transport represents 19% of spending" })).toBeInTheDocument();
     expect(screen.getByText("$34")).toBeInTheDocument();
     expect(screen.getAllByText("$30").length).toBeGreaterThan(0);
     expect(screen.queryByText("$52 - 33%")).not.toBeInTheDocument();
@@ -1565,10 +1577,35 @@ describe("insights overview", () => {
     expectCategoryIcon("Transfers", "lucide-arrow-right-left");
     expectCategoryIcon("Transport", "lucide-car");
     expectCategoryIcon("Travel", "lucide-plane");
-    expect(screen.getByRole("img", { name: "Housing chart color and category icon" })).toHaveStyle({ color: "#4f46e5" });
-    expect(screen.getByRole("img", { name: "Transfers chart color and category icon" })).toHaveStyle({ color: "#475569" });
-    expect(screen.getByRole("img", { name: "Transport chart color and category icon" })).toHaveStyle({ color: "#2563eb" });
-    expect(screen.getByRole("img", { name: "Travel chart color and category icon" })).toHaveStyle({ color: "#0ea5e9" });
+    expect(screen.getByRole("img", { name: "Housing represents 38% of spending" })).toHaveStyle({ color: "#4f46e5" });
+    expect(screen.getByRole("img", { name: "Transfers represents 31% of spending" })).toHaveStyle({ color: "#475569" });
+    expect(screen.getByRole("img", { name: "Transport represents 19% of spending" })).toHaveStyle({ color: "#2563eb" });
+    expect(screen.getByRole("img", { name: "Travel represents 13% of spending" })).toHaveStyle({ color: "#0ea5e9" });
+  });
+
+  it("renders intentional percentage rings on Mix category row badges", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 8200, amountDisplay: "$82", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1500, amountDisplay: "$15", transactionCount: 1 }),
+          makeCategory({ key: "utilities", label: "Utilities", amountMinor: 300, amountDisplay: "$3", transactionCount: 1 }),
+          makeCategory({ key: "other", label: "Other", amountMinor: 0, amountDisplay: "$0", transactionCount: 0 }),
+        ],
+      }),
+    );
+
+    const housing = screen.getByRole("img", { name: "Housing represents 82% of spending" });
+    const groceries = screen.getByRole("img", { name: "Groceries represents 15% of spending" });
+    const utilities = screen.getByRole("img", { name: "Utilities represents 3% of spending" });
+    const other = screen.getByRole("img", { name: "Other represents 0% of spending" });
+
+    expect(housing.getAttribute("style")).toContain("#4F46E5 0% 82%");
+    expect(groceries.getAttribute("style")).toContain("#16A34A 0% 15%");
+    expect(utilities.getAttribute("style")).toContain("#F97316 0% 4%");
+    expect(other.getAttribute("style")).not.toContain("conic-gradient");
+    expect(housing.querySelector("svg")).toHaveClass("lucide-house");
   });
 
   it("renders multi-category donuts as rounded arc paths for smoother small slices", () => {
@@ -1639,7 +1676,7 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("button", { name: "Show Groceries entries" })).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.click(screen.getByRole("img", { name: "Groceries chart color and category icon" }));
+    fireEvent.click(screen.getByRole("img", { name: "Groceries represents 100% of spending" }));
     expect(screen.getByText("Corner market")).toBeInTheDocument();
     expect(screen.queryByText("corner market")).not.toBeInTheDocument();
     expect(screen.getByText("Apr 22")).toBeInTheDocument();
@@ -1665,7 +1702,7 @@ describe("insights overview", () => {
     expect(screen.queryByLabelText("Income category legend")).not.toBeInTheDocument();
     expect(screen.queryByText("$50 - 100%")).not.toBeInTheDocument();
     expect(screen.getAllByText("Salary").length).toBeGreaterThan(0);
-    expect(screen.getByRole("img", { name: "Salary chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Salary represents 100% of income" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Salary income share 100%" })).toBeInTheDocument();
     expect(screen.getByText("1 entry")).toBeInTheDocument();
 
@@ -1697,7 +1734,7 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getByRole("img", { name: "Personal chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Personal represents 100% of spending" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Personal spending share 100%" })).toBeInTheDocument();
   });
 
@@ -1740,7 +1777,7 @@ describe("insights overview", () => {
 
     expect(screen.queryByText(/2 tracked transactions need review/)).not.toBeInTheDocument();
     expect(screen.getAllByText("Needs category").length).toBeGreaterThan(0);
-    expect(screen.getByRole("img", { name: "Needs category chart color and category icon" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Needs category represents 100% of spending" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review");
   });
 

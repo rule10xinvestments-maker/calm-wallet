@@ -707,6 +707,52 @@ function CategoryColorIcon({ label, color, className = "" }: { label: string; co
   );
 }
 
+export function clampCategorySharePercentage(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, value));
+}
+
+function CategoryShareIcon({
+  label,
+  percentage,
+  segment,
+  className = "",
+}: {
+  label: string;
+  percentage: number | null | undefined;
+  segment: SpendingMixSegment;
+  className?: string;
+}) {
+  const visuals = getCategoryVisualsByName(label);
+  const CategoryIcon = visuals.icon;
+  const clampedPercentage = clampCategorySharePercentage(percentage);
+  const ringPercentage = clampedPercentage > 0 && clampedPercentage < 4 ? 4 : clampedPercentage;
+  const context = segment === "income" ? "income" : "spending";
+  const ringBackground =
+    ringPercentage <= 0
+      ? visuals.bg
+      : `conic-gradient(${visuals.primary} 0% ${ringPercentage}%, ${visuals.bg} ${ringPercentage}% 100%)`;
+
+  return (
+    <span
+      aria-label={`${label} represents ${clampedPercentage}% of ${context}`}
+      className={`relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${className}`}
+      role="img"
+      style={{ background: ringBackground, borderColor: visuals.border, color: visuals.primary }}
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-[3px] rounded-full"
+        style={{ backgroundColor: visuals.bg }}
+      />
+      <CategoryIcon aria-hidden="true" className="relative h-4 w-4" />
+    </span>
+  );
+}
+
 function getCategoryChartColor(item: { label: string }) {
   return getCategoryVisualsByName(item.label).primary;
 }
@@ -946,7 +992,7 @@ function TimeframeCategoryBreakdown({
                 onClick={() => setExpandedKey(isExpanded ? null : item.key)}
                 type="button"
               >
-                {showIcons ? <CategoryColorIcon className="mt-0.5" color={chartColor} label={item.label} /> : null}
+                {showIcons ? <CategoryShareIcon label={item.label} percentage={percent} segment={segment} /> : null}
                 <span className="min-w-0 space-y-2">
                   <span className="grid grid-cols-[1fr_auto] gap-3">
                     <span className="min-w-0">
@@ -999,7 +1045,7 @@ function TimeframeCategoryBreakdown({
           <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
             <div className={`grid min-w-0 ${showIcons ? "grid-cols-[2rem_1fr] gap-3" : "grid-cols-1"}`}>
               {showIcons ? (
-                <CategoryColorIcon className="mt-0.5" color={chartColor} label={item.label} />
+                <CategoryShareIcon label={item.label} percentage={percent} segment={segment} />
               ) : null}
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1364,7 +1410,6 @@ function SpendingMixRows({
     <>
       {items.map((item) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
-        const CategoryIcon = getCategoryVisualsByName(item.label).icon;
         const isExpanded = expandedKey === item.key;
         const chartColor = getCategoryChartColor(item);
 
@@ -1377,14 +1422,7 @@ function SpendingMixRows({
               onClick={() => setExpandedKey(isExpanded ? null : item.key)}
               type="button"
             >
-              <span
-                aria-label={`${item.label} chart color and category icon`}
-                className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full border"
-                role="img"
-                style={{ backgroundColor: `${chartColor}1A`, borderColor: `${chartColor}33`, color: chartColor }}
-              >
-                <CategoryIcon aria-hidden="true" className="h-4 w-4" />
-              </span>
+              <CategoryShareIcon label={item.label} percentage={percent} segment={segment} />
               <span className="min-w-0 space-y-2">
                 <span className="grid grid-cols-[1fr_auto] gap-3">
                   <span className="min-w-0">
