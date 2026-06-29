@@ -4,25 +4,16 @@ import { useActionState, useEffect, useRef, useState, type FormEvent } from "rea
 import { useFormStatus } from "react-dom";
 import {
   AlertCircle,
-  Car,
   ChevronDown,
   CircleHelp,
-  HeartPulse,
   Pencil,
-  ReceiptText,
   Repeat2,
-  ShoppingBag,
-  ShoppingBasket,
   StickyNote,
-  Tag,
-  Ticket,
   Trash2,
-  Utensils,
-  User,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
+import { getCategoryIconByName } from "@/lib/category-icons";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -152,47 +143,11 @@ function getCategoryIcon(item: TransactionListItem): LucideIcon {
     return CircleHelp;
   }
 
-  if (item.amountTone === "income" || label.includes("income") || label.includes("salary") || label.includes("pay")) {
-    return Wallet;
-  }
-
-  if (label.includes("dining") || label.includes("food")) {
-    return Utensils;
-  }
-
-  if (label.includes("grocer")) {
-    return ShoppingBasket;
-  }
-
-  if (label.includes("travel") || label.includes("transport") || label.includes("taxi") || label.includes("car")) {
-    return Car;
-  }
-
-  if (label.includes("bill") || label.includes("utilit") || label.includes("receipt")) {
-    return ReceiptText;
-  }
-
-  if (label.includes("shopping")) {
-    return ShoppingBag;
-  }
-
-  if (label.includes("personal")) {
-    return User;
-  }
-
-  if (label.includes("health") || label.includes("medical")) {
-    return HeartPulse;
-  }
-
-  if (label.includes("entertain") || label.includes("ticket")) {
-    return Ticket;
-  }
-
   if (item.reviewLabel !== "Reviewed") {
     return AlertCircle;
   }
 
-  return Tag;
+  return getCategoryIconByName(item.categoryLabel);
 }
 
 function getReviewLabel(reviewState: TransactionListItem["reviewState"]) {

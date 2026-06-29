@@ -3,29 +3,17 @@
 import { useActionState, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  ArrowLeftRight,
-  Car,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
-  HeartPulse,
-  House,
-  Plane,
-  ReceiptText,
-  ShoppingBag,
-  ShoppingBasket,
-  Tag,
-  Ticket,
-  Utensils,
-  User,
-  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { ScreenHeader } from "@/components/shared/screen-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { initialBudgetActionState, type BudgetActionState } from "@/lib/actions/budgets-state";
+import { getCategoryIconByName } from "@/lib/category-icons";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -1244,59 +1232,11 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
 function getSpendingCategoryIcon(label: string): LucideIcon {
   const normalizedLabel = label.toLowerCase();
 
-  if (normalizedLabel.includes("income") || normalizedLabel.includes("salary") || normalizedLabel.includes("pay")) {
-    return Wallet;
-  }
-
-  if (normalizedLabel.includes("dining") || normalizedLabel.includes("food")) {
-    return Utensils;
-  }
-
-  if (normalizedLabel.includes("grocer")) {
-    return ShoppingBasket;
-  }
-
-  if (normalizedLabel.includes("housing") || normalizedLabel.includes("home") || normalizedLabel.includes("rent")) {
-    return House;
-  }
-
-  if (normalizedLabel.includes("transfer")) {
-    return ArrowLeftRight;
-  }
-
-  if (normalizedLabel.includes("travel") || normalizedLabel.includes("flight") || normalizedLabel.includes("plane")) {
-    return Plane;
-  }
-
-  if (normalizedLabel.includes("transport") || normalizedLabel.includes("taxi") || normalizedLabel.includes("car")) {
-    return Car;
-  }
-
-  if (normalizedLabel.includes("bill") || normalizedLabel.includes("utilit") || normalizedLabel.includes("receipt")) {
-    return ReceiptText;
-  }
-
-  if (normalizedLabel.includes("shopping")) {
-    return ShoppingBag;
-  }
-
-  if (normalizedLabel.includes("personal")) {
-    return User;
-  }
-
-  if (normalizedLabel.includes("health") || normalizedLabel.includes("medical")) {
-    return HeartPulse;
-  }
-
-  if (normalizedLabel.includes("entertain") || normalizedLabel.includes("ticket")) {
-    return Ticket;
-  }
-
   if (normalizedLabel.includes("uncategorized") || normalizedLabel.includes("needs")) {
     return CircleHelp;
   }
 
-  return Tag;
+  return getCategoryIconByName(label);
 }
 
 function buildSpendingMixChartItems(items: SpendingMixCategoryItem[]) {

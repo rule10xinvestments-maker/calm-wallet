@@ -1317,7 +1317,7 @@ describe("insights overview", () => {
 
     expectCategoryIcon("Needs category", "lucide-circle-help");
     expectCategoryIcon("Housing", "lucide-house");
-    expectCategoryIcon("Transfers", "lucide-arrow-left-right");
+    expectCategoryIcon("Transfers", "lucide-arrow-right-left");
     expectCategoryIcon("Dining", "lucide-utensils");
     expectCategoryIcon("Transport", "lucide-car");
     expectCategoryIcon("Travel", "lucide-plane");
@@ -1562,7 +1562,7 @@ describe("insights overview", () => {
     );
 
     expectCategoryIcon("Housing", "lucide-house");
-    expectCategoryIcon("Transfers", "lucide-arrow-left-right");
+    expectCategoryIcon("Transfers", "lucide-arrow-right-left");
     expectCategoryIcon("Transport", "lucide-car");
     expectCategoryIcon("Travel", "lucide-plane");
     expect(screen.getByRole("img", { name: "Housing chart color and category icon" })).toHaveStyle({ color: "#16a34a" });

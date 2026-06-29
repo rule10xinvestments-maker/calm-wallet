@@ -2,28 +2,20 @@
 
 import { useActionState, useEffect, useState, type FormEvent } from "react";
 import {
-  AlertCircle,
   CalendarDays,
-  Car,
   FileSpreadsheet,
-  HeartPulse,
   History,
   Plus,
   Receipt,
   ReceiptText,
   Repeat2,
-  ShoppingBag,
-  ShoppingBasket,
   StickyNote,
   Store,
-  Tag,
-  Ticket,
-  Utensils,
-  User,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getCategoryIconByName } from "@/lib/category-icons";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import {
   uploadReceiptImageAction,
@@ -126,56 +118,6 @@ const betaActionPanelItems: Array<{
   { id: "manual", label: "Manual", Icon: Plus },
 ];
 
-function getCategoryIcon(label: string, transactionType: "expense" | "income"): LucideIcon {
-  const normalized = label.toLowerCase();
-
-  if (normalized.includes("uncategorized") || normalized.includes("needs")) {
-    return AlertCircle;
-  }
-
-  if (normalized.includes("other")) {
-    return Tag;
-  }
-
-  if (transactionType === "income" || normalized.includes("income") || normalized.includes("salary") || normalized.includes("pay")) {
-    return Wallet;
-  }
-
-  if (normalized.includes("dining") || normalized.includes("restaurant") || normalized.includes("coffee") || normalized.includes("food")) {
-    return Utensils;
-  }
-
-  if (normalized.includes("grocer") || normalized.includes("household")) {
-    return ShoppingBasket;
-  }
-
-  if (normalized.includes("travel") || normalized.includes("transport") || normalized.includes("taxi") || normalized.includes("car")) {
-    return Car;
-  }
-
-  if (normalized.includes("bill") || normalized.includes("utilit") || normalized.includes("receipt")) {
-    return ReceiptText;
-  }
-
-  if (normalized.includes("shopping")) {
-    return ShoppingBag;
-  }
-
-  if (normalized.includes("personal")) {
-    return User;
-  }
-
-  if (normalized.includes("health") || normalized.includes("medical")) {
-    return HeartPulse;
-  }
-
-  if (normalized.includes("entertain") || normalized.includes("ticket")) {
-    return Ticket;
-  }
-
-  return Tag;
-}
-
 function findCategoryByLabel(categories: ControlledCategoryOption[], labels: string[], transactionType: "expense" | "income") {
   return categories.find((category) => {
     const normalized = category.label.toLowerCase();
@@ -255,7 +197,7 @@ export function AssistantComposer({
   const effectiveManualCategoryId = manualCategoryWasSelected ? manualCategoryId : guessedManualCategoryId;
   const selectedCategory = categoryOptions.find((category) => category.id === effectiveManualCategoryId) ?? null;
   const selectedCategoryLabel = selectedCategory?.label ?? "Other";
-  const SelectedCategoryIcon = getCategoryIcon(selectedCategoryLabel, manualTransactionType);
+  const SelectedCategoryIcon = getCategoryIconByName(selectedCategoryLabel);
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
@@ -836,7 +778,7 @@ export function AssistantComposer({
               {manualOptionalPanel === "category" ? (
                 <div aria-label="Category picker" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1">
                   {categoryOptions.map((category) => {
-                    const CategoryIcon = getCategoryIcon(category.label, manualTransactionType);
+                    const CategoryIcon = getCategoryIconByName(category.label);
                     const isSelected = effectiveManualCategoryId === category.id;
 
                     return (
