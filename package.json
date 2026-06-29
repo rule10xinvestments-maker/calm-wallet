@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
+    "check:schema": "node --no-warnings --experimental-strip-types scripts/check-production-schema.ts",
+    "check:prod-schema": "node --no-warnings --experimental-strip-types scripts/check-production-schema.ts --required",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
