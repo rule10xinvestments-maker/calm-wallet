@@ -103,8 +103,9 @@ describe("transaction item card", () => {
     );
 
     expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
-    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
     expect(screen.queryByText("Dining · May 5 · 🔁 Recurring")).not.toBeInTheDocument();
+    expect(screen.queryByText(/🔁|⚠️/)).not.toBeInTheDocument();
 
     rerender(
       <TransactionItemCard
@@ -117,14 +118,15 @@ describe("transaction item card", () => {
       />,
     );
 
-    expect(screen.queryByText(/🔁 Recurring/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Recurring")).not.toBeInTheDocument();
   });
 
   it("shows one calm over-limit status line for expense rows over an active limit", () => {
     renderCard({ item: makeItem({ isOverLimit: true }) });
 
     expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
-    expect(screen.getByText("⚠️ Over limit")).toBeInTheDocument();
+    expect(screen.getByText("Over limit")).toBeInTheDocument();
+    expect(screen.queryByText(/🔁|⚠️/)).not.toBeInTheDocument();
   });
 
   it("does not show over-limit status for income rows", () => {
@@ -136,15 +138,16 @@ describe("transaction item card", () => {
       }),
     });
 
-    expect(screen.queryByText("⚠️ Over limit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Over limit")).not.toBeInTheDocument();
   });
 
   it("shows recurring and over-limit statuses together on normal rows", () => {
     renderCard({ item: makeItem({ isRecurring: true, isOverLimit: true }) });
 
     expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
-    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
-    expect(screen.getByText("⚠️ Over limit")).toBeInTheDocument();
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Over limit")).toBeInTheDocument();
+    expect(screen.queryByText(/🔁|⚠️/)).not.toBeInTheDocument();
   });
 
   it("shows frequency and active or paused state in Recurring mode rows", () => {
@@ -167,7 +170,7 @@ describe("transaction item card", () => {
 
     expect(screen.getByText("Dining · Weekly · Active")).toBeInTheDocument();
     expect(screen.queryByText(/🔁 Recurring/)).not.toBeInTheDocument();
-    expect(screen.queryByText("⚠️ Over limit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Over limit")).not.toBeInTheDocument();
 
     rerender(
       <TransactionItemCard
@@ -208,8 +211,7 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
 
     expect(screen.getByText("Utilities · Jun 26")).toBeInTheDocument();
-    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
-    expect(screen.getByText("Recurring")).toBeInTheDocument();
+    expect(screen.getAllByText("Recurring")).toHaveLength(2);
     expect(screen.getByText("Monthly · Starts Jun 26, 2026 · Until turned off")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit details" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete transaction" })).toBeInTheDocument();
@@ -345,7 +347,7 @@ describe("transaction item card", () => {
     expect(formData.get("recurringRuleId")).toBe("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     expect(await screen.findByText("Bill")).toBeInTheDocument();
     expect(screen.getByText("Dining · Jun 26")).toBeInTheDocument();
-    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getAllByText("Recurring").length).toBeGreaterThanOrEqual(1);
   });
 
   it("resumes a paused recurring transaction from the edit flow", async () => {
@@ -500,6 +502,10 @@ describe("transaction item card", () => {
       "Edit details",
       "Delete transaction",
     ]);
+    const editDetailsIcon = screen.getByRole("button", { name: "Edit details" }).querySelector("svg");
+    expect(editDetailsIcon).toBeInTheDocument();
+    expect(editDetailsIcon).toHaveClass("lucide-sliders-horizontal");
+    expect(editDetailsIcon).not.toHaveClass("lucide-pencil");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark reviewed" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mark tracked" })).not.toBeInTheDocument();

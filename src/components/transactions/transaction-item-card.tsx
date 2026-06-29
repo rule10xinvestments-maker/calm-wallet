@@ -4,10 +4,11 @@ import { useActionState, useEffect, useRef, useState, type FormEvent } from "rea
 import { useFormStatus } from "react-dom";
 import {
   AlertCircle,
+  AlertTriangle,
   ChevronDown,
   CircleHelp,
-  Pencil,
   Repeat2,
+  SlidersHorizontal,
   StickyNote,
   Trash2,
   type LucideIcon,
@@ -571,10 +572,16 @@ export function TransactionItemCard({
           <span className="block break-words text-sm font-medium leading-5 text-slate-900">{formatTransactionTitleForDisplay(displayItem.title)}</span>
           <span className="block text-xs leading-5 text-slate-500">{getRowMetadata(displayItem, recurringMode)}</span>
           {!recurringMode && displayItem.isRecurring ? (
-            <span className="block text-xs leading-5 text-slate-500">🔁 Recurring</span>
+            <span className="flex items-center gap-1.5 text-xs leading-5 text-slate-500">
+              <Repeat2 aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={2.1} />
+              <span>Recurring</span>
+            </span>
           ) : null}
           {!recurringMode && displayItem.amountTone === "expense" && displayItem.isOverLimit ? (
-            <span className="block text-xs font-medium leading-5 text-amber-700">⚠️ Over limit</span>
+            <span className="flex items-center gap-1.5 text-xs font-medium leading-5 text-amber-700">
+              <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={2.1} />
+              <span>Over limit</span>
+            </span>
           ) : null}
           {displayItem.note ? (
             <span className="block truncate text-xs leading-5 text-slate-500" title={`Note: ${displayItem.note}`}>
@@ -653,7 +660,7 @@ export function TransactionItemCard({
                 onClick={toggleDetailsEditor}
                 type="button"
               >
-                <Pencil aria-hidden="true" size={18} strokeWidth={2.1} />
+                <SlidersHorizontal aria-hidden="true" size={18} strokeWidth={2.1} />
               </button>
               <button
                 aria-label="Delete transaction"
