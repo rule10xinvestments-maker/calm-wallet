@@ -1268,8 +1268,9 @@ export type SpendingMixDonutSegment = SpendingMixChartItem & {
   arcPath: string;
 };
 
-const donutCenter = { x: 60, y: 58 };
+const donutCenter = { x: 60, y: 60 };
 const donutRadius = 42;
+const donutArrowRadius = 30;
 const donutGapDegrees = 2.4;
 const donutMinimumSliceDegrees = 7;
 
@@ -1277,12 +1278,12 @@ function formatSvgNumber(value: number) {
   return Number(value.toFixed(3));
 }
 
-function getDonutPoint(angleDegrees: number) {
+function getDonutPoint(angleDegrees: number, radius = donutRadius) {
   const angleRadians = (angleDegrees * Math.PI) / 180;
 
   return {
-    x: formatSvgNumber(donutCenter.x + donutRadius * Math.cos(angleRadians)),
-    y: formatSvgNumber(donutCenter.y + donutRadius * Math.sin(angleRadians)),
+    x: formatSvgNumber(donutCenter.x + radius * Math.cos(angleRadians)),
+    y: formatSvgNumber(donutCenter.y + radius * Math.sin(angleRadians)),
   };
 }
 
@@ -1294,8 +1295,35 @@ function getDonutArcPath(startAngle: number, endAngle: number) {
   return `M ${start.x} ${start.y} A ${donutRadius} ${donutRadius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
 }
 
-function getDonutMidPoint(startAngle: number, endAngle: number) {
-  return getDonutPoint((startAngle + endAngle) / 2);
+function getDonutMidAngle(startAngle: number, endAngle: number) {
+  return (startAngle + endAngle) / 2;
+}
+
+function normalizeDegrees(angle: number) {
+  return ((angle % 360) + 360) % 360;
+}
+
+function getAngleDistance(a: number, b: number) {
+  const delta = Math.abs(normalizeDegrees(a) - normalizeDegrees(b));
+  return Math.min(delta, 360 - delta);
+}
+
+function getNearestDonutSegmentKey(segments: SpendingMixDonutSegment[], x: number, y: number) {
+  if (!segments.length) {
+    return null;
+  }
+
+  const pointerAngle = (Math.atan2(y - donutCenter.y, x - donutCenter.x) * 180) / Math.PI;
+
+  return segments.reduce<{ key: string; distance: number } | null>((nearest, segment) => {
+    const distance = getAngleDistance(pointerAngle, getDonutMidAngle(segment.startAngle, segment.endAngle));
+
+    if (!nearest || distance < nearest.distance) {
+      return { key: segment.key, distance };
+    }
+
+    return nearest;
+  }, null)?.key ?? null;
 }
 
 function normalizeDonutAngles(items: SpendingMixChartItem[], total: number) {
@@ -1356,12 +1384,46 @@ function SpendingMixSummaryChart({
   selectedKey: string | null;
   segment: SpendingMixSegment;
 }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const scrubPointerIdRef = useRef<number | null>(null);
   const donutSegments = buildSpendingMixDonutSegments(chart.items, chart.total);
   const selectedItem = chart.items.find((item) => item.key === selectedKey) ?? donutSegments[0] ?? chart.items[0] ?? null;
   const selectedSegment = donutSegments.find((item) => item.key === selectedItem?.key) ?? null;
-  const selectedDot = selectedSegment ? getDonutMidPoint(selectedSegment.startAngle, selectedSegment.endAngle) : null;
+  const selectedSegmentIndex = selectedSegment ? donutSegments.findIndex((item) => item.key === selectedSegment.key) : -1;
+  const selectedAngle = selectedSegment ? getDonutMidAngle(selectedSegment.startAngle, selectedSegment.endAngle) : null;
+  const selectedArrowPoint = selectedAngle === null ? null : getDonutPoint(selectedAngle, donutArrowRadius);
   const SelectedIcon = selectedItem ? getCategoryVisualsByName(selectedItem.label).icon : null;
   const context = segment === "income" ? "income" : "spending";
+
+  function selectNearestSegmentFromPointer(clientX: number, clientY: number) {
+    const svg = svgRef.current;
+
+    if (!svg) {
+      return;
+    }
+
+    const rect = svg.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      return;
+    }
+
+    const svgX = ((clientX - rect.left) / rect.width) * 120;
+    const svgY = ((clientY - rect.top) / rect.height) * 120;
+    const nearestKey = getNearestDonutSegmentKey(donutSegments, svgX, svgY);
+
+    if (nearestKey) {
+      onSelect(nearestKey);
+    }
+  }
+
+  function selectSegmentByOffset(offset: number) {
+    if (selectedSegmentIndex < 0 || !donutSegments.length) {
+      return;
+    }
+
+    const nextIndex = (selectedSegmentIndex + offset + donutSegments.length) % donutSegments.length;
+    onSelect(donutSegments[nextIndex]!.key);
+  }
 
   if (!chart.items.length || chart.total <= 0) {
     return null;
@@ -1370,8 +1432,7 @@ function SpendingMixSummaryChart({
   return (
     <div className="space-y-4 rounded-lg border border-slate-100 bg-slate-50/70 p-3">
       <div className="relative mx-auto aspect-square w-full max-w-[180px]" aria-label={`${segment === "income" ? "Income" : "Expenses"} category share chart`} role="img">
-        <div className="absolute inset-x-[19%] bottom-[10%] h-7 rounded-full bg-slate-300/40 blur-md" />
-        <svg className="relative h-full w-full drop-shadow-sm" shapeRendering="geometricPrecision" viewBox="0 0 120 120">
+        <svg ref={svgRef} className="relative h-full w-full" shapeRendering="geometricPrecision" viewBox="0 0 120 120">
           <defs>
             <linearGradient id={`spending-mix-highlight-${segment}`} x1="25%" x2="75%" y1="10%" y2="90%">
               <stop offset="0%" stopColor="white" stopOpacity="0.72" />
@@ -1379,14 +1440,13 @@ function SpendingMixSummaryChart({
               <stop offset="100%" stopColor="black" stopOpacity="0.1" />
             </linearGradient>
           </defs>
-          <ellipse cx="60" cy="67" fill="#cbd5e1" opacity="0.5" rx="43" ry="38" />
-          <circle cx="60" cy="58" fill="none" r={donutRadius} stroke="#e2e8f0" strokeWidth="16" />
+          <circle cx={donutCenter.x} cy={donutCenter.y} fill="none" r={donutRadius} stroke="#e2e8f0" strokeWidth="16" />
           {donutSegments.length === 1 ? (
             <circle
               aria-label={`${donutSegments[0]!.label}, ${donutSegments[0]!.amountDisplay}, ${donutSegments[0]!.percent} percent of ${context}`}
               className="cursor-pointer focus:outline-none"
-              cx="60"
-              cy="58"
+              cx={donutCenter.x}
+              cy={donutCenter.y}
               fill="none"
               onClick={() => onSelect(donutSegments[0]!.key)}
               onKeyDown={(event) => {
@@ -1399,7 +1459,7 @@ function SpendingMixSummaryChart({
               role="button"
               stroke={donutSegments[0]!.color}
               strokeLinejoin="round"
-              strokeWidth={donutSegments[0]!.key === selectedItem?.key ? "18" : "16"}
+              strokeWidth={donutSegments[0]!.key === selectedItem?.key ? "17" : "16"}
               tabIndex={0}
             />
           ) : (
@@ -1420,29 +1480,85 @@ function SpendingMixSummaryChart({
                 opacity={item.key === selectedItem?.key ? 1 : 0.72}
                 role="button"
                 stroke={item.color}
-                strokeLinecap="round"
+                strokeLinecap="butt"
                 strokeLinejoin="round"
-                strokeWidth={item.key === selectedItem?.key ? "18" : "15"}
+                strokeWidth={item.key === selectedItem?.key ? "17" : "15"}
                 tabIndex={0}
               />
             ))
           )}
-          {selectedDot ? (
-            <circle
-              aria-hidden="true"
-              cx={selectedDot.x}
-              cy={selectedDot.y}
-              fill={selectedItem?.color ?? "#64748b"}
-              r="3.2"
+          <circle cx={donutCenter.x} cy={donutCenter.y} fill="none" r="33" stroke={`url(#spending-mix-highlight-${segment})`} strokeWidth="2" />
+          <circle cx={donutCenter.x} cy={donutCenter.y} fill="#f8fafc" r="27" />
+          {selectedArrowPoint && selectedItem && selectedAngle !== null ? (
+            <path
+              aria-valuemax={donutSegments.length}
+              aria-valuemin={1}
+              aria-valuenow={selectedSegmentIndex + 1}
+              aria-valuetext={`${selectedItem.label}, ${selectedItem.amountDisplay}, ${selectedItem.percent} percent of ${context}`}
+              aria-label={`Drag to select a ${context} category`}
+              className="cursor-grab touch-none focus:outline-none active:cursor-grabbing"
+              d={`M ${selectedArrowPoint.x} ${formatSvgNumber(selectedArrowPoint.y - 5)} L ${formatSvgNumber(selectedArrowPoint.x + 4.5)} ${formatSvgNumber(
+                selectedArrowPoint.y + 3,
+              )} L ${formatSvgNumber(selectedArrowPoint.x - 4.5)} ${formatSvgNumber(selectedArrowPoint.y + 3)} Z`}
+              fill={selectedItem.color}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                scrubPointerIdRef.current = event.pointerId;
+                event.currentTarget.setPointerCapture(event.pointerId);
+                selectNearestSegmentFromPointer(event.clientX, event.clientY);
+              }}
+              onPointerMove={(event) => {
+                if (scrubPointerIdRef.current !== event.pointerId) {
+                  return;
+                }
+
+                event.preventDefault();
+                selectNearestSegmentFromPointer(event.clientX, event.clientY);
+              }}
+              onPointerUp={(event) => {
+                if (scrubPointerIdRef.current === event.pointerId) {
+                  scrubPointerIdRef.current = null;
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }
+              }}
+              onPointerCancel={(event) => {
+                if (scrubPointerIdRef.current === event.pointerId) {
+                  scrubPointerIdRef.current = null;
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                  event.preventDefault();
+                  selectSegmentByOffset(1);
+                }
+
+                if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  selectSegmentByOffset(-1);
+                }
+
+                if (event.key === "Home") {
+                  event.preventDefault();
+                  onSelect(donutSegments[0]!.key);
+                }
+
+                if (event.key === "End") {
+                  event.preventDefault();
+                  onSelect(donutSegments[donutSegments.length - 1]!.key);
+                }
+              }}
+              role="slider"
               stroke="#ffffff"
-              strokeWidth="1.8"
+              strokeLinejoin="round"
+              strokeWidth="1.4"
+              tabIndex={0}
+              transform={`rotate(${formatSvgNumber(selectedAngle + 90)} ${selectedArrowPoint.x} ${selectedArrowPoint.y})`}
             />
           ) : null}
-          <circle cx="60" cy="58" fill="none" r="33" stroke={`url(#spending-mix-highlight-${segment})`} strokeWidth="2" />
-          <circle cx="60" cy="58" fill="#f8fafc" r="27" />
         </svg>
         {selectedItem ? (
-          <div className="pointer-events-none absolute left-1/2 top-[48%] flex w-[4.6rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
+          <div className="pointer-events-none absolute left-1/2 top-1/2 flex w-[4.5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
             {SelectedIcon ? <SelectedIcon aria-hidden="true" className="mb-0.5 h-3.5 w-3.5 shrink-0" style={{ color: selectedItem.color }} /> : null}
             <p className="w-full truncate text-[10px] font-semibold leading-3 text-slate-900">{selectedItem.label}</p>
             <p className="mt-0.5 w-full truncate text-[9px] font-semibold leading-3 text-slate-700">{selectedItem.amountDisplay}</p>

@@ -12,12 +12,13 @@ import type { InsightsData } from "@/lib/server/transactions-read-model";
 
 function dispatchPointerEvent(
   element: Element,
-  type: "pointerdown" | "pointermove",
-  init: { clientX: number; pointerId: number; pointerType: string },
+  type: "pointerdown" | "pointermove" | "pointerup",
+  init: { clientX?: number; clientY?: number; pointerId: number; pointerType: string },
 ) {
   const event = new Event(type, { bubbles: true });
   Object.defineProperties(event, {
-    clientX: { value: init.clientX },
+    clientX: { value: init.clientX ?? 0 },
+    clientY: { value: init.clientY ?? 0 },
     pointerId: { value: init.pointerId },
     pointerType: { value: init.pointerType },
   });
@@ -1648,15 +1649,23 @@ describe("insights overview", () => {
     expect(within(donut).getByText("$15")).toBeInTheDocument();
     expect(within(donut).getByText("15%")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("slider", { name: "Drag to select a spending category" })).toHaveAttribute(
+      "aria-valuetext",
+      "Groceries, $15, 15 percent of spending",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Utilities, $18, 18 percent of spending" }));
     expect(within(donut).getByText("Utilities")).toBeInTheDocument();
     expect(within(donut).getByText("$18")).toBeInTheDocument();
     expect(within(donut).getByText("18%")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show Utilities entries" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("slider", { name: "Drag to select a spending category" })).toHaveAttribute(
+      "aria-valuetext",
+      "Utilities, $18, 18 percent of spending",
+    );
   });
 
-  it("renders multi-category donuts as rounded arc paths for smoother small slices", () => {
+  it("renders multi-category donuts as clean separated arcs without loose markers", () => {
     const { container } = renderInsights(
       makeInsightsData({
         selectedChartMode: "mix",
@@ -1669,11 +1678,58 @@ describe("insights overview", () => {
     );
 
     const donut = screen.getByRole("img", { name: "Expenses category share chart" });
-    const slicePaths = donut.querySelectorAll("path[stroke-linecap='round'][stroke-linejoin='round']");
+    const slicePaths = donut.querySelectorAll("path[stroke-linecap='butt'][stroke-linejoin='round']");
 
     expect(slicePaths).toHaveLength(3);
     expect(container.querySelector("svg[shape-rendering='geometricPrecision']")).toBeInTheDocument();
     expect(container.querySelector("[stroke-dasharray]")).not.toBeInTheDocument();
+    expect(donut.querySelector("ellipse")).not.toBeInTheDocument();
+    expect(donut.querySelector("circle[r='3.2']")).not.toBeInTheDocument();
+    expect(donut.querySelector(".blur-md")).not.toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Drag to select a spending category" })).toBeInTheDocument();
+  });
+
+  it("scrubs Mix selection from the inner arrow", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 6700, amountDisplay: "$67", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1500, amountDisplay: "$15", transactionCount: 1 }),
+          makeCategory({ key: "utilities", label: "Utilities", amountMinor: 1800, amountDisplay: "$18", transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    const donut = screen.getByRole("img", { name: "Expenses category share chart" });
+    const svg = donut.querySelector("svg")!;
+    const scrubber = screen.getByRole("slider", { name: "Drag to select a spending category" });
+    const box = {
+      bottom: 120,
+      height: 120,
+      left: 0,
+      right: 120,
+      toJSON: () => ({}),
+      top: 0,
+      width: 120,
+      x: 0,
+      y: 0,
+    } as DOMRect;
+    const setPointerCapture = vi.fn();
+    const releasePointerCapture = vi.fn();
+
+    vi.spyOn(svg, "getBoundingClientRect").mockReturnValue(box);
+    Object.assign(scrubber, { releasePointerCapture, setPointerCapture });
+
+    dispatchPointerEvent(scrubber, "pointerdown", { clientX: 60, clientY: 18, pointerId: 1, pointerType: "touch" });
+    dispatchPointerEvent(scrubber, "pointermove", { clientX: 42, clientY: 35, pointerId: 1, pointerType: "touch" });
+    dispatchPointerEvent(scrubber, "pointerup", { pointerId: 1, pointerType: "touch" });
+
+    expect(within(donut).getByText("Utilities")).toBeInTheDocument();
+    expect(within(donut).getByText("$18")).toBeInTheDocument();
+    expect(within(donut).getByText("18%")).toBeInTheDocument();
+    expect(setPointerCapture).toHaveBeenCalledWith(1);
+    expect(releasePointerCapture).toHaveBeenCalledWith(1);
   });
 
   it("keeps tiny nonzero donut slices above the minimum visual angle", () => {
