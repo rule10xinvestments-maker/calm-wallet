@@ -20,7 +20,7 @@ describe("bottom navigation", () => {
     const activity = screen.getByRole("link", { name: /activity/i });
 
     expect(assistant).toHaveClass("bg-sky-50");
-    expect(assistant.querySelector("svg")).toHaveClass("lucide-sparkles");
+    expect(assistant.querySelector("svg")).toHaveClass("lucide-notebook-pen");
     expect(activity).not.toHaveClass("bg-sky-50");
 
     activity.addEventListener("click", (event) => event.preventDefault(), { once: true });
