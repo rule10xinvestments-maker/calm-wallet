@@ -18,6 +18,10 @@ const expectedIcons = [
   ["Refunds", "lucide-rotate-ccw"],
   ["Gifts", "lucide-gift"],
   ["Transfers", "lucide-arrow-right-left"],
+  ["Investments", "lucide-trending-up"],
+  ["Sales", "lucide-store"],
+  ["Rental income", "lucide-building-2"],
+  ["Side income", "lucide-coins"],
   ["Other", "lucide-tag"],
 ] as const;
 
@@ -37,6 +41,10 @@ const expectedVisuals = [
   ["Refunds", "#65A30D", "#ECFCCB", "#BEF264"],
   ["Gifts", "#C026D3", "#FAE8FF", "#E879F9"],
   ["Transfers", "#475569", "#E2E8F0", "#CBD5E1"],
+  ["Investments", "#0F766E", "#CCFBF1", "#5EEAD4"],
+  ["Sales", "#7C3AED", "#EDE9FE", "#C4B5FD"],
+  ["Rental income", "#0369A1", "#E0F2FE", "#7DD3FC"],
+  ["Side income", "#9333EA", "#F3E8FF", "#D8B4FE"],
   ["Other", "#CA8A04", "#FEF9C3", "#FDE047"],
   ["Needs category", "#0EA5E9", "#E0F2FE", "#7DD3FC"],
 ] as const;

@@ -13,10 +13,13 @@ values
   ('education', 'Education', 'expense', 'Courses, books, tuition, and learning tools.', 100),
   ('salary', 'Salary', 'income', 'Primary employment income.', 110),
   ('self_employment', 'Self-employment', 'income', 'Freelance, contract, and business income.', 120),
-  ('investment_income', 'Investments', 'income', 'Investment gains, dividends, and crypto income.', 125),
+  ('investment_income', 'Investments', 'both', 'Investment gains, dividends, crypto income, and investment purchases.', 125),
   ('refunds', 'Refunds', 'income', 'Refunds, reimbursements, and returned purchases.', 130),
   ('gifts', 'Gifts', 'both', 'Money given or received as gifts.', 140),
   ('transfers', 'Transfers', 'both', 'Internal transfers or balance movements.', 150),
+  ('sales', 'Sales', 'income', 'Sale proceeds and marketplace income.', 152),
+  ('rental_income', 'Rental income', 'income', 'Income from rented property or space.', 154),
+  ('side_income', 'Side income', 'income', 'Occasional income from side work and small projects.', 156),
   ('other', 'Other', 'both', 'A controlled fallback for items that do not fit elsewhere yet.', 160)
 on conflict (slug) do update
 set

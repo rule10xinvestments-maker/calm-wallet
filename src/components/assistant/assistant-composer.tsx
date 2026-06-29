@@ -49,6 +49,7 @@ type UploadFlowState = {
 type ActionPanel = "receipt" | "statement" | "recent" | "manual";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
+type ManualCategoryOption = ControlledCategoryOption & { isSynthetic?: boolean };
 
 const initialUploadFlowState: UploadFlowState = {
   status: "idle",
@@ -61,6 +62,66 @@ const receiptImageMaxBytes = 5 * 1024 * 1024;
 const safeReceiptImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const safeCsvMimeTypes = new Set(["text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"]);
 const manualCurrencyOptions = ["RON", "EUR", "USD", "GBP"] as const;
+const manualSpendCategoryLabels = [
+  "Housing",
+  "Groceries",
+  "Dining",
+  "Transport",
+  "Utilities",
+  "Health",
+  "Shopping",
+  "Entertainment",
+  "Travel",
+  "Education",
+  "Gifts",
+  "Transfers",
+  "Investments",
+  "Other",
+] as const;
+const manualIncomeCategoryLabels = [
+  "Salary",
+  "Self-employment",
+  "Refunds",
+  "Gifts",
+  "Sales",
+  "Investments",
+  "Rental income",
+  "Transfers",
+  "Side income",
+  "Other",
+] as const;
+
+function normalizeManualCategoryKey(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[_/]+/g, " ")
+    .replace(/[â€“â€”]/g, "-")
+    .replace(/\s+/g, " ");
+}
+
+function syntheticManualCategoryId(label: string) {
+  return `manual-default-${normalizeManualCategoryKey(label).replace(/[^a-z0-9]+/g, "-")}`;
+}
+
+function buildManualCategoryOptions(categories: ControlledCategoryOption[], transactionType: "expense" | "income"): ManualCategoryOption[] {
+  const labels = transactionType === "income" ? manualIncomeCategoryLabels : manualSpendCategoryLabels;
+
+  return labels.map((label) => {
+    const normalizedLabel = normalizeManualCategoryKey(label);
+    const category = categories.find((option) => normalizeManualCategoryKey(option.label) === normalizedLabel || normalizeManualCategoryKey(option.slug) === normalizedLabel);
+
+    return (
+      category ?? {
+        id: syntheticManualCategoryId(label),
+        slug: normalizedLabel.replace(/[^a-z0-9]+/g, "_"),
+        label,
+        direction: transactionType,
+        isSynthetic: true,
+      }
+    );
+  });
+}
 
 function fileMatchesImportType(importType: "receipt_image" | "csv_import", file: File) {
   if (importType === "receipt_image") {
@@ -188,6 +249,7 @@ export function AssistantComposer({
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
   const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
+  const manualCategoryOptions = buildManualCategoryOptions(categoryOptions, manualTransactionType);
   const guessedManualCategoryId = guessManualCategoryId({
     categories: categoryOptions,
     merchant: manualMerchant,
@@ -195,10 +257,14 @@ export function AssistantComposer({
     transactionType: manualTransactionType,
   });
   const effectiveManualCategoryId = manualCategoryWasSelected ? manualCategoryId : guessedManualCategoryId;
-  const selectedCategory = categoryOptions.find((category) => category.id === effectiveManualCategoryId) ?? null;
+  const selectedCategory: ManualCategoryOption | null =
+    manualCategoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
+    categoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
+    null;
   const selectedCategoryLabel = selectedCategory?.label ?? "Other";
   const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
   const SelectedCategoryIcon = selectedCategoryVisuals.icon;
+  const submittedManualCategoryId = selectedCategory?.isSynthetic ? "" : effectiveManualCategoryId;
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
@@ -284,10 +350,12 @@ export function AssistantComposer({
     }
 
     const selected = categoryOptions.find((category) => category.id === manualCategoryId);
-    const categoryStillValid = selected && (!selected.direction || selected.direction === "both" || selected.direction === type);
+    const nextManualCategories = buildManualCategoryOptions(categoryOptions, type);
+    const categoryStillValid = selected && nextManualCategories.some((category) => category.id === selected.id);
 
     if (!categoryStillValid) {
       setManualCategoryWasSelected(false);
+      setManualCategoryId(findCategoryByLabel(categoryOptions, ["other"], type)?.id ?? "");
     }
   }
 
@@ -678,7 +746,7 @@ export function AssistantComposer({
             >
               <input name="toolName" type="hidden" value="create_transaction" />
               <input name="transactionType" type="hidden" value={manualTransactionType} />
-              {effectiveManualCategoryId ? <input name="categoryId" type="hidden" value={effectiveManualCategoryId} /> : null}
+              {submittedManualCategoryId ? <input name="categoryId" type="hidden" value={submittedManualCategoryId} /> : null}
               <input name="categoryLabel" type="hidden" value={selectedCategoryLabel} />
               {manualDate ? <input name="occurredAt" type="hidden" value={manualDate} /> : null}
               {manualMerchant.trim() ? <input name="merchant" type="hidden" value={manualMerchant} /> : null}
@@ -764,20 +832,15 @@ export function AssistantComposer({
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
                   aria-label={`Category: ${selectedCategoryLabel}`}
-                  className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 py-1.5 text-center text-xs font-semibold transition ${
-                    manualOptionalPanel === "category" ? "shadow-sm" : ""
+                  className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border bg-white px-1.5 py-1.5 text-center text-xs font-semibold text-slate-700 transition ${
+                    manualOptionalPanel === "category" ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-slate-50"
                   }`}
                   onClick={() => setManualOptionalPanel((current) => (current === "category" ? null : "category"))}
-                  style={{
-                    backgroundColor: manualOptionalPanel === "category" ? "#FFFFFF" : selectedCategoryVisuals.bg,
-                    borderColor: selectedCategoryVisuals.border,
-                    color: selectedCategoryVisuals.primary,
-                  }}
                   type="button"
                 >
-                  <SelectedCategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                  <SelectedCategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} style={{ color: selectedCategoryVisuals.primary }} />
                   <span>Category</span>
-                  <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight" style={{ color: selectedCategoryVisuals.primary }}>
+                  <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight text-slate-600">
                     {selectedCategoryLabel}
                   </span>
                 </button>
@@ -785,7 +848,7 @@ export function AssistantComposer({
 
               {manualOptionalPanel === "category" ? (
                 <div aria-label="Category picker" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1">
-                  {categoryOptions.map((category) => {
+                  {manualCategoryOptions.map((category) => {
                     const categoryVisuals = getCategoryVisualsByName(category.label);
                     const CategoryIcon = categoryVisuals.icon;
                     const isSelected = effectiveManualCategoryId === category.id;
@@ -793,7 +856,9 @@ export function AssistantComposer({
                     return (
                       <button
                         aria-pressed={isSelected}
-                        className="flex min-h-10 items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs font-semibold"
+                        className={`flex min-h-10 items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs font-semibold transition ${
+                          isSelected ? "shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
                         key={category.id}
                         onClick={() => {
                           setManualCategoryId(category.id);
@@ -801,13 +866,18 @@ export function AssistantComposer({
                           setManualOptionalPanel(null);
                         }}
                         style={{
-                          backgroundColor: isSelected ? categoryVisuals.primary : categoryVisuals.bg,
-                          borderColor: categoryVisuals.border,
-                          color: isSelected ? "#FFFFFF" : categoryVisuals.primary,
+                          backgroundColor: isSelected ? categoryVisuals.primary : "#FFFFFF",
+                          borderColor: isSelected ? categoryVisuals.primary : "#E2E8F0",
+                          color: isSelected ? "#FFFFFF" : "#334155",
                         }}
                         type="button"
                       >
-                        <CategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                        <CategoryIcon
+                          aria-hidden="true"
+                          className="size-4 shrink-0"
+                          strokeWidth={2.1}
+                          style={{ color: isSelected ? "#FFFFFF" : categoryVisuals.primary }}
+                        />
                         <span className="truncate">{category.label}</span>
                       </button>
                     );

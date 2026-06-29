@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
 import type { AssistantActionState } from "@/lib/server/assistant";
@@ -53,6 +53,40 @@ function openImportUpload() {
 
 function openManualEntry() {
   fireEvent.click(screen.getByRole("button", { name: "Manual" }));
+}
+
+const manualCategoryOptions: ControlledCategoryOption[] = [
+  { id: "category-housing", slug: "housing", label: "Housing", direction: "expense" },
+  { id: "category-groceries", slug: "groceries", label: "Groceries", direction: "expense" },
+  { id: "category-dining", slug: "dining", label: "Dining", direction: "expense" },
+  { id: "category-transport", slug: "transport", label: "Transport", direction: "expense" },
+  { id: "category-utilities", slug: "utilities", label: "Utilities", direction: "expense" },
+  { id: "category-health", slug: "health", label: "Health", direction: "expense" },
+  { id: "category-shopping", slug: "shopping", label: "Shopping", direction: "expense" },
+  { id: "category-entertainment", slug: "entertainment", label: "Entertainment", direction: "expense" },
+  { id: "category-travel", slug: "travel", label: "Travel", direction: "expense" },
+  { id: "category-education", slug: "education", label: "Education", direction: "expense" },
+  { id: "category-salary", slug: "salary", label: "Salary", direction: "income" },
+  { id: "category-self-employment", slug: "self_employment", label: "Self-employment", direction: "income" },
+  { id: "category-refunds", slug: "refunds", label: "Refunds", direction: "income" },
+  { id: "category-gifts", slug: "gifts", label: "Gifts", direction: "both" },
+  { id: "category-transfers", slug: "transfers", label: "Transfers", direction: "both" },
+  { id: "category-investments", slug: "investment_income", label: "Investments", direction: "both" },
+  { id: "category-sales", slug: "sales", label: "Sales", direction: "income" },
+  { id: "category-rental-income", slug: "rental_income", label: "Rental income", direction: "income" },
+  { id: "category-side-income", slug: "side_income", label: "Side income", direction: "income" },
+  { id: "category-other", slug: "other", label: "Other", direction: "both" },
+];
+
+function openManualCategoryPicker() {
+  fireEvent.click(screen.getByRole("button", { name: /^Category:/ }));
+  return screen.getByLabelText("Category picker");
+}
+
+function pickerCategoryLabels() {
+  return within(screen.getByLabelText("Category picker"))
+    .getAllByRole("button")
+    .map((button) => button.textContent);
 }
 
 describe("assistant composer", () => {
@@ -324,6 +358,73 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
   });
 
+  it("shows a type-aware even Manual category picker for Spend and Income", () => {
+    renderComposer(undefined, [], undefined, manualCategoryOptions);
+
+    openManualEntry();
+    openManualCategoryPicker();
+
+    expect(pickerCategoryLabels()).toEqual([
+      "Housing",
+      "Groceries",
+      "Dining",
+      "Transport",
+      "Utilities",
+      "Health",
+      "Shopping",
+      "Entertainment",
+      "Travel",
+      "Education",
+      "Gifts",
+      "Transfers",
+      "Investments",
+      "Other",
+    ]);
+    expect(pickerCategoryLabels()).toHaveLength(14);
+    expect(within(screen.getByLabelText("Category picker")).queryByRole("button", { name: "Salary" })).not.toBeInTheDocument();
+    expect(within(screen.getByLabelText("Category picker")).queryByRole("button", { name: "Self-employment" })).not.toBeInTheDocument();
+    expect(within(screen.getByLabelText("Category picker")).queryByRole("button", { name: "Sales" })).not.toBeInTheDocument();
+    expect(within(screen.getByLabelText("Category picker")).queryByRole("button", { name: "Rental income" })).not.toBeInTheDocument();
+    expect(within(screen.getByLabelText("Category picker")).queryByRole("button", { name: "Side income" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(pickerCategoryLabels()).toEqual([
+      "Salary",
+      "Self-employment",
+      "Refunds",
+      "Gifts",
+      "Sales",
+      "Investments",
+      "Rental income",
+      "Transfers",
+      "Side income",
+      "Other",
+    ]);
+    expect(pickerCategoryLabels()).toHaveLength(10);
+    for (const expenseOnlyLabel of ["Groceries", "Housing", "Dining", "Transport", "Utilities", "Health", "Shopping", "Entertainment", "Travel", "Education"]) {
+      expect(within(screen.getByLabelText("Category picker")).queryByRole("button", { name: expenseOnlyLabel })).not.toBeInTheDocument();
+    }
+  });
+
+  it("keeps Manual category picker buttons calm while leaving the selected category obvious", () => {
+    renderComposer(undefined, [], undefined, manualCategoryOptions);
+
+    openManualEntry();
+    const picker = openManualCategoryPicker();
+    const groceries = within(picker).getByRole("button", { name: "Groceries" });
+
+    expect(groceries).toHaveStyle({ backgroundColor: "#ffffff", color: "#334155" });
+    expect(groceries.querySelector(".lucide-shopping-basket")).toHaveStyle({ color: "#16a34a" });
+
+    fireEvent.click(groceries);
+    openManualCategoryPicker();
+
+    const selectedGroceries = within(screen.getByLabelText("Category picker")).getByRole("button", { name: "Groceries" });
+    expect(selectedGroceries).toHaveAttribute("aria-pressed", "true");
+    expect(selectedGroceries).toHaveStyle({ backgroundColor: "#16a34a", color: "#ffffff" });
+  });
+
   it("resets a manually selected category only when it is invalid for the new intent", () => {
     const categoryOptions: ControlledCategoryOption[] = [
       { id: "category-other", slug: "other", label: "Other", direction: "both" },
@@ -338,6 +439,39 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
+  });
+
+  it("preserves shared Manual categories and resets invalid categories when toggling Spend and Income", () => {
+    renderComposer(undefined, [], undefined, manualCategoryOptions);
+
+    openManualEntry();
+    openManualCategoryPicker();
+    fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
+
+    openManualCategoryPicker();
+    fireEvent.click(screen.getByRole("button", { name: "Transfers" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spend" }));
+    expect(screen.getByRole("button", { name: "Category: Transfers" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    openManualCategoryPicker();
+    fireEvent.click(screen.getByRole("button", { name: "Investments" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spend" }));
+    expect(screen.getByRole("button", { name: "Category: Investments" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    openManualCategoryPicker();
+    fireEvent.click(screen.getByRole("button", { name: "Salary" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spend" }));
+    expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    openManualCategoryPicker();
+    fireEvent.click(screen.getByRole("button", { name: "Side income" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spend" }));
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
   });
 
@@ -451,6 +585,34 @@ describe("assistant composer", () => {
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(2));
     expect(action.mock.calls[1]![1].get("transactionType")).toBe("income");
+  });
+
+  it("submits the selected type-aware Manual category when saving", async () => {
+    const action = vi.fn(async (state: AssistantActionState, formData: FormData): Promise<AssistantActionState> => {
+      void state;
+      void formData;
+
+      return {
+        status: "success",
+        message: "Saved.",
+        reviewState: null,
+        latestTransaction: null,
+        recentItems: [],
+      };
+    });
+
+    renderComposer(undefined, [], action, manualCategoryOptions);
+    openManualEntry();
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    openManualCategoryPicker();
+    fireEvent.click(screen.getByRole("button", { name: "Investments" }));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "88.00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save item" }));
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    expect(action.mock.calls[0]![1].get("transactionType")).toBe("income");
+    expect(action.mock.calls[0]![1].get("categoryId")).toBe("category-investments");
+    expect(action.mock.calls[0]![1].get("categoryLabel")).toBe("Investments");
   });
 
   it("shows manual save failures beside the Save item button", async () => {
