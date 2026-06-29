@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
+import type { Budget } from "@/domain/budgets/types";
 import type { AssistantActionState } from "@/lib/server/assistant";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 
@@ -53,6 +54,10 @@ function openImportUpload() {
 
 function openManualEntry() {
   fireEvent.click(screen.getByRole("button", { name: "Manual" }));
+}
+
+function openLimitsPanel() {
+  fireEvent.click(screen.getByRole("button", { name: "Limits" }));
 }
 
 const manualCategoryOptions: ControlledCategoryOption[] = [
@@ -108,6 +113,7 @@ describe("assistant composer", () => {
     expect(screen.queryByRole("button", { name: "Statement" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Limits" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
@@ -251,6 +257,74 @@ describe("assistant composer", () => {
     expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Action")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows Assistant Limits with weekly defaults and existing active or paused rows", () => {
+    const categoryLimits: Budget[] = [
+      {
+        id: "limit-groceries",
+        userId: "user-1",
+        monthStart: "2026-06-01",
+        categoryId: "category-groceries",
+        amountMinor: 30000,
+        currency: "RON",
+        period: "weekly",
+        repeats: true,
+        isActive: true,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      },
+      {
+        id: "limit-housing",
+        userId: "user-1",
+        monthStart: "2026-06-01",
+        categoryId: "category-housing",
+        amountMinor: 120000,
+        currency: "RON",
+        period: "monthly",
+        repeats: true,
+        isActive: false,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      },
+    ];
+
+    render(
+      <AssistantComposer
+        action={async () => ({
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        })}
+        categoryLimits={categoryLimits}
+        categoryOptions={manualCategoryOptions}
+        defaultCurrency="RON"
+        initialState={{
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        }}
+        importsEnabled={false}
+        recentItems={[]}
+      />,
+    );
+
+    openLimitsPanel();
+
+    expect(screen.getByText("Set a limit")).toBeInTheDocument();
+    expect(screen.getByLabelText("Category")).toHaveValue("category-housing");
+    expect(screen.getByLabelText("Currency")).toHaveValue("RON");
+    expect(screen.getByRole("button", { name: "weekly" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Repeat every week")).toBeChecked();
+    expect(screen.getByText("Existing limits")).toBeInTheDocument();
+    expect(screen.getByText(/Weekly .* Active/)).toBeInTheDocument();
+    expect(screen.getByText(/Monthly .* Paused/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
 
   it("sets optional manual fields through compact buttons and prepares create fields", () => {

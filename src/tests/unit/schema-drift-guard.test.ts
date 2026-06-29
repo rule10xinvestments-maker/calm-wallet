@@ -20,17 +20,17 @@ function makeFetch(statuses: boolean[]) {
 
 describe("production schema drift guard", () => {
   it("passes when all required schema exists", async () => {
-    const fetchImpl = makeFetch([true, true, true]);
+    const fetchImpl = makeFetch([true, true, true, true, true, true]);
 
     const result = await checkProductionSchema({ env, fetchImpl, required: true });
 
     expect(result.status).toBe("passed");
     expect(fetchImpl).toHaveBeenCalledTimes(REQUIRED_SCHEMA.length);
-    expect(result.message).toBe("Production schema check passed for 3 required objects.");
+    expect(result.message).toBe("Production schema check passed for 6 required objects.");
   });
 
   it("reports a missing table with clear copy", async () => {
-    const fetchImpl = makeFetch([false, true, true]);
+    const fetchImpl = makeFetch([false, true, true, true, true, true]);
 
     const result = await checkProductionSchema({ env, fetchImpl, required: true });
 
@@ -41,13 +41,25 @@ describe("production schema drift guard", () => {
   });
 
   it("reports a missing column with clear copy", async () => {
-    const fetchImpl = makeFetch([true, false, true]);
+    const fetchImpl = makeFetch([true, false, true, true, true, true]);
 
     const result = await checkProductionSchema({ env, fetchImpl, required: true });
 
     expect(result.status).toBe("failed");
     expect(result.message).toContain("- public.transactions.recurring_rule_id");
+    expect(result.message).not.toContain("- public.budgets.period");
     expect(result.message).not.toContain("service-role-key");
+  });
+
+  it("reports missing repeating limit columns with clear copy", async () => {
+    const fetchImpl = makeFetch([true, true, true, false, true, false]);
+
+    const result = await checkProductionSchema({ env, fetchImpl, required: true });
+
+    expect(result.status).toBe("failed");
+    expect(result.message).toContain("- public.budgets.period");
+    expect(result.message).toContain("- public.budgets.is_active");
+    expect(result.message).toContain("Apply pending Supabase migrations before deploying app code.");
   });
 
   it("skips calmly when env vars are missing for the optional command", async () => {

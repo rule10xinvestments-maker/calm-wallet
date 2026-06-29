@@ -993,6 +993,9 @@ describe("transactions read model", () => {
           categoryId: "food",
           amountMinor: 10000,
           currency: "USD",
+          period: "monthly",
+          repeats: true,
+          isActive: true,
           createdAt: "2026-04-01T00:00:00.000Z",
           updatedAt: "2026-04-01T00:00:00.000Z",
         },
@@ -1007,7 +1010,90 @@ describe("transactions read model", () => {
       remainingMinor: 4500,
       percentUsed: 55,
       isOverBudget: false,
+      period: "monthly",
+      repeats: true,
+      isActive: true,
     });
+  });
+
+  it("builds weekly category limit progress from the current calendar week", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "1",
+          transactionType: "expense",
+          amountMinor: 3000,
+          categoryId: "food",
+          occurredAt: "2026-04-20T10:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "2",
+          transactionType: "expense",
+          amountMinor: 2500,
+          categoryId: "food",
+          occurredAt: "2026-04-10T10:00:00.000Z",
+        }),
+      ],
+      { food: "Groceries" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [
+        {
+          id: "budget-1",
+          userId: "user-1",
+          monthStart: "2026-04-01",
+          categoryId: "food",
+          amountMinor: 10000,
+          currency: "USD",
+          period: "weekly",
+          repeats: true,
+          isActive: true,
+          createdAt: "2026-04-01T00:00:00.000Z",
+          updatedAt: "2026-04-01T00:00:00.000Z",
+        },
+      ],
+    );
+
+    expect(data.budgetProgress[0]).toMatchObject({
+      budgetId: "budget-1",
+      categoryLabel: "Groceries",
+      spentMinor: 3000,
+      remainingMinor: 7000,
+      percentUsed: 30,
+      period: "weekly",
+    });
+  });
+
+  it("hides paused category limits from Insights progress", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          transactionType: "expense",
+          amountMinor: 3000,
+          categoryId: "food",
+        }),
+      ],
+      { food: "Groceries" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [
+        {
+          id: "budget-1",
+          userId: "user-1",
+          monthStart: "2026-04-01",
+          categoryId: "food",
+          amountMinor: 10000,
+          currency: "USD",
+          period: "monthly",
+          repeats: true,
+          isActive: false,
+          createdAt: "2026-04-01T00:00:00.000Z",
+          updatedAt: "2026-04-01T00:00:00.000Z",
+        },
+      ],
+    );
+
+    expect(data.budgetProgress).toEqual([]);
   });
 
   it("flags over-budget monthly category budgets", () => {
@@ -1030,6 +1116,9 @@ describe("transactions read model", () => {
           categoryId: "food",
           amountMinor: 10000,
           currency: "USD",
+          period: "monthly",
+          repeats: true,
+          isActive: true,
           createdAt: "2026-04-01T00:00:00.000Z",
           updatedAt: "2026-04-01T00:00:00.000Z",
         },

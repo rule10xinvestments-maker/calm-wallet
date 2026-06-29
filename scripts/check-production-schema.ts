@@ -47,6 +47,21 @@ export const REQUIRED_SCHEMA: RequiredSchemaEntry[] = [
     column: "recurring_occurrence_date",
     type: "column",
   },
+  {
+    table: "budgets",
+    column: "period",
+    type: "column",
+  },
+  {
+    table: "budgets",
+    column: "repeats",
+    type: "column",
+  },
+  {
+    table: "budgets",
+    column: "is_active",
+    type: "column",
+  },
 ];
 
 function normalizeSupabaseUrl(value: string) {

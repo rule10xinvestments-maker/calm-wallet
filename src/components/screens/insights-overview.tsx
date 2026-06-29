@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { ScreenHeader } from "@/components/shared/screen-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { initialBudgetActionState, type BudgetActionState } from "@/lib/actions/budgets-state";
+import type { BudgetActionState } from "@/lib/actions/budgets-state";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
@@ -1857,84 +1857,27 @@ function SpendingMixRows({
   );
 }
 
-function BudgetActionMessage({ state }: { state: BudgetActionState }) {
-  if (state.status === "idle" || !state.message) {
-    return null;
+function getLimitStatusColor(percentUsed: number) {
+  if (percentUsed >= 120) {
+    return "bg-red-600";
   }
 
-  return <p className={`text-xs ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{state.message}</p>;
+  if (percentUsed >= 100) {
+    return "bg-orange-600";
+  }
+
+  if (percentUsed >= 80) {
+    return "bg-amber-500";
+  }
+
+  if (percentUsed >= 50) {
+    return "bg-lime-500";
+  }
+
+  return "bg-emerald-500";
 }
 
-function BudgetSetup({ data, action }: { data: InsightsData; action: InsightsOverviewProps["upsertBudgetAction"] }) {
-  const [state, formAction, pending] = useActionState(action, initialBudgetActionState);
-
-  return (
-    <form action={formAction} className="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-      <input name="monthStart" type="hidden" value={data.monthStart} />
-      <input name="currency" type="hidden" value={data.currency} />
-      <label className="space-y-1 text-sm">
-        <span className="text-xs font-medium text-slate-600">Category</span>
-        <select
-          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900"
-          name="categoryId"
-          required
-        >
-          {data.budgetCategoryOptions.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="space-y-1 text-sm">
-        <span className="text-xs font-medium text-slate-600">Amount</span>
-        <input
-          className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900"
-          min="0.01"
-          name="amount"
-          placeholder="250"
-          step="0.01"
-          type="number"
-          required
-        />
-      </label>
-      <div className="flex items-end">
-        <button
-          className="h-10 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white disabled:opacity-60"
-          disabled={pending || data.budgetCategoryOptions.length === 0}
-          type="submit"
-        >
-          Save
-        </button>
-      </div>
-      <div className="sm:col-span-3">
-        <BudgetActionMessage state={state} />
-      </div>
-    </form>
-  );
-}
-
-function BudgetRemoveButton({
-  budgetId,
-  action,
-}: {
-  budgetId: string;
-  action: InsightsOverviewProps["deleteBudgetAction"];
-}) {
-  const [state, formAction, pending] = useActionState(action, initialBudgetActionState);
-
-  return (
-    <form action={formAction} className="space-y-1">
-      <input name="budgetId" type="hidden" value={budgetId} />
-      <button className="text-xs font-medium text-slate-500 underline-offset-4 hover:underline" disabled={pending} type="submit">
-        Remove
-      </button>
-      <BudgetActionMessage state={state} />
-    </form>
-  );
-}
-
-export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction, loadError = false }: InsightsOverviewProps) {
+export function InsightsOverview({ data, loadError = false }: InsightsOverviewProps) {
   const [activeData, setActiveData] = useState<InsightsData>(data);
   const hasTrackedData = activeData.trackedTransactionCount > 0;
   const hasCurrentMonthData = activeData.currentMonthTransactionCount > 0;
@@ -2045,8 +1988,8 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
 
       <Card className="rounded-lg">
         <CardHeader>
-          <CardTitle className="text-lg">Monthly category budgets</CardTitle>
-          <CardDescription>Optional limits for controlled categories in {activeData.monthLabel}.</CardDescription>
+          <CardTitle className="text-lg">Category limits</CardTitle>
+          <CardDescription>See how your planned limits are going.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {activeData.budgetProgress.length ? (
@@ -2056,19 +1999,18 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
                   <div>
                     <p className="font-medium text-slate-900">{item.categoryLabel}</p>
                     <p className="text-xs text-slate-500">
-                      {item.spentDisplay} of {item.amountDisplay} used
+                      {item.period === "weekly" ? "Weekly" : "Monthly"} · {item.spentDisplay} of {item.amountDisplay} used
                     </p>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${item.isOverBudget ? "text-rose-700" : "text-slate-800"}`}>
                       {item.isOverBudget ? `${item.remainingDisplay} over` : `${item.remainingDisplay} left`}
                     </p>
-                    <BudgetRemoveButton action={deleteBudgetAction} budgetId={item.budgetId} />
                   </div>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className={`h-full rounded-full ${item.isOverBudget ? "bg-rose-500" : "bg-sky-600"}`}
+                    className={`h-full rounded-full ${getLimitStatusColor(item.percentUsed)}`}
                     style={{ width: `${Math.min(item.percentUsed, 100)}%` }}
                   />
                 </div>
@@ -2076,9 +2018,8 @@ export function InsightsOverview({ data, upsertBudgetAction, deleteBudgetAction,
               </div>
             ))
           ) : (
-            <p className="text-sm leading-6 text-slate-500">Set a monthly category budget to track progress here.</p>
+            <p className="text-sm leading-6 text-slate-500">Set a category limit from Assistant to track progress here.</p>
           )}
-          <BudgetSetup action={upsertBudgetAction} data={activeData} />
         </CardContent>
       </Card>
     </section>

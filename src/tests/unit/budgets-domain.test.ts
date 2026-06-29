@@ -29,6 +29,9 @@ function makeBudget(overrides: Partial<BudgetRow> = {}): BudgetRow {
     category_id: categoryId,
     amount_minor: 10000,
     currency: "USD",
+    period: "monthly",
+    repeats: true,
+    is_active: true,
     created_at: "2026-04-01T00:00:00.000Z",
     updated_at: "2026-04-01T00:00:00.000Z",
     ...overrides,
@@ -74,8 +77,40 @@ describe("budget domain service", () => {
       category_id: categoryId,
       amount_minor: 25000,
       currency: "USD",
+      period: "monthly",
+      repeats: true,
+      is_active: true,
     });
     expect(budget.amountMinor).toBe(25000);
+  });
+
+  it("creates a weekly repeating category limit", async () => {
+    const adapter = makeAdapter();
+    const service = createBudgetService(adapter);
+
+    const budget = await service.upsertCategoryLimit(userId, {
+      monthStart: "2026-04-01",
+      categoryId,
+      amountMinor: 7500,
+      currency: "USD",
+      period: "weekly",
+      repeats: true,
+    });
+
+    expect(adapter.getBudgetByMonthCategoryCurrency).toHaveBeenCalledWith(userId, "2026-04-01", categoryId, "USD", "weekly");
+    expect(adapter.insertBudget).toHaveBeenCalledWith({
+      user_id: userId,
+      month_start: "2026-04-01",
+      category_id: categoryId,
+      amount_minor: 7500,
+      currency: "USD",
+      period: "weekly",
+      repeats: true,
+      is_active: true,
+    });
+    expect(budget.period).toBe("weekly");
+    expect(budget.repeats).toBe(true);
+    expect(budget.isActive).toBe(true);
   });
 
   it("updates an existing monthly category budget", async () => {
@@ -93,8 +128,22 @@ describe("budget domain service", () => {
 
     expect(adapter.updateBudget).toHaveBeenCalledWith(userId, budgetId, {
       amount_minor: 12000,
+      repeats: true,
+      is_active: true,
     });
     expect(adapter.insertBudget).not.toHaveBeenCalled();
+  });
+
+  it("pauses and resumes a category limit without deleting it", async () => {
+    const adapter = makeAdapter();
+    const service = createBudgetService(adapter);
+
+    await service.pauseCategoryLimit(userId, { budgetId });
+    await service.resumeCategoryLimit(userId, { budgetId });
+
+    expect(adapter.updateBudget).toHaveBeenNthCalledWith(1, userId, budgetId, { is_active: false });
+    expect(adapter.updateBudget).toHaveBeenNthCalledWith(2, userId, budgetId, { is_active: true });
+    expect(adapter.deleteBudget).not.toHaveBeenCalled();
   });
 
   it("deletes an owned budget row", async () => {
@@ -109,7 +158,7 @@ describe("budget domain service", () => {
     expect(adapter.deleteBudget).toHaveBeenCalledWith(userId, budgetId);
   });
 
-  it("rejects zero or negative budget amounts", async () => {
+  it("rejects zero or negative limit amounts", async () => {
     const service = createBudgetService(makeAdapter());
 
     await expect(
@@ -119,7 +168,7 @@ describe("budget domain service", () => {
         amountMinor: 0,
         currency: "USD",
       }),
-    ).rejects.toThrow("Budget amount must be positive.");
+    ).rejects.toThrow("Limit amount must be positive.");
   });
 
   it("rejects inactive or income-only categories", async () => {
@@ -150,6 +199,6 @@ describe("budget domain service", () => {
       service.deleteMonthlyCategoryBudget(userId, {
         budgetId,
       }),
-    ).rejects.toThrow("Budget not found.");
+    ).rejects.toThrow("Limit not found.");
   });
 });

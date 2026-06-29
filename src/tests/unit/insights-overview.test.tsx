@@ -2287,14 +2287,14 @@ describe("insights overview", () => {
     expect(screen.queryByText("-$30.00")).not.toBeInTheDocument();
   });
 
-  it("renders budget progress and empty setup state", () => {
+  it("renders limit progress and empty setup state", () => {
     renderInsights(makeInsightsData());
 
-    expect(screen.getByText("Monthly category budgets")).toBeInTheDocument();
-    expect(screen.getByText("Set a monthly category budget to track progress here.")).toBeInTheDocument();
+    expect(screen.getByText("Category limits")).toBeInTheDocument();
+    expect(screen.getByText("Set a category limit from Assistant to track progress here.")).toBeInTheDocument();
   });
 
-  it("renders over-budget state", () => {
+  it("renders over-limit state", () => {
     renderInsights(
       makeInsightsData({
         budgetProgress: [
@@ -2302,6 +2302,9 @@ describe("insights overview", () => {
             budgetId: "budget-1",
             categoryId: "33333333-3333-3333-3333-333333333333",
             categoryLabel: "Groceries",
+            period: "weekly",
+            repeats: true,
+            isActive: true,
             amountMinor: 1000,
             amountDisplay: "$10.00",
             spentMinor: 1250,
@@ -2316,7 +2319,7 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getByText("$12.50 of $10.00 used")).toBeInTheDocument();
+    expect(screen.getByText("Weekly · $12.50 of $10.00 used")).toBeInTheDocument();
     expect(screen.getByText("$2.50 over")).toBeInTheDocument();
   });
 });

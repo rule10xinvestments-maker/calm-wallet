@@ -12,21 +12,34 @@ export type Budget = {
   categoryId: string;
   amountMinor: number;
   currency: string;
+  period: "weekly" | "monthly";
+  repeats: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
-export type UpsertMonthlyCategoryBudgetInput = {
+export type UpsertCategoryLimitInput = {
   monthStart: string;
   categoryId: string;
   amountMinor: number;
   currency: string;
+  period: "weekly" | "monthly";
+  repeats: boolean;
+  budgetId?: string;
 };
 
-export type DeleteMonthlyCategoryBudgetInput = {
+export type UpsertMonthlyCategoryBudgetInput = Omit<UpsertCategoryLimitInput, "period" | "repeats" | "budgetId">;
+
+export type ManageCategoryLimitInput = {
   budgetId: string;
 };
 
-export type ListMonthlyCategoryBudgetsInput = {
+export type DeleteMonthlyCategoryBudgetInput = ManageCategoryLimitInput;
+
+export type ListCategoryLimitsInput = {
   monthStart: string;
+  includePaused?: boolean;
 };
+
+export type ListMonthlyCategoryBudgetsInput = Pick<ListCategoryLimitsInput, "monthStart">;

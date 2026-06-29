@@ -126,6 +126,9 @@ export type InsightsData = {
     budgetId: string;
     categoryId: string;
     categoryLabel: string;
+    period: "weekly" | "monthly";
+    repeats: boolean;
+    isActive: boolean;
     amountMinor: number;
     amountDisplay: string;
     spentMinor: number;
@@ -620,6 +623,13 @@ function toDayKey(date: Date) {
 
 function shiftDay(date: Date, offset: number) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + offset));
+}
+
+function startOfCalendarWeek(date: Date) {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = start.getUTCDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  return shiftDay(start, mondayOffset);
 }
 
 function buildInsightsTimeframeDailyBars(args: {
@@ -1378,22 +1388,49 @@ export function buildInsightsData(
       categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
     }));
 
-  const monthlyExpenseByCategory = new Map<string, number>();
+  const monthlyExpenseByCategory = new Map<string, Map<string, number>>();
+  const weeklyExpenseByCategory = new Map<string, Map<string, number>>();
+  const weekStart = startOfCalendarWeek(now);
+  const weekEnd = shiftDay(weekStart, 7);
   currentMonthTransactions
     .filter((transaction) => transaction.transactionType === "expense" && transaction.categoryId)
     .forEach((transaction) => {
       const categoryId = transaction.categoryId!;
-      const conversionRate = getConversionRate(normalizeCurrency(transaction.currency), transaction.currency, rateLookup);
-      monthlyExpenseByCategory.set(
-        categoryId,
-        (monthlyExpenseByCategory.get(categoryId) ?? 0) +
-          (conversionRate === null ? transaction.amountMinor : convertMinor(transaction.amountMinor, conversionRate)),
-      );
+      const sourceCurrency = normalizeCurrency(transaction.currency);
+      const monthlyCurrencyTotals = monthlyExpenseByCategory.get(categoryId) ?? new Map<string, number>();
+      monthlyCurrencyTotals.set(sourceCurrency, (monthlyCurrencyTotals.get(sourceCurrency) ?? 0) + transaction.amountMinor);
+      monthlyExpenseByCategory.set(categoryId, monthlyCurrencyTotals);
+
+      const occurredAt = new Date(transaction.occurredAt);
+
+      if (occurredAt >= weekStart && occurredAt < weekEnd) {
+        const weeklyCurrencyTotals = weeklyExpenseByCategory.get(categoryId) ?? new Map<string, number>();
+        weeklyCurrencyTotals.set(sourceCurrency, (weeklyCurrencyTotals.get(sourceCurrency) ?? 0) + transaction.amountMinor);
+        weeklyExpenseByCategory.set(categoryId, weeklyCurrencyTotals);
+      }
     });
 
+  const getSpentForLimit = (budget: Budget) => {
+    const totals = budget.period === "weekly" ? weeklyExpenseByCategory.get(budget.categoryId) : monthlyExpenseByCategory.get(budget.categoryId);
+
+    if (!totals) {
+      return 0;
+    }
+
+    let spentMinor = 0;
+
+    for (const [sourceCurrency, amountMinor] of totals.entries()) {
+      const conversionRate = getConversionRate(sourceCurrency, budget.currency, rateLookup);
+      spentMinor += conversionRate === null ? 0 : convertMinor(amountMinor, conversionRate);
+    }
+
+    return spentMinor;
+  };
+
   const budgetProgress = budgets
+    .filter((budget) => budget.isActive)
     .map((budget) => {
-      const spentMinor = monthlyExpenseByCategory.get(budget.categoryId) ?? 0;
+      const spentMinor = getSpentForLimit(budget);
       const remainingMinor = budget.amountMinor - spentMinor;
       const percentUsed = budget.amountMinor > 0 ? Math.round((spentMinor / budget.amountMinor) * 100) : 0;
 
@@ -1401,6 +1438,9 @@ export function buildInsightsData(
         budgetId: budget.id,
         categoryId: budget.categoryId,
         categoryLabel: categoryLabels[budget.categoryId] || "Controlled category",
+        period: budget.period,
+        repeats: budget.repeats,
+        isActive: budget.isActive,
         amountMinor: budget.amountMinor,
         amountDisplay: formatInsightsMoney(budget.amountMinor, budget.currency),
         spentMinor,
@@ -1670,7 +1710,7 @@ export async function loadControlledCategoryOptions(): Promise<ControlledCategor
   }));
 }
 
-async function loadDefaultCurrency(userId: string) {
+export async function loadDefaultCurrency(userId: string) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.from("profiles").select("default_currency").eq("id", userId).single();
   return data?.default_currency ?? "USD";

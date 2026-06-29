@@ -4,22 +4,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { mapTransactionsToAssistantItems, type AssistantActionState } from "@/lib/server/assistant";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import type { Transaction } from "@/domain/transactions/types";
+import type { Budget } from "@/domain/budgets/types";
+import type { BudgetActionState } from "@/lib/actions/budgets-state";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
+type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
+
+const noopBudgetAction: BudgetActionHandler = async (state) => state;
 
 type AssistantOverviewProps = {
   action: AssistantActionHandler;
   initialState: AssistantActionState;
   categoryOptions: ControlledCategoryOption[];
+  categoryLimits?: Budget[];
   recentTransactions: Transaction[];
+  defaultCurrency?: string;
+  upsertLimitAction?: BudgetActionHandler;
+  pauseLimitAction?: BudgetActionHandler;
+  resumeLimitAction?: BudgetActionHandler;
+  deleteLimitAction?: BudgetActionHandler;
   loadError?: boolean;
 };
 
 export function AssistantOverview({
   action,
   initialState,
+  categoryLimits = [],
   categoryOptions,
+  deleteLimitAction = noopBudgetAction,
+  defaultCurrency = "USD",
+  pauseLimitAction = noopBudgetAction,
   recentTransactions,
+  resumeLimitAction = noopBudgetAction,
+  upsertLimitAction = noopBudgetAction,
   loadError = false,
 }: AssistantOverviewProps) {
   const recentItems = mapTransactionsToAssistantItems(recentTransactions);
@@ -50,9 +67,15 @@ export function AssistantOverview({
         <CardContent>
           <AssistantComposer
             action={action}
+            categoryLimits={categoryLimits}
             categoryOptions={categoryOptions}
+            deleteLimitAction={deleteLimitAction}
+            defaultCurrency={defaultCurrency}
             initialState={initialState}
+            pauseLimitAction={pauseLimitAction}
             recentItems={recentItems}
+            resumeLimitAction={resumeLimitAction}
+            upsertLimitAction={upsertLimitAction}
           />
         </CardContent>
       </Card>

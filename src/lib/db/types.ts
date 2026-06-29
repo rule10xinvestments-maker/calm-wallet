@@ -454,6 +454,9 @@ export type Database = {
           category_id: string;
           amount_minor: number;
           currency: string;
+          period: "weekly" | "monthly";
+          repeats: boolean;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -464,6 +467,9 @@ export type Database = {
           category_id: string;
           amount_minor: number;
           currency: string;
+          period?: "weekly" | "monthly";
+          repeats?: boolean;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -474,6 +480,9 @@ export type Database = {
           category_id?: string;
           amount_minor?: number;
           currency?: string;
+          period?: "weekly" | "monthly";
+          repeats?: boolean;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };

@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useState, type FormEvent } from "react";
+import { useActionState, useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   CalendarDays,
+  CircleGauge,
   FileSpreadsheet,
   History,
   Plus,
@@ -17,6 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
+import { initialBudgetActionState, type BudgetActionState } from "@/lib/actions/budgets-state";
+import type { Budget } from "@/domain/budgets/types";
 import {
   uploadReceiptImageAction,
   uploadCsvBankStatementAction,
@@ -30,12 +33,19 @@ import { CSV_IMPORT_MAX_BYTES } from "@/lib/imports/storage";
 import type { AssistantActionState } from "@/lib/server/assistant";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
+type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 
 type AssistantComposerProps = {
   action: AssistantActionHandler;
   initialState: AssistantActionState;
   recentItems?: AssistantActionState["recentItems"];
   categoryOptions?: ControlledCategoryOption[];
+  categoryLimits?: Budget[];
+  defaultCurrency?: string;
+  upsertLimitAction?: BudgetActionHandler;
+  pauseLimitAction?: BudgetActionHandler;
+  resumeLimitAction?: BudgetActionHandler;
+  deleteLimitAction?: BudgetActionHandler;
   importsEnabled?: boolean;
 };
 
@@ -46,7 +56,7 @@ type UploadFlowState = {
   filename: string | null;
 };
 
-type ActionPanel = "receipt" | "statement" | "recent" | "manual";
+type ActionPanel = "receipt" | "statement" | "recent" | "manual" | "limits";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
 type ManualCategoryOption = ControlledCategoryOption & { isSynthetic?: boolean };
@@ -62,6 +72,7 @@ const receiptImageMaxBytes = 5 * 1024 * 1024;
 const safeReceiptImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const safeCsvMimeTypes = new Set(["text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"]);
 const manualCurrencyOptions = ["RON", "EUR", "USD", "GBP"] as const;
+type ManualCurrencyOption = (typeof manualCurrencyOptions)[number];
 const manualSpendCategoryLabels = [
   "Housing",
   "Groceries",
@@ -91,12 +102,17 @@ const manualIncomeCategoryLabels = [
   "Other",
 ] as const;
 
+function getSupportedManualCurrency(value: string): ManualCurrencyOption {
+  const normalized = value.trim().toUpperCase();
+  return manualCurrencyOptions.includes(normalized as ManualCurrencyOption) ? (normalized as ManualCurrencyOption) : "USD";
+}
+
 function normalizeManualCategoryKey(value: string) {
   return value
     .trim()
     .toLowerCase()
     .replace(/[_/]+/g, " ")
-    .replace(/[â€“â€”]/g, "-")
+    .replace(/[\u2013\u2014]/g, "-")
     .replace(/\s+/g, " ");
 }
 
@@ -168,6 +184,7 @@ const importActionPanelItems: Array<{
   { id: "statement", label: "Statement", Icon: FileSpreadsheet },
   { id: "recent", label: "Recent", Icon: History },
   { id: "manual", label: "Manual", Icon: Plus },
+  { id: "limits", label: "Limits", Icon: CircleGauge },
 ];
 
 const betaActionPanelItems: Array<{
@@ -177,7 +194,12 @@ const betaActionPanelItems: Array<{
 }> = [
   { id: "recent", label: "Recent", Icon: History },
   { id: "manual", label: "Manual", Icon: Plus },
+  { id: "limits", label: "Limits", Icon: CircleGauge },
 ];
+
+async function noopBudgetAction(state: BudgetActionState) {
+  return state;
+}
 
 function findCategoryByLabel(categories: ControlledCategoryOption[], labels: string[], transactionType: "expense" | "income") {
   return categories.find((category) => {
@@ -225,8 +247,15 @@ export function AssistantComposer({
   initialState,
   recentItems = [],
   categoryOptions = [],
+  categoryLimits = [],
+  defaultCurrency = "USD",
+  upsertLimitAction = noopBudgetAction,
+  pauseLimitAction = noopBudgetAction,
+  resumeLimitAction = noopBudgetAction,
+  deleteLimitAction = noopBudgetAction,
   importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
+  const supportedDefaultCurrency = getSupportedManualCurrency(defaultCurrency);
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
   const [manualName, setManualName] = useState("");
   const [manualTransactionType, setManualTransactionType] = useState<"expense" | "income">("expense");
@@ -245,12 +274,24 @@ export function AssistantComposer({
   const [manualRecurringOpenEnded, setManualRecurringOpenEnded] = useState(true);
   const [manualFeedback, setManualFeedback] = useState<ManualFeedback>({ status: "idle", message: null });
   const [manualLastSubmitted, setManualLastSubmitted] = useState(false);
+  const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
+  const [pauseState, pauseFormAction] = useActionState<BudgetActionState, FormData>(pauseLimitAction, initialBudgetActionState);
+  const [resumeState, resumeFormAction] = useActionState<BudgetActionState, FormData>(resumeLimitAction, initialBudgetActionState);
+  const [deleteState, deleteFormAction] = useActionState<BudgetActionState, FormData>(deleteLimitAction, initialBudgetActionState);
+  const [limitCategoryId, setLimitCategoryId] = useState("");
+  const [limitAmount, setLimitAmount] = useState("");
+  const [limitCurrency, setLimitCurrency] = useState(supportedDefaultCurrency);
+  const [limitPeriod, setLimitPeriod] = useState<"weekly" | "monthly">("weekly");
+  const [limitRepeats, setLimitRepeats] = useState(true);
+  const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
+  const [confirmRemoveLimitId, setConfirmRemoveLimitId] = useState<string | null>(null);
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
   const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
   const manualCategoryOptions = buildManualCategoryOptions(categoryOptions, manualTransactionType);
+  const limitCategoryOptions = buildManualCategoryOptions(categoryOptions, "expense").filter((category) => !category.isSynthetic);
   const guessedManualCategoryId = guessManualCategoryId({
     categories: categoryOptions,
     merchant: manualMerchant,
@@ -270,12 +311,27 @@ export function AssistantComposer({
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
   const isManualPanelOpen = openPanel === "manual";
+  const isLimitsPanelOpen = openPanel === "limits";
+  const resetLimitForm = useCallback(() => {
+    setEditingLimitId(null);
+    setLimitAmount("");
+    setLimitCurrency(supportedDefaultCurrency);
+    setLimitPeriod("weekly");
+    setLimitRepeats(true);
+    setConfirmRemoveLimitId(null);
+  }, [supportedDefaultCurrency]);
 
   useEffect(() => {
     if (!manualCategoryWasSelected) {
       setManualCategoryId(guessedManualCategoryId);
     }
   }, [guessedManualCategoryId, manualCategoryWasSelected]);
+
+  useEffect(() => {
+    if (!limitCategoryId && limitCategoryOptions[0]) {
+      setLimitCategoryId(limitCategoryOptions[0].id);
+    }
+  }, [limitCategoryId, limitCategoryOptions]);
 
   useEffect(() => {
     if (!manualLastSubmitted || state.status === "idle") {
@@ -310,6 +366,12 @@ export function AssistantComposer({
     }
   }, [manualLastSubmitted, state.message, state.status]);
 
+  useEffect(() => {
+    if (limitState.status === "success") {
+      resetLimitForm();
+    }
+  }, [limitState.status, resetLimitForm]);
+
   function togglePanel(panel: ActionPanel) {
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
   }
@@ -332,6 +394,33 @@ export function AssistantComposer({
   function getTodayDateKey() {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  }
+
+  function getCurrentMonthStartKey() {
+    return `${getTodayDateKey().slice(0, 7)}-01`;
+  }
+
+  function getLimitCategoryLabel(categoryId: string) {
+    return categoryOptions.find((category) => category.id === categoryId)?.label ?? "Category";
+  }
+
+  function editLimit(limit: Budget) {
+    setEditingLimitId(limit.id);
+    setLimitCategoryId(limit.categoryId);
+    setLimitAmount((limit.amountMinor / 100).toFixed(limit.amountMinor % 100 === 0 ? 0 : 2));
+    setLimitCurrency(getSupportedManualCurrency(limit.currency));
+    setLimitPeriod(limit.period);
+    setLimitRepeats(limit.repeats);
+    setConfirmRemoveLimitId(null);
+  }
+
+  function formatLimitAmount(limit: Budget) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: limit.currency,
+      minimumFractionDigits: limit.amountMinor % 100 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    }).format(limit.amountMinor / 100);
   }
 
   function getMerchantButtonLabel() {
@@ -520,7 +609,7 @@ export function AssistantComposer({
         </Button>
       </form>
 
-      <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-4" : "grid-cols-2"}`}>
+      <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-5" : "grid-cols-3"}`}>
         {(importsEnabled ? importActionPanelItems : betaActionPanelItems).map(({ id, label, Icon }) => {
           const isOpen = openPanel === id;
 
@@ -1053,6 +1142,191 @@ export function AssistantComposer({
                 {isPending && manualLastSubmitted ? "Saving..." : "Save item"}
               </Button>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {isLimitsPanelOpen ? (
+        <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-900">Limits</p>
+              <p className="text-xs text-slate-500">Set weekly or monthly spending limits.</p>
+            </div>
+            <button
+              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              onClick={() => setOpenPanel(null)}
+              type="button"
+            >
+              Close
+            </button>
+          </div>
+
+          <form action={limitFormAction} className="space-y-3 rounded-2xl bg-white p-3">
+            <p className="text-sm font-semibold text-slate-900">{editingLimitId ? "Edit limit" : "Set a limit"}</p>
+            <input name="budgetId" type="hidden" value={editingLimitId ?? ""} />
+            <input name="monthStart" type="hidden" value={getCurrentMonthStartKey()} />
+            <input name="repeats" type="hidden" value={limitRepeats ? "on" : "off"} />
+            <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">Category</span>
+                <select
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                  name="categoryId"
+                  onChange={(event) => setLimitCategoryId(event.target.value)}
+                  required
+                  value={limitCategoryId}
+                >
+                  {limitCategoryOptions.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">Amount</span>
+                <input
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                  inputMode="decimal"
+                  min="0.01"
+                  name="amount"
+                  onChange={(event) => setLimitAmount(event.target.value)}
+                  placeholder="300"
+                  required
+                  step="0.01"
+                  type="number"
+                  value={limitAmount}
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-[5.5rem_1fr] gap-2">
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">Currency</span>
+                <select
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                  name="currency"
+                  onChange={(event) => setLimitCurrency(getSupportedManualCurrency(event.target.value))}
+                  value={limitCurrency}
+                >
+                  {manualCurrencyOptions.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-slate-600">Period</span>
+                <div className="grid min-h-11 grid-cols-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  {(["weekly", "monthly"] as const).map((period) => (
+                    <button
+                      aria-pressed={limitPeriod === period}
+                      className={`text-sm font-semibold capitalize transition ${
+                        limitPeriod === period ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-white"
+                      }`}
+                      key={period}
+                      onClick={() => setLimitPeriod(period)}
+                      type="button"
+                    >
+                      {period}
+                    </button>
+                  ))}
+                </div>
+                <input name="period" type="hidden" value={limitPeriod} />
+              </div>
+            </div>
+            <label className="flex min-h-11 items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+              <input
+                checked={limitRepeats}
+                className="size-5 accent-sky-600"
+                onChange={(event) => setLimitRepeats(event.currentTarget.checked)}
+                type="checkbox"
+              />
+              <span>Repeat every {limitPeriod === "weekly" ? "week" : "month"}</span>
+            </label>
+            {limitState.message ? (
+              <p className={`rounded-xl px-3 py-2 text-sm ${limitState.status === "error" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+                {limitState.message}
+              </p>
+            ) : null}
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <Button disabled={isLimitPending || limitCategoryOptions.length === 0} type="submit">
+                {isLimitPending ? "Saving..." : "Save limit"}
+              </Button>
+              {editingLimitId ? (
+                <button className="rounded-xl px-3 text-sm font-medium text-slate-600 hover:bg-slate-50" onClick={resetLimitForm} type="button">
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+          </form>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-slate-700">Existing limits</p>
+            {categoryLimits.length ? (
+              categoryLimits.map((limit) => {
+                const categoryLabel = getLimitCategoryLabel(limit.categoryId);
+                const visuals = getCategoryVisualsByName(categoryLabel);
+                const LimitIcon = visuals.icon;
+                const isConfirmingRemove = confirmRemoveLimitId === limit.id;
+
+                return (
+                  <div key={limit.id} className="space-y-2 rounded-2xl bg-white px-3 py-3">
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: visuals.bg, color: visuals.primary }}>
+                        <LimitIcon aria-hidden="true" className="size-4" strokeWidth={2.2} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{categoryLabel}</p>
+                        <p className="text-xs text-slate-500">
+                          {limit.period === "weekly" ? "Weekly" : "Monthly"} · {formatLimitAmount(limit)} · {limit.isActive ? "Active" : "Paused"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button className="rounded-lg bg-slate-50 px-2 py-2 text-xs font-medium text-slate-700" onClick={() => editLimit(limit)} type="button">
+                        Edit
+                      </button>
+                      <form action={limit.isActive ? pauseFormAction : resumeFormAction}>
+                        <input name="budgetId" type="hidden" value={limit.id} />
+                        <button className="w-full rounded-lg bg-slate-50 px-2 py-2 text-xs font-medium text-slate-700" type="submit">
+                          {limit.isActive ? "Pause" : "Resume"}
+                        </button>
+                      </form>
+                      {isConfirmingRemove ? (
+                        <form action={deleteFormAction}>
+                          <input name="budgetId" type="hidden" value={limit.id} />
+                          <button className="w-full rounded-lg bg-rose-50 px-2 py-2 text-xs font-medium text-rose-700" type="submit">
+                            Confirm
+                          </button>
+                        </form>
+                      ) : (
+                        <button
+                          className="rounded-lg bg-slate-50 px-2 py-2 text-xs font-medium text-slate-700"
+                          onClick={() => setConfirmRemoveLimitId(limit.id)}
+                          type="button"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">No limits yet.</p>
+            )}
+            {[pauseState, resumeState, deleteState].map((actionState, index) =>
+              actionState.message ? (
+                <p
+                  className={`rounded-xl px-3 py-2 text-sm ${actionState.status === "error" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}
+                  key={index}
+                >
+                  {actionState.message}
+                </p>
+              ) : null,
+            )}
           </div>
         </div>
       ) : null}
