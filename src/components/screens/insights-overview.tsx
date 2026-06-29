@@ -1561,7 +1561,7 @@ function SpendingMixSummaryChart({
           ) : null}
         </svg>
         {selectedItem ? (
-          <div className="pointer-events-none absolute left-1/2 top-1/2 flex w-[4.5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
+          <div className="pointer-events-none absolute left-1/2 top-1/2 flex w-[5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
             {SelectedIcon ? <SelectedIcon aria-hidden="true" className="mb-0.5 h-3.5 w-3.5 shrink-0" style={{ color: selectedItem.color }} /> : null}
             <p className="w-full truncate text-[10px] font-semibold leading-3 text-slate-900">{selectedItem.label}</p>
             <p className="mt-0.5 w-full truncate text-[9px] font-semibold leading-3 text-slate-700">{selectedItem.amountDisplay}</p>
