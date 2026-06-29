@@ -103,7 +103,7 @@ function getRecurringDetailsText(item: TransactionListItem) {
 function getRowMetadata(item: TransactionListItem, recurringMode: boolean) {
   if (recurringMode && item.isRecurring) {
     return `${item.categoryLabel} · ${getRecurringFrequencyLabel(item.recurringFrequency)} · ${
-      item.recurringPausedAt ? "Paused" : "🔁 Recurring"
+      item.recurringPausedAt ? "Paused" : "Active"
     }`;
   }
 

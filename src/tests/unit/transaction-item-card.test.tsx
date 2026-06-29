@@ -118,15 +118,42 @@ describe("transaction item card", () => {
     expect(screen.queryByText(/🔁 Recurring/)).not.toBeInTheDocument();
   });
 
-  it("shows frequency and paused state in Recurring mode rows", () => {
-    renderCard({
-      recurringMode: true,
-      item: makeItem({
-        isRecurring: true,
-        recurringFrequency: "monthly",
-        recurringPausedAt: "2026-06-26T12:00:00.000Z",
-      }),
-    });
+  it("shows frequency and active or paused state in Recurring mode rows", () => {
+    const { rerender } = render(
+      <TransactionItemCard
+        categories={categories}
+        deleteAction={vi.fn(async () => initialState)}
+        initialState={initialState}
+        item={makeItem({
+          isRecurring: true,
+          recurringFrequency: "weekly",
+          recurringPausedAt: null,
+        })}
+        recategorizeAction={vi.fn(async () => initialState)}
+        recurringMode
+        updateAction={vi.fn(async () => initialState)}
+      />,
+    );
+
+    expect(screen.getByText("Dining · Weekly · Active")).toBeInTheDocument();
+    expect(screen.queryByText(/🔁 Recurring/)).not.toBeInTheDocument();
+
+    rerender(
+      <TransactionItemCard
+        categories={categories}
+        deleteAction={vi.fn(async () => initialState)}
+        initialState={initialState}
+        item={makeItem({
+          id: "txn-paused",
+          isRecurring: true,
+          recurringFrequency: "monthly",
+          recurringPausedAt: "2026-06-26T12:00:00.000Z",
+        })}
+        recategorizeAction={vi.fn(async () => initialState)}
+        recurringMode
+        updateAction={vi.fn(async () => initialState)}
+      />,
+    );
 
     expect(screen.getByText("Dining · Monthly · Paused")).toBeInTheDocument();
   });

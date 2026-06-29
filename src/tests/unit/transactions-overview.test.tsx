@@ -12,7 +12,11 @@ vi.mock("@/components/transactions/transaction-item-card", () => ({
       <span>{item.title}</span>
       <span>
         {item.categoryLabel} · {recurringMode && item.isRecurring ? item.recurringFrequency ?? "monthly" : item.subtitle}
-        {item.isRecurring ? " · 🔁 Recurring" : ""}
+        {recurringMode && item.isRecurring
+          ? ` · ${item.recurringPausedAt ? "Paused" : "Active"}`
+          : item.isRecurring
+            ? " · 🔁 Recurring"
+            : ""}
       </span>
       <span className={item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}>{item.amountDisplay}</span>
     </div>
@@ -248,7 +252,8 @@ describe("transactions overview", () => {
 
     expect(screen.getByText("Bill")).toBeInTheDocument();
     expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
-    expect(screen.getByText("Groceries · monthly · 🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Groceries · monthly · Active")).toBeInTheDocument();
+    expect(screen.queryByText("Groceries · monthly · 🔁 Recurring")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: currentMonthLabel() })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Summary" })).not.toBeInTheDocument();
     expect(screen.getAllByText("1 recurring item shown")).toHaveLength(1);
@@ -278,6 +283,46 @@ describe("transactions overview", () => {
     expect(screen.getByText("No recurring items yet.")).toBeInTheDocument();
     expect(screen.getByText("Recurring payments and income you save will show here.")).toBeInTheDocument();
     expect(screen.queryByText("Coffee")).not.toBeInTheDocument();
+  });
+
+  it("shows active and paused recurring status directly in the Recurring tab", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "active-recurring",
+            title: "Tuition",
+            itemName: "Tuition",
+            categoryLabel: "Education",
+            isRecurring: true,
+            recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            recurringFrequency: "monthly",
+            recurringStartDate: dateInCurrentMonth(10).slice(0, 10),
+          }),
+          makeTransactionItem({
+            id: "paused-recurring",
+            title: "Side bill",
+            itemName: "Side bill",
+            categoryLabel: "Other",
+            isRecurring: true,
+            recurringRuleId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            recurringFrequency: "weekly",
+            recurringPausedAt: "2026-06-29T12:00:00.000Z",
+            recurringStartDate: dateInCurrentMonth(12).slice(0, 10),
+          }),
+        ]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Recurring transactions" }));
+
+    expect(screen.getByText("Education · monthly · Active")).toBeInTheDocument();
+    expect(screen.getByText("Other · weekly · Paused")).toBeInTheDocument();
+    expect(screen.queryByText(/monthly · 🔁 Recurring/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/weekly · 🔁 Recurring/)).not.toBeInTheDocument();
   });
 
   it("expands and collapses timeframe and Summary controls", () => {
