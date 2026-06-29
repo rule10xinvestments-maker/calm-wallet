@@ -1033,7 +1033,13 @@ function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: Spe
     <div className="space-y-4">
       <SpendingMixSummaryChart chart={chart} onSelect={setSelectedKey} selectedKey={effectiveSelectedKey} segment={segment} />
       <div className="space-y-3">
-        <SpendingMixRows items={spendingMixItems} onSelect={setSelectedKey} selectedKey={effectiveSelectedKey} segment={segment} />
+        <SpendingMixRows
+          displayCurrency={data.displayCurrency}
+          items={spendingMixItems}
+          onSelect={setSelectedKey}
+          selectedKey={effectiveSelectedKey}
+          segment={segment}
+        />
       </div>
     </div>
   );
@@ -1641,12 +1647,113 @@ function SpendingMixSummaryChart({
   );
 }
 
+type SpendingMixRecentEntry = SpendingMixCategoryItem["recentEntries"][number];
+
+type GroupedMixEntry = {
+  key: string;
+  title: string;
+  amountDisplay: string;
+  metaLabel: string;
+  count: number;
+  totalMinor: number;
+  latestOccurredAt: string;
+};
+
+function normalizeMixEntryTitle(title: string) {
+  return title.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function formatGroupedMixTitle(title: string) {
+  return formatTransactionTitleForDisplay(title.trim().replace(/\s+/g, " "));
+}
+
+function formatGroupedMixAmount(group: {
+  approximate: boolean;
+  hasUnavailableRate: boolean;
+  totalMinor: number;
+}, displayCurrency: string) {
+  if (group.hasUnavailableRate) {
+    return `${formatMoney(group.totalMinor, displayCurrency)} + rate unavailable`;
+  }
+
+  return `${group.approximate ? "≈ " : ""}${formatMoney(group.totalMinor, displayCurrency)}`;
+}
+
+function buildGroupedMixEntries(entries: SpendingMixRecentEntry[], displayCurrency: string): GroupedMixEntry[] {
+  const groups = new Map<
+    string,
+    {
+      key: string;
+      title: string;
+      count: number;
+      totalMinor: number;
+      latestOccurredAt: string;
+      latestOccurredLabel: string;
+      approximate: boolean;
+      hasUnavailableRate: boolean;
+      firstEntry: SpendingMixRecentEntry;
+    }
+  >();
+
+  for (const entry of entries) {
+    const normalizedTitle = normalizeMixEntryTitle(entry.title);
+    const key = normalizedTitle || entry.id;
+    const current = groups.get(key);
+    const displayAmountMinor = entry.displayAmountMinor ?? entry.amountMinor;
+    const nextLatest =
+      !current || new Date(entry.occurredAt).getTime() > new Date(current.latestOccurredAt).getTime()
+        ? { occurredAt: entry.occurredAt, occurredLabel: entry.occurredLabel }
+        : { occurredAt: current.latestOccurredAt, occurredLabel: current.latestOccurredLabel };
+
+    groups.set(key, {
+      key,
+      title: current?.title ?? formatGroupedMixTitle(entry.title),
+      count: (current?.count ?? 0) + 1,
+      totalMinor: (current?.totalMinor ?? 0) + displayAmountMinor,
+      latestOccurredAt: nextLatest.occurredAt,
+      latestOccurredLabel: nextLatest.occurredLabel,
+      approximate: Boolean(current?.approximate || entry.displayAmountApproximate),
+      hasUnavailableRate: Boolean(current?.hasUnavailableRate || entry.displayAmountUnavailable),
+      firstEntry: current?.firstEntry ?? entry,
+    });
+  }
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      key: group.key,
+      title: group.title,
+      amountDisplay:
+        group.count === 1
+          ? group.firstEntry.amountDisplay
+          : formatGroupedMixAmount(group, displayCurrency),
+      metaLabel: group.count === 1 ? group.latestOccurredLabel : `${group.count} entries`,
+      count: group.count,
+      totalMinor: group.totalMinor,
+      latestOccurredAt: group.latestOccurredAt,
+    }))
+    .sort((a, b) => {
+      if (b.totalMinor !== a.totalMinor) {
+        return b.totalMinor - a.totalMinor;
+      }
+
+      const dateDelta = new Date(b.latestOccurredAt).getTime() - new Date(a.latestOccurredAt).getTime();
+
+      if (dateDelta !== 0) {
+        return dateDelta;
+      }
+
+      return a.title.localeCompare(b.title);
+    });
+}
+
 function SpendingMixRows({
+  displayCurrency,
   items,
   onSelect,
   selectedKey,
   segment,
 }: {
+  displayCurrency: string;
   items: InsightsData["categoryBreakdown"];
   onSelect: (key: string) => void;
   selectedKey: string | null;
@@ -1672,6 +1779,7 @@ function SpendingMixRows({
         const isExpanded = expandedKey === item.key;
         const isSelected = selectedKey === item.key;
         const chartColor = getCategoryChartColor(item);
+        const groupedEntries = isExpanded ? buildGroupedMixEntries(item.recentEntries, displayCurrency) : [];
 
         return (
           <div key={item.key} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
@@ -1729,11 +1837,11 @@ function SpendingMixRows({
               {isExpanded ? (
                 <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
                   <div className="space-y-2">
-                    {item.recentEntries.map((entry) => (
-                      <div key={entry.id} className="grid grid-cols-[1fr_auto] gap-3">
+                    {groupedEntries.map((entry) => (
+                      <div key={entry.key} className="grid grid-cols-[1fr_auto] gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title)}</p>
-                          <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
+                          <p className="truncate text-sm font-medium text-slate-800">{entry.title}</p>
+                          <p className="text-xs text-slate-500">{entry.metaLabel}</p>
                         </div>
                         <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
                       </div>

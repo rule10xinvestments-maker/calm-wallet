@@ -201,6 +201,9 @@ describe("transactions read model", () => {
     expect(data.categoryBreakdown[0]?.recentEntries[0]).toMatchObject({
       title: "Market",
       amountDisplay: "$20.00",
+      displayAmountMinor: 2000,
+      displayAmountApproximate: false,
+      displayAmountUnavailable: false,
       occurredLabel: "Apr 10",
     });
     expect(data.incomeCategoryBreakdown[0]).toMatchObject({
@@ -214,6 +217,26 @@ describe("transactions read model", () => {
     });
     expect(data.largestRecentExpenses[0]?.amountDisplay).toBe("$20.00");
     expect(data.budgetProgress).toEqual([]);
+  });
+
+  it("keeps all selected-month category entries available for Mix expansion", () => {
+    const transactions = Array.from({ length: 6 }, (_, index) =>
+      makeTransaction({
+        id: `coffee-${index}`,
+        transactionType: "expense",
+        amountMinor: 500,
+        categoryId: "food",
+        itemName: "Coffee",
+        merchant: null,
+        occurredAt: `2026-04-${String(index + 1).padStart(2, "0")}T00:00:00.000Z`,
+      }),
+    );
+
+    const data = buildInsightsData(transactions, { food: "Groceries" }, "USD", new Date("2026-04-21T00:00:00.000Z"));
+
+    expect(data.categoryBreakdown[0]?.transactionCount).toBe(6);
+    expect(data.categoryBreakdown[0]?.recentEntries).toHaveLength(6);
+    expect(data.timeframeCategoryBreakdown[0]?.recentEntries).toHaveLength(5);
   });
 
   it("converts EUR income into RON display totals without mutating original transaction currency", () => {

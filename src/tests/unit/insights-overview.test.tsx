@@ -1942,6 +1942,91 @@ describe("insights overview", () => {
     expect(screen.queryByText("Corner market")).not.toBeInTheDocument();
   });
 
+  it("groups repeated same-name items in Mix category expansion", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        displayCurrency: "RON",
+        availableDisplayCurrencies: ["RON", "USD"],
+        categoryBreakdown: [
+          makeCategory({
+            label: "Groceries",
+            amountMinor: 31096,
+            amountDisplay: "≈ RON 310.96",
+            transactionCount: 4,
+            recentEntries: [
+              {
+                id: "cola-usd",
+                title: " Cola ",
+                amountMinor: 1000,
+                amountDisplay: "$10.00",
+                displayAmountMinor: 4520,
+                displayAmountDisplay: "≈ RON 45.20",
+                displayAmountApproximate: true,
+                displayAmountUnavailable: false,
+                occurredAt: "2026-06-29T00:00:00.000Z",
+                occurredLabel: "Jun 29",
+              },
+              {
+                id: "bere",
+                title: "Bere",
+                amountMinor: 500,
+                amountDisplay: "RON 5.00",
+                displayAmountMinor: 500,
+                displayAmountDisplay: "RON 5.00",
+                displayAmountApproximate: false,
+                displayAmountUnavailable: false,
+                occurredAt: "2026-06-13T00:00:00.000Z",
+                occurredLabel: "Jun 13",
+              },
+              {
+                id: "kaufland",
+                title: "Kaufland",
+                amountMinor: 25000,
+                amountDisplay: "RON 250.00",
+                displayAmountMinor: 25000,
+                displayAmountDisplay: "RON 250.00",
+                displayAmountApproximate: false,
+                displayAmountUnavailable: false,
+                occurredAt: "2026-06-10T00:00:00.000Z",
+                occurredLabel: "Jun 10",
+              },
+              {
+                id: "cola-ron",
+                title: "cola",
+                amountMinor: 1000,
+                amountDisplay: "RON 10.00",
+                displayAmountMinor: 1000,
+                displayAmountDisplay: "RON 10.00",
+                displayAmountApproximate: false,
+                displayAmountUnavailable: false,
+                occurredAt: "2026-06-03T00:00:00.000Z",
+                occurredLabel: "Jun 3",
+              },
+            ],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Groceries entries" }));
+
+    expect(screen.getAllByText("Cola")).toHaveLength(1);
+    expect(screen.getByText("≈ RON 55.20")).toBeInTheDocument();
+    expect(screen.getByText("2 entries")).toBeInTheDocument();
+    expect(screen.queryByText("Jun 29")).not.toBeInTheDocument();
+    expect(screen.queryByText("Jun 3")).not.toBeInTheDocument();
+
+    expect(screen.getByText("Bere")).toBeInTheDocument();
+    expect(screen.getByText("Jun 13")).toBeInTheDocument();
+    expect(screen.getByText("Kaufland")).toBeInTheDocument();
+    expect(screen.getByText("Jun 10")).toBeInTheDocument();
+
+    const expandedText = screen.getByText("Kaufland").closest(".space-y-2")?.textContent ?? "";
+    expect(expandedText.indexOf("Kaufland")).toBeLessThan(expandedText.indexOf("Cola"));
+    expect(expandedText.indexOf("Cola")).toBeLessThan(expandedText.indexOf("Bere"));
+  });
+
   it("selects income segment and renders income category rows", () => {
     renderInsights(makeInsightsData({ selectedChartMode: "mix" }));
 
