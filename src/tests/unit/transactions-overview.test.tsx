@@ -14,10 +14,10 @@ vi.mock("@/components/transactions/transaction-item-card", () => ({
         {item.categoryLabel} · {recurringMode && item.isRecurring ? item.recurringFrequency ?? "monthly" : item.subtitle}
         {recurringMode && item.isRecurring
           ? ` · ${item.recurringPausedAt ? "Paused" : "Active"}`
-          : item.isRecurring
-            ? " · 🔁 Recurring"
-            : ""}
+          : ""}
       </span>
+      {!recurringMode && item.isRecurring ? <span>🔁 Recurring</span> : null}
+      {!recurringMode && item.amountTone === "expense" && item.isOverLimit ? <span>⚠️ Over limit</span> : null}
       <span className={item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}>{item.amountDisplay}</span>
     </div>
   ),
@@ -245,8 +245,9 @@ describe("transactions overview", () => {
 
     expect(screen.getByText("Bill")).toBeInTheDocument();
     expect(screen.getByText("Coffee")).toBeInTheDocument();
-    expect(screen.getByText("Groceries · This month · 🔁 Recurring")).toBeInTheDocument();
-    expect(screen.queryByText("Groceries · This month · 🔁 Recurring", { selector: "span" })?.parentElement).toHaveTextContent("Bill");
+    expect(screen.getAllByText("Groceries · This month")).toHaveLength(2);
+    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("🔁 Recurring").parentElement).toHaveTextContent("Bill");
 
     fireEvent.click(screen.getByRole("button", { name: "Recurring transactions" }));
 

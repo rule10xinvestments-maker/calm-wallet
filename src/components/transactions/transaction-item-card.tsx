@@ -107,7 +107,7 @@ function getRowMetadata(item: TransactionListItem, recurringMode: boolean) {
     }`;
   }
 
-  return `${item.categoryLabel} · ${item.subtitle}${item.isRecurring ? " · 🔁 Recurring" : ""}`;
+  return `${item.categoryLabel} · ${item.subtitle}`;
 }
 
 function ActionMessage({ state }: { state: TransactionMutationState }) {
@@ -358,6 +358,7 @@ export function TransactionItemCard({
             reviewState: "reviewed" as const,
             reviewLabel: "Reviewed",
             uncertaintyReason: null,
+            isOverLimit: false,
           }
         : {}),
     };
@@ -508,6 +509,7 @@ export function TransactionItemCard({
       recurringStartDate: nextIsRecurring ? recurringStartDate : null,
       recurringEndDate: nextIsRecurring ? recurringEndDate : null,
       recurringPausedAt: nextRecurringPaused,
+      isOverLimit: false,
     };
 
     pendingDetailsItemRef.current = nextItem;
@@ -568,6 +570,12 @@ export function TransactionItemCard({
         <span className="min-w-0 space-y-0.5">
           <span className="block break-words text-sm font-medium leading-5 text-slate-900">{formatTransactionTitleForDisplay(displayItem.title)}</span>
           <span className="block text-xs leading-5 text-slate-500">{getRowMetadata(displayItem, recurringMode)}</span>
+          {!recurringMode && displayItem.isRecurring ? (
+            <span className="block text-xs leading-5 text-slate-500">🔁 Recurring</span>
+          ) : null}
+          {!recurringMode && displayItem.amountTone === "expense" && displayItem.isOverLimit ? (
+            <span className="block text-xs font-medium leading-5 text-amber-700">⚠️ Over limit</span>
+          ) : null}
           {displayItem.note ? (
             <span className="block truncate text-xs leading-5 text-slate-500" title={`Note: ${displayItem.note}`}>
               Note: {displayItem.note}

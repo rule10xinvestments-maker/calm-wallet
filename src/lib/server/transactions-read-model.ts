@@ -36,6 +36,7 @@ export type TransactionListItem = {
   recurringStartDate?: string | null;
   recurringEndDate?: string | null;
   recurringPausedAt?: string | null;
+  isOverLimit?: boolean;
 };
 
 export type TransactionCategoryOption = {
@@ -392,6 +393,7 @@ export function mapTransactionsToListItems(
   categoryLabels: Record<string, string>,
   currencyFallback = "USD",
   recurringRules: Record<string, RecurringRuleSummary> = {},
+  overLimitTransactionIds: ReadonlySet<string> = new Set(),
 ): TransactionListItem[] {
   return transactions.map((transaction) => {
     const reviewMeta = getReviewStateMeta(transaction.reviewState);
@@ -425,6 +427,7 @@ export function mapTransactionsToListItems(
       recurringStartDate: recurringRule?.startDate ?? null,
       recurringEndDate: recurringRule?.endDate ?? null,
       recurringPausedAt: recurringRule?.pausedAt ?? null,
+      isOverLimit: overLimitTransactionIds.has(transaction.id),
     };
   });
 }
@@ -1003,6 +1006,126 @@ function convertMinor(amountMinor: number, conversionRate: number) {
   return Math.round(amountMinor * conversionRate);
 }
 
+function getLimitReferenceRange(budget: Budget, referenceDate: Date) {
+  if (budget.period === "weekly") {
+    const start = startOfCalendarWeek(referenceDate);
+    return {
+      start,
+      end: shiftDay(start, 7),
+    };
+  }
+
+  const start = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), 1));
+  return {
+    start,
+    end: shiftMonth(start, 1),
+  };
+}
+
+function isBudgetEffectiveForDate(budget: Budget, referenceDate: Date) {
+  const budgetMonthStart = parseMonthKey(budget.monthStart.slice(0, 7), referenceDate);
+  const referenceMonth = toMonthKey(referenceDate);
+  const budgetMonth = toMonthKey(budgetMonthStart);
+
+  if (referenceDate < budgetMonthStart) {
+    return false;
+  }
+
+  return budget.repeats || referenceMonth === budgetMonth;
+}
+
+function getSpentForCategoryLimit(args: {
+  transactions: Transaction[];
+  budget: Budget;
+  referenceDate: Date;
+  rateLookup: Map<string, FxRate>;
+}) {
+  const { start, end } = getLimitReferenceRange(args.budget, args.referenceDate);
+  let spentMinor = 0;
+
+  for (const transaction of args.transactions) {
+    if (
+      transaction.deletedAt ||
+      transaction.deletedForeverAt ||
+      transaction.transactionType !== "expense" ||
+      transaction.categoryId !== args.budget.categoryId
+    ) {
+      continue;
+    }
+
+    const occurredAt = new Date(transaction.occurredAt);
+
+    if (occurredAt < start || occurredAt >= end) {
+      continue;
+    }
+
+    const sourceCurrency = normalizeCurrency(transaction.currency);
+    const conversionRate = getConversionRate(sourceCurrency, args.budget.currency, args.rateLookup);
+    spentMinor += conversionRate === null ? 0 : convertMinor(transaction.amountMinor, conversionRate);
+  }
+
+  return spentMinor;
+}
+
+export function buildOverLimitTransactionIds(args: {
+  transactions: Transaction[];
+  budgets: Budget[];
+  fxRates?: FxRate[];
+}) {
+  const rateLookup = createEurRateLookup(args.fxRates ?? []);
+  const activeBudgetsByCategory = new Map<string, Budget[]>();
+  const overLimitTransactionIds = new Set<string>();
+
+  for (const budget of args.budgets) {
+    if (!budget.isActive) {
+      continue;
+    }
+
+    const budgets = activeBudgetsByCategory.get(budget.categoryId) ?? [];
+    budgets.push(budget);
+    activeBudgetsByCategory.set(budget.categoryId, budgets);
+  }
+
+  for (const transaction of args.transactions) {
+    if (
+      transaction.deletedAt ||
+      transaction.deletedForeverAt ||
+      transaction.transactionType !== "expense" ||
+      !transaction.categoryId
+    ) {
+      continue;
+    }
+
+    const budgets = activeBudgetsByCategory.get(transaction.categoryId) ?? [];
+    const occurredAt = new Date(transaction.occurredAt);
+
+    if (Number.isNaN(occurredAt.getTime())) {
+      continue;
+    }
+
+    const isOverLimit = budgets.some((budget) => {
+      if (!isBudgetEffectiveForDate(budget, occurredAt)) {
+        return false;
+      }
+
+      return (
+        getSpentForCategoryLimit({
+          transactions: args.transactions,
+          budget,
+          referenceDate: occurredAt,
+          rateLookup,
+        }) > budget.amountMinor
+      );
+    });
+
+    if (isOverLimit) {
+      overLimitTransactionIds.add(transaction.id);
+    }
+  }
+
+  return overLimitTransactionIds;
+}
+
 function getInsightsCategoryMeta(
   transaction: Transaction,
   categoryLabels: Record<string, string>,
@@ -1388,49 +1511,15 @@ export function buildInsightsData(
       categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
     }));
 
-  const monthlyExpenseByCategory = new Map<string, Map<string, number>>();
-  const weeklyExpenseByCategory = new Map<string, Map<string, number>>();
-  const weekStart = startOfCalendarWeek(now);
-  const weekEnd = shiftDay(weekStart, 7);
-  currentMonthTransactions
-    .filter((transaction) => transaction.transactionType === "expense" && transaction.categoryId)
-    .forEach((transaction) => {
-      const categoryId = transaction.categoryId!;
-      const sourceCurrency = normalizeCurrency(transaction.currency);
-      const monthlyCurrencyTotals = monthlyExpenseByCategory.get(categoryId) ?? new Map<string, number>();
-      monthlyCurrencyTotals.set(sourceCurrency, (monthlyCurrencyTotals.get(sourceCurrency) ?? 0) + transaction.amountMinor);
-      monthlyExpenseByCategory.set(categoryId, monthlyCurrencyTotals);
-
-      const occurredAt = new Date(transaction.occurredAt);
-
-      if (occurredAt >= weekStart && occurredAt < weekEnd) {
-        const weeklyCurrencyTotals = weeklyExpenseByCategory.get(categoryId) ?? new Map<string, number>();
-        weeklyCurrencyTotals.set(sourceCurrency, (weeklyCurrencyTotals.get(sourceCurrency) ?? 0) + transaction.amountMinor);
-        weeklyExpenseByCategory.set(categoryId, weeklyCurrencyTotals);
-      }
-    });
-
-  const getSpentForLimit = (budget: Budget) => {
-    const totals = budget.period === "weekly" ? weeklyExpenseByCategory.get(budget.categoryId) : monthlyExpenseByCategory.get(budget.categoryId);
-
-    if (!totals) {
-      return 0;
-    }
-
-    let spentMinor = 0;
-
-    for (const [sourceCurrency, amountMinor] of totals.entries()) {
-      const conversionRate = getConversionRate(sourceCurrency, budget.currency, rateLookup);
-      spentMinor += conversionRate === null ? 0 : convertMinor(amountMinor, conversionRate);
-    }
-
-    return spentMinor;
-  };
-
   const budgetProgress = budgets
     .filter((budget) => budget.isActive)
     .map((budget) => {
-      const spentMinor = getSpentForLimit(budget);
+      const spentMinor = getSpentForCategoryLimit({
+        transactions: activeTransactions,
+        budget,
+        referenceDate: budget.period === "weekly" ? now : monthStart,
+        rateLookup,
+      });
       const remainingMinor = budget.amountMinor - spentMinor;
       const percentUsed = budget.amountMinor > 0 ? Math.round((spentMinor / budget.amountMinor) * 100) : 0;
 
@@ -1758,6 +1847,45 @@ async function loadRecurringRuleSummaries(userId: string, ruleIds: string[]): Pr
   }
 }
 
+async function loadActivityCategoryLimits(userId: string, transactions: Transaction[]): Promise<Budget[]> {
+  const monthStarts = Array.from(
+    new Set(
+      transactions
+        .filter((transaction) => !transaction.deletedAt && !transaction.deletedForeverAt)
+        .map((transaction) => toMonthStartValue(parseMonthKey(transaction.occurredAt.slice(0, 7), new Date(transaction.occurredAt)))),
+    ),
+  );
+
+  if (!monthStarts.length) {
+    return [];
+  }
+
+  try {
+    const budgetService = await createSupabaseBudgetService();
+    const limitsById = new Map<string, Budget>();
+
+    await Promise.all(
+      monthStarts.map(async (monthStart) => {
+        const limits = await budgetService.listCategoryLimits(userId, { monthStart });
+
+        for (const limit of limits) {
+          limitsById.set(limit.id, limit);
+        }
+      }),
+    );
+
+    return Array.from(limitsById.values());
+  } catch (error) {
+    console.warn("[activity-limits-fallback]", {
+      hasTransactions: transactions.length > 0,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      hasMessage: error instanceof Error && Boolean(error.message),
+    });
+
+    return [];
+  }
+}
+
 function logInsightsSupportingDataFailure(source: "categories" | "controlled_categories" | "default_currency" | "budgets" | "fx_rates", error: unknown) {
   console.warn("[insights-supporting-data-fallback]", {
     source,
@@ -1801,7 +1929,13 @@ export async function loadTransactionsPageData(args: {
   ]);
   const recoverableDeletedAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const recentlyDeletedTransactions = await service.listRecoverableDeletedTransactions(args.userId, recoverableDeletedAfter, 25);
-  const availableDisplayCurrencies = buildActivityAvailableDisplayCurrencies([...transactions, ...recentlyDeletedTransactions], currency);
+  const activityLimits = await loadActivityCategoryLimits(args.userId, transactions);
+  const availableDisplayCurrencies = Array.from(
+    new Set([
+      ...buildActivityAvailableDisplayCurrencies([...transactions, ...recentlyDeletedTransactions], currency),
+      ...activityLimits.map((limit) => normalizeCurrency(limit.currency)),
+    ]),
+  );
   const fxRates = await loadInsightsSupportingData(
     "fx_rates",
     () => loadFxRatesForDisplay(availableDisplayCurrencies),
@@ -1809,6 +1943,11 @@ export async function loadTransactionsPageData(args: {
   );
 
   const filtered = filterTransactionsForView(transactions, args.view, args.query);
+  const overLimitTransactionIds = buildOverLimitTransactionIds({
+    transactions,
+    budgets: activityLimits,
+    fxRates,
+  });
   const recurringRules = await loadRecurringRuleSummaries(
     args.userId,
     [...filtered, ...recentlyDeletedTransactions].map((transaction) => transaction.recurringRuleId ?? "").filter(Boolean),
@@ -1826,7 +1965,7 @@ export async function loadTransactionsPageData(args: {
     displayCurrency: currency,
     availableDisplayCurrencies,
     fxRates,
-    items: mapTransactionsToListItems(filtered, categoryLabels, currency, recurringRules),
+    items: mapTransactionsToListItems(filtered, categoryLabels, currency, recurringRules, overLimitTransactionIds),
     recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency, recurringRules),
     categories: await loadCategoryOptions(),
   };

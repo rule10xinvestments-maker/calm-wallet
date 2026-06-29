@@ -90,7 +90,7 @@ describe("transaction item card", () => {
     expect(screen.getByText("Note: bought for home")).toBeInTheDocument();
   });
 
-  it("shows the required inline recurring marker only on recurring rows", () => {
+  it("shows the recurring marker on a separate status line only on recurring rows", () => {
     const { rerender } = render(
       <TransactionItemCard
         categories={categories}
@@ -102,7 +102,9 @@ describe("transaction item card", () => {
       />,
     );
 
-    expect(screen.getByText("Dining · May 5 · 🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
+    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
+    expect(screen.queryByText("Dining · May 5 · 🔁 Recurring")).not.toBeInTheDocument();
 
     rerender(
       <TransactionItemCard
@@ -118,6 +120,33 @@ describe("transaction item card", () => {
     expect(screen.queryByText(/🔁 Recurring/)).not.toBeInTheDocument();
   });
 
+  it("shows one calm over-limit status line for expense rows over an active limit", () => {
+    renderCard({ item: makeItem({ isOverLimit: true }) });
+
+    expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
+    expect(screen.getByText("⚠️ Over limit")).toBeInTheDocument();
+  });
+
+  it("does not show over-limit status for income rows", () => {
+    renderCard({
+      item: makeItem({
+        amountTone: "income",
+        amountDisplay: "+$34.00",
+        isOverLimit: true,
+      }),
+    });
+
+    expect(screen.queryByText("⚠️ Over limit")).not.toBeInTheDocument();
+  });
+
+  it("shows recurring and over-limit statuses together on normal rows", () => {
+    renderCard({ item: makeItem({ isRecurring: true, isOverLimit: true }) });
+
+    expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
+    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("⚠️ Over limit")).toBeInTheDocument();
+  });
+
   it("shows frequency and active or paused state in Recurring mode rows", () => {
     const { rerender } = render(
       <TransactionItemCard
@@ -126,6 +155,7 @@ describe("transaction item card", () => {
         initialState={initialState}
         item={makeItem({
           isRecurring: true,
+          isOverLimit: true,
           recurringFrequency: "weekly",
           recurringPausedAt: null,
         })}
@@ -137,6 +167,7 @@ describe("transaction item card", () => {
 
     expect(screen.getByText("Dining · Weekly · Active")).toBeInTheDocument();
     expect(screen.queryByText(/🔁 Recurring/)).not.toBeInTheDocument();
+    expect(screen.queryByText("⚠️ Over limit")).not.toBeInTheDocument();
 
     rerender(
       <TransactionItemCard
@@ -176,7 +207,8 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
 
-    expect(screen.getByText("Utilities · Jun 26 · 🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Utilities · Jun 26")).toBeInTheDocument();
+    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
     expect(screen.getByText("Recurring")).toBeInTheDocument();
     expect(screen.getByText("Monthly · Starts Jun 26, 2026 · Until turned off")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit details" })).toBeInTheDocument();
@@ -312,7 +344,8 @@ describe("transaction item card", () => {
     expect(formData.get("recurringManageIntent")).toBe("pause");
     expect(formData.get("recurringRuleId")).toBe("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     expect(await screen.findByText("Bill")).toBeInTheDocument();
-    expect(screen.getByText("Dining · Jun 26 · 🔁 Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Dining · Jun 26")).toBeInTheDocument();
+    expect(screen.getByText("🔁 Recurring")).toBeInTheDocument();
   });
 
   it("resumes a paused recurring transaction from the edit flow", async () => {

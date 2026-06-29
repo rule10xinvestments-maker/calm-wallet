@@ -4,12 +4,14 @@ import {
   buildSpendingSummaryData,
   buildAssistantFinancialQuestionAnswer,
   buildInsightsData,
+  buildOverLimitTransactionIds,
   filterTransactionsForView,
   getReviewStateMeta,
   mapTransactionsToListItems,
   normalizeInsightsChartMode,
   resolveInsightsMonthStatus,
 } from "@/lib/server/transactions-read-model";
+import type { Budget } from "@/domain/budgets/types";
 import type { Transaction } from "@/domain/transactions/types";
 
 function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
@@ -33,6 +35,23 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     deletedForeverAt: null,
     createdAt: "2026-04-10T00:00:00.000Z",
     updatedAt: "2026-04-10T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeBudget(overrides: Partial<Budget> = {}): Budget {
+  return {
+    id: "budget-1",
+    userId: "user-1",
+    monthStart: "2026-06-01",
+    categoryId: "housing",
+    amountMinor: 25000,
+    currency: "RON",
+    period: "monthly",
+    repeats: true,
+    isActive: true,
+    createdAt: "2026-06-01T00:00:00.000Z",
+    updatedAt: "2026-06-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -137,6 +156,119 @@ describe("transactions read model", () => {
       recurringStartDate: "2026-04-10",
       recurringEndDate: null,
     });
+  });
+
+  it("marks Activity expense rows over an active monthly category limit", () => {
+    const transactions = [
+      makeTransaction({
+        id: "rent",
+        amountMinor: 20000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-06-05T12:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "utilities",
+        amountMinor: 6000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-06-15T12:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "travel",
+        amountMinor: 1000,
+        currency: "RON",
+        categoryId: "travel",
+        occurredAt: "2026-06-15T12:00:00.000Z",
+      }),
+    ];
+
+    const overLimitIds = buildOverLimitTransactionIds({
+      transactions,
+      budgets: [
+        makeBudget(),
+        makeBudget({ id: "travel-limit", categoryId: "travel", amountMinor: 10000 }),
+      ],
+    });
+    const items = mapTransactionsToListItems(transactions, { housing: "Housing", travel: "Travel" }, "RON", {}, overLimitIds);
+
+    expect(items.find((item) => item.id === "rent")?.isOverLimit).toBe(true);
+    expect(items.find((item) => item.id === "utilities")?.isOverLimit).toBe(true);
+    expect(items.find((item) => item.id === "travel")?.isOverLimit).toBe(false);
+  });
+
+  it("does not mark Activity rows over paused category limits", () => {
+    const transactions = [
+      makeTransaction({
+        id: "rent",
+        amountMinor: 30000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-06-05T12:00:00.000Z",
+      }),
+    ];
+
+    const overLimitIds = buildOverLimitTransactionIds({
+      transactions,
+      budgets: [makeBudget({ isActive: false })],
+    });
+
+    expect(overLimitIds.has("rent")).toBe(false);
+  });
+
+  it("does not mark income rows over category limits", () => {
+    const transactions = [
+      makeTransaction({
+        id: "income",
+        transactionType: "income",
+        amountMinor: 30000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-06-05T12:00:00.000Z",
+      }),
+    ];
+
+    const overLimitIds = buildOverLimitTransactionIds({
+      transactions,
+      budgets: [makeBudget()],
+    });
+
+    expect(overLimitIds.has("income")).toBe(false);
+  });
+
+  it("marks Activity rows over an active weekly category limit in the transaction calendar week", () => {
+    const transactions = [
+      makeTransaction({
+        id: "week-a",
+        amountMinor: 7000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-06-29T12:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "week-b",
+        amountMinor: 4000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-07-01T12:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "next-week",
+        amountMinor: 1000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-07-06T12:00:00.000Z",
+      }),
+    ];
+
+    const overLimitIds = buildOverLimitTransactionIds({
+      transactions,
+      budgets: [makeBudget({ period: "weekly", amountMinor: 10000 })],
+    });
+
+    expect(overLimitIds.has("week-a")).toBe(true);
+    expect(overLimitIds.has("week-b")).toBe(true);
+    expect(overLimitIds.has("next-week")).toBe(false);
   });
 
   it("uses item name as the primary title and keeps merchant separate", () => {
