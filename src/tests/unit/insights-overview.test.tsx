@@ -1190,6 +1190,7 @@ describe("insights overview", () => {
     const panel = screen.getByLabelText("Apr 10 spending category breakdown");
     expect(day).toHaveAttribute("aria-pressed", "true");
     expect(within(panel).getByText("Apr 10")).toBeInTheDocument();
+    expect(within(panel).queryByText("Apr 10 breakdown")).not.toBeInTheDocument();
     expect(within(panel).getByText("Total $150")).toBeInTheDocument();
     expect(within(panel).getByText("Housing")).toBeInTheDocument();
     expect(within(panel).getByText("$120")).toBeInTheDocument();
@@ -1235,6 +1236,7 @@ describe("insights overview", () => {
     const panel = screen.getByLabelText("Apr 29 spending category breakdown");
 
     expect(within(panel).getByText("Apr 29")).toBeInTheDocument();
+    expect(within(panel).queryByText("Apr 29 breakdown")).not.toBeInTheDocument();
     expect(within(panel).getByText("Total RON 100")).toBeInTheDocument();
     expect(within(panel).getByText("Transfers")).toBeInTheDocument();
     expect(within(panel).getByText("Self-employment")).toBeInTheDocument();

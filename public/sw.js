@@ -1,4 +1,4 @@
-const CACHE_NAME = "calm-wallet-static-v1";
+const CACHE_NAME = "calm-wallet-static-v2";
 const SAFE_CACHE_PATHS = [
   "/favicon.svg",
   "/manifest.webmanifest",
@@ -38,10 +38,7 @@ function isSafeStaticRequest(request, url) {
     return false;
   }
 
-  return (
-    SAFE_CACHE_PATHS.includes(url.pathname) ||
-    (url.pathname.startsWith("/_next/static/") && (request.destination === "script" || request.destination === "style"))
-  );
+  return SAFE_CACHE_PATHS.includes(url.pathname);
 }
 
 self.addEventListener("install", (event) => {

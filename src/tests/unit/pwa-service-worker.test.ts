@@ -8,11 +8,12 @@ const safeCachePaths = Array.from(serviceWorkerSource.matchAll(/"([^"]+)"/g))
   .filter((value) => value?.startsWith("/favicon") || value?.startsWith("/manifest") || value?.startsWith("/icons/"));
 
 describe("PWA service worker", () => {
-  it("only caches safe static app assets", () => {
-    expect(serviceWorkerSource).toContain("/_next/static/");
+  it("only caches safe static app assets without runtime bundles", () => {
+    expect(serviceWorkerSource).toContain("calm-wallet-static-v2");
     expect(serviceWorkerSource).toContain("/icons/calm-wallet-icon-192.png");
     expect(serviceWorkerSource).toContain("/icons/calm-wallet-maskable-512.png");
-    expect(serviceWorkerSource).toContain("request.destination === \"script\" || request.destination === \"style\"");
+    expect(serviceWorkerSource).not.toContain("/_next/static/");
+    expect(serviceWorkerSource).not.toContain("request.destination === \"script\" || request.destination === \"style\"");
   });
 
   it("populates the install cache without failing the service worker install for one missing asset", () => {
