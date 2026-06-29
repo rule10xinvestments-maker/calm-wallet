@@ -938,12 +938,34 @@ function TimeframeBarsChart({
 
 function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: SpendingMixSegment }) {
   const spendingMixItems = segment === "income" ? data.incomeCategoryBreakdown : data.categoryBreakdown;
+  const chart = buildSpendingMixChartItems(spendingMixItems);
+  const defaultSelectedKey =
+    chart.items.reduce<SpendingMixChartItem | null>((largest, item) => {
+      if (Math.max(item.amountMinor, 0) <= 0) {
+        return largest;
+      }
+
+      if (!largest || item.amountMinor > largest.amountMinor) {
+        return item;
+      }
+
+      return largest;
+    }, null)?.key ??
+    chart.items[0]?.key ??
+    null;
+  const [selectedKey, setSelectedKey] = useState<string | null>(defaultSelectedKey);
+  const selectedKeyIsVisible = selectedKey ? chart.items.some((item) => item.key === selectedKey && Math.max(item.amountMinor, 0) > 0) : false;
+  const effectiveSelectedKey = selectedKeyIsVisible ? selectedKey : defaultSelectedKey;
+
+  useEffect(() => {
+    setSelectedKey(defaultSelectedKey);
+  }, [defaultSelectedKey, segment]);
 
   return (
     <div className="space-y-4">
-      <SpendingMixSummaryChart items={spendingMixItems} segment={segment} />
+      <SpendingMixSummaryChart chart={chart} onSelect={setSelectedKey} selectedKey={effectiveSelectedKey} segment={segment} />
       <div className="space-y-3">
-        <SpendingMixRows items={spendingMixItems} segment={segment} />
+        <SpendingMixRows items={spendingMixItems} onSelect={setSelectedKey} selectedKey={effectiveSelectedKey} segment={segment} />
       </div>
     </div>
   );
@@ -1272,6 +1294,10 @@ function getDonutArcPath(startAngle: number, endAngle: number) {
   return `M ${start.x} ${start.y} A ${donutRadius} ${donutRadius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
 }
 
+function getDonutMidPoint(startAngle: number, endAngle: number) {
+  return getDonutPoint((startAngle + endAngle) / 2);
+}
+
 function normalizeDonutAngles(items: SpendingMixChartItem[], total: number) {
   const positiveItems = items.filter((item) => Math.max(item.amountMinor, 0) > 0);
   const gap = positiveItems.length > 1 ? donutGapDegrees : 0;
@@ -1320,14 +1346,22 @@ export function buildSpendingMixDonutSegments(items: SpendingMixChartItem[], tot
 }
 
 function SpendingMixSummaryChart({
-  items,
+  chart,
+  onSelect,
+  selectedKey,
   segment,
 }: {
-  items: SpendingMixCategoryItem[];
+  chart: ReturnType<typeof buildSpendingMixChartItems>;
+  onSelect: (key: string) => void;
+  selectedKey: string | null;
   segment: SpendingMixSegment;
 }) {
-  const chart = buildSpendingMixChartItems(items);
   const donutSegments = buildSpendingMixDonutSegments(chart.items, chart.total);
+  const selectedItem = chart.items.find((item) => item.key === selectedKey) ?? donutSegments[0] ?? chart.items[0] ?? null;
+  const selectedSegment = donutSegments.find((item) => item.key === selectedItem?.key) ?? null;
+  const selectedDot = selectedSegment ? getDonutMidPoint(selectedSegment.startAngle, selectedSegment.endAngle) : null;
+  const SelectedIcon = selectedItem ? getCategoryVisualsByName(selectedItem.label).icon : null;
+  const context = segment === "income" ? "income" : "spending";
 
   if (!chart.items.length || chart.total <= 0) {
     return null;
@@ -1349,38 +1383,72 @@ function SpendingMixSummaryChart({
           <circle cx="60" cy="58" fill="none" r={donutRadius} stroke="#e2e8f0" strokeWidth="16" />
           {donutSegments.length === 1 ? (
             <circle
-              aria-label={`${donutSegments[0]!.label} ${segment === "income" ? "income" : "spending"} chart slice ${donutSegments[0]!.percent}%`}
+              aria-label={`${donutSegments[0]!.label}, ${donutSegments[0]!.amountDisplay}, ${donutSegments[0]!.percent} percent of ${context}`}
+              className="cursor-pointer focus:outline-none"
               cx="60"
               cy="58"
               fill="none"
+              onClick={() => onSelect(donutSegments[0]!.key)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelect(donutSegments[0]!.key);
+                }
+              }}
               r={donutRadius}
+              role="button"
               stroke={donutSegments[0]!.color}
               strokeLinejoin="round"
-              strokeWidth="16"
+              strokeWidth={donutSegments[0]!.key === selectedItem?.key ? "18" : "16"}
+              tabIndex={0}
             />
           ) : (
             donutSegments.map((item) => (
               <path
                 key={item.key}
-                aria-label={`${item.label} ${segment === "income" ? "income" : "spending"} chart slice ${item.percent}%`}
+                aria-label={`${item.label}, ${item.amountDisplay}, ${item.percent} percent of ${context}`}
+                className="cursor-pointer focus:outline-none"
                 d={item.arcPath}
                 fill="none"
+                onClick={() => onSelect(item.key)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(item.key);
+                  }
+                }}
+                opacity={item.key === selectedItem?.key ? 1 : 0.72}
+                role="button"
                 stroke={item.color}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth="16"
+                strokeWidth={item.key === selectedItem?.key ? "18" : "15"}
+                tabIndex={0}
               />
             ))
           )}
+          {selectedDot ? (
+            <circle
+              aria-hidden="true"
+              cx={selectedDot.x}
+              cy={selectedDot.y}
+              fill={selectedItem?.color ?? "#64748b"}
+              r="3.2"
+              stroke="#ffffff"
+              strokeWidth="1.8"
+            />
+          ) : null}
           <circle cx="60" cy="58" fill="none" r="33" stroke={`url(#spending-mix-highlight-${segment})`} strokeWidth="2" />
           <circle cx="60" cy="58" fill="#f8fafc" r="27" />
-          <text className="fill-slate-900 text-[13px] font-semibold" textAnchor="middle" x="60" y="56">
-            {chart.items.length}
-          </text>
-          <text className="fill-slate-500 text-[7px] font-medium" textAnchor="middle" x="60" y="67">
-            categories
-          </text>
         </svg>
+        {selectedItem ? (
+          <div className="pointer-events-none absolute left-1/2 top-[48%] flex w-[4.6rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
+            {SelectedIcon ? <SelectedIcon aria-hidden="true" className="mb-0.5 h-3.5 w-3.5 shrink-0" style={{ color: selectedItem.color }} /> : null}
+            <p className="w-full truncate text-[10px] font-semibold leading-3 text-slate-900">{selectedItem.label}</p>
+            <p className="mt-0.5 w-full truncate text-[9px] font-semibold leading-3 text-slate-700">{selectedItem.amountDisplay}</p>
+            <p className="text-[9px] font-medium leading-3 text-slate-500">{selectedItem.percent}%</p>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -1388,9 +1456,13 @@ function SpendingMixSummaryChart({
 
 function SpendingMixRows({
   items,
+  onSelect,
+  selectedKey,
   segment,
 }: {
   items: InsightsData["categoryBreakdown"];
+  onSelect: (key: string) => void;
+  selectedKey: string | null;
   segment: SpendingMixSegment;
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -1411,6 +1483,7 @@ function SpendingMixRows({
       {items.map((item) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
         const isExpanded = expandedKey === item.key;
+        const isSelected = selectedKey === item.key;
         const chartColor = getCategoryChartColor(item);
 
         return (
@@ -1418,8 +1491,14 @@ function SpendingMixRows({
             <button
               aria-expanded={isExpanded}
               aria-label={`${isExpanded ? "Hide" : "Show"} ${item.label} entries`}
-              className="grid w-full grid-cols-[2rem_1fr] gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              onClick={() => setExpandedKey(isExpanded ? null : item.key)}
+              aria-pressed={isSelected}
+              className={`grid w-full grid-cols-[2rem_1fr] gap-3 rounded-lg px-1 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                isSelected ? "bg-slate-50 ring-1 ring-slate-200" : ""
+              }`}
+              onClick={() => {
+                onSelect(item.key);
+                setExpandedKey(isExpanded ? null : item.key);
+              }}
               type="button"
             >
               <CategoryShareIcon label={item.label} percentage={percent} segment={segment} />

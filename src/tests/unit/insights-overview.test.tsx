@@ -1540,7 +1540,7 @@ describe("insights overview", () => {
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByText("Category breakdown")).not.toBeInTheDocument();
     expect(screen.queryByText("Tracked")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Needs category")).toHaveLength(1);
+    expect(screen.getAllByText("Needs category")).toHaveLength(2);
     expect(screen.getAllByText("Housing")).toHaveLength(1);
     expect(screen.getAllByText("Dining")).toHaveLength(1);
     expect(screen.getAllByText("Transport")).toHaveLength(1);
@@ -1552,9 +1552,9 @@ describe("insights overview", () => {
     expect(screen.getByText("$34")).toBeInTheDocument();
     expect(screen.getAllByText("$30").length).toBeGreaterThan(0);
     expect(screen.queryByText("$52 - 33%")).not.toBeInTheDocument();
-    expect(screen.getByText("$52")).toBeInTheDocument();
+    expect(screen.getAllByText("$52")).toHaveLength(2);
     expect(screen.getByText("$40")).toBeInTheDocument();
-    expect(screen.getByText("33%")).toBeInTheDocument();
+    expect(screen.getAllByText("33%")).toHaveLength(2);
     expect(screen.getByText("26%")).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Dining spending share 22%" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Transport spending share 19%" })).toBeInTheDocument();
@@ -1606,6 +1606,54 @@ describe("insights overview", () => {
     expect(utilities.getAttribute("style")).toContain("#F97316 0% 4%");
     expect(other.getAttribute("style")).not.toContain("conic-gradient");
     expect(housing.querySelector("svg")).toHaveClass("lucide-house");
+  });
+
+  it("selects the largest Mix category by default and shows center details", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        categoryBreakdown: [
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1500, amountDisplay: "$15", transactionCount: 1 }),
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 6700, amountDisplay: "$67", transactionCount: 2 }),
+          makeCategory({ key: "utilities", label: "Utilities", amountMinor: 1800, amountDisplay: "$18", transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    const donut = screen.getByRole("img", { name: "Expenses category share chart" });
+
+    expect(within(donut).getByText("Housing")).toBeInTheDocument();
+    expect(within(donut).getByText("$67")).toBeInTheDocument();
+    expect(within(donut).getByText("67%")).toBeInTheDocument();
+    expect(within(donut).queryByText("categories")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Housing entries" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("updates Mix center details from category row and donut slice selection", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 6700, amountDisplay: "$67", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 1500, amountDisplay: "$15", transactionCount: 1 }),
+          makeCategory({ key: "utilities", label: "Utilities", amountMinor: 1800, amountDisplay: "$18", transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    const donut = screen.getByRole("img", { name: "Expenses category share chart" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Groceries entries" }));
+    expect(within(donut).getByText("Groceries")).toBeInTheDocument();
+    expect(within(donut).getByText("$15")).toBeInTheDocument();
+    expect(within(donut).getByText("15%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Utilities, $18, 18 percent of spending" }));
+    expect(within(donut).getByText("Utilities")).toBeInTheDocument();
+    expect(within(donut).getByText("$18")).toBeInTheDocument();
+    expect(within(donut).getByText("18%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Utilities entries" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("renders multi-category donuts as rounded arc paths for smoother small slices", () => {
@@ -1698,10 +1746,14 @@ describe("insights overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
 
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("img", { name: "Income category share chart" })).toBeInTheDocument();
+    const donut = screen.getByRole("img", { name: "Income category share chart" });
+    expect(donut).toBeInTheDocument();
     expect(screen.queryByLabelText("Income category legend")).not.toBeInTheDocument();
     expect(screen.queryByText("$50 - 100%")).not.toBeInTheDocument();
     expect(screen.getAllByText("Salary").length).toBeGreaterThan(0);
+    expect(within(donut).getByText("Salary")).toBeInTheDocument();
+    expect(within(donut).getByText("$50")).toBeInTheDocument();
+    expect(within(donut).getByText("100%")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Salary represents 100% of income" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Salary income share 100%" })).toBeInTheDocument();
     expect(screen.getByText("1 entry")).toBeInTheDocument();
