@@ -923,6 +923,7 @@ describe("insights overview", () => {
     expect(screen.getByText("Apr 2")).toBeInTheDocument();
     expect(screen.getByLabelText("Apr 2 tracked spending $12")).toBeInTheDocument();
     expect(screen.getByLabelText("Apr 2 Groceries spending $12")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Apr 2 spending category breakdown")).not.toBeInTheDocument();
     expect(screen.getAllByText("$12").length).toBeGreaterThan(0);
   });
 
@@ -1153,6 +1154,107 @@ describe("insights overview", () => {
     expect(within(legend).queryByText("Dining")).not.toBeInTheDocument();
     expect(screen.getAllByRole("img", { name: "Groceries chart color and category icon" })[0]).toHaveStyle({ color: "#16a34a" });
     expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#e11d48" });
+  });
+
+  it("selects and collapses a Bars day category breakdown", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 15000,
+            amountDisplay: "$150",
+            transactionCount: 2,
+            segments: [
+              { key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 },
+              { key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 },
+            ],
+          }),
+        ],
+      }),
+    );
+
+    const day = screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" });
+
+    expect(screen.queryByLabelText("Apr 10 spending category breakdown")).not.toBeInTheDocument();
+
+    fireEvent.click(day);
+
+    const panel = screen.getByLabelText("Apr 10 spending category breakdown");
+    expect(day).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).getByText("Apr 10 breakdown")).toBeInTheDocument();
+    expect(within(panel).getByText("Total: $150")).toBeInTheDocument();
+    expect(within(panel).getByText("Housing")).toBeInTheDocument();
+    expect(within(panel).getByText("$120")).toBeInTheDocument();
+    expect(within(panel).getByText("80%")).toBeInTheDocument();
+    expect(within(panel).getByText("Groceries")).toBeInTheDocument();
+    expect(within(panel).getByText("$30")).toBeInTheDocument();
+    expect(within(panel).getByText("20%")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $150 spending, hide category breakdown" }));
+
+    expect(screen.queryByLabelText("Apr 10 spending category breakdown")).not.toBeInTheDocument();
+  });
+
+  it("updates Bars selected day detail and clears it when switching segment mode", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        incomeCategoryBreakdown: [
+          makeCategory({ key: "salary", label: "Salary", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 15000,
+            amountDisplay: "$150",
+            transactionCount: 2,
+            segments: [
+              { key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 },
+              { key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 },
+            ],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-12",
+            label: "12",
+            amountMinor: 5000,
+            amountDisplay: "$50",
+            incomeAmountMinor: 5000,
+            incomeAmountDisplay: "$50",
+            transactionCount: 1,
+            segments: [{ key: "utilities", label: "Utilities", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 }],
+            incomeSegments: [{ key: "salary", label: "Salary", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 }],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" }));
+    expect(screen.getByLabelText("Apr 10 spending category breakdown")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Apr 12, $50 spending, tap for category breakdown" }));
+    expect(screen.queryByLabelText("Apr 10 spending category breakdown")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Apr 12 spending category breakdown")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.queryByLabelText("Apr 12 spending category breakdown")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Apr 12 income category breakdown")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Apr 12, $50 income, tap for category breakdown" }));
+
+    const incomePanel = screen.getByLabelText("Apr 12 income category breakdown");
+    expect(within(incomePanel).getByText("Salary")).toBeInTheDocument();
+    expect(within(incomePanel).getByText("100%")).toBeInTheDocument();
   });
 
   it("renders a calm empty state when 1M bars have no spending days", () => {

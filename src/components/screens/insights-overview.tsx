@@ -798,6 +798,7 @@ function TimeframeBarsChart({
   data: InsightsData;
   barsSegment: SpendingMixSegment;
 }) {
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const isIncome = barsSegment === "income";
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
@@ -805,6 +806,12 @@ function TimeframeBarsChart({
   const categoryColorMap = new Map(categoryItems.map((item) => [item.key, getCategoryChartColor(item)]));
   const activeBars = data.timeframeBars.filter((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor) > 0);
   const getSegmentColor = (key: string, label: string) => categoryColorMap.get(key) ?? getCategoryChartColor({ label });
+  const context = isIncome ? "income" : "spending";
+
+  useEffect(() => {
+    setSelectedDayKey(null);
+  }, [barsSegment, data.selectedMonth, data.selectedTimeframe, data.displayCurrency]);
+
   const activeLegendItems = Array.from(
     new Map(
       activeBars
@@ -853,31 +860,44 @@ function TimeframeBarsChart({
             const segments = isIncome ? bar.incomeSegments : bar.segments;
             const width = `${Math.max(10, Math.round((amountMinor / dayMax) * 100))}%`;
             const label = formatSpendingDayLabel(bar);
+            const isSelected = selectedDayKey === bar.key;
 
             return (
-              <div className="grid grid-cols-[3.25rem_1fr_auto] items-center gap-2" key={bar.key}>
-                <span className="whitespace-nowrap text-xs font-medium text-slate-600">{label}</span>
-                <div className="h-8 overflow-hidden rounded-lg bg-slate-50">
-                  <div
-                    aria-label={`${label} tracked ${isIncome ? "income" : "spending"} ${amountDisplay}`}
-                    className="flex h-full overflow-hidden rounded-lg"
-                    style={{ width }}
-                  >
-                    {segments.map((segment) => (
-                      <span
-                        aria-label={`${label} ${segment.label} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
-                        className="h-full"
-                        key={segment.key}
-                        role="img"
-                        style={{
-                          backgroundColor: getSegmentColor(segment.key, segment.label),
-                          flexBasis: `${Math.max(0, (segment.amountMinor / amountMinor) * 100)}%`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{amountDisplay}</span>
+              <div className="space-y-2" key={bar.key}>
+                <button
+                  aria-label={`${label}, ${amountDisplay} ${context}, ${isSelected ? "hide" : "tap for"} category breakdown`}
+                  aria-pressed={isSelected}
+                  className={`grid w-full grid-cols-[3.25rem_1fr_auto] items-center gap-2 rounded-lg px-1 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                    isSelected ? "bg-slate-50 ring-1 ring-slate-200" : ""
+                  }`}
+                  onClick={() => setSelectedDayKey(isSelected ? null : bar.key)}
+                  type="button"
+                >
+                  <span className="whitespace-nowrap text-xs font-medium text-slate-600">{label}</span>
+                  <span className="h-8 overflow-hidden rounded-lg bg-slate-100">
+                    <span
+                      aria-label={`${label} tracked ${context} ${amountDisplay}`}
+                      className="flex h-full overflow-hidden rounded-lg"
+                      style={{ width }}
+                    >
+                      {segments.map((segment, index) => (
+                        <span
+                          aria-label={`${label} ${segment.label} ${context} ${segment.amountDisplay}`}
+                          className={`h-full ${index > 0 ? "border-l border-white/80" : ""}`}
+                          key={segment.key}
+                          role="img"
+                          style={{
+                            backgroundColor: getSegmentColor(segment.key, segment.label),
+                            flexBasis: `${Math.max(0, (segment.amountMinor / amountMinor) * 100)}%`,
+                            minWidth: segments.length > 1 ? "3px" : undefined,
+                          }}
+                        />
+                      ))}
+                    </span>
+                  </span>
+                  <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{amountDisplay}</span>
+                </button>
+                {isSelected ? <BarsDayBreakdownPanel bar={bar} isIncome={isIncome} segments={segments} totalDisplay={amountDisplay} totalMinor={amountMinor} /> : null}
               </div>
             );
           })}
@@ -928,6 +948,56 @@ function TimeframeBarsChart({
                 </div>
               </div>
               <span className="h-4 max-w-full truncate text-[10px] font-medium text-slate-500">{bar.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BarsDayBreakdownPanel({
+  bar,
+  isIncome,
+  segments,
+  totalDisplay,
+  totalMinor,
+}: {
+  bar: InsightsData["timeframeBars"][number];
+  isIncome: boolean;
+  segments: InsightsData["timeframeBars"][number]["segments"];
+  totalDisplay: string;
+  totalMinor: number;
+}) {
+  const label = formatSpendingDayLabel(bar);
+  const context = isIncome ? "income" : "spending";
+
+  return (
+    <div className="ml-[3.5rem] rounded-lg border border-slate-100 bg-white px-3 py-2 shadow-sm" aria-label={`${label} ${context} category breakdown`}>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="truncate text-xs font-semibold text-slate-800">{label} breakdown</p>
+        <p className="whitespace-nowrap text-xs font-medium text-slate-500">Total: {totalDisplay}</p>
+      </div>
+      <div className="space-y-1.5">
+        {segments.map((segment) => {
+          const visuals = getCategoryVisualsByName(segment.label);
+          const SegmentIcon = visuals.icon;
+          const percentage = totalMinor > 0 ? Math.round((Math.max(segment.amountMinor, 0) / totalMinor) * 100) : 0;
+
+          return (
+            <div className="grid grid-cols-[1fr_auto_2.5rem] items-center gap-2 text-xs" key={segment.key}>
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+                  style={{ backgroundColor: visuals.bg, borderColor: visuals.border, color: visuals.primary }}
+                >
+                  <SegmentIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                </span>
+                <span className="truncate font-medium text-slate-700">{segment.label}</span>
+              </div>
+              <span className="whitespace-nowrap font-semibold text-slate-800">{segment.amountDisplay}</span>
+              <span className="text-right font-medium text-slate-500">{percentage}%</span>
             </div>
           );
         })}
