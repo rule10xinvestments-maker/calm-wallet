@@ -1189,8 +1189,8 @@ describe("insights overview", () => {
 
     const panel = screen.getByLabelText("Apr 10 spending category breakdown");
     expect(day).toHaveAttribute("aria-pressed", "true");
-    expect(within(panel).getByText("Apr 10 breakdown")).toBeInTheDocument();
-    expect(within(panel).getByText("Total: $150")).toBeInTheDocument();
+    expect(within(panel).getByText("Apr 10")).toBeInTheDocument();
+    expect(within(panel).getByText("Total $150")).toBeInTheDocument();
     expect(within(panel).getByText("Housing")).toBeInTheDocument();
     expect(within(panel).getByText("$120")).toBeInTheDocument();
     expect(within(panel).getByText("80%")).toBeInTheDocument();
@@ -1201,6 +1201,45 @@ describe("insights overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Apr 10, $150 spending, hide category breakdown" }));
 
     expect(screen.queryByLabelText("Apr 10 spending category breakdown")).not.toBeInTheDocument();
+  });
+
+  it("renders readable Bars selected-day detail labels and the correct approximate symbol", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        displayCurrency: "RON",
+        availableDisplayCurrencies: ["RON"],
+        categoryBreakdown: [
+          makeCategory({ key: "transfers", label: "Transfers", amountMinor: 2299, amountDisplay: "≈ RON 22.99", transactionCount: 1 }),
+          makeCategory({ key: "self-employment", label: "Self-employment", amountMinor: 7701, amountDisplay: "RON 77.01", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-29",
+            label: "29",
+            amountMinor: 10000,
+            amountDisplay: "RON 100",
+            transactionCount: 2,
+            segments: [
+              { key: "transfers", label: "Transfers", amountMinor: 2299, amountDisplay: "≈ RON 22.99", transactionCount: 1 },
+              { key: "self-employment", label: "Self-employment", amountMinor: 7701, amountDisplay: "RON 77.01", transactionCount: 1 },
+            ],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Apr 29, RON 100 spending, tap for category breakdown" }));
+
+    const panel = screen.getByLabelText("Apr 29 spending category breakdown");
+
+    expect(within(panel).getByText("Apr 29")).toBeInTheDocument();
+    expect(within(panel).getByText("Total RON 100")).toBeInTheDocument();
+    expect(within(panel).getByText("Transfers")).toBeInTheDocument();
+    expect(within(panel).getByText("Self-employment")).toBeInTheDocument();
+    expect(within(panel).getByText("≈ RON 22.99")).toBeInTheDocument();
+    expect(within(panel).queryByText(/â‰ˆ/)).not.toBeInTheDocument();
   });
 
   it("updates Bars selected day detail and clears it when switching segment mode", () => {

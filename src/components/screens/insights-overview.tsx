@@ -973,10 +973,10 @@ function BarsDayBreakdownPanel({
   const context = isIncome ? "income" : "spending";
 
   return (
-    <div className="ml-[3.5rem] rounded-lg border border-slate-100 bg-white px-3 py-2 shadow-sm" aria-label={`${label} ${context} category breakdown`}>
+    <div className="rounded-lg border border-slate-100 bg-white px-3 py-2 shadow-sm" aria-label={`${label} ${context} category breakdown`}>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="truncate text-xs font-semibold text-slate-800">{label} breakdown</p>
-        <p className="whitespace-nowrap text-xs font-medium text-slate-500">Total: {totalDisplay}</p>
+        <p className="whitespace-nowrap text-xs font-semibold text-slate-800">{label}</p>
+        <p className="min-w-0 truncate text-right text-xs font-medium text-slate-500">Total {totalDisplay}</p>
       </div>
       <div className="space-y-1.5">
         {segments.map((segment) => {
@@ -985,17 +985,15 @@ function BarsDayBreakdownPanel({
           const percentage = totalMinor > 0 ? Math.round((Math.max(segment.amountMinor, 0) / totalMinor) * 100) : 0;
 
           return (
-            <div className="grid grid-cols-[1fr_auto_2.5rem] items-center gap-2 text-xs" key={segment.key}>
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
-                  style={{ backgroundColor: visuals.bg, borderColor: visuals.border, color: visuals.primary }}
-                >
-                  <SegmentIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                </span>
-                <span className="truncate font-medium text-slate-700">{segment.label}</span>
-              </div>
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_2.5rem] items-center gap-2 text-xs" key={segment.key}>
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+                style={{ backgroundColor: visuals.bg, borderColor: visuals.border, color: visuals.primary }}
+              >
+                <SegmentIcon aria-hidden="true" className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0 truncate font-medium text-slate-700">{segment.label}</span>
               <span className="whitespace-nowrap font-semibold text-slate-800">{segment.amountDisplay}</span>
               <span className="text-right font-medium text-slate-500">{percentage}%</span>
             </div>

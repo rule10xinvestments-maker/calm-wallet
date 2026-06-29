@@ -707,7 +707,7 @@ function buildInsightsBarCategorySegments(args: {
       amountMinor: value.amountMinor,
       amountDisplay: value.hasMissingRates
         ? `${formatInsightsMoney(value.amountMinor, args.displayCurrency)} + rate unavailable`
-        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(args.displayCurrency) ? "â‰ˆ " : ""}${formatInsightsMoney(value.amountMinor, args.displayCurrency)}`,
+        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(args.displayCurrency) ? "≈ " : ""}${formatInsightsMoney(value.amountMinor, args.displayCurrency)}`,
       transactionCount: value.transactionCount,
     }));
 }
