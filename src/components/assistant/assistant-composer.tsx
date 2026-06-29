@@ -242,6 +242,7 @@ export function AssistantComposer({
   const [manualRecurringFrequency, setManualRecurringFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
   const [manualRecurringStartDate, setManualRecurringStartDate] = useState("");
   const [manualRecurringEndDate, setManualRecurringEndDate] = useState("");
+  const [manualRecurringOpenEnded, setManualRecurringOpenEnded] = useState(true);
   const [manualFeedback, setManualFeedback] = useState<ManualFeedback>({ status: "idle", message: null });
   const [manualLastSubmitted, setManualLastSubmitted] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
@@ -293,6 +294,7 @@ export function AssistantComposer({
       setManualNote("");
       setManualRecurringEnabled(false);
       setManualRecurringEndDate("");
+      setManualRecurringOpenEnded(true);
       setManualOptionalPanel(null);
       setManualCategoryWasSelected(false);
       setManualLastSubmitted(false);
@@ -738,6 +740,12 @@ export function AssistantComposer({
                   return;
                 }
 
+                if (manualRecurringEnabled && !manualRecurringOpenEnded && !manualRecurringEndDate) {
+                  setManualFeedback({ status: "error", message: "Choose an end date or repeat until turned off." });
+                  setManualLastSubmitted(false);
+                  return;
+                }
+
                 setManualFeedback({ status: "pending", message: "Saving..." });
                 setManualLastSubmitted(true);
                 formAction(formData);
@@ -756,7 +764,7 @@ export function AssistantComposer({
                   <input name="recurringEnabled" type="hidden" value="on" />
                   <input name="recurringFrequency" type="hidden" value={manualRecurringFrequency} />
                   <input name="recurringStartDate" type="hidden" value={manualRecurringStartDate || manualDate || getTodayDateKey()} />
-                  {manualRecurringEndDate ? <input name="recurringEndDate" type="hidden" value={manualRecurringEndDate} /> : null}
+                  {!manualRecurringOpenEnded && manualRecurringEndDate ? <input name="recurringEndDate" type="hidden" value={manualRecurringEndDate} /> : null}
                 </>
               ) : null}
 
@@ -980,7 +988,7 @@ export function AssistantComposer({
                         </button>
                       ))}
                     </div>
-                    <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <label className="block space-y-1">
                         <span className="text-xs font-medium text-slate-600">Start date</span>
                         <input
@@ -993,13 +1001,38 @@ export function AssistantComposer({
                       <label className="block space-y-1">
                         <span className="text-xs font-medium text-slate-600">End date</span>
                         <input
-                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                          onChange={(event) => setManualRecurringEndDate(event.target.value)}
+                          className={`min-h-10 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
+                            manualRecurringOpenEnded
+                              ? "border-slate-200 bg-slate-100 text-slate-400"
+                              : "border-slate-200 bg-slate-50 text-slate-900"
+                          }`}
+                          disabled={manualRecurringOpenEnded}
+                          onChange={(event) => {
+                            setManualRecurringEndDate(event.target.value);
+                            if (manualFeedback.status === "error") {
+                              setManualFeedback({ status: "idle", message: null });
+                            }
+                          }}
                           type="date"
                           value={manualRecurringEndDate}
                         />
                       </label>
                     </div>
+                    <label className="flex min-h-11 items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                      <input
+                        checked={manualRecurringOpenEnded}
+                        className="size-5 accent-sky-600"
+                        onChange={(event) => {
+                          setManualRecurringOpenEnded(event.currentTarget.checked);
+                          if (event.currentTarget.checked) {
+                            setManualRecurringEndDate("");
+                            setManualFeedback({ status: "idle", message: null });
+                          }
+                        }}
+                        type="checkbox"
+                      />
+                      <span>Repeat until I turn it off</span>
+                    </label>
                   </div>
                 ) : null}
               </div>

@@ -487,10 +487,11 @@ describe("assistant composer", () => {
     expect(screen.getByText("Repeats automatically as tracked entries.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "monthly" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "weekly" }));
-    expect(screen.getByLabelText("Start date").parentElement?.parentElement).toHaveClass("grid-cols-1");
-    expect(screen.getByLabelText("Start date").parentElement?.parentElement).toHaveClass("min-[420px]:grid-cols-2");
+    expect(screen.getByLabelText("Start date").parentElement?.parentElement).toHaveClass("grid-cols-2");
     expect(screen.getByLabelText("Start date")).toHaveClass("px-3");
     expect(screen.getByLabelText("End date")).toHaveClass("px-3");
+    expect(screen.getByLabelText("Repeat until I turn it off")).toBeChecked();
+    expect(screen.getByLabelText("End date")).toBeDisabled();
 
     const forms = container.querySelectorAll("form");
     const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"][value="create_transaction"]'));
@@ -499,6 +500,30 @@ describe("assistant composer", () => {
     expect(formData.get("recurringEnabled")).toBe("on");
     expect(formData.get("recurringFrequency")).toBe("weekly");
     expect(formData.get("recurringStartDate")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(formData.get("recurringEndDate")).toBeNull();
+  });
+
+  it("requires an end date when Manual recurring is not open-ended", () => {
+    const action = vi.fn(async (): Promise<AssistantActionState> => ({
+      status: "success",
+      message: "Saved.",
+      reviewState: null,
+      latestTransaction: null,
+      recentItems: [],
+    }));
+
+    renderComposer(undefined, [], action);
+    openManualEntry();
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
+    fireEvent.click(screen.getByLabelText("Recurring"));
+    fireEvent.click(screen.getByLabelText("Repeat until I turn it off"));
+    expect(screen.getByLabelText("Repeat until I turn it off")).not.toBeChecked();
+    expect(screen.getByLabelText("End date")).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save item" }));
+
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByText("Choose an end date or repeat until turned off.")).toBeInTheDocument();
   });
 
   it("guesses categories from merchant or note unless the user selected one", () => {

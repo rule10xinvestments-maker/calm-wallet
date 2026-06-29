@@ -95,9 +95,9 @@ function getRecurringFrequencyLabel(frequency: TransactionListItem["recurringFre
 function getRecurringDetailsText(item: TransactionListItem) {
   const frequencyLabel = getRecurringFrequencyLabel(item.recurringFrequency);
   const startLabel = formatReadableDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10));
-  const endLabel = item.recurringEndDate ? `Ends ${formatReadableDate(item.recurringEndDate)}` : "No end date";
+  const endLabel = item.recurringEndDate ? `Ends ${formatReadableDate(item.recurringEndDate)}` : "Until turned off";
 
-  return `${frequencyLabel} - Starts ${startLabel} - ${endLabel}`;
+  return `${frequencyLabel} · Starts ${startLabel} · ${endLabel}`;
 }
 
 function getRowMetadata(item: TransactionListItem, recurringMode: boolean) {
@@ -194,8 +194,10 @@ export function TransactionItemCard({
     item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10),
   );
   const [selectedRecurringEndDate, setSelectedRecurringEndDate] = useState(item.recurringEndDate ?? "");
+  const [selectedRecurringOpenEnded, setSelectedRecurringOpenEnded] = useState(!item.recurringEndDate);
   const [selectedRecurringPaused, setSelectedRecurringPaused] = useState(Boolean(item.recurringPausedAt));
   const [selectedRecurringManageIntent, setSelectedRecurringManageIntent] = useState<"update" | "pause" | "resume" | "stop">("update");
+  const [detailsValidationMessage, setDetailsValidationMessage] = useState<string | null>(null);
   const [pendingRecategorizedItem, setPendingRecategorizedItem] = useState<TransactionListItem | null>(null);
   const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -314,8 +316,10 @@ export function TransactionItemCard({
       setSelectedRecurringFrequency(item.recurringFrequency ?? "monthly");
       setSelectedRecurringStartDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10));
       setSelectedRecurringEndDate(item.recurringEndDate ?? "");
+      setSelectedRecurringOpenEnded(!item.recurringEndDate);
       setSelectedRecurringPaused(Boolean(item.recurringPausedAt));
       setSelectedRecurringManageIntent("update");
+      setDetailsValidationMessage(null);
       setIsNotePanelOpen(false);
       setIsCategoryPickerOpen(false);
       setIsDeleteConfirmOpen(false);
@@ -455,8 +459,14 @@ export function TransactionItemCard({
       ? recurringStartDateValue
       : displayItem.recurringStartDate ?? displayItem.recurringOccurrenceDate ?? occurredAt.slice(0, 10);
     const recurringEndDateValue = String(formData.get("recurringEndDate") ?? "").trim();
-    const recurringEndDate = recurringEndDateValue && /^\d{4}-\d{2}-\d{2}$/.test(recurringEndDateValue) ? recurringEndDateValue : null;
     const recurringManageIntentValue = String(formData.get("recurringManageIntent") ?? "update");
+    if (recurringEnabled && recurringManageIntentValue !== "stop" && !selectedRecurringOpenEnded && !recurringEndDateValue) {
+      event.preventDefault();
+      setDetailsValidationMessage("Choose an end date or repeat until turned off.");
+      return;
+    }
+    setDetailsValidationMessage(null);
+    const recurringEndDate = recurringEndDateValue && /^\d{4}-\d{2}-\d{2}$/.test(recurringEndDateValue) ? recurringEndDateValue : null;
     const recurringManageIntent =
       recurringManageIntentValue === "pause" || recurringManageIntentValue === "resume" || recurringManageIntentValue === "stop"
         ? recurringManageIntentValue
@@ -511,6 +521,7 @@ export function TransactionItemCard({
     setSelectedRecurringFrequency(recurringFrequency);
     setSelectedRecurringStartDate(recurringStartDate);
     setSelectedRecurringEndDate(recurringEndDate ?? "");
+    setSelectedRecurringOpenEnded(!recurringEndDate);
     setSelectedRecurringPaused(Boolean(nextRecurringPaused));
     setSelectedRecurringManageIntent("update");
     setIsStopRecurringConfirmOpen(false);
@@ -820,7 +831,7 @@ export function TransactionItemCard({
               <input name="recurringEnabled" type="hidden" value={selectedRecurringEnabled ? "on" : "off"} />
               <input name="recurringFrequency" type="hidden" value={selectedRecurringFrequency} />
               <input name="recurringStartDate" type="hidden" value={selectedRecurringStartDate || displayItem.occurredAt.slice(0, 10)} />
-              <input name="recurringEndDate" type="hidden" value={selectedRecurringEndDate} />
+              <input name="recurringEndDate" type="hidden" value={selectedRecurringOpenEnded ? "" : selectedRecurringEndDate} />
               <input name="recurringManageIntent" type="hidden" value={selectedRecurringManageIntent} />
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Transaction type</legend>
@@ -925,6 +936,9 @@ export function TransactionItemCard({
                         onChange={(event) => {
                           setSelectedRecurringEnabled(event.currentTarget.checked);
                           setSelectedRecurringManageIntent("update");
+                          if (event.currentTarget.checked && !selectedRecurringEndDate) {
+                            setSelectedRecurringOpenEnded(true);
+                          }
                         }}
                         type="checkbox"
                       />
@@ -950,7 +964,7 @@ export function TransactionItemCard({
                         </button>
                       ))}
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <label className="grid gap-1">
                         <span className="text-xs font-medium text-slate-600">Start</span>
                         <input
@@ -963,20 +977,38 @@ export function TransactionItemCard({
                       <label className="grid gap-1">
                         <span className="text-xs font-medium text-slate-600">End</span>
                         <input
-                          className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
-                          onChange={(event) => setSelectedRecurringEndDate(event.currentTarget.value)}
+                          className={`min-h-10 w-full rounded-xl border px-3 py-2 text-sm ${
+                            selectedRecurringOpenEnded
+                              ? "border-slate-200 bg-slate-100 text-slate-400"
+                              : "border-slate-200 bg-white text-slate-800"
+                          }`}
+                          disabled={selectedRecurringOpenEnded}
+                          onChange={(event) => {
+                            setSelectedRecurringEndDate(event.currentTarget.value);
+                            setDetailsValidationMessage(null);
+                          }}
                           type="date"
                           value={selectedRecurringEndDate}
                         />
                       </label>
                     </div>
-                    <button
-                      className="justify-self-start rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-slate-800"
-                      onClick={() => setSelectedRecurringEndDate("")}
-                      type="button"
-                    >
-                      No end date
-                    </button>
+                    <label className="flex min-h-11 items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-700">
+                      <input
+                        checked={selectedRecurringOpenEnded}
+                        className="size-5 accent-sky-600"
+                        onChange={(event) => {
+                          setSelectedRecurringOpenEnded(event.currentTarget.checked);
+                          setSelectedRecurringManageIntent("update");
+                          if (event.currentTarget.checked) {
+                            setSelectedRecurringEndDate("");
+                            setDetailsValidationMessage(null);
+                          }
+                        }}
+                        type="checkbox"
+                      />
+                      <span>Repeat until I turn it off</span>
+                    </label>
+                    {detailsValidationMessage ? <p className="text-xs font-medium text-rose-600">{detailsValidationMessage}</p> : null}
                     {displayItem.isRecurring ? (
                       <div className="grid grid-cols-2 gap-2">
                         <button

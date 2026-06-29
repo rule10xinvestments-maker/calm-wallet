@@ -151,7 +151,7 @@ describe("transaction item card", () => {
 
     expect(screen.getByText("Utilities · Jun 26 · 🔁 Recurring")).toBeInTheDocument();
     expect(screen.getByText("Recurring")).toBeInTheDocument();
-    expect(screen.getByText("Monthly - Starts Jun 26, 2026 - No end date")).toBeInTheDocument();
+    expect(screen.getByText("Monthly · Starts Jun 26, 2026 · Until turned off")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit details" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete transaction" })).toBeInTheDocument();
   });
@@ -179,9 +179,12 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
     expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByLabelText("Repeat until I turn it off")).toBeChecked();
+    expect(screen.getByLabelText("End")).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
     fireEvent.change(screen.getByLabelText("Start"), { target: { value: "2026-06-27" } });
+    fireEvent.click(screen.getByLabelText("Repeat until I turn it off"));
     fireEvent.change(screen.getByLabelText("End"), { target: { value: "2026-12-31" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -194,7 +197,61 @@ describe("transaction item card", () => {
     expect(formData.get("recurringFrequency")).toBe("weekly");
     expect(formData.get("recurringStartDate")).toBe("2026-06-27");
     expect(formData.get("recurringEndDate")).toBe("2026-12-31");
-    expect(await screen.findByText("Weekly - Starts Jun 27, 2026 - Ends Dec 31, 2026")).toBeInTheDocument();
+    expect(await screen.findByText("Weekly · Starts Jun 27, 2026 · Ends Dec 31, 2026")).toBeInTheDocument();
+  });
+
+  it("requires an end date in Activity edit when recurring is not open-ended", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-26",
+        recurringEndDate: null,
+        title: "Bill",
+        itemName: "Bill",
+        subtitle: "Jun 26",
+      }),
+      updateAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /bill/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    fireEvent.click(screen.getByLabelText("Repeat until I turn it off"));
+    expect(screen.getByLabelText("End")).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(updateAction).not.toHaveBeenCalled();
+    expect(screen.getByText("Choose an end date or repeat until turned off.")).toBeInTheDocument();
+  });
+
+  it("loads Activity edit recurring end-date state from existing rules", () => {
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-26",
+        recurringEndDate: "2026-12-31",
+        title: "Bill",
+        itemName: "Bill",
+        subtitle: "Jun 26",
+      }),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /bill/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+
+    expect(screen.getByLabelText("Repeat until I turn it off")).not.toBeChecked();
+    expect(screen.getByLabelText("End")).not.toBeDisabled();
+    expect(screen.getByLabelText("End")).toHaveValue("2026-12-31");
   });
 
   it("pauses recurring without clearing the row marker", async () => {
@@ -298,7 +355,7 @@ describe("transaction item card", () => {
     expect(formData.get("recurringManageIntent")).toBe("stop");
     expect(await screen.findByText("Bill")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.queryByText("Monthly - Starts Jun 26, 2026 - No end date")).not.toBeInTheDocument();
+      expect(screen.queryByText("Monthly · Starts Jun 26, 2026 · Until turned off")).not.toBeInTheDocument();
     });
   });
 
