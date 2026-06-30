@@ -275,14 +275,18 @@ export type InsightsCategoryBreakdownItem = {
   recentEntries: Array<{
     id: string;
     title: string;
+    transactionType?: "expense" | "income";
     amountMinor: number;
     amountDisplay: string;
     displayAmountMinor?: number;
     displayAmountDisplay?: string;
     displayAmountApproximate?: boolean;
     displayAmountUnavailable?: boolean;
+    isRecurring?: boolean;
     occurredAt: string;
     occurredLabel: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
   }>;
 };
 
@@ -1476,8 +1480,19 @@ function buildInsightsTrendCategoryBreakdown(args: {
         movementMinor,
         transactionCount: value.transactionCount,
         recentEntries: value.entries
-          .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
-          .slice(0, 5)
+          .sort((a, b) => {
+            const occurredComparison = new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime();
+            if (occurredComparison !== 0) {
+              return occurredComparison;
+            }
+
+            const createdComparison = getSortableTime(b.createdAt) - getSortableTime(a.createdAt);
+            if (createdComparison !== 0) {
+              return createdComparison;
+            }
+
+            return b.id.localeCompare(a.id);
+          })
           .map((transaction) => {
             const sourceCurrency = normalizeCurrency(transaction.currency);
             const conversionRate = getConversionRate(sourceCurrency, args.displayCurrency, args.rateLookup);
@@ -1487,6 +1502,7 @@ function buildInsightsTrendCategoryBreakdown(args: {
             return {
               id: transaction.id,
               title: getTransactionDisplayTitle(transaction),
+              transactionType: transaction.transactionType,
               amountMinor: transaction.amountMinor,
               amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency),
               displayAmountMinor,
@@ -1496,11 +1512,14 @@ function buildInsightsTrendCategoryBreakdown(args: {
                   : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, args.displayCurrency)}`,
               displayAmountApproximate,
               displayAmountUnavailable: conversionRate === null,
+              isRecurring: Boolean(transaction.recurringRuleId),
               occurredAt: transaction.occurredAt,
               occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
               }),
+              createdAt: transaction.createdAt,
+              updatedAt: transaction.updatedAt,
             };
           }),
       };

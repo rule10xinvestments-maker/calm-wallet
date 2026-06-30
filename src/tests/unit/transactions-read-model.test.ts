@@ -1230,8 +1230,40 @@ describe("transactions read model", () => {
       [
         makeTransaction({ id: "salary", transactionType: "income", amountMinor: 50000, categoryId: "salary", itemName: "Salary" }),
         makeTransaction({ id: "housing", transactionType: "expense", amountMinor: 12000, categoryId: "housing", itemName: "Rent" }),
-        makeTransaction({ id: "other-income", transactionType: "income", amountMinor: 100000, categoryId: "other", itemName: "Sale" }),
-        makeTransaction({ id: "other-spend", transactionType: "expense", amountMinor: 90000, categoryId: "other", itemName: "Supplies" }),
+        makeTransaction({
+          id: "other-income",
+          transactionType: "income",
+          amountMinor: 100000,
+          categoryId: "other",
+          itemName: "Sale",
+          occurredAt: "2026-04-18T10:00:00.000Z",
+          createdAt: "2026-04-18T11:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "other-spend",
+          transactionType: "expense",
+          amountMinor: 90000,
+          categoryId: "other",
+          itemName: "Supplies",
+          occurredAt: "2026-04-16T10:00:00.000Z",
+          recurringRuleId: "rule-other-spend",
+        }),
+        makeTransaction({
+          id: "other-deleted",
+          transactionType: "income",
+          amountMinor: 77700,
+          categoryId: "other",
+          itemName: "Deleted sale",
+          deletedAt: "2026-04-20T10:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "other-may",
+          transactionType: "expense",
+          amountMinor: 88800,
+          categoryId: "other",
+          itemName: "May supplies",
+          occurredAt: "2026-05-01T10:00:00.000Z",
+        }),
       ],
       { salary: "Salary", housing: "Housing", other: "Other" },
       "USD",
@@ -1256,6 +1288,17 @@ describe("transactions read model", () => {
       amountDisplay: "$100",
       incomeDisplay: "$1,000",
       expenseDisplay: "$900",
+    });
+    expect(data.trendCategoryBreakdown[0]?.recentEntries.map((entry) => entry.id)).toEqual(["other-income", "other-spend"]);
+    expect(data.trendCategoryBreakdown[0]?.recentEntries[0]).toMatchObject({
+      transactionType: "income",
+      displayAmountDisplay: "$1,000",
+      isRecurring: false,
+    });
+    expect(data.trendCategoryBreakdown[0]?.recentEntries[1]).toMatchObject({
+      transactionType: "expense",
+      displayAmountDisplay: "$900",
+      isRecurring: true,
     });
     expect(data.trendCategoryBreakdown[1]).toMatchObject({
       label: "Salary",

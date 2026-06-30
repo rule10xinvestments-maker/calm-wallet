@@ -911,6 +911,33 @@ describe("insights overview", () => {
             netDisplay: "$100",
             movementMinor: 190000,
             transactionCount: 2,
+            recentEntries: [
+              {
+                id: "other-income",
+                title: "Side sale",
+                transactionType: "income",
+                amountMinor: 100000,
+                amountDisplay: "$1,000",
+                displayAmountMinor: 100000,
+                displayAmountDisplay: "$1,000",
+                occurredAt: "2026-04-18T12:00:00.000Z",
+                occurredLabel: "Apr 18",
+                createdAt: "2026-04-18T12:30:00.000Z",
+              },
+              {
+                id: "other-spending",
+                title: "Supplies",
+                transactionType: "expense",
+                amountMinor: 90000,
+                amountDisplay: "$900",
+                displayAmountMinor: 90000,
+                displayAmountDisplay: "≈ $900",
+                isRecurring: true,
+                occurredAt: "2026-04-16T12:00:00.000Z",
+                occurredLabel: "Apr 16",
+                createdAt: "2026-04-16T12:30:00.000Z",
+              },
+            ],
           }),
           makeCategory({
             key: "salary",
@@ -925,6 +952,19 @@ describe("insights overview", () => {
             netDisplay: "$500",
             movementMinor: 50000,
             transactionCount: 1,
+            recentEntries: [
+              {
+                id: "salary-income",
+                title: "Paycheck",
+                transactionType: "income",
+                amountMinor: 50000,
+                amountDisplay: "$500",
+                displayAmountMinor: 50000,
+                displayAmountDisplay: "$500",
+                occurredAt: "2026-04-20T12:00:00.000Z",
+                occurredLabel: "Apr 20",
+              },
+            ],
           }),
           makeCategory({
             key: "housing",
@@ -939,6 +979,19 @@ describe("insights overview", () => {
             netDisplay: "-$120",
             movementMinor: 12000,
             transactionCount: 1,
+            recentEntries: [
+              {
+                id: "housing-spending",
+                title: "Rent",
+                transactionType: "expense",
+                amountMinor: 12000,
+                amountDisplay: "$120",
+                displayAmountMinor: 12000,
+                displayAmountDisplay: "$120",
+                occurredAt: "2026-04-15T12:00:00.000Z",
+                occurredLabel: "Apr 15",
+              },
+            ],
           }),
         ],
       }),
@@ -953,9 +1006,30 @@ describe("insights overview", () => {
     expect(within(card).getByText("+$100")).toBeInTheDocument();
     expect(within(card).getByText("33% of income · 1 transaction")).toBeInTheDocument();
     expect(within(card).getByText("12% of spending · 1 transaction")).toBeInTheDocument();
-    expect(within(card).getByLabelText("Other income and spending mix")).toBeInTheDocument();
+    const otherIcon = within(card).getByLabelText("Other income and spending mix");
+    expect(otherIcon).toBeInTheDocument();
+    expect(otherIcon).toHaveStyle({ background: "conic-gradient(#10B981 0% 53%, #F43F5E 53% 100%)" });
+    expect(otherIcon.querySelector(".bg-white")).toBeInTheDocument();
     expect(within(card).getByLabelText("Salary income and spending mix")).toBeInTheDocument();
     expect(within(card).getByLabelText("Housing income and spending mix")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show Other transactions" }));
+
+    expect(within(card).getByRole("button", { name: "Hide Other transactions" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(card).getAllByText("Income").length).toBeGreaterThan(0);
+    expect(within(card).getByText("Side sale")).toBeInTheDocument();
+    expect(within(card).getByText("$1,000")).toBeInTheDocument();
+    expect(within(card).getByText("Spending")).toBeInTheDocument();
+    expect(within(card).getByText("Supplies")).toBeInTheDocument();
+    expect(within(card).getByText("≈ $900")).toBeInTheDocument();
+    expect(within(card).getByText("Recurring")).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show Salary transactions" }));
+
+    expect(within(card).queryByText("Side sale")).not.toBeInTheDocument();
+    expect(within(card).getByText("Paycheck")).toBeInTheDocument();
   });
 
   it("keeps Bars category breakdown on the selected expense or income segment", () => {

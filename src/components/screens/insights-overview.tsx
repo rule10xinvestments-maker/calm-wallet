@@ -785,8 +785,7 @@ function TrendCategoryMixIcon({ item }: { item: TrendCategoryItem }) {
     >
       <span
         aria-hidden="true"
-        className="absolute inset-[4px] rounded-full border"
-        style={{ backgroundColor: visuals.bg, borderColor: visuals.border }}
+        className="absolute inset-[4px] rounded-full border border-white bg-white"
       />
       <CategoryIcon aria-hidden="true" className="relative h-4 w-4" style={{ color: visuals.primary }} />
     </span>
@@ -1576,6 +1575,66 @@ function formatTrendNetAmountDisplay(item: TrendCategoryItem) {
   return display;
 }
 
+function sortTrendDetailEntries(entries: TrendCategoryItem["recentEntries"]) {
+  return [...entries].sort((left, right) => {
+    const occurredComparison = new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime();
+    if (occurredComparison !== 0) {
+      return occurredComparison;
+    }
+
+    const createdComparison = new Date(right.createdAt ?? "").getTime() - new Date(left.createdAt ?? "").getTime();
+    if (Number.isFinite(createdComparison) && createdComparison !== 0) {
+      return createdComparison;
+    }
+
+    return right.id.localeCompare(left.id);
+  });
+}
+
+function TrendCategoryEntryList({
+  entries,
+  tone,
+}: {
+  entries: TrendCategoryItem["recentEntries"];
+  tone: "income" | "expense";
+}) {
+  const amountClass = tone === "income" ? "text-emerald-700" : "text-rose-700";
+
+  if (!entries.length) {
+    return <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">Details could not load.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {entries.map((entry) => {
+        const amountDisplay = entry.displayAmountDisplay ?? entry.amountDisplay;
+        const signedAmount =
+          tone === "income" || amountDisplay.startsWith("-") || amountDisplay.startsWith("+") || amountDisplay.startsWith("≈ ")
+            ? amountDisplay
+            : `-${amountDisplay}`;
+
+        return (
+          <div className="grid grid-cols-[1fr_auto] gap-3 rounded-lg bg-white px-3 py-2" key={entry.id}>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title || "Unnamed transaction")}</p>
+                {entry.isRecurring ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">
+                    <Repeat2 aria-hidden="true" className="h-3 w-3" />
+                    Recurring
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
+            </div>
+            <p className={`whitespace-nowrap text-sm font-semibold ${amountClass}`}>{signedAmount}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function TrendCategoryBreakdown({
   displayCurrency,
   items,
@@ -1587,6 +1646,8 @@ function TrendCategoryBreakdown({
   totalExpenseMinor: number;
   totalIncomeMinor: number;
 }) {
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+
   if (!items.length) {
     return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked money movement in this period.</p>;
   }
@@ -1607,6 +1668,9 @@ function TrendCategoryBreakdown({
             ? `${totalIncomeMinor > 0 ? Math.round((incomeMinor / totalIncomeMinor) * 100) : 0}% of income · ${countLabel}`
             : `${totalExpenseMinor > 0 ? Math.round((expenseMinor / totalExpenseMinor) * 100) : 0}% of spending · ${countLabel}`;
         const amountDisplay = isMixed ? formatTrendNetAmountDisplay(item) : item.amountDisplay;
+        const isExpanded = expandedKey === item.key;
+        const incomeEntries = sortTrendDetailEntries(item.recentEntries.filter((entry) => entry.transactionType === "income"));
+        const expenseEntries = sortTrendDetailEntries(item.recentEntries.filter((entry) => entry.transactionType !== "income"));
         const amountClass = isMixed
           ? (item.netMinor ?? 0) > 0
             ? "text-emerald-700"
@@ -1618,13 +1682,44 @@ function TrendCategoryBreakdown({
             : "text-rose-700";
 
         return (
-          <div className="grid grid-cols-[2.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
-            <TrendCategoryMixIcon item={item} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
-              <p className="text-xs leading-5 text-slate-500">{subtitle}</p>
-            </div>
-            <p className={`whitespace-nowrap text-sm font-semibold ${amountClass}`}>{amountDisplay}</p>
+          <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
+            <button
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? "Hide" : "Show"} ${item.label} transactions`}
+              className="grid w-full grid-cols-[2.25rem_1fr_auto] items-start gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              onClick={() => setExpandedKey(isExpanded ? null : item.key)}
+              type="button"
+            >
+              <TrendCategoryMixIcon item={item} />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-slate-900">{item.label}</span>
+                <span className="block text-xs leading-5 text-slate-500">{subtitle}</span>
+              </span>
+              <span className={`whitespace-nowrap text-sm font-semibold ${amountClass}`}>{amountDisplay}</span>
+            </button>
+            {isExpanded ? (
+              <div className="ml-11 mt-2 rounded-lg bg-slate-50 px-3 py-3">
+                {isMixed ? (
+                  <div className="space-y-3">
+                    {incomeEntries.length ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-700">Income</p>
+                        <TrendCategoryEntryList entries={incomeEntries} tone="income" />
+                      </div>
+                    ) : null}
+                    {expenseEntries.length ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-700">Spending</p>
+                        <TrendCategoryEntryList entries={expenseEntries} tone="expense" />
+                      </div>
+                    ) : null}
+                    {!incomeEntries.length && !expenseEntries.length ? <p className="text-xs text-slate-500">Details could not load.</p> : null}
+                  </div>
+                ) : (
+                  <TrendCategoryEntryList entries={isIncomeOnly ? incomeEntries : expenseEntries} tone={isIncomeOnly ? "income" : "expense"} />
+                )}
+              </div>
+            ) : null}
           </div>
         );
       })}
