@@ -1651,94 +1651,134 @@ function TrendCategoryEntryList({
   );
 }
 
-function TrendCategoryBreakdown({
+function TrendCategoryExplorer({
   displayCurrency,
   items,
-  totalExpenseMinor,
-  totalIncomeMinor,
 }: {
   displayCurrency: string;
   items: TrendCategoryItem[];
-  totalExpenseMinor: number;
-  totalIncomeMinor: number;
 }) {
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   if (!items.length) {
     return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked money movement in this period.</p>;
   }
 
+  const sortedItems = [...items].sort((left, right) => {
+    const movementDelta = (right.movementMinor ?? Math.abs(right.amountMinor)) - (left.movementMinor ?? Math.abs(left.amountMinor));
+    return movementDelta || left.label.localeCompare(right.label);
+  });
+  const visibleLimit = 10;
+  const selectedItem = selectedKey ? sortedItems.find((item) => item.key === selectedKey) ?? null : null;
+  const topItems = sortedItems.slice(0, visibleLimit);
+  const gridItems =
+    showAllCategories || sortedItems.length <= visibleLimit
+      ? sortedItems
+      : selectedItem && !topItems.some((item) => item.key === selectedItem.key)
+        ? [...topItems, selectedItem]
+        : topItems;
+  const shouldShowToggle = sortedItems.length > visibleLimit;
+  const selectedIncomeMinor = Math.max(selectedItem?.incomeMinor ?? 0, 0);
+  const selectedExpenseMinor = Math.max(selectedItem?.expenseMinor ?? 0, 0);
+  const selectedIsMixed = selectedIncomeMinor > 0 && selectedExpenseMinor > 0;
+  const selectedIsIncomeOnly = selectedIncomeMinor > 0 && selectedExpenseMinor === 0;
+  const selectedIncomeEntries = selectedItem
+    ? sortTrendDetailEntries(selectedItem.recentEntries.filter((entry) => entry.transactionType === "income"))
+    : [];
+  const selectedExpenseEntries = selectedItem
+    ? sortTrendDetailEntries(selectedItem.recentEntries.filter((entry) => entry.transactionType !== "income"))
+    : [];
+  const selectedAmountDisplay = selectedItem ? (selectedIsMixed ? formatTrendNetAmountDisplay(selectedItem) : selectedItem.amountDisplay) : "";
+  const selectedAmountClass = selectedIsMixed
+    ? (selectedItem?.netMinor ?? 0) > 0
+      ? "text-emerald-700"
+      : (selectedItem?.netMinor ?? 0) < 0
+        ? "text-rose-700"
+        : "text-slate-800"
+    : selectedIsIncomeOnly
+      ? "text-emerald-700"
+      : "text-rose-700";
+
   return (
     <div className="space-y-3">
-      {items.map((item) => {
-        const incomeMinor = Math.max(item.incomeMinor ?? 0, 0);
-        const expenseMinor = Math.max(item.expenseMinor ?? 0, 0);
-        const isMixed = incomeMinor > 0 && expenseMinor > 0;
-        const isIncomeOnly = incomeMinor > 0 && expenseMinor === 0;
-        const countLabel = formatTransactionCountLabel(item.transactionCount);
-        const subtitle = isMixed
-          ? `Income ${item.incomeDisplay ?? formatMoney(incomeMinor, displayCurrency)} · Spending ${
-              item.expenseDisplay ?? formatMoney(expenseMinor, displayCurrency)
-            } · ${countLabel}`
-          : isIncomeOnly
-            ? `${totalIncomeMinor > 0 ? Math.round((incomeMinor / totalIncomeMinor) * 100) : 0}% of income · ${countLabel}`
-            : `${totalExpenseMinor > 0 ? Math.round((expenseMinor / totalExpenseMinor) * 100) : 0}% of spending · ${countLabel}`;
-        const amountDisplay = isMixed ? formatTrendNetAmountDisplay(item) : item.amountDisplay;
-        const isExpanded = expandedKey === item.key;
-        const incomeEntries = sortTrendDetailEntries(item.recentEntries.filter((entry) => entry.transactionType === "income"));
-        const expenseEntries = sortTrendDetailEntries(item.recentEntries.filter((entry) => entry.transactionType !== "income"));
-        const amountClass = isMixed
-          ? (item.netMinor ?? 0) > 0
-            ? "text-emerald-700"
-            : (item.netMinor ?? 0) < 0
-              ? "text-rose-700"
-              : "text-slate-800"
-          : isIncomeOnly
-            ? "text-emerald-700"
-            : "text-rose-700";
+      <div className="flex flex-wrap gap-2">
+        {gridItems.map((item) => {
+          const isSelected = selectedKey === item.key;
 
-        return (
-          <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
+          return (
             <button
-              aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? "Hide" : "Show"} ${item.label} transactions`}
-              className="grid w-full grid-cols-[2.25rem_1fr_auto] items-start gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              onClick={() => setExpandedKey(isExpanded ? null : item.key)}
+              aria-label={`${isSelected ? "Hide" : "Show"} ${item.label} details`}
+              aria-pressed={isSelected}
+              className={`rounded-full p-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                isSelected ? "bg-slate-100 ring-2 ring-slate-300" : "hover:bg-slate-50"
+              }`}
+              key={item.key}
+              onClick={() => setSelectedKey(isSelected ? null : item.key)}
+              title={item.label}
               type="button"
             >
               <TrendCategoryMixIcon item={item} />
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-slate-900">{item.label}</span>
-                <span className="block text-xs leading-5 text-slate-500">{subtitle}</span>
-              </span>
-              <span className={`whitespace-nowrap text-sm font-semibold ${amountClass}`}>{amountDisplay}</span>
             </button>
-            {isExpanded ? (
-              <div className="ml-11 mt-2 rounded-lg bg-slate-50 px-3 py-3">
-                {isMixed ? (
-                  <div className="space-y-3">
-                    {incomeEntries.length ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold text-slate-700">Income</p>
-                        <TrendCategoryEntryList entries={incomeEntries} tone="income" />
-                      </div>
-                    ) : null}
-                    {expenseEntries.length ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold text-slate-700">Spending</p>
-                        <TrendCategoryEntryList entries={expenseEntries} tone="expense" />
-                      </div>
-                    ) : null}
-                    {!incomeEntries.length && !expenseEntries.length ? <p className="text-xs text-slate-500">Details could not load.</p> : null}
-                  </div>
-                ) : (
-                  <TrendCategoryEntryList entries={isIncomeOnly ? incomeEntries : expenseEntries} tone={isIncomeOnly ? "income" : "expense"} />
-                )}
+          );
+        })}
+      </div>
+      {shouldShowToggle ? (
+        <button
+          className="text-sm font-medium text-sky-700 hover:text-sky-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          onClick={() => setShowAllCategories((current) => !current)}
+          type="button"
+        >
+          {showAllCategories ? "Show fewer" : "Show all"}
+        </button>
+      ) : null}
+      {selectedItem ? (
+        <div className="rounded-lg bg-slate-50 px-3 py-3">
+          <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900">{selectedItem.label}</p>
+              <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount)}</p>
+            </div>
+            <p className={`whitespace-nowrap text-sm font-semibold ${selectedAmountClass}`}>{selectedAmountDisplay}</p>
+          </div>
+          <div className="mb-3 grid gap-2 text-xs text-slate-600">
+            {selectedIncomeMinor > 0 ? (
+              <div className="grid grid-cols-[1fr_auto] gap-3">
+                <span>Income</span>
+                <span className="font-medium text-emerald-700">{selectedItem.incomeDisplay ?? formatMoney(selectedIncomeMinor, displayCurrency)}</span>
+              </div>
+            ) : null}
+            {selectedExpenseMinor > 0 ? (
+              <div className="grid grid-cols-[1fr_auto] gap-3">
+                <span>Spending</span>
+                <span className="font-medium text-rose-700">{selectedItem.expenseDisplay ?? formatMoney(selectedExpenseMinor, displayCurrency)}</span>
               </div>
             ) : null}
           </div>
-        );
-      })}
+          {selectedIsMixed ? (
+            <div className="space-y-3">
+              {selectedIncomeEntries.length ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-700">Income</p>
+                  <TrendCategoryEntryList entries={selectedIncomeEntries} tone="income" />
+                </div>
+              ) : null}
+              {selectedExpenseEntries.length ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-700">Spending</p>
+                  <TrendCategoryEntryList entries={selectedExpenseEntries} tone="expense" />
+                </div>
+              ) : null}
+              {!selectedIncomeEntries.length && !selectedExpenseEntries.length ? <p className="text-xs text-slate-500">Details could not load.</p> : null}
+            </div>
+          ) : (
+            <TrendCategoryEntryList
+              entries={selectedIsIncomeOnly ? selectedIncomeEntries : selectedExpenseEntries}
+              tone={selectedIsIncomeOnly ? "income" : "expense"}
+            />
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1915,13 +1955,11 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
         {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} segment={mixSegment} /> : null}
         {data.selectedChartMode === "mix" ? null : (
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
+            <p className="text-sm font-semibold text-slate-900">{isTrend ? "Categories on this trend" : "Category breakdown"}</p>
             {isTrend ? (
-              <TrendCategoryBreakdown
+              <TrendCategoryExplorer
                 displayCurrency={data.displayCurrency}
                 items={trendBreakdownItems}
-                totalExpenseMinor={data.selectedPeriodExpenseDisplayMinor}
-                totalIncomeMinor={data.selectedPeriodIncomeDisplayMinor}
               />
             ) : (
               <TimeframeCategoryBreakdown

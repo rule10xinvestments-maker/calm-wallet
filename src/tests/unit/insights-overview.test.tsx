@@ -891,7 +891,7 @@ describe("insights overview", () => {
     expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
   });
 
-  it("renders Trend category breakdown with income-only, spending-only, and mixed category rows", () => {
+  it("renders Trend category icons and opens read-only category details", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "trend",
@@ -998,14 +998,12 @@ describe("insights overview", () => {
     );
 
     const card = screen.getByTestId("timeframe-insights-card");
-    const text = card.textContent ?? "";
 
-    expect(text.indexOf("Other")).toBeLessThan(text.indexOf("Salary"));
-    expect(text.indexOf("Salary")).toBeLessThan(text.indexOf("Housing"));
-    expect(within(card).getByText("Income $1,000 · Spending $900 · 2 transactions")).toBeInTheDocument();
-    expect(within(card).getByText("+$100")).toBeInTheDocument();
-    expect(within(card).getByText("33% of income · 1 transaction")).toBeInTheDocument();
-    expect(within(card).getByText("12% of spending · 1 transaction")).toBeInTheDocument();
+    expect(within(card).getByText("Categories on this trend")).toBeInTheDocument();
+    expect(within(card).queryByText("Category breakdown")).not.toBeInTheDocument();
+    expect(within(card).queryByText(/of income/)).not.toBeInTheDocument();
+    expect(within(card).queryByText(/of spending/)).not.toBeInTheDocument();
+    expect(within(card).queryByText("Side sale")).not.toBeInTheDocument();
     const otherIcon = within(card).getByLabelText("Other income and spending mix");
     expect(otherIcon).toBeInTheDocument();
     expect(otherIcon).toHaveStyle({ background: "conic-gradient(#10B981 0% 53%, #F43F5E 53% 100%)" });
@@ -1013,23 +1011,86 @@ describe("insights overview", () => {
     expect(within(card).getByLabelText("Salary income and spending mix")).toBeInTheDocument();
     expect(within(card).getByLabelText("Housing income and spending mix")).toBeInTheDocument();
 
-    fireEvent.click(within(card).getByRole("button", { name: "Show Other transactions" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Show Other details" }));
 
-    expect(within(card).getByRole("button", { name: "Hide Other transactions" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(card).getByRole("button", { name: "Hide Other details" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(card).getByText("Other")).toBeInTheDocument();
+    expect(within(card).getByText("2 transactions")).toBeInTheDocument();
+    expect(within(card).getByText("+$100")).toBeInTheDocument();
     expect(within(card).getAllByText("Income").length).toBeGreaterThan(0);
     expect(within(card).getByText("Side sale")).toBeInTheDocument();
-    expect(within(card).getByText("$1,000")).toBeInTheDocument();
-    expect(within(card).getByText("Spending")).toBeInTheDocument();
+    expect(within(card).getAllByText("$1,000").length).toBeGreaterThan(0);
+    expect(within(card).getAllByText("Spending").length).toBeGreaterThan(0);
     expect(within(card).getByText("Supplies")).toBeInTheDocument();
     expect(within(card).getByText("≈ $900")).toBeInTheDocument();
     expect(within(card).getByText("Recurring")).toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
 
-    fireEvent.click(within(card).getByRole("button", { name: "Show Salary transactions" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Show Salary details" }));
 
     expect(within(card).queryByText("Side sale")).not.toBeInTheDocument();
     expect(within(card).getByText("Paycheck")).toBeInTheDocument();
+    expect(within(card).queryByText("Spending")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show Housing details" }));
+
+    expect(within(card).queryByText("Paycheck")).not.toBeInTheDocument();
+    expect(within(card).getByText("Rent")).toBeInTheDocument();
+    expect(within(card).queryByText("Income")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Hide Housing details" }));
+
+    expect(within(card).queryByText("Rent")).not.toBeInTheDocument();
+  });
+
+  it("keeps Trend category icons compact with Show all and keeps a selected hidden category visible", () => {
+    const categories = Array.from({ length: 12 }, (_, index) => {
+      const amountMinor = 12000 - index * 1000;
+      const amountDollars = 120 - index * 10;
+
+      return makeCategory({
+        key: `category-${index + 1}`,
+        label: `Category ${index + 1}`,
+        amountMinor,
+        amountDisplay: `$${amountDollars}`,
+        incomeMinor: 0,
+        incomeDisplay: "$0",
+        expenseMinor: amountMinor,
+        expenseDisplay: `$${amountDollars}`,
+        netMinor: -amountMinor,
+        netDisplay: `-$${amountDollars}`,
+        movementMinor: amountMinor,
+        transactionCount: 1,
+      });
+    });
+
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        trendCategoryBreakdown: categories,
+      }),
+    );
+
+    const card = screen.getByTestId("timeframe-insights-card");
+
+    expect(within(card).getByText("Categories on this trend")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Category 10 details" })).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Category 11 details" })).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show all" })).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show all" }));
+
+    expect(within(card).getByRole("button", { name: "Show fewer" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Category 11 details" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Category 12 details" })).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show Category 12 details" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Show fewer" }));
+
+    expect(within(card).getByRole("button", { name: "Hide Category 12 details" })).toBeInTheDocument();
+    expect(within(card).getByText("Category 12")).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Category 11 details" })).not.toBeInTheDocument();
   });
 
   it("keeps Bars category breakdown on the selected expense or income segment", () => {
@@ -2087,9 +2148,16 @@ describe("insights overview", () => {
     expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
     expect(screen.queryByText("75% of spending - 3 transactions")).not.toBeInTheDocument();
     expect(screen.queryByText("25% of spending - 1 transaction")).not.toBeInTheDocument();
-    expect(screen.getByText("Salary")).toBeInTheDocument();
-    expect(screen.getByText("100% of income · 1 transaction")).toBeInTheDocument();
+    expect(screen.getByText("Categories on this trend")).toBeInTheDocument();
+    expect(screen.queryByText("100% of income · 1 transaction")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Salary income and spending mix")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Salary details" }));
+
+    expect(screen.getByRole("button", { name: "Hide Salary details" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.getByText("1 transaction")).toBeInTheDocument();
+    expect(screen.getAllByText("$50").length).toBeGreaterThan(0);
   });
 
   it("renders Bars category breakdown with Mix-style icons and the Needs category review badge", () => {
@@ -2314,11 +2382,12 @@ describe("insights overview", () => {
     );
   });
 
-  it("renders timeframe category breakdown and largest recent expenses outside Mix", () => {
+  it("renders compact Trend categories and largest recent expenses outside Mix", () => {
     renderInsights(makeInsightsData({ selectedChartMode: "trend" }));
 
-    expect(screen.getByText("Category breakdown")).toBeInTheDocument();
-    expect(screen.getAllByText("Groceries").length).toBeGreaterThan(0);
+    expect(screen.getByText("Categories on this trend")).toBeInTheDocument();
+    expect(screen.queryByText("Category breakdown")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Groceries income and spending mix")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Expenses category share chart" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Expenses category legend")).not.toBeInTheDocument();
     expect(screen.queryByText("$12 - 100%")).not.toBeInTheDocument();
