@@ -259,7 +259,7 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("shows Assistant Limits with weekly defaults and existing active or paused rows", () => {
+  it("shows Assistant Limits as compact create and manage options by default", () => {
     const categoryLimits: Budget[] = [
       {
         id: "limit-groceries",
@@ -315,16 +315,116 @@ describe("assistant composer", () => {
 
     openLimitsPanel();
 
+    expect(screen.getAllByText("Limits")).toHaveLength(2);
+    expect(screen.getByText("Set weekly or monthly spending limits.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Create a limit/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Set a category limit.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Manage limits/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Edit, pause, or remove limits.")).toBeInTheDocument();
+    expect(screen.queryByText("Set a limit")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Category")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Weekly .* Active/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Create a limit/ }));
+
+    expect(screen.getByRole("button", { name: /Create a limit/ })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: /Manage limits/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByText("Set a limit")).toBeInTheDocument();
     expect(screen.getByLabelText("Category")).toHaveValue("category-housing");
     expect(screen.getByLabelText("Currency")).toHaveValue("RON");
     expect(screen.getByRole("button", { name: "weekly" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("Repeat every week")).toBeChecked();
-    expect(screen.getByText("Existing limits")).toBeInTheDocument();
+    expect(screen.queryByText("Your limits")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Manage limits/ }));
+
+    expect(screen.getByRole("button", { name: /Create a limit/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Manage limits/ })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByText("Set a limit")).not.toBeInTheDocument();
+    expect(screen.getByText("Your limits")).toBeInTheDocument();
     expect(screen.getByText(/Weekly .* Active/)).toBeInTheDocument();
     expect(screen.getByText(/Monthly .* Paused/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(2);
+  });
+
+  it("shows an empty Manage limits state without opening the create form", () => {
+    renderComposer(undefined, [], undefined, manualCategoryOptions);
+
+    openLimitsPanel();
+    fireEvent.click(screen.getByRole("button", { name: /Manage limits/ }));
+
+    expect(screen.getByText("No limits yet.")).toBeInTheDocument();
+    expect(screen.queryByText("Set a limit")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
+  });
+
+  it("keeps create limit save wired through the expanded Create section", async () => {
+    const upsertLimitAction = vi.fn(async (state: unknown, formData: FormData) => {
+      void state;
+      void formData;
+
+      return {
+        status: "success" as const,
+        message: "Limit saved.",
+        budget: null,
+      };
+    });
+
+    render(
+      <AssistantComposer
+        action={async () => ({
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        })}
+        categoryOptions={manualCategoryOptions}
+        defaultCurrency="RON"
+        initialState={{
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        }}
+        importsEnabled={false}
+        recentItems={[]}
+        upsertLimitAction={upsertLimitAction}
+      />,
+    );
+
+    openLimitsPanel();
+    fireEvent.click(screen.getByRole("button", { name: /Create a limit/ }));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "280" } });
+    fireEvent.click(screen.getByRole("button", { name: "monthly" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save limit" }));
+
+    await waitFor(() => expect(upsertLimitAction).toHaveBeenCalled());
+    const [, formData] = upsertLimitAction.mock.calls[0] as [unknown, FormData];
+
+    expect(formData.get("categoryId")).toBe("category-housing");
+    expect(formData.get("amount")).toBe("280");
+    expect(formData.get("currency")).toBe("RON");
+    expect(formData.get("period")).toBe("monthly");
+    expect(formData.get("repeats")).toBe("on");
+  });
+
+  it("keeps Assistant Limits close behavior compact", () => {
+    renderComposer(undefined, [], undefined, manualCategoryOptions);
+
+    openLimitsPanel();
+    fireEvent.click(screen.getByRole("button", { name: /Create a limit/ }));
+    expect(screen.getByText("Set a limit")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(screen.queryByText("Create a limit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Set a limit")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Limits" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("sets optional manual fields through compact buttons and prepares create fields", () => {

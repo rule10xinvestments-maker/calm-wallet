@@ -93,8 +93,10 @@ describe("assistant overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Limits" }));
 
-    expect(screen.getByText("Set a limit")).toBeInTheDocument();
     expect(screen.getByText("Set weekly or monthly spending limits.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Create a limit/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Manage limits/ })).toBeInTheDocument();
+    expect(screen.queryByText("Set a limit")).not.toBeInTheDocument();
   });
 
   it("uses only the in-card recent items toggle instead of a separate recent card", () => {

@@ -3,6 +3,7 @@
 import { useActionState, useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   CalendarDays,
+  ChevronDown,
   CircleGauge,
   FileSpreadsheet,
   History,
@@ -10,6 +11,7 @@ import {
   Receipt,
   ReceiptText,
   Repeat2,
+  SlidersHorizontal,
   StickyNote,
   Store,
   Wallet,
@@ -60,6 +62,7 @@ type ActionPanel = "receipt" | "statement" | "recent" | "manual" | "limits";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
 type ManualCategoryOption = ControlledCategoryOption & { isSynthetic?: boolean };
+type LimitSection = "create" | "manage" | null;
 
 const initialUploadFlowState: UploadFlowState = {
   status: "idle",
@@ -201,6 +204,40 @@ async function noopBudgetAction(state: BudgetActionState) {
   return state;
 }
 
+function LimitOptionButton({
+  title,
+  helper,
+  Icon,
+  expanded,
+  onClick,
+}: {
+  title: string;
+  helper: string;
+  Icon: LucideIcon;
+  expanded: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-expanded={expanded}
+      className={`grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+        expanded ? "border-sky-200 bg-white shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <span className={`flex size-9 items-center justify-center rounded-xl ${expanded ? "bg-sky-50 text-sky-700" : "bg-slate-50 text-slate-600"}`}>
+        <Icon aria-hidden="true" className="size-4" strokeWidth={2.2} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-slate-900">{title}</span>
+        <span className="block text-xs leading-5 text-slate-500">{helper}</span>
+      </span>
+      <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} strokeWidth={2.2} />
+    </button>
+  );
+}
+
 function findCategoryByLabel(categories: ControlledCategoryOption[], labels: string[], transactionType: "expense" | "income") {
   return categories.find((category) => {
     const normalized = category.label.toLowerCase();
@@ -285,6 +322,7 @@ export function AssistantComposer({
   const [limitRepeats, setLimitRepeats] = useState(true);
   const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
   const [confirmRemoveLimitId, setConfirmRemoveLimitId] = useState<string | null>(null);
+  const [expandedLimitSection, setExpandedLimitSection] = useState<LimitSection>(null);
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
@@ -369,8 +407,15 @@ export function AssistantComposer({
   useEffect(() => {
     if (limitState.status === "success") {
       resetLimitForm();
+      setExpandedLimitSection("manage");
     }
   }, [limitState.status, resetLimitForm]);
+
+  useEffect(() => {
+    if (!isLimitsPanelOpen) {
+      setExpandedLimitSection(null);
+    }
+  }, [isLimitsPanelOpen]);
 
   function togglePanel(panel: ActionPanel) {
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
@@ -412,6 +457,11 @@ export function AssistantComposer({
     setLimitPeriod(limit.period);
     setLimitRepeats(limit.repeats);
     setConfirmRemoveLimitId(null);
+    setExpandedLimitSection("create");
+  }
+
+  function toggleLimitSection(section: Exclude<LimitSection, null>) {
+    setExpandedLimitSection((currentSection) => (currentSection === section ? null : section));
   }
 
   function formatLimitAmount(limit: Budget) {
@@ -1162,6 +1212,15 @@ export function AssistantComposer({
             </button>
           </div>
 
+          <div className="space-y-2">
+            <LimitOptionButton
+              Icon={Plus}
+              expanded={expandedLimitSection === "create"}
+              helper="Set a category limit."
+              onClick={() => toggleLimitSection("create")}
+              title="Create a limit"
+            />
+            {expandedLimitSection === "create" ? (
           <form action={limitFormAction} className="space-y-3 rounded-2xl bg-white p-3">
             <p className="text-sm font-semibold text-slate-900">{editingLimitId ? "Edit limit" : "Set a limit"}</p>
             <input name="budgetId" type="hidden" value={editingLimitId ?? ""} />
@@ -1261,9 +1320,20 @@ export function AssistantComposer({
               ) : null}
             </div>
           </form>
+            ) : null}
 
+            <LimitOptionButton
+              Icon={SlidersHorizontal}
+              expanded={expandedLimitSection === "manage"}
+              helper="Edit, pause, or remove limits."
+              onClick={() => toggleLimitSection("manage")}
+              title="Manage limits"
+            />
+          </div>
+
+          {expandedLimitSection === "manage" ? (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700">Existing limits</p>
+            <p className="text-sm font-medium text-slate-700">Your limits</p>
             {categoryLimits.length ? (
               categoryLimits.map((limit) => {
                 const categoryLabel = getLimitCategoryLabel(limit.categoryId);
@@ -1328,6 +1398,7 @@ export function AssistantComposer({
               ) : null,
             )}
           </div>
+          ) : null}
         </div>
       ) : null}
 
