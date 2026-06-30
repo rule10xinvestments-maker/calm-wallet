@@ -2711,22 +2711,18 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
         : "Largest expenses this period";
   const helper =
     data.selectedTimeframe === "1M"
-      ? `Top tracked ${isIncome ? "income" : "expenses"} from ${periodLabel}.`
-      : `Top tracked ${isIncome ? "income" : "expenses"} from this period.`;
+      ? `Biggest ${isIncome ? "money-in" : "spending"} entries from ${periodLabel}.`
+      : `Biggest ${isIncome ? "money-in" : "spending"} entries from this period.`;
   const shareContext = data.selectedTimeframe === "1M" ? "monthly" : "period";
 
   return (
     <Card className="rounded-lg" data-testid="largest-entries-card">
-      <CardHeader className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg">{title}</CardTitle>
-            <CardDescription>{helper}</CardDescription>
-          </div>
-          <SpendingSegmentControls buttonLabelPrefix="Largest entries" orientation="horizontal" segment={segment} onSegmentChange={setSegment} />
-        </div>
+      <CardHeader className="space-y-2 p-4 pb-2">
+        <CardTitle className="text-lg leading-snug">{title}</CardTitle>
+        <SpendingSegmentControls buttonLabelPrefix="Largest entries" orientation="horizontal" segment={segment} onSegmentChange={setSegment} />
+        <CardDescription>{helper}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 p-4 pt-0">
         {items.length ? (
           items.map((item) => {
             const visuals = getCategoryVisualsByName(item.categoryLabel);

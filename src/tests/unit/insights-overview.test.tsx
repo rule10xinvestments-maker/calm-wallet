@@ -2696,7 +2696,12 @@ describe("insights overview", () => {
     const card = screen.getByTestId("largest-entries-card");
 
     expect(within(card).getByText("Largest expenses this month")).toBeInTheDocument();
-    expect(within(card).getByText("Top tracked expenses from April 2026.")).toBeInTheDocument();
+    expect(within(card).getByText("Biggest spending entries from April 2026.")).toBeInTheDocument();
+    expect(within(card).queryByText(/Top tracked expenses from/)).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Largest entries Expenses" })).toHaveAttribute("aria-pressed", "true");
+    const cardText = card.textContent ?? "";
+    expect(cardText.indexOf("Largest expenses this month")).toBeLessThan(cardText.indexOf("Expenses"));
+    expect(cardText.indexOf("Expenses")).toBeLessThan(cardText.indexOf("Biggest spending entries from April 2026."));
     expect(within(card).getByText("Rent")).toBeInTheDocument();
     expect(within(card).getByText("Housing · Apr 10")).toBeInTheDocument();
     expect(within(card).getByText("50% of monthly spending")).toBeInTheDocument();
@@ -2706,7 +2711,9 @@ describe("insights overview", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Largest entries Income" }));
 
     expect(within(card).getByText("Largest income this month")).toBeInTheDocument();
-    expect(within(card).getByText("Top tracked income from April 2026.")).toBeInTheDocument();
+    expect(within(card).getByText("Biggest money-in entries from April 2026.")).toBeInTheDocument();
+    expect(within(card).queryByText(/Top tracked income from/)).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Largest entries Income" })).toHaveAttribute("aria-pressed", "true");
     expect(within(card).getByText("Payroll")).toBeInTheDocument();
     expect(within(card).getByText("Salary · Apr 1")).toBeInTheDocument();
     expect(within(card).getByText("70% of monthly income")).toBeInTheDocument();
@@ -2727,13 +2734,15 @@ describe("insights overview", () => {
     const card = screen.getByTestId("largest-entries-card");
 
     expect(within(card).getByText("Largest expenses this period")).toBeInTheDocument();
-    expect(within(card).getByText("Top tracked expenses from this period.")).toBeInTheDocument();
+    expect(within(card).getByText("Biggest spending entries from this period.")).toBeInTheDocument();
+    expect(within(card).queryByText(/Top tracked expenses from/)).not.toBeInTheDocument();
     expect(within(card).getByText("No spending entries in this period.")).toBeInTheDocument();
 
     fireEvent.click(within(card).getByRole("button", { name: "Largest entries Income" }));
 
     expect(within(card).getByText("Largest income this period")).toBeInTheDocument();
-    expect(within(card).getByText("Top tracked income from this period.")).toBeInTheDocument();
+    expect(within(card).getByText("Biggest money-in entries from this period.")).toBeInTheDocument();
+    expect(within(card).queryByText(/Top tracked income from/)).not.toBeInTheDocument();
     expect(within(card).getByText("No income entries in this period.")).toBeInTheDocument();
   });
 
