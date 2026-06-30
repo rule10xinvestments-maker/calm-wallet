@@ -1193,13 +1193,17 @@ describe("insights overview", () => {
 
     expect(housingBubble).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("$120 · 1 day this period")).toBeInTheDocument();
+    expect(screen.getByText("Day amounts show Housing only")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 10, $120 spending, tap for category breakdown" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apr 11, $30 spending, tap for category breakdown" }).parentElement).toHaveClass("opacity-35");
+    expect(screen.getByRole("button", { name: "Select Groceries focus" })).toHaveClass("opacity-25");
     expect(screen.getByLabelText("Apr 10 Housing spending $120")).toHaveClass("opacity-100");
     expect(screen.getByLabelText("Apr 10 Groceries spending $30")).toHaveClass("opacity-35");
 
     fireEvent.click(housingBubble);
 
     expect(housingBubble).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" })).toBeInTheDocument();
     expect(screen.queryByText("$120 · 1 day this period")).not.toBeInTheDocument();
   });
 
@@ -1234,7 +1238,7 @@ describe("insights overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Apr 10, $120 spending, tap for category breakdown" }));
 
     expect(screen.getByRole("button", { name: "Select Housing focus" })).toHaveClass("opacity-100");
-    expect(screen.getByRole("button", { name: "Select Groceries focus" })).toHaveClass("opacity-35");
+    expect(screen.getByRole("button", { name: "Select Groceries focus" })).toHaveClass("opacity-25");
   });
 
   it("keeps a selected category first in the expanded Bars day breakdown", () => {
@@ -1262,7 +1266,7 @@ describe("insights overview", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Select Groceries focus" }));
-    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $30 spending, tap for category breakdown" }));
 
     const panel = screen.getByLabelText("Apr 10 spending category breakdown");
     const labels = within(panel).getAllByText(/Housing|Groceries/).map((node) => node.textContent);
@@ -1334,7 +1338,11 @@ describe("insights overview", () => {
     expect(screen.getByText("2 active recurring items · monthly total ≈ RON 1,200")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Inspect Housing limit details" }));
-    expect(screen.getByRole("dialog", { name: "Housing limit details" })).toBeInTheDocument();
+    const limitDialog = screen.getByRole("dialog", { name: "Housing limit details" });
+
+    expect(limitDialog).toBeInTheDocument();
+    expect(limitDialog).toHaveClass("flex");
+    expect(limitDialog.querySelector(".overflow-y-auto")).toBeInTheDocument();
     expect(screen.getByText("Near limit")).toBeInTheDocument();
     expect(screen.queryByText("Manage")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Close details" }));
@@ -1344,6 +1352,55 @@ describe("insights overview", () => {
     expect(screen.getByText("Rent")).toBeInTheDocument();
     expect(screen.getByText("Spend · Monthly · Apr 10 · Active")).toBeInTheDocument();
     expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+  });
+
+  it("hides Bars recurring badge and row when there are no active recurring items", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "education", label: "Education", amountMinor: 4200, amountDisplay: "$42", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 4200,
+            amountDisplay: "$42",
+            segments: [{ key: "education", label: "Education", amountMinor: 4200, amountDisplay: "$42", transactionCount: 1 }],
+          }),
+        ],
+        categorySignals: {
+          education: {
+            recurring: {
+              count: 1,
+              activeCount: 0,
+              pausedCount: 1,
+              monthlyTotalMinor: 0,
+              monthlyTotalDisplay: "$0",
+              items: [
+                {
+                  id: "paused-recurring",
+                  title: "Course",
+                  amountDisplay: "$42",
+                  tone: "Spend",
+                  frequency: "monthly",
+                  nextDateLabel: "Apr 10",
+                  status: "Paused",
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Select Education focus" }));
+
+    expect(screen.queryByText("Recurring")).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 active recurring/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Inspect Education recurring details" })).not.toBeInTheDocument();
   });
 
   it("selects and collapses a Bars day category breakdown", () => {

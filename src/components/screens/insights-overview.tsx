@@ -822,15 +822,15 @@ function BarsCategoryBubble({
   const visuals = getCategoryVisualsByName(item.label);
   const CategoryIcon = visuals.icon;
   const limit = item.signal?.limit;
-  const recurring = item.signal?.recurring;
+  const recurring = item.signal?.recurring?.activeCount ? item.signal.recurring : undefined;
 
   return (
     <button
       aria-label={getCategoryBubbleActionLabel(item.label, isSelected)}
       aria-pressed={isSelected}
-      className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-        isSelected ? "ring-2 ring-sky-500 ring-offset-2" : ""
-      } ${isDimmed ? "grayscale opacity-35" : "opacity-100"}`}
+      className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+        isSelected ? "border-2 shadow-sm ring-2 ring-sky-500 ring-offset-2 scale-105" : "border"
+      } ${isDimmed ? "grayscale opacity-25" : "opacity-100"}`}
       onClick={onSelect}
       ref={setRef}
       style={{ backgroundColor: visuals.bg, borderColor: isSelected ? visuals.primary : visuals.border, color: visuals.primary }}
@@ -867,22 +867,26 @@ function BarsCategoryFocusPanel({
   onInspect: (kind: "limit" | "recurring") => void;
 }) {
   const limit = category.signal?.limit;
-  const recurring = category.signal?.recurring;
+  const recurring = category.signal?.recurring?.activeCount ? category.signal.recurring : undefined;
+  const visuals = getCategoryVisualsByName(category.label);
 
   return (
-    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3">
+    <div className="-mt-1 rounded-lg border bg-white px-3 py-2.5 shadow-sm transition" style={{ borderColor: visuals.border }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-900">{category.label}</p>
+          <p className="truncate text-sm font-semibold text-slate-900" style={{ color: visuals.primary }}>
+            {category.label}
+          </p>
           <p className="text-xs leading-5 text-slate-500">
             {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? "day" : "days"} this period
           </p>
+          <p className="text-[11px] leading-4 text-slate-400">Day amounts show {category.label} only</p>
         </div>
       </div>
       {limit || recurring ? (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-1.5">
           {limit ? (
-            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white px-2 py-2">
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
               <CircleGauge aria-hidden="true" className="h-4 w-4 text-sky-700" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-800">Limit</p>
@@ -902,7 +906,7 @@ function BarsCategoryFocusPanel({
             </div>
           ) : null}
           {recurring ? (
-            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white px-2 py-2">
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
               <Repeat2 aria-hidden="true" className="h-4 w-4 text-slate-600" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-800">Recurring</p>
@@ -932,7 +936,7 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
   }
 
   const limit = detail.category.signal?.limit;
-  const recurring = detail.category.signal?.recurring;
+  const recurring = detail.category.signal?.recurring?.activeCount ? detail.category.signal.recurring : undefined;
 
   if (detail.kind === "limit" && !limit) {
     return null;
@@ -943,14 +947,19 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/30 px-3 py-4 sm:items-center sm:justify-center" role="presentation">
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-slate-950/30 px-3 pt-4 sm:items-center sm:justify-center sm:p-4"
+      role="presentation"
+      style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
+    >
       <div
         aria-label={`${detail.category.label} ${detail.kind} details`}
         aria-modal="true"
-        className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl"
+        className="flex w-full max-w-md flex-col rounded-2xl bg-white p-4 shadow-xl"
         role="dialog"
+        style={{ maxHeight: "calc(100dvh - 8.5rem - env(safe-area-inset-bottom))" }}
       >
-        <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-slate-900">{detail.category.label}</p>
             <p className="text-xs text-slate-500">{detail.kind === "limit" ? "Limit details" : "Recurring details"}</p>
@@ -964,7 +973,8 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
-        {detail.kind === "limit" && limit ? (
+        <div className="min-h-0 overflow-y-auto pr-1">
+          {detail.kind === "limit" && limit ? (
           <div className="space-y-2 text-sm">
             <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Period</span><span className="font-medium text-slate-800">{limit.period === "weekly" ? "Weekly" : "Monthly"}</span></div>
             <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Limit amount</span><span className="font-medium text-slate-800">{limit.amountDisplay}</span></div>
@@ -988,7 +998,8 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
               </div>
             ))}
           </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -1101,7 +1112,11 @@ function TimeframeBarsChart({
     <div aria-label={`${isIncome ? "Income" : "Expenses"} category bubbles`} className="flex scroll-px-3 gap-2 overflow-x-auto px-1 pb-2 pt-1">
       {activeCategoryItems.map((item) => (
         <BarsCategoryBubble
-          isDimmed={Boolean(selectedDay && !selectedDayCategoryKeys.has(item.key) && selectedCategoryKey !== item.key)}
+          isDimmed={Boolean(
+            selectedCategoryKey
+              ? selectedCategoryKey !== item.key
+              : selectedDay && !selectedDayCategoryKeys.has(item.key)
+          )}
           isSelected={selectedCategoryKey === item.key}
           item={item}
           key={item.key}
@@ -1152,11 +1167,13 @@ function TimeframeBarsChart({
             const isSelected = selectedDayKey === bar.key;
             const containsSelectedCategory = selectedCategoryKey ? segments.some((segment) => segment.key === selectedCategoryKey) : true;
             const isBarDimmed = Boolean(selectedCategoryKey && !containsSelectedCategory);
+            const selectedCategorySegment = selectedCategoryKey ? segments.find((segment) => segment.key === selectedCategoryKey) ?? null : null;
+            const rowAmountDisplay = selectedCategorySegment?.amountDisplay ?? amountDisplay;
 
             return (
               <div className={`space-y-2 transition-opacity ${isBarDimmed ? "opacity-35" : "opacity-100"}`} key={bar.key}>
                 <button
-                  aria-label={`${label}, ${amountDisplay} ${context}, ${isSelected ? "hide" : "tap for"} category breakdown`}
+                  aria-label={`${label}, ${rowAmountDisplay} ${context}, ${isSelected ? "hide" : "tap for"} category breakdown`}
                   aria-pressed={isSelected}
                   className={`grid w-full grid-cols-[3.25rem_1fr_auto] items-center gap-2 rounded-lg px-1 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                     isSelected ? "bg-slate-50 ring-1 ring-slate-200" : ""
@@ -1188,7 +1205,7 @@ function TimeframeBarsChart({
                       ))}
                     </span>
                   </span>
-                  <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{amountDisplay}</span>
+                  <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{rowAmountDisplay}</span>
                 </button>
                 {isSelected ? (
                   <BarsDayBreakdownPanel

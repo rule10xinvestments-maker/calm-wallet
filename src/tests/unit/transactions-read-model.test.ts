@@ -396,6 +396,43 @@ describe("transactions read model", () => {
     });
   });
 
+  it("does not build Insights recurring category signals when all recurring items are paused", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "paused-rent",
+          amountMinor: 120000,
+          currency: "RON",
+          categoryId: "housing",
+          occurredAt: "2026-06-10T12:00:00.000Z",
+          recurringRuleId: "rule-rent",
+          recurringOccurrenceDate: "2026-06-10",
+        }),
+      ],
+      { housing: "Housing" },
+      "RON",
+      new Date("2026-06-15T12:00:00.000Z"),
+      [],
+      [],
+      [],
+      "RON",
+      "2026-06",
+      "1M",
+      "bars",
+      {
+        "rule-rent": {
+          id: "rule-rent",
+          frequency: "monthly",
+          startDate: "2026-06-10",
+          endDate: null,
+          pausedAt: "2026-06-12T12:00:00.000Z",
+        },
+      },
+    );
+
+    expect(data.categorySignals?.housing?.recurring).toBeUndefined();
+  });
+
   it("marks Activity rows over an active weekly category limit in the transaction calendar week", () => {
     const transactions = [
       makeTransaction({

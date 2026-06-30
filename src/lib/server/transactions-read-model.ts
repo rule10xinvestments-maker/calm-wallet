@@ -1794,12 +1794,11 @@ function buildInsightsCategorySignals(args: {
         const frequency = rule?.frequency ?? null;
         const isPaused = Boolean(rule?.pausedAt);
 
-        monthlyTotalMinor += convertedMinor * getRecurringMonthlyFactor(frequency);
-
         if (isPaused) {
           pausedCount += 1;
         } else {
           activeCount += 1;
+          monthlyTotalMinor += convertedMinor * getRecurringMonthlyFactor(frequency);
         }
 
         return {
@@ -1813,14 +1812,16 @@ function buildInsightsCategorySignals(args: {
         };
       });
 
-    current.recurring = {
-      count: items.length,
-      activeCount,
-      pausedCount,
-      monthlyTotalMinor: Math.round(monthlyTotalMinor),
-      monthlyTotalDisplay: formatInsightsMoney(Math.round(monthlyTotalMinor), args.displayCurrency),
-      items,
-    };
+    if (activeCount > 0) {
+      current.recurring = {
+        count: items.length,
+        activeCount,
+        pausedCount,
+        monthlyTotalMinor: Math.round(monthlyTotalMinor),
+        monthlyTotalDisplay: formatInsightsMoney(Math.round(monthlyTotalMinor), args.displayCurrency),
+        items,
+      };
+    }
     signals[categoryId] = current;
   }
 
