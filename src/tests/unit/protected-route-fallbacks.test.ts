@@ -28,6 +28,17 @@ describe("protected route fallbacks", () => {
     });
   });
 
+  it("uses the app display timezone for fallback Insights month labels", () => {
+    expect(getFallbackInsightsData(new Date("2026-06-30T21:10:00.000Z"))).toMatchObject({
+      monthLabel: "July 2026",
+      selectedMonth: "2026-07",
+      currentMonth: "2026-07",
+      previousMonth: "2026-06",
+      nextMonth: "2026-08",
+      timeframeLabel: "1M ending July 2026",
+    });
+  });
+
   it("logs route load failures without leaking error messages", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 

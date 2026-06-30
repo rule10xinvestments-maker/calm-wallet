@@ -68,6 +68,8 @@ type RecurringRuleSummary = {
 
 export type DisplayFxRate = FxRate;
 
+const appDisplayTimeZone = "Europe/Bucharest";
+
 export type ControlledCategoryOption = TransactionCategoryOption & {
   slug: string;
   direction: "expense" | "income" | "both";
@@ -588,6 +590,22 @@ function toMonthKey(date: Date) {
 
 function toMonthStartValue(date: Date) {
   return `${toMonthKey(date)}-01`;
+}
+
+function getAppCurrentMonthDate(now: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    timeZone: appDisplayTimeZone,
+    year: "numeric",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  }
+
+  return new Date(Date.UTC(year, month - 1, 1));
 }
 
 function parseMonthKey(month: string | null | undefined, fallback: Date) {
@@ -1643,8 +1661,8 @@ export function buildInsightsData(
   const activeTransactions = transactions.filter((transaction) => !transaction.deletedAt && !transaction.deletedForeverAt);
   const selectedTimeframe = normalizeInsightsTimeframe(requestedTimeframe);
   const selectedChartMode = normalizeInsightsChartMode(requestedChartMode);
-  const currentMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const monthStart = parseMonthKey(selectedMonth, now);
+  const currentMonthDate = getAppCurrentMonthDate(now);
+  const monthStart = parseMonthKey(selectedMonth, currentMonthDate);
   const monthEnd = shiftMonth(monthStart, 1);
   const monthStartValue = toMonthStartValue(monthStart);
   const selectedMonthKey = toMonthKey(monthStart);
@@ -2492,7 +2510,8 @@ export async function loadInsightsPageData(
   const service = await createSupabaseTransactionService();
   const budgetService = await createSupabaseBudgetService();
   const now = new Date();
-  const selectedMonthDate = parseMonthKey(selectedMonth, now);
+  const currentMonthDate = getAppCurrentMonthDate(now);
+  const selectedMonthDate = parseMonthKey(selectedMonth, currentMonthDate);
   const monthStart = toMonthStartValue(selectedMonthDate);
   const transactions = await service.listTransactions(userId, {
     includeDeleted: false,

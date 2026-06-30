@@ -710,6 +710,23 @@ describe("insights overview", () => {
     expect(screen.getByText("Period net")).toBeInTheDocument();
   });
 
+  it("allows navigating from the latest activity month to an empty current month", () => {
+    renderInsights(
+      makeInsightsData({
+        currentMonth: "2026-07",
+        monthLabel: "June 2026",
+        nextMonth: "2026-07",
+        selectedMonth: "2026-06",
+        selectedTimeframe: "1M",
+      }),
+    );
+
+    const nextMonthButton = screen.getByLabelText("View 2026-07");
+
+    expect(nextMonthButton).toHaveAttribute("data-href", "/insights?month=2026-07&timeframe=1M&chart=mix&currency=USD");
+    expect(nextMonthButton).not.toHaveClass("text-slate-300");
+  });
+
   it("renders timeframe presets and preserves currency in timeframe URLs", () => {
     renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["RON", "USD"] }));
 

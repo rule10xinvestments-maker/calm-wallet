@@ -1397,6 +1397,24 @@ describe("transactions read model", () => {
     expect(data.isSelectedMonthCurrent).toBe(true);
   });
 
+  it("uses the app display timezone for the current Insights month before UTC midnight", () => {
+    const data = buildInsightsData(
+      [makeTransaction({ id: "june", occurredAt: "2026-06-29T12:00:00.000Z" })],
+      {},
+      "USD",
+      new Date("2026-06-30T21:10:00.000Z"),
+    );
+
+    expect(data.monthLabel).toBe("July 2026");
+    expect(data.selectedMonth).toBe("2026-07");
+    expect(data.currentMonth).toBe("2026-07");
+    expect(data.previousMonth).toBe("2026-06");
+    expect(data.nextMonth).toBe("2026-08");
+    expect(data.currentMonthTransactionCount).toBe(0);
+    expect(data.latestActivityMonth).toBe("2026-06");
+    expect(data.monthPickerYears[0]?.months.map((month) => month.month)).toContain("2026-07");
+  });
+
   it("keeps an empty selected month period at zero while preserving lifetime tracked balance", () => {
     const data = buildInsightsData(
       [

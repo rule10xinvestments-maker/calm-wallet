@@ -36,12 +36,32 @@ export function getFallbackTransactionsPageData(args: { view: TransactionsView; 
   };
 }
 
+const appDisplayTimeZone = "Europe/Bucharest";
+
+function getFallbackCurrentMonthDate(now: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    timeZone: appDisplayTimeZone,
+    year: "numeric",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  }
+
+  return new Date(Date.UTC(year, month - 1, 1));
+}
+
 export function getFallbackInsightsData(now = new Date()): InsightsData {
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  const currentMonthDate = getFallbackCurrentMonthDate(now);
+  const monthStart = currentMonthDate.toISOString().slice(0, 10);
   const month = monthStart.slice(0, 7);
-  const previousMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  const nextMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const previousMonthDate = new Date(Date.UTC(currentMonthDate.getUTCFullYear(), currentMonthDate.getUTCMonth() - 1, 1));
+  const nextMonthDate = new Date(Date.UTC(currentMonthDate.getUTCFullYear(), currentMonthDate.getUTCMonth() + 1, 1));
   const formatMonth = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+  const monthLabel = currentMonthDate.toLocaleDateString("en-US", { month: "long", timeZone: "UTC", year: "numeric" });
 
   return {
     trackedBalanceMinor: 0,
@@ -64,12 +84,12 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
     rateSource: null,
     hasConvertedCurrencies: false,
     hasMissingRates: false,
-    monthLabel: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    monthLabel,
     selectedMonth: month,
     selectedTimeframe: "1M",
     selectedChartMode: "mix",
     timeframePresets: ["1M", "3M", "6M", "1Y", "All"],
-    timeframeLabel: `1M ending ${now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`,
+    timeframeLabel: `1M ending ${monthLabel}`,
     timeframeStartMonth: month,
     timeframeEndMonth: month,
     timeframeExpenseDisplayMinor: 0,
