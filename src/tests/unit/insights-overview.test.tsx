@@ -2328,7 +2328,7 @@ describe("insights overview", () => {
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
-  it("renders the full Mix experience with percentages while avoiding duplicate category rows", () => {
+  it("renders focused Mix selected category by default and expands to all categories", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "mix",
@@ -2364,26 +2364,41 @@ describe("insights overview", () => {
     expect(screen.getByRole("img", { name: "Expenses category share chart" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Expenses" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Selected category")).toBeInTheDocument();
     expect(screen.queryByText("Category breakdown")).not.toBeInTheDocument();
     expect(screen.queryByText("Tracked")).not.toBeInTheDocument();
     expect(screen.getAllByText("Needs category")).toHaveLength(2);
-    expect(screen.getAllByText("Housing")).toHaveLength(1);
-    expect(screen.getAllByText("Dining")).toHaveLength(1);
-    expect(screen.getAllByText("Transport")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Show Housing entries" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show Dining entries" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show Transport entries" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Expenses category legend")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Needs category represents 33% of spending" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Housing represents 26% of spending" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Dining represents 22% of spending" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Transport represents 19% of spending" })).toBeInTheDocument();
-    expect(screen.getByText("$34")).toBeInTheDocument();
-    expect(screen.getAllByText("$30").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("img", { name: "Housing represents 26% of spending" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Dining represents 22% of spending" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Transport represents 19% of spending" })).not.toBeInTheDocument();
+    expect(screen.queryByText("$34")).not.toBeInTheDocument();
     expect(screen.queryByText("$52 - 33%")).not.toBeInTheDocument();
     expect(screen.getAllByText("$52")).toHaveLength(2);
-    expect(screen.getByText("$40")).toBeInTheDocument();
+    expect(screen.queryByText("$40")).not.toBeInTheDocument();
     expect(screen.getAllByText("33%")).toHaveLength(2);
-    expect(screen.getByText("26%")).toBeInTheDocument();
+    expect(screen.queryByText("26%")).not.toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: "Dining spending share 22%" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: "Transport spending share 19%" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all categories" }));
+
+    expect(screen.getByText("Category breakdown")).toBeInTheDocument();
+    expect(screen.queryByText("Selected category")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show selected only" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Housing entries" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Dining entries" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Transport entries" })).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Dining spending share 22%" })).toBeInTheDocument();
-    expect(screen.getByRole("meter", { name: "Transport spending share 19%" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show selected only" }));
+
+    expect(screen.getByText("Selected category")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show Housing entries" })).not.toBeInTheDocument();
   });
 
   it("uses distinct category icons in Mix rows", () => {
@@ -2398,6 +2413,8 @@ describe("insights overview", () => {
         ],
       }),
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all categories" }));
 
     expectCategoryIcon("Housing", "lucide-house");
     expectCategoryIcon("Transfers", "lucide-arrow-right-left");
@@ -2421,6 +2438,8 @@ describe("insights overview", () => {
         ],
       }),
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all categories" }));
 
     const housing = screen.getByRole("img", { name: "Housing represents 82% of spending" });
     const groceries = screen.getByRole("img", { name: "Groceries represents 15% of spending" });
@@ -2455,6 +2474,20 @@ describe("insights overview", () => {
     expect(screen.getByRole("button", { name: "Show Housing entries" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("hides the Mix category list toggle when there is only one category", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        categoryBreakdown: [makeCategory({ key: "housing", label: "Housing", amountMinor: 6700, amountDisplay: "$67", transactionCount: 2 })],
+      }),
+    );
+
+    expect(screen.getByText("Selected category")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Housing entries" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show all categories" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show selected only" })).not.toBeInTheDocument();
+  });
+
   it("updates Mix center details from category row and donut slice selection", () => {
     renderInsights(
       makeInsightsData({
@@ -2469,6 +2502,11 @@ describe("insights overview", () => {
 
     const donut = screen.getByRole("img", { name: "Expenses category share chart" });
 
+    expect(screen.getByText("Selected category")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Housing entries" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "Show Groceries entries" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all categories" }));
     fireEvent.click(screen.getByRole("button", { name: "Show Groceries entries" }));
     expect(within(donut).getByText("Groceries")).toBeInTheDocument();
     expect(within(donut).getByText("$15")).toBeInTheDocument();
@@ -2488,6 +2526,14 @@ describe("insights overview", () => {
       "aria-valuetext",
       "Utilities, $18, 18 percent of spending",
     );
+
+    expect(screen.getByText("Category breakdown")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Housing entries" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show selected only" }));
+    expect(screen.getByText("Selected category")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show Utilities entries" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "Show Housing entries" })).not.toBeInTheDocument();
   });
 
   it("renders multi-category donuts as clean separated arcs without loose markers", () => {

@@ -1416,24 +1416,40 @@ function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: Spe
     chart.items[0]?.key ??
     null;
   const [selectedKey, setSelectedKey] = useState<string | null>(defaultSelectedKey);
+  const [mixBreakdownExpanded, setMixBreakdownExpanded] = useState(false);
   const selectedKeyIsVisible = selectedKey ? chart.items.some((item) => item.key === selectedKey && Math.max(item.amountMinor, 0) > 0) : false;
   const effectiveSelectedKey = selectedKeyIsVisible ? selectedKey : defaultSelectedKey;
+  const focusedItems = effectiveSelectedKey ? spendingMixItems.filter((item) => item.key === effectiveSelectedKey) : [];
+  const visibleItems = mixBreakdownExpanded ? spendingMixItems : focusedItems;
+  const showBreakdownToggle = spendingMixItems.length > 1;
 
   useEffect(() => {
     setSelectedKey(defaultSelectedKey);
+    setMixBreakdownExpanded(false);
   }, [defaultSelectedKey, segment]);
 
   return (
     <div className="space-y-4">
       <SpendingMixSummaryChart chart={chart} onSelect={setSelectedKey} selectedKey={effectiveSelectedKey} segment={segment} />
       <div className="space-y-3">
+        <p className="text-sm font-semibold text-slate-900">{mixBreakdownExpanded ? "Category breakdown" : "Selected category"}</p>
         <SpendingMixRows
           displayCurrency={data.displayCurrency}
           items={spendingMixItems}
           onSelect={setSelectedKey}
           selectedKey={effectiveSelectedKey}
           segment={segment}
+          visibleItems={visibleItems}
         />
+        {showBreakdownToggle ? (
+          <button
+            className="text-sm font-medium text-sky-700 hover:text-sky-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            onClick={() => setMixBreakdownExpanded((current) => !current)}
+            type="button"
+          >
+            {mixBreakdownExpanded ? "Show selected only" : "Show all categories"}
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -2354,15 +2370,18 @@ function SpendingMixRows({
   onSelect,
   selectedKey,
   segment,
+  visibleItems,
 }: {
   displayCurrency: string;
   items: InsightsData["categoryBreakdown"];
   onSelect: (key: string) => void;
   selectedKey: string | null;
   segment: SpendingMixSegment;
+  visibleItems?: InsightsData["categoryBreakdown"];
 }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const total = items.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
+  const renderedItems = visibleItems ?? items;
 
   if (!items.length) {
     return (
@@ -2376,7 +2395,7 @@ function SpendingMixRows({
 
   return (
     <>
-      {items.map((item) => {
+      {renderedItems.map((item) => {
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
         const isExpanded = expandedKey === item.key;
         const isSelected = selectedKey === item.key;
