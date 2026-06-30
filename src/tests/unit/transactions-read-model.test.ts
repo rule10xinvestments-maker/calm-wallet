@@ -682,7 +682,8 @@ describe("transactions read model", () => {
       title: "Payroll",
       amountDisplay: "$50.00",
     });
-    expect(data.largestRecentExpenses[0]?.amountDisplay).toBe("$20.00");
+    expect(data.largestRecentExpenses[0]?.amountDisplay).toBe("$20");
+    expect(data.largestRecentIncome[0]?.amountDisplay).toBe("$50");
     expect(data.budgetProgress).toEqual([]);
   });
 
@@ -948,6 +949,36 @@ describe("transactions read model", () => {
     expect(data.expenseMinor).toBe(10700);
     expect(data.categoryBreakdown[0]?.label).toBe("Housing");
     expect(data.largestRecentExpenses[0]?.title).toBe("Rent");
+  });
+
+  it("builds top three largest expense and income entries for the selected period", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "expense-1", transactionType: "expense", amountMinor: 1000, categoryId: "food", itemName: "Food 1" }),
+        makeTransaction({ id: "expense-2", transactionType: "expense", amountMinor: 4000, categoryId: "rent", itemName: "Rent" }),
+        makeTransaction({ id: "expense-3", transactionType: "expense", amountMinor: 3000, categoryId: "travel", itemName: "Train" }),
+        makeTransaction({ id: "expense-4", transactionType: "expense", amountMinor: 2000, categoryId: "food", itemName: "Food 2" }),
+        makeTransaction({ id: "income-1", transactionType: "income", amountMinor: 5000, categoryId: "salary", itemName: "Payroll" }),
+        makeTransaction({ id: "income-2", transactionType: "income", amountMinor: 7000, categoryId: "gifts", itemName: "Gift" }),
+        makeTransaction({ id: "income-3", transactionType: "income", amountMinor: 1000, categoryId: "refunds", itemName: "Refund" }),
+        makeTransaction({ id: "income-4", transactionType: "income", amountMinor: 2000, categoryId: "sales", itemName: "Sale" }),
+      ],
+      { food: "Groceries", rent: "Housing", travel: "Travel", salary: "Salary", gifts: "Gifts", refunds: "Refunds", sales: "Sales" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.largestRecentExpenses.map((entry) => entry.title)).toEqual(["Rent", "Train", "Food 2"]);
+    expect(data.largestRecentIncome.map((entry) => entry.title)).toEqual(["Gift", "Payroll", "Sale"]);
+    expect(data.largestRecentExpenses).toHaveLength(3);
+    expect(data.largestRecentIncome).toHaveLength(3);
+    expect(data.largestRecentIncome[0]).toMatchObject({
+      amountMinor: 7000,
+      amountDisplay: "$70",
+      categoryLabel: "Gifts",
+      currency: "USD",
+      isApproximate: false,
+    });
   });
 
   it("includes a saved receipt expense in Activity and Insights totals", () => {

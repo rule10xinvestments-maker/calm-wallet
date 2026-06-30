@@ -284,6 +284,21 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
         occurredAt: "2026-04-21T00:00:00.000Z",
         occurredLabel: "Apr 21",
         categoryLabel: "Groceries",
+        currency: "USD",
+        isApproximate: false,
+      },
+    ],
+    largestRecentIncome: [
+      {
+        id: "txn-income",
+        title: "Payroll",
+        amountMinor: 5000,
+        amountDisplay: "$50",
+        occurredAt: "2026-04-01T00:00:00.000Z",
+        occurredLabel: "Apr 1",
+        categoryLabel: "Salary",
+        currency: "USD",
+        isApproximate: false,
       },
     ],
     budgetCategoryOptions: [
@@ -2600,6 +2615,128 @@ describe("insights overview", () => {
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
+  it("switches largest entries between top expenses and income with icons and share copy", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedPeriodExpenseDisplayMinor: 2400,
+        selectedPeriodIncomeDisplayMinor: 10000,
+        largestRecentExpenses: [
+          {
+            id: "rent",
+            title: "Rent",
+            amountMinor: 1200,
+            amountDisplay: "$12",
+            occurredAt: "2026-04-10T00:00:00.000Z",
+            occurredLabel: "Apr 10",
+            categoryLabel: "Housing",
+            currency: "USD",
+            isApproximate: false,
+          },
+          {
+            id: "market",
+            title: "Market",
+            amountMinor: 800,
+            amountDisplay: "$8",
+            occurredAt: "2026-04-11T00:00:00.000Z",
+            occurredLabel: "Apr 11",
+            categoryLabel: "Groceries",
+            currency: "USD",
+            isApproximate: false,
+          },
+          {
+            id: "train",
+            title: "Train",
+            amountMinor: 400,
+            amountDisplay: "$4",
+            occurredAt: "2026-04-12T00:00:00.000Z",
+            occurredLabel: "Apr 12",
+            categoryLabel: "Travel",
+            currency: "USD",
+            isApproximate: false,
+          },
+        ],
+        largestRecentIncome: [
+          {
+            id: "payroll",
+            title: "Payroll",
+            amountMinor: 7000,
+            amountDisplay: "≈ $70",
+            occurredAt: "2026-04-01T00:00:00.000Z",
+            occurredLabel: "Apr 1",
+            categoryLabel: "Salary",
+            currency: "USD",
+            isApproximate: true,
+          },
+          {
+            id: "gift",
+            title: "Gift",
+            amountMinor: 2000,
+            amountDisplay: "$20",
+            occurredAt: "2026-04-02T00:00:00.000Z",
+            occurredLabel: "Apr 2",
+            categoryLabel: "Gifts",
+            currency: "USD",
+            isApproximate: false,
+          },
+          {
+            id: "refund",
+            title: "Refund",
+            amountMinor: 1000,
+            amountDisplay: "$10",
+            occurredAt: "2026-04-03T00:00:00.000Z",
+            occurredLabel: "Apr 3",
+            categoryLabel: "Refunds",
+            currency: "USD",
+            isApproximate: false,
+          },
+        ],
+      }),
+    );
+
+    const card = screen.getByTestId("largest-entries-card");
+
+    expect(within(card).getByText("Largest expenses this month")).toBeInTheDocument();
+    expect(within(card).getByText("Top tracked expenses from April 2026.")).toBeInTheDocument();
+    expect(within(card).getByText("Rent")).toBeInTheDocument();
+    expect(within(card).getByText("Housing · Apr 10")).toBeInTheDocument();
+    expect(within(card).getByText("50% of monthly spending")).toBeInTheDocument();
+    expect(within(card).queryByText("Payroll")).not.toBeInTheDocument();
+    expect(card.querySelector("svg[style]")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Largest entries Income" }));
+
+    expect(within(card).getByText("Largest income this month")).toBeInTheDocument();
+    expect(within(card).getByText("Top tracked income from April 2026.")).toBeInTheDocument();
+    expect(within(card).getByText("Payroll")).toBeInTheDocument();
+    expect(within(card).getByText("Salary · Apr 1")).toBeInTheDocument();
+    expect(within(card).getByText("70% of monthly income")).toBeInTheDocument();
+    expect(within(card).getByText("≈ $70")).toBeInTheDocument();
+    expect(within(card).queryByText("Rent")).not.toBeInTheDocument();
+  });
+
+  it("uses period wording and empty states in the largest entries card", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedTimeframe: "3M",
+        timeframeLabel: "Feb-Apr 2026",
+        largestRecentExpenses: [],
+        largestRecentIncome: [],
+      }),
+    );
+
+    const card = screen.getByTestId("largest-entries-card");
+
+    expect(within(card).getByText("Largest expenses this period")).toBeInTheDocument();
+    expect(within(card).getByText("Top tracked expenses from this period.")).toBeInTheDocument();
+    expect(within(card).getByText("No spending entries in this period.")).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Largest entries Income" }));
+
+    expect(within(card).getByText("Largest income this period")).toBeInTheDocument();
+    expect(within(card).getByText("Top tracked income from this period.")).toBeInTheDocument();
+    expect(within(card).getByText("No income entries in this period.")).toBeInTheDocument();
+  });
+
   it("renders focused Mix selected category by default and expands to all categories", () => {
     renderInsights(
       makeInsightsData({
@@ -3095,7 +3232,7 @@ describe("insights overview", () => {
     expect(screen.getByText("No monthly spending categories yet.")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Expenses category share chart" })).not.toBeInTheDocument();
     expect(screen.queryByRole("meter")).not.toBeInTheDocument();
-    expect(screen.getByText("No tracked expenses in April 2026 yet.")).toBeInTheDocument();
+    expect(screen.getByText("No spending entries in this period.")).toBeInTheDocument();
   });
 
   it("does not duplicate a needs category card above spending mix", () => {

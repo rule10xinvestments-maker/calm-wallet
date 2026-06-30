@@ -124,15 +124,8 @@ export type InsightsData = {
   monthStart: string;
   categoryBreakdown: InsightsCategoryBreakdownItem[];
   incomeCategoryBreakdown: InsightsCategoryBreakdownItem[];
-  largestRecentExpenses: Array<{
-    id: string;
-    title: string;
-    amountMinor: number;
-    amountDisplay: string;
-    occurredAt: string;
-    occurredLabel: string;
-    categoryLabel: string;
-  }>;
+  largestRecentExpenses: InsightsLargestEntry[];
+  largestRecentIncome: InsightsLargestEntry[];
   budgetCategoryOptions: Array<{
     id: string;
     label: string;
@@ -160,6 +153,18 @@ export type InsightsData = {
     income: Record<string, InsightsCategorySignal>;
   };
   clientViews?: Record<string, InsightsClientView>;
+};
+
+export type InsightsLargestEntry = {
+    id: string;
+    title: string;
+    amountMinor: number;
+    amountDisplay: string;
+    occurredAt: string;
+    occurredLabel: string;
+    categoryLabel: string;
+    currency: string;
+    isApproximate: boolean;
 };
 
 export type InsightsClientView = Omit<InsightsData, "clientViews">;
@@ -1527,6 +1532,43 @@ function buildInsightsTrendCategoryBreakdown(args: {
     .sort((a, b) => (b.movementMinor ?? 0) - (a.movementMinor ?? 0) || a.label.localeCompare(b.label));
 }
 
+function buildLargestInsightsEntries(args: {
+  transactions: Transaction[];
+  transactionType: "expense" | "income";
+  categoryLabels: Record<string, string>;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}): InsightsLargestEntry[] {
+  return args.transactions
+    .filter((transaction) => transaction.transactionType === args.transactionType)
+    .map((transaction) => {
+      const sourceCurrency = normalizeCurrency(transaction.currency);
+      const conversionRate = getConversionRate(sourceCurrency, args.displayCurrency, args.rateLookup);
+      const amountMinor = conversionRate === null ? 0 : convertMinor(transaction.amountMinor, conversionRate);
+      const isApproximate = conversionRate !== null && sourceCurrency !== args.displayCurrency;
+
+      return {
+        id: transaction.id,
+        title: getTransactionDisplayTitle(transaction),
+        amountMinor,
+        amountDisplay:
+          conversionRate === null
+            ? `${formatInsightsMoney(amountMinor, args.displayCurrency)} + rate unavailable`
+            : `${isApproximate ? "≈ " : ""}${formatInsightsMoney(amountMinor, args.displayCurrency)}`,
+        occurredAt: transaction.occurredAt,
+        occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        categoryLabel: transaction.categoryId ? args.categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
+        currency: args.displayCurrency,
+        isApproximate,
+      };
+    })
+    .sort((a, b) => b.amountMinor - a.amountMinor || new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime() || b.id.localeCompare(a.id))
+    .slice(0, 3);
+}
+
 function sumBreakdowns(transactions: Transaction[]) {
   const totals = new Map<string, { incomeMinor: number; expenseMinor: number }>();
 
@@ -1802,22 +1844,20 @@ export function buildInsightsData(
     (transaction) => transaction.transactionType === "expense",
   ).length;
 
-  const largestRecentExpenses = selectedPeriodTransactions
-    .filter((transaction) => transaction.transactionType === "expense")
-    .sort((a, b) => b.amountMinor - a.amountMinor)
-    .slice(0, 3)
-    .map((transaction) => ({
-        id: transaction.id,
-        title: getTransactionDisplayTitle(transaction),
-        amountMinor: transaction.amountMinor,
-        amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || displayCurrency),
-      occurredAt: transaction.occurredAt,
-      occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      }),
-      categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
-    }));
+  const largestRecentExpenses = buildLargestInsightsEntries({
+    transactions: selectedPeriodTransactions,
+    transactionType: "expense",
+    categoryLabels,
+    displayCurrency,
+    rateLookup,
+  });
+  const largestRecentIncome = buildLargestInsightsEntries({
+    transactions: selectedPeriodTransactions,
+    transactionType: "income",
+    categoryLabels,
+    displayCurrency,
+    rateLookup,
+  });
 
   const budgetProgress = budgets
     .filter((budget) => budget.isActive)
@@ -1922,6 +1962,7 @@ export function buildInsightsData(
     categoryBreakdown,
     incomeCategoryBreakdown,
     largestRecentExpenses,
+    largestRecentIncome,
     budgetCategoryOptions,
     budgetProgress,
     categorySignals: expenseCategorySignals,

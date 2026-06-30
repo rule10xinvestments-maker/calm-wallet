@@ -430,35 +430,42 @@ function SpendingSegmentControls({
   segment,
   onSegmentChange,
   orientation = "horizontal",
+  buttonLabelPrefix,
 }: {
   segment: SpendingMixSegment;
   onSegmentChange: (segment: SpendingMixSegment) => void;
   orientation?: "horizontal" | "vertical";
+  buttonLabelPrefix?: string;
 }) {
   const isVertical = orientation === "vertical";
 
   return (
     <div className={`inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1 ${isVertical ? "flex-col" : ""}`}>
-      {(["expenses", "income"] as const).map((nextSegment) => (
-        <button
-          key={nextSegment}
-          aria-pressed={segment === nextSegment}
-          className={`whitespace-nowrap rounded-md text-sm font-medium ${
-            segment === nextSegment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-          } ${isVertical ? "px-3 py-1.5 text-xs" : "px-3 py-1.5"}`}
-          onClick={(event) => {
-            const scrollSnapshot = getDesktopScrollSnapshot();
+      {(["expenses", "income"] as const).map((nextSegment) => {
+        const label = nextSegment === "expenses" ? "Expenses" : "Income";
 
-            event.currentTarget.blur();
-            onSegmentChange(nextSegment);
-            restoreDesktopScroll(scrollSnapshot);
-          }}
-          onMouseDown={preventMouseFocus}
-          type="button"
-        >
-          {nextSegment === "expenses" ? "Expenses" : "Income"}
-        </button>
-      ))}
+        return (
+          <button
+            key={nextSegment}
+            aria-label={buttonLabelPrefix ? `${buttonLabelPrefix} ${label}` : undefined}
+            aria-pressed={segment === nextSegment}
+            className={`whitespace-nowrap rounded-md text-sm font-medium ${
+              segment === nextSegment ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            } ${isVertical ? "px-3 py-1.5 text-xs" : "px-3 py-1.5"}`}
+            onClick={(event) => {
+              const scrollSnapshot = getDesktopScrollSnapshot();
+
+              event.currentTarget.blur();
+              onSegmentChange(nextSegment);
+              restoreDesktopScroll(scrollSnapshot);
+            }}
+            onMouseDown={preventMouseFocus}
+            type="button"
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -2688,6 +2695,70 @@ function getLimitStatusColor(percentUsed: number) {
   return "bg-emerald-500";
 }
 
+function LargestEntriesCard({ data }: { data: InsightsData }) {
+  const [segment, setSegment] = useState<SpendingMixSegment>("expenses");
+  const isIncome = segment === "income";
+  const items = isIncome ? data.largestRecentIncome : data.largestRecentExpenses;
+  const totalMinor = isIncome ? data.selectedPeriodIncomeDisplayMinor : data.selectedPeriodExpenseDisplayMinor;
+  const periodLabel = data.selectedTimeframe === "1M" ? data.monthLabel : "this period";
+  const title =
+    data.selectedTimeframe === "1M"
+      ? isIncome
+        ? "Largest income this month"
+        : "Largest expenses this month"
+      : isIncome
+        ? "Largest income this period"
+        : "Largest expenses this period";
+  const helper =
+    data.selectedTimeframe === "1M"
+      ? `Top tracked ${isIncome ? "income" : "expenses"} from ${periodLabel}.`
+      : `Top tracked ${isIncome ? "income" : "expenses"} from this period.`;
+  const shareContext = data.selectedTimeframe === "1M" ? "monthly" : "period";
+
+  return (
+    <Card className="rounded-lg" data-testid="largest-entries-card">
+      <CardHeader className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg">{title}</CardTitle>
+            <CardDescription>{helper}</CardDescription>
+          </div>
+          <SpendingSegmentControls buttonLabelPrefix="Largest entries" orientation="horizontal" segment={segment} onSegmentChange={setSegment} />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {items.length ? (
+          items.map((item) => {
+            const visuals = getCategoryVisualsByName(item.categoryLabel);
+            const CategoryIcon = visuals.icon;
+            const percent = totalMinor > 0 ? Math.round((item.amountMinor / totalMinor) * 100) : null;
+
+            return (
+              <div key={item.id} className="grid grid-cols-[1.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                <CategoryIcon aria-hidden="true" className="mt-0.5 h-4 w-4" style={{ color: visuals.primary }} />
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
+                  <p className="text-xs text-slate-500">
+                    {item.categoryLabel}{" \u00b7 "}{item.occurredLabel}
+                  </p>
+                  {percent !== null ? (
+                    <p className="text-xs text-slate-500">
+                      {percent}% of {shareContext} {isIncome ? "income" : "spending"}
+                    </p>
+                  ) : null}
+                </div>
+                <p className={`whitespace-nowrap text-sm font-semibold ${isIncome ? "text-emerald-700" : "text-rose-700"}`}>{item.amountDisplay}</p>
+              </div>
+            );
+          })
+        ) : (
+          <p className="text-sm leading-6 text-slate-500">{isIncome ? "No income entries in this period." : "No spending entries in this period."}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function InsightsOverview({ data, loadError = false }: InsightsOverviewProps) {
   const [activeData, setActiveData] = useState<InsightsData>(data);
   const hasTrackedData = activeData.trackedTransactionCount > 0;
@@ -2769,33 +2840,7 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
         </div>
       ) : null}
 
-      <Card className="rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {activeData.selectedTimeframe === "1M" ? "Largest expenses this month" : "Largest expenses in period"}
-          </CardTitle>
-          <CardDescription>Top tracked expenses from {activeData.selectedTimeframe === "1M" ? activeData.monthLabel : activeData.timeframeLabel}.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {activeData.largestRecentExpenses.length ? (
-            activeData.largestRecentExpenses.map((item) => (
-              <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                <div>
-                  <p className="font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
-                  <p className="text-xs text-slate-500">
-                    {item.categoryLabel} - {item.occurredLabel}
-                  </p>
-                </div>
-                <p className="text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm leading-6 text-slate-500">
-              No tracked expenses in {activeData.selectedTimeframe === "1M" ? activeData.monthLabel : "this period"} yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <LargestEntriesCard data={activeData} />
 
       <Card className="rounded-lg">
         <CardHeader>
