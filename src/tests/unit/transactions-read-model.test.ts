@@ -3,6 +3,7 @@ import { DEFAULT_TRANSACTION_SOURCE } from "@/domain/transactions/types";
 import {
   buildSpendingSummaryData,
   buildAssistantFinancialQuestionAnswer,
+  buildActivityLimitStatuses,
   buildInsightsData,
   buildOverLimitTransactionIds,
   filterTransactionsForView,
@@ -197,6 +198,61 @@ describe("transactions read model", () => {
     expect(items.find((item) => item.id === "travel")?.isOverLimit).toBe(false);
   });
 
+  it("shows remaining Activity limit status for active monthly category limits under the amount", () => {
+    const transactions = [
+      makeTransaction({
+        id: "travel-a",
+        amountMinor: 10000,
+        currency: "RON",
+        categoryId: "travel",
+        occurredAt: "2026-06-05T12:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "travel-b",
+        amountMinor: 10680,
+        currency: "RON",
+        categoryId: "travel",
+        occurredAt: "2026-06-29T12:00:00.000Z",
+      }),
+    ];
+
+    const limitStatuses = buildActivityLimitStatuses({
+      transactions,
+      budgets: [makeBudget({ id: "travel-limit", categoryId: "travel", amountMinor: 28000 })],
+    });
+    const items = mapTransactionsToListItems(transactions, { travel: "Travel" }, "RON", {}, new Set(), limitStatuses);
+
+    expect(limitStatuses.get("travel-b")).toEqual({
+      state: "remaining",
+      remainingMinor: 7320,
+      remainingDisplay: "RON\u00a073.20",
+    });
+    expect(items.find((item) => item.id === "travel-b")?.limitStatus).toEqual({
+      state: "remaining",
+      remainingMinor: 7320,
+      remainingDisplay: "RON\u00a073.20",
+    });
+  });
+
+  it("uses over-limit Activity status instead of remaining status when the limit is exceeded", () => {
+    const transactions = [
+      makeTransaction({
+        id: "rent",
+        amountMinor: 26000,
+        currency: "RON",
+        categoryId: "housing",
+        occurredAt: "2026-06-05T12:00:00.000Z",
+      }),
+    ];
+
+    const limitStatuses = buildActivityLimitStatuses({
+      transactions,
+      budgets: [makeBudget()],
+    });
+
+    expect(limitStatuses.get("rent")).toEqual({ state: "over" });
+  });
+
   it("does not mark Activity rows over paused category limits", () => {
     const transactions = [
       makeTransaction({
@@ -214,6 +270,7 @@ describe("transactions read model", () => {
     });
 
     expect(overLimitIds.has("rent")).toBe(false);
+    expect(buildActivityLimitStatuses({ transactions, budgets: [makeBudget({ isActive: false })] }).has("rent")).toBe(false);
   });
 
   it("does not mark income rows over category limits", () => {
@@ -234,6 +291,55 @@ describe("transactions read model", () => {
     });
 
     expect(overLimitIds.has("income")).toBe(false);
+    expect(buildActivityLimitStatuses({ transactions, budgets: [makeBudget()] }).has("income")).toBe(false);
+  });
+
+  it("uses the smallest remaining amount when weekly and monthly Activity limits are both active", () => {
+    const transactions = [
+      makeTransaction({
+        id: "travel",
+        amountMinor: 9000,
+        currency: "RON",
+        categoryId: "travel",
+        occurredAt: "2026-06-29T12:00:00.000Z",
+      }),
+    ];
+
+    const limitStatuses = buildActivityLimitStatuses({
+      transactions,
+      budgets: [
+        makeBudget({ id: "weekly-travel", categoryId: "travel", period: "weekly", amountMinor: 10000 }),
+        makeBudget({ id: "monthly-travel", categoryId: "travel", period: "monthly", amountMinor: 28000 }),
+      ],
+    });
+
+    expect(limitStatuses.get("travel")).toEqual({
+      state: "remaining",
+      remainingMinor: 1000,
+      remainingDisplay: "RON\u00a010",
+    });
+  });
+
+  it("uses over-limit Activity status when any active weekly or monthly limit is exceeded", () => {
+    const transactions = [
+      makeTransaction({
+        id: "travel",
+        amountMinor: 11000,
+        currency: "RON",
+        categoryId: "travel",
+        occurredAt: "2026-06-29T12:00:00.000Z",
+      }),
+    ];
+
+    const limitStatuses = buildActivityLimitStatuses({
+      transactions,
+      budgets: [
+        makeBudget({ id: "weekly-travel", categoryId: "travel", period: "weekly", amountMinor: 10000 }),
+        makeBudget({ id: "monthly-travel", categoryId: "travel", period: "monthly", amountMinor: 28000 }),
+      ],
+    });
+
+    expect(limitStatuses.get("travel")).toEqual({ state: "over" });
   });
 
   it("marks Activity rows over an active weekly category limit in the transaction calendar week", () => {

@@ -122,32 +122,98 @@ describe("transaction item card", () => {
   });
 
   it("shows one calm over-limit status line for expense rows over an active limit", () => {
-    renderCard({ item: makeItem({ isOverLimit: true }) });
+    renderCard({ item: makeItem({ limitStatus: { state: "over" } }) });
 
     expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
     expect(screen.getByText("Over limit")).toBeInTheDocument();
+    expect(screen.queryByText(/Limit:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/🔁|⚠️/)).not.toBeInTheDocument();
   });
 
-  it("does not show over-limit status for income rows", () => {
+  it("shows remaining limit status for expense rows under an active limit", () => {
+    renderCard({
+      item: makeItem({
+        categoryLabel: "Travel",
+        limitStatus: {
+          state: "remaining",
+          remainingMinor: 7320,
+          remainingDisplay: "RON\u00a073.20",
+        },
+      }),
+    });
+
+    expect(screen.getByText("Travel · May 5")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName.toLowerCase() === "span" &&
+          element.children.length === 0 &&
+          element.textContent === "Limit: RON\u00a073.20 left",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Over limit")).not.toBeInTheDocument();
+    expect(screen.queryByText(/🔁|⚠️/)).not.toBeInTheDocument();
+  });
+
+  it("does not show limit status for income rows", () => {
     renderCard({
       item: makeItem({
         amountTone: "income",
         amountDisplay: "+$34.00",
-        isOverLimit: true,
+        limitStatus: { state: "over" },
       }),
     });
 
     expect(screen.queryByText("Over limit")).not.toBeInTheDocument();
+
+    renderCard({
+      item: makeItem({
+        id: "income-under-limit",
+        amountTone: "income",
+        amountDisplay: "+$34.00",
+        limitStatus: {
+          state: "remaining",
+          remainingMinor: 7320,
+          remainingDisplay: "RON\u00a073.20",
+        },
+      }),
+    });
+
+    expect(screen.queryByText("Limit: RON\u00a073.20 left")).not.toBeInTheDocument();
+  });
+
+  it("shows recurring and limit statuses together on normal rows", () => {
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        limitStatus: {
+          state: "remaining",
+          remainingMinor: 7320,
+          remainingDisplay: "RON\u00a073.20",
+        },
+      }),
+    });
+
+    expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName.toLowerCase() === "span" &&
+          element.children.length === 0 &&
+          element.textContent === "Limit: RON\u00a073.20 left",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/🔁|⚠️/)).not.toBeInTheDocument();
   });
 
   it("shows recurring and over-limit statuses together on normal rows", () => {
-    renderCard({ item: makeItem({ isRecurring: true, isOverLimit: true }) });
+    renderCard({ item: makeItem({ isRecurring: true, limitStatus: { state: "over" } }) });
 
     expect(screen.getByText("Dining · May 5")).toBeInTheDocument();
     expect(screen.getByText("Recurring")).toBeInTheDocument();
     expect(screen.getByText("Over limit")).toBeInTheDocument();
-    expect(screen.queryByText(/🔁|⚠️/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Limit:/)).not.toBeInTheDocument();
   });
 
   it("shows frequency and active or paused state in Recurring mode rows", () => {

@@ -37,7 +37,18 @@ export type TransactionListItem = {
   recurringEndDate?: string | null;
   recurringPausedAt?: string | null;
   isOverLimit?: boolean;
+  limitStatus?: TransactionLimitStatus | null;
 };
+
+export type TransactionLimitStatus =
+  | {
+      state: "over";
+    }
+  | {
+      state: "remaining";
+      remainingMinor: number;
+      remainingDisplay: string;
+    };
 
 export type TransactionCategoryOption = {
   id: string;
@@ -394,6 +405,7 @@ export function mapTransactionsToListItems(
   currencyFallback = "USD",
   recurringRules: Record<string, RecurringRuleSummary> = {},
   overLimitTransactionIds: ReadonlySet<string> = new Set(),
+  limitStatuses: ReadonlyMap<string, TransactionLimitStatus> = new Map(),
 ): TransactionListItem[] {
   return transactions.map((transaction) => {
     const reviewMeta = getReviewStateMeta(transaction.reviewState);
@@ -428,6 +440,7 @@ export function mapTransactionsToListItems(
       recurringEndDate: recurringRule?.endDate ?? null,
       recurringPausedAt: recurringRule?.pausedAt ?? null,
       isOverLimit: overLimitTransactionIds.has(transaction.id),
+      limitStatus: limitStatuses.get(transaction.id) ?? null,
     };
   });
 }
@@ -1067,14 +1080,14 @@ function getSpentForCategoryLimit(args: {
   return spentMinor;
 }
 
-export function buildOverLimitTransactionIds(args: {
+export function buildActivityLimitStatuses(args: {
   transactions: Transaction[];
   budgets: Budget[];
   fxRates?: FxRate[];
 }) {
   const rateLookup = createEurRateLookup(args.fxRates ?? []);
   const activeBudgetsByCategory = new Map<string, Budget[]>();
-  const overLimitTransactionIds = new Set<string>();
+  const limitStatuses = new Map<string, TransactionLimitStatus>();
 
   for (const budget of args.budgets) {
     if (!budget.isActive) {
@@ -1099,27 +1112,61 @@ export function buildOverLimitTransactionIds(args: {
     const budgets = activeBudgetsByCategory.get(transaction.categoryId) ?? [];
     const occurredAt = new Date(transaction.occurredAt);
 
-    if (Number.isNaN(occurredAt.getTime())) {
+    if (!budgets.length || Number.isNaN(occurredAt.getTime())) {
       continue;
     }
 
-    const isOverLimit = budgets.some((budget) => {
-      if (!isBudgetEffectiveForDate(budget, occurredAt)) {
-        return false;
-      }
-
-      return (
-        getSpentForCategoryLimit({
+    const relevantLimits = budgets
+      .filter((budget) => isBudgetEffectiveForDate(budget, occurredAt))
+      .map((budget) => {
+        const spentMinor = getSpentForCategoryLimit({
           transactions: args.transactions,
           budget,
           referenceDate: occurredAt,
           rateLookup,
-        }) > budget.amountMinor
-      );
-    });
+        });
 
-    if (isOverLimit) {
-      overLimitTransactionIds.add(transaction.id);
+        return {
+          budget,
+          spentMinor,
+          remainingMinor: budget.amountMinor - spentMinor,
+        };
+      });
+
+    if (!relevantLimits.length) {
+      continue;
+    }
+
+    if (relevantLimits.some((limit) => limit.spentMinor > limit.budget.amountMinor)) {
+      limitStatuses.set(transaction.id, { state: "over" });
+      continue;
+    }
+
+    const mostUrgent = relevantLimits.sort((a, b) => a.remainingMinor - b.remainingMinor)[0];
+
+    if (mostUrgent) {
+      limitStatuses.set(transaction.id, {
+        state: "remaining",
+        remainingMinor: mostUrgent.remainingMinor,
+        remainingDisplay: formatInsightsMoney(mostUrgent.remainingMinor, mostUrgent.budget.currency),
+      });
+    }
+  }
+
+  return limitStatuses;
+}
+
+export function buildOverLimitTransactionIds(args: {
+  transactions: Transaction[];
+  budgets: Budget[];
+  fxRates?: FxRate[];
+}) {
+  const limitStatuses = buildActivityLimitStatuses(args);
+  const overLimitTransactionIds = new Set<string>();
+
+  for (const [transactionId, status] of limitStatuses.entries()) {
+    if (status.state === "over") {
+      overLimitTransactionIds.add(transactionId);
     }
   }
 
@@ -1943,11 +1990,16 @@ export async function loadTransactionsPageData(args: {
   );
 
   const filtered = filterTransactionsForView(transactions, args.view, args.query);
-  const overLimitTransactionIds = buildOverLimitTransactionIds({
+  const limitStatuses = buildActivityLimitStatuses({
     transactions,
     budgets: activityLimits,
     fxRates,
   });
+  const overLimitTransactionIds = new Set(
+    Array.from(limitStatuses.entries())
+      .filter(([, status]) => status.state === "over")
+      .map(([transactionId]) => transactionId),
+  );
   const recurringRules = await loadRecurringRuleSummaries(
     args.userId,
     [...filtered, ...recentlyDeletedTransactions].map((transaction) => transaction.recurringRuleId ?? "").filter(Boolean),
@@ -1965,7 +2017,7 @@ export async function loadTransactionsPageData(args: {
     displayCurrency: currency,
     availableDisplayCurrencies,
     fxRates,
-    items: mapTransactionsToListItems(filtered, categoryLabels, currency, recurringRules, overLimitTransactionIds),
+    items: mapTransactionsToListItems(filtered, categoryLabels, currency, recurringRules, overLimitTransactionIds, limitStatuses),
     recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency, recurringRules),
     categories: await loadCategoryOptions(),
   };

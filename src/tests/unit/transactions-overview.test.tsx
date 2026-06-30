@@ -17,7 +17,12 @@ vi.mock("@/components/transactions/transaction-item-card", () => ({
           : ""}
       </span>
       {!recurringMode && item.isRecurring ? <span>Recurring</span> : null}
-      {!recurringMode && item.amountTone === "expense" && item.isOverLimit ? <span>Over limit</span> : null}
+      {!recurringMode && item.amountTone === "expense" && (item.limitStatus?.state === "over" || item.isOverLimit) ? (
+        <span>Over limit</span>
+      ) : null}
+      {!recurringMode && item.amountTone === "expense" && !item.isOverLimit && item.limitStatus?.state === "remaining" ? (
+        <span>Limit: {item.limitStatus.remainingDisplay} left</span>
+      ) : null}
       <span className={item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}>{item.amountDisplay}</span>
     </div>
   ),

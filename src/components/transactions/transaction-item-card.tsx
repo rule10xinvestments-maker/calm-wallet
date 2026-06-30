@@ -6,6 +6,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ChevronDown,
+  CircleGauge,
   CircleHelp,
   Repeat2,
   SlidersHorizontal,
@@ -360,6 +361,7 @@ export function TransactionItemCard({
             reviewLabel: "Reviewed",
             uncertaintyReason: null,
             isOverLimit: false,
+            limitStatus: null,
           }
         : {}),
     };
@@ -511,6 +513,7 @@ export function TransactionItemCard({
       recurringEndDate: nextIsRecurring ? recurringEndDate : null,
       recurringPausedAt: nextRecurringPaused,
       isOverLimit: false,
+      limitStatus: null,
     };
 
     pendingDetailsItemRef.current = nextItem;
@@ -547,6 +550,10 @@ export function TransactionItemCard({
     return null;
   }
 
+  const limitStatus = displayItem.amountTone === "expense" && !recurringMode ? displayItem.limitStatus : null;
+  const isOverLimit = displayItem.amountTone === "expense" && !recurringMode && (limitStatus?.state === "over" || displayItem.isOverLimit);
+  const remainingLimitDisplay = !isOverLimit && limitStatus?.state === "remaining" ? limitStatus.remainingDisplay : null;
+
   return (
     <div className="rounded-2xl bg-slate-50 px-3 py-3">
       <button
@@ -577,10 +584,16 @@ export function TransactionItemCard({
               <span>Recurring</span>
             </span>
           ) : null}
-          {!recurringMode && displayItem.amountTone === "expense" && displayItem.isOverLimit ? (
+          {isOverLimit ? (
             <span className="flex items-center gap-1.5 text-xs font-medium leading-5 text-amber-700">
               <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={2.1} />
               <span>Over limit</span>
+            </span>
+          ) : null}
+          {remainingLimitDisplay ? (
+            <span className="flex items-center gap-1.5 text-xs leading-5 text-slate-500">
+              <CircleGauge aria-hidden="true" className="size-3.5 shrink-0 text-sky-700" strokeWidth={2.1} />
+              <span>Limit: {remainingLimitDisplay} left</span>
             </span>
           ) : null}
           {displayItem.note ? (
