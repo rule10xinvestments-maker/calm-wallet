@@ -1148,12 +1148,202 @@ describe("insights overview", () => {
 
     expect(screen.getByLabelText("Apr 2 Groceries spending $8")).toHaveStyle({ backgroundColor: "#16a34a" });
     expect(screen.getByLabelText("Apr 2 Dining spending $4")).toHaveStyle({ backgroundColor: "#e11d48" });
-    const legend = screen.getByLabelText("Expenses category icon legend");
+    const legend = screen.getByLabelText("Expenses category bubbles");
 
     expect(within(legend).queryByText("Groceries")).not.toBeInTheDocument();
     expect(within(legend).queryByText("Dining")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("img", { name: "Groceries chart color and category icon" })[0]).toHaveStyle({ color: "#16a34a" });
-    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#e11d48" });
+    expect(within(legend).getByRole("button", { name: "Select Groceries focus" })).toHaveStyle({ color: "#16a34a" });
+    expect(within(legend).getByRole("button", { name: "Select Dining focus" })).toHaveStyle({ color: "#e11d48" });
+  });
+
+  it("selects Bars category bubbles and dims unrelated days while emphasizing the selected segment", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 15000,
+            amountDisplay: "$150",
+            segments: [
+              { key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 },
+              { key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 },
+            ],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-11",
+            label: "11",
+            amountMinor: 3000,
+            amountDisplay: "$30",
+            segments: [{ key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }],
+          }),
+        ],
+      }),
+    );
+
+    const housingBubble = screen.getByRole("button", { name: "Select Housing focus" });
+
+    fireEvent.click(housingBubble);
+
+    expect(housingBubble).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("$120 · 1 day this period")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 11, $30 spending, tap for category breakdown" }).parentElement).toHaveClass("opacity-35");
+    expect(screen.getByLabelText("Apr 10 Housing spending $120")).toHaveClass("opacity-100");
+    expect(screen.getByLabelText("Apr 10 Groceries spending $30")).toHaveClass("opacity-35");
+
+    fireEvent.click(housingBubble);
+
+    expect(housingBubble).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText("$120 · 1 day this period")).not.toBeInTheDocument();
+  });
+
+  it("fades category bubbles that are not present in the opened Bars day", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 12000,
+            amountDisplay: "$120",
+            segments: [{ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-11",
+            label: "11",
+            amountMinor: 3000,
+            amountDisplay: "$30",
+            segments: [{ key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $120 spending, tap for category breakdown" }));
+
+    expect(screen.getByRole("button", { name: "Select Housing focus" })).toHaveClass("opacity-100");
+    expect(screen.getByRole("button", { name: "Select Groceries focus" })).toHaveClass("opacity-35");
+  });
+
+  it("keeps a selected category first in the expanded Bars day breakdown", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 15000,
+            amountDisplay: "$150",
+            segments: [
+              { key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 },
+              { key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 },
+            ],
+          }),
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Select Groceries focus" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" }));
+
+    const panel = screen.getByLabelText("Apr 10 spending category breakdown");
+    const labels = within(panel).getAllByText(/Housing|Groceries/).map((node) => node.textContent);
+
+    expect(labels).toEqual(["Groceries", "Housing"]);
+  });
+
+  it("shows Bars limit and recurring badges with read-only detail sheets", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 121200, amountDisplay: "RON 1,212", transactionCount: 3 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 121200,
+            amountDisplay: "RON 1,212",
+            segments: [{ key: "housing", label: "Housing", amountMinor: 121200, amountDisplay: "RON 1,212", transactionCount: 3 }],
+          }),
+        ],
+        categorySignals: {
+          housing: {
+            limit: {
+              budgetId: "limit-1",
+              categoryId: "housing",
+              categoryLabel: "Housing",
+              period: "monthly",
+              amountMinor: 150000,
+              amountDisplay: "RON 1,500",
+              spentMinor: 121200,
+              spentDisplay: "RON 1,212",
+              remainingMinor: 28800,
+              remainingDisplay: "RON 288",
+              percentUsed: 81,
+              status: "near",
+            },
+            recurring: {
+              count: 2,
+              activeCount: 2,
+              pausedCount: 0,
+              monthlyTotalMinor: 120000,
+              monthlyTotalDisplay: "RON 1,200",
+              items: [
+                {
+                  id: "recurring-1",
+                  title: "Rent",
+                  amountDisplay: "RON 1,000",
+                  tone: "Spend",
+                  frequency: "monthly",
+                  nextDateLabel: "Apr 10",
+                  status: "Active",
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Select Housing focus" }));
+
+    expect(screen.getByText("Limit")).toBeInTheDocument();
+    expect(screen.getByText("RON 1,212 of RON 1,500 used · RON 288 left")).toBeInTheDocument();
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
+    expect(screen.getByText("2 active recurring items · monthly total ≈ RON 1,200")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Inspect Housing limit details" }));
+    expect(screen.getByRole("dialog", { name: "Housing limit details" })).toBeInTheDocument();
+    expect(screen.getByText("Near limit")).toBeInTheDocument();
+    expect(screen.queryByText("Manage")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close details" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Inspect Housing recurring details" }));
+    expect(screen.getByRole("dialog", { name: "Housing recurring details" })).toBeInTheDocument();
+    expect(screen.getByText("Rent")).toBeInTheDocument();
+    expect(screen.getByText("Spend · Monthly · Apr 10 · Active")).toBeInTheDocument();
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument();
   });
 
   it("selects and collapses a Bars day category breakdown", () => {
@@ -1479,18 +1669,18 @@ describe("insights overview", () => {
     expectCategoryIcon("Travel", "lucide-plane");
     expectCategoryIcon("Groceries", "lucide-shopping-basket");
 
-    const legend = screen.getByLabelText("Expenses category icon legend");
+    const legend = screen.getByLabelText("Expenses category bubbles");
 
-    expect(within(legend).getByRole("img", { name: "Transfers chart color and category icon" })).toBeInTheDocument();
-    expect(screen.getAllByRole("img", { name: "Needs category chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
-    expect(screen.getAllByRole("img", { name: "Housing chart color and category icon" })[0]).toHaveStyle({ color: "#4f46e5" });
-    expect(screen.getAllByRole("img", { name: "Transfers chart color and category icon" })[0]).toHaveStyle({ color: "#475569" });
-    expect(screen.getAllByRole("img", { name: "Dining chart color and category icon" })[0]).toHaveStyle({ color: "#e11d48" });
-    expect(screen.getAllByRole("img", { name: "Transport chart color and category icon" })[0]).toHaveStyle({ color: "#2563eb" });
-    expect(screen.getAllByRole("img", { name: "Travel chart color and category icon" })[0]).toHaveStyle({ color: "#0ea5e9" });
-    expect(screen.getAllByRole("img", { name: "Groceries chart color and category icon" })[0]).toHaveStyle({ color: "#16a34a" });
-    expect(screen.getAllByRole("img", { name: "Transfers chart color and category icon" })[0]).not.toHaveStyle({ color: "#16a34a" });
-    expect(screen.getAllByRole("img", { name: "Housing chart color and category icon" })[0]).not.toHaveStyle({ color: "#0ea5e9" });
+    expect(within(legend).getByRole("button", { name: "Select Transfers focus" })).toBeInTheDocument();
+    expect(within(legend).getByRole("button", { name: "Select Needs category focus" })).toHaveStyle({ color: "#0ea5e9" });
+    expect(within(legend).getByRole("button", { name: "Select Housing focus" })).toHaveStyle({ color: "#4f46e5" });
+    expect(within(legend).getByRole("button", { name: "Select Transfers focus" })).toHaveStyle({ color: "#475569" });
+    expect(within(legend).getByRole("button", { name: "Select Dining focus" })).toHaveStyle({ color: "#e11d48" });
+    expect(within(legend).getByRole("button", { name: "Select Transport focus" })).toHaveStyle({ color: "#2563eb" });
+    expect(within(legend).getByRole("button", { name: "Select Travel focus" })).toHaveStyle({ color: "#0ea5e9" });
+    expect(within(legend).getByRole("button", { name: "Select Groceries focus" })).toHaveStyle({ color: "#16a34a" });
+    expect(within(legend).getByRole("button", { name: "Select Transfers focus" })).not.toHaveStyle({ color: "#16a34a" });
+    expect(within(legend).getByRole("button", { name: "Select Housing focus" })).not.toHaveStyle({ color: "#0ea5e9" });
   });
 
   it("opens a compact month picker grouped by year", () => {

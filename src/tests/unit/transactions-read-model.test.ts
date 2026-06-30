@@ -342,6 +342,60 @@ describe("transactions read model", () => {
     expect(limitStatuses.get("travel")).toEqual({ state: "over" });
   });
 
+  it("builds optional Insights category signals for limits and recurring items", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "rent",
+          amountMinor: 120000,
+          currency: "RON",
+          categoryId: "housing",
+          occurredAt: "2026-06-10T12:00:00.000Z",
+          recurringRuleId: "rule-rent",
+          recurringOccurrenceDate: "2026-06-10",
+        }),
+      ],
+      { housing: "Housing" },
+      "RON",
+      new Date("2026-06-15T12:00:00.000Z"),
+      [makeBudget({ id: "housing-limit", categoryId: "housing", amountMinor: 150000 })],
+      [],
+      [],
+      "RON",
+      "2026-06",
+      "1M",
+      "bars",
+      {
+        "rule-rent": {
+          id: "rule-rent",
+          frequency: "monthly",
+          startDate: "2026-06-10",
+          endDate: null,
+          pausedAt: null,
+        },
+      },
+    );
+
+    expect(data.categorySignals?.housing?.limit).toMatchObject({
+      budgetId: "housing-limit",
+      status: "near",
+      spentDisplay: "RON\u00a01,200",
+      remainingDisplay: "RON\u00a0300",
+    });
+    expect(data.categorySignals?.housing?.recurring).toMatchObject({
+      activeCount: 1,
+      monthlyTotalDisplay: "RON\u00a01,200",
+      items: [
+        expect.objectContaining({
+          title: "Market",
+          amountDisplay: "RON\u00a01,200.00",
+          frequency: "monthly",
+          status: "Active",
+        }),
+      ],
+    });
+  });
+
   it("marks Activity rows over an active weekly category limit in the transaction calendar week", () => {
     const transactions = [
       makeTransaction({

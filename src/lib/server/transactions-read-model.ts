@@ -151,10 +151,44 @@ export type InsightsData = {
     isOverBudget: boolean;
     currency: string;
   }>;
+  categorySignals?: Record<string, InsightsCategorySignal>;
   clientViews?: Record<string, InsightsClientView>;
 };
 
 export type InsightsClientView = Omit<InsightsData, "clientViews">;
+
+export type InsightsCategorySignal = {
+  limit?: {
+    budgetId: string;
+    categoryId: string;
+    categoryLabel: string;
+    period: "weekly" | "monthly";
+    amountMinor: number;
+    amountDisplay: string;
+    spentMinor: number;
+    spentDisplay: string;
+    remainingMinor: number;
+    remainingDisplay: string;
+    percentUsed: number;
+    status: "on-track" | "near" | "over";
+  };
+  recurring?: {
+    count: number;
+    activeCount: number;
+    pausedCount: number;
+    monthlyTotalMinor: number;
+    monthlyTotalDisplay: string;
+    items: Array<{
+      id: string;
+      title: string;
+      amountDisplay: string;
+      tone: "Spend" | "Income";
+      frequency: RecurringFrequency | null;
+      nextDateLabel: string | null;
+      status: "Active" | "Paused";
+    }>;
+  };
+};
 
 export type InsightsMonthPickerYear = {
   year: string;
@@ -1342,8 +1376,9 @@ export function buildInsightsData(
   selectedMonth?: string | null,
   requestedTimeframe?: string | null,
   requestedChartMode?: string | null,
+  recurringRules: Record<string, RecurringRuleSummary> = {},
 ): InsightsData {
-  const activeTransactions = transactions.filter((transaction) => !transaction.deletedAt);
+  const activeTransactions = transactions.filter((transaction) => !transaction.deletedAt && !transaction.deletedForeverAt);
   const selectedTimeframe = normalizeInsightsTimeframe(requestedTimeframe);
   const selectedChartMode = normalizeInsightsChartMode(requestedChartMode);
   const currentMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -1589,6 +1624,14 @@ export function buildInsightsData(
       };
     })
     .sort((a, b) => b.percentUsed - a.percentUsed);
+  const categorySignals = buildInsightsCategorySignals({
+    budgetProgress,
+    categoryLabels,
+    displayCurrency,
+    rateLookup,
+    recurringRules,
+    selectedPeriodTransactions,
+  });
 
   return {
     trackedBalanceMinor,
@@ -1646,7 +1689,142 @@ export function buildInsightsData(
     largestRecentExpenses,
     budgetCategoryOptions,
     budgetProgress,
+    categorySignals,
   };
+}
+
+function getBudgetSignalStatus(item: { isOverBudget: boolean; percentUsed: number }): "on-track" | "near" | "over" {
+  if (item.isOverBudget || item.percentUsed >= 100) {
+    return "over";
+  }
+
+  return item.percentUsed >= 80 ? "near" : "on-track";
+}
+
+function formatRecurringSignalDate(dateKey: string | null | undefined) {
+  if (!dateKey) {
+    return null;
+  }
+
+  const date = new Date(`${dateKey.slice(0, 10)}T12:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function getRecurringMonthlyFactor(frequency: RecurringFrequency | null | undefined) {
+  if (frequency === "weekly") {
+    return 4;
+  }
+
+  if (frequency === "yearly") {
+    return 1 / 12;
+  }
+
+  return 1;
+}
+
+function buildInsightsCategorySignals(args: {
+  budgetProgress: InsightsData["budgetProgress"];
+  categoryLabels: Record<string, string>;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+  recurringRules: Record<string, RecurringRuleSummary>;
+  selectedPeriodTransactions: Transaction[];
+}): Record<string, InsightsCategorySignal> {
+  const signals: Record<string, InsightsCategorySignal> = {};
+
+  for (const item of args.budgetProgress) {
+    const current = signals[item.categoryId] ?? {};
+    const nextLimit = {
+      budgetId: item.budgetId,
+      categoryId: item.categoryId,
+      categoryLabel: item.categoryLabel,
+      period: item.period,
+      amountMinor: item.amountMinor,
+      amountDisplay: item.amountDisplay,
+      spentMinor: item.spentMinor,
+      spentDisplay: item.spentDisplay,
+      remainingMinor: item.remainingMinor,
+      remainingDisplay: item.remainingDisplay,
+      percentUsed: item.percentUsed,
+      status: getBudgetSignalStatus(item),
+    };
+    const currentRank = current.limit?.status === "over" ? 2 : current.limit?.status === "near" ? 1 : 0;
+    const nextRank = nextLimit.status === "over" ? 2 : nextLimit.status === "near" ? 1 : 0;
+
+    if (!current.limit || nextRank > currentRank || (nextRank === currentRank && nextLimit.percentUsed > current.limit.percentUsed)) {
+      current.limit = nextLimit;
+    }
+
+    signals[item.categoryId] = current;
+  }
+
+  const recurringByCategory = new Map<string, Transaction[]>();
+
+  for (const transaction of args.selectedPeriodTransactions) {
+    if (!transaction.recurringRuleId || !transaction.categoryId) {
+      continue;
+    }
+
+    const transactions = recurringByCategory.get(transaction.categoryId) ?? [];
+    transactions.push(transaction);
+    recurringByCategory.set(transaction.categoryId, transactions);
+  }
+
+  for (const [categoryId, transactions] of recurringByCategory.entries()) {
+    const current = signals[categoryId] ?? {};
+    let monthlyTotalMinor = 0;
+    let activeCount = 0;
+    let pausedCount = 0;
+
+    const items = transactions
+      .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+      .map((transaction) => {
+        const rule = transaction.recurringRuleId ? args.recurringRules[transaction.recurringRuleId] : null;
+        const sourceCurrency = normalizeCurrency(transaction.currency);
+        const conversionRate = getConversionRate(sourceCurrency, args.displayCurrency, args.rateLookup);
+        const convertedMinor = conversionRate === null ? 0 : convertMinor(transaction.amountMinor, conversionRate);
+        const frequency = rule?.frequency ?? null;
+        const isPaused = Boolean(rule?.pausedAt);
+
+        monthlyTotalMinor += convertedMinor * getRecurringMonthlyFactor(frequency);
+
+        if (isPaused) {
+          pausedCount += 1;
+        } else {
+          activeCount += 1;
+        }
+
+        return {
+          id: transaction.id,
+          title: getTransactionDisplayTitle(transaction),
+          amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency),
+          tone: transaction.transactionType === "income" ? ("Income" as const) : ("Spend" as const),
+          frequency,
+          nextDateLabel: formatRecurringSignalDate(transaction.recurringOccurrenceDate ?? rule?.startDate ?? transaction.occurredAt),
+          status: isPaused ? ("Paused" as const) : ("Active" as const),
+        };
+      });
+
+    current.recurring = {
+      count: items.length,
+      activeCount,
+      pausedCount,
+      monthlyTotalMinor: Math.round(monthlyTotalMinor),
+      monthlyTotalDisplay: formatInsightsMoney(Math.round(monthlyTotalMinor), args.displayCurrency),
+      items,
+    };
+    signals[categoryId] = current;
+  }
+
+  return Object.fromEntries(Object.entries(signals).filter(([, signal]) => signal.limit || signal.recurring));
 }
 
 function buildInsightsClientViewKey(args: {
@@ -2053,6 +2231,10 @@ export async function loadInsightsPageData(
   });
   const currenciesForRates = Array.from(new Set([...transactions.map((transaction) => transaction.currency), displayCurrency]));
   const fxRates = await loadInsightsSupportingData("fx_rates", () => loadFxRatesForDisplay(currenciesForRates), []);
+  const recurringRules = await loadRecurringRuleSummaries(
+    userId,
+    transactions.map((transaction) => transaction.recurringRuleId ?? "").filter(Boolean),
+  );
   const budgetCategoryOptions = controlledCategories
     .filter((category) => category.direction === "expense" || category.direction === "both")
     .map((category) => ({
@@ -2072,6 +2254,7 @@ export async function loadInsightsPageData(
     toMonthKey(selectedMonthDate),
     requestedTimeframe,
     requestedChartMode,
+    recurringRules,
   );
   const cachedMonths = Array.from(
     new Set(
@@ -2101,6 +2284,7 @@ export async function loadInsightsPageData(
           month,
           timeframe,
           data.selectedChartMode,
+          recurringRules,
         );
         clientViews[
           buildInsightsClientViewKey({

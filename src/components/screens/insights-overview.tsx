@@ -6,6 +6,9 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  CircleGauge,
+  Eye,
+  Repeat2,
   X,
 } from "lucide-react";
 import { ScreenHeader } from "@/components/shared/screen-header";
@@ -692,21 +695,6 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   );
 }
 
-function CategoryColorIcon({ label, color, className = "" }: { label: string; color: string; className?: string }) {
-  const CategoryIcon = getCategoryVisualsByName(label).icon;
-
-  return (
-    <div
-      aria-label={`${label} chart color and category icon`}
-      className={`flex h-8 w-8 items-center justify-center rounded-full border ${className}`}
-      role="img"
-      style={{ backgroundColor: `${color}1A`, borderColor: `${color}33`, color }}
-    >
-      <CategoryIcon aria-hidden="true" className="h-4 w-4" />
-    </div>
-  );
-}
-
 export function clampCategorySharePercentage(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return 0;
@@ -757,6 +745,255 @@ function getCategoryChartColor(item: { label: string }) {
   return getCategoryVisualsByName(item.label).primary;
 }
 
+type BarsCategoryItem = {
+  key: string;
+  label: string;
+  color: string;
+  amountMinor: number;
+  amountDisplay: string;
+  dayCount: number;
+  signal?: NonNullable<InsightsData["categorySignals"]>[string];
+};
+
+type BarsDetailSheet = {
+  category: BarsCategoryItem;
+  kind: "limit" | "recurring";
+} | null;
+
+type BarsRecurringItem = NonNullable<NonNullable<InsightsData["categorySignals"]>[string]["recurring"]>["items"][number];
+
+function getLimitToneClasses(status: "on-track" | "near" | "over") {
+  if (status === "over") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+
+  if (status === "near") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+
+  return "border-sky-200 bg-sky-50 text-sky-700";
+}
+
+function getLimitStatusLabel(status: "on-track" | "near" | "over") {
+  if (status === "over") {
+    return "Over limit";
+  }
+
+  if (status === "near") {
+    return "Near limit";
+  }
+
+  return "On track";
+}
+
+function getCategoryBubbleActionLabel(label: string, isSelected: boolean) {
+  return `${isSelected ? "Clear" : "Select"} ${label} focus`;
+}
+
+function getRecurringFrequencyLabel(frequency: BarsRecurringItem["frequency"]) {
+  if (frequency === "weekly") {
+    return "Weekly";
+  }
+
+  if (frequency === "yearly") {
+    return "Yearly";
+  }
+
+  if (frequency === "monthly") {
+    return "Monthly";
+  }
+
+  return "Repeats";
+}
+
+function BarsCategoryBubble({
+  item,
+  isDimmed,
+  isSelected,
+  onSelect,
+  setRef,
+}: {
+  item: BarsCategoryItem;
+  isDimmed: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
+  setRef: (node: HTMLButtonElement | null) => void;
+}) {
+  const visuals = getCategoryVisualsByName(item.label);
+  const CategoryIcon = visuals.icon;
+  const limit = item.signal?.limit;
+  const recurring = item.signal?.recurring;
+
+  return (
+    <button
+      aria-label={getCategoryBubbleActionLabel(item.label, isSelected)}
+      aria-pressed={isSelected}
+      className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+        isSelected ? "ring-2 ring-sky-500 ring-offset-2" : ""
+      } ${isDimmed ? "grayscale opacity-35" : "opacity-100"}`}
+      onClick={onSelect}
+      ref={setRef}
+      style={{ backgroundColor: visuals.bg, borderColor: isSelected ? visuals.primary : visuals.border, color: visuals.primary }}
+      type="button"
+    >
+      <CategoryIcon aria-hidden="true" className="h-5 w-5" />
+      {limit ? (
+        <span
+          aria-hidden="true"
+          className={`absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border ${getLimitToneClasses(limit.status)}`}
+        >
+          <CircleGauge className="h-2.5 w-2.5" strokeWidth={2.2} />
+        </span>
+      ) : null}
+      {recurring ? (
+        <span
+          aria-hidden="true"
+          className={`absolute -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 ${
+            limit ? "top-3.5" : "-top-1"
+          }`}
+        >
+          <Repeat2 className="h-2.5 w-2.5" strokeWidth={2.2} />
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function BarsCategoryFocusPanel({
+  category,
+  onInspect,
+}: {
+  category: BarsCategoryItem;
+  onInspect: (kind: "limit" | "recurring") => void;
+}) {
+  const limit = category.signal?.limit;
+  const recurring = category.signal?.recurring;
+
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-slate-900">{category.label}</p>
+          <p className="text-xs leading-5 text-slate-500">
+            {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? "day" : "days"} this period
+          </p>
+        </div>
+      </div>
+      {limit || recurring ? (
+        <div className="mt-2 space-y-2">
+          {limit ? (
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white px-2 py-2">
+              <CircleGauge aria-hidden="true" className="h-4 w-4 text-sky-700" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-800">Limit</p>
+                <p className="truncate text-xs text-slate-500">
+                  {limit.spentDisplay} of {limit.amountDisplay} used ·{" "}
+                  {limit.remainingMinor < 0 ? `${limit.remainingDisplay} over` : `${limit.remainingDisplay} left`}
+                </p>
+              </div>
+              <button
+                aria-label={`Inspect ${category.label} limit details`}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                onClick={() => onInspect("limit")}
+                type="button"
+              >
+                <Eye aria-hidden="true" className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+          {recurring ? (
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white px-2 py-2">
+              <Repeat2 aria-hidden="true" className="h-4 w-4 text-slate-600" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-800">Recurring</p>
+                <p className="truncate text-xs text-slate-500">
+                  {recurring.activeCount} active recurring {recurring.activeCount === 1 ? "item" : "items"} · monthly total ≈ {recurring.monthlyTotalDisplay}
+                </p>
+              </div>
+              <button
+                aria-label={`Inspect ${category.label} recurring details`}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                onClick={() => onInspect("recurring")}
+                type="button"
+              >
+                <Eye aria-hidden="true" className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet; onClose: () => void }) {
+  if (!detail) {
+    return null;
+  }
+
+  const limit = detail.category.signal?.limit;
+  const recurring = detail.category.signal?.recurring;
+
+  if (detail.kind === "limit" && !limit) {
+    return null;
+  }
+
+  if (detail.kind === "recurring" && !recurring) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-slate-950/30 px-3 py-4 sm:items-center sm:justify-center" role="presentation">
+      <div
+        aria-label={`${detail.category.label} ${detail.kind} details`}
+        aria-modal="true"
+        className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl"
+        role="dialog"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{detail.category.label}</p>
+            <p className="text-xs text-slate-500">{detail.kind === "limit" ? "Limit details" : "Recurring details"}</p>
+          </div>
+          <button
+            aria-label="Close details"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
+        {detail.kind === "limit" && limit ? (
+          <div className="space-y-2 text-sm">
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Period</span><span className="font-medium text-slate-800">{limit.period === "weekly" ? "Weekly" : "Monthly"}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Limit amount</span><span className="font-medium text-slate-800">{limit.amountDisplay}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Used</span><span className="font-medium text-slate-800">{limit.spentDisplay}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Remaining</span><span className="font-medium text-slate-800">{limit.remainingMinor < 0 ? `${limit.remainingDisplay} over` : `${limit.remainingDisplay} left`}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Percent used</span><span className="font-medium text-slate-800">{limit.percentUsed}%</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Status</span><span className="font-medium text-slate-800">{getLimitStatusLabel(limit.status)}</span></div>
+          </div>
+        ) : null}
+        {detail.kind === "recurring" && recurring ? (
+          <div className="space-y-2">
+            {recurring.items.map((item) => (
+              <div className="grid grid-cols-[1fr_auto] gap-3 rounded-lg bg-slate-50 px-3 py-2" key={item.id}>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
+                  <p className="text-xs text-slate-500">
+                    {item.tone} · {getRecurringFrequencyLabel(item.frequency)} · {item.nextDateLabel ?? "Date not set"} · {item.status}
+                  </p>
+                </div>
+                <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function buildBarsIncomeCategoryBreakdown(data: InsightsData): SpendingMixCategoryItem[] {
   const totals = new Map<string, { label: string; amountMinor: number; transactionCount: number; hasUnavailableRate: boolean }>();
   const recentEntriesByKey = new Map(data.incomeCategoryBreakdown.map((item) => [item.key, item.recentEntries]));
@@ -799,6 +1036,9 @@ function TimeframeBarsChart({
   barsSegment: SpendingMixSegment;
 }) {
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
+  const [detailSheet, setDetailSheet] = useState<BarsDetailSheet>(null);
+  const bubbleRefs = useRef(new Map<string, HTMLButtonElement>());
   const isIncome = barsSegment === "income";
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
@@ -810,9 +1050,22 @@ function TimeframeBarsChart({
 
   useEffect(() => {
     setSelectedDayKey(null);
+    setSelectedCategoryKey(null);
+    setDetailSheet(null);
   }, [barsSegment, data.selectedMonth, data.selectedTimeframe, data.displayCurrency]);
 
-  const activeLegendItems = Array.from(
+  useEffect(() => {
+    if (!selectedCategoryKey) {
+      return;
+    }
+
+    const node = bubbleRefs.current.get(selectedCategoryKey);
+    if (typeof node?.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [selectedCategoryKey]);
+
+  const activeCategoryItems: BarsCategoryItem[] = Array.from(
     new Map(
       activeBars
         .flatMap((bar) => (isIncome ? bar.incomeSegments : bar.segments))
@@ -822,15 +1075,45 @@ function TimeframeBarsChart({
             key: segment.key,
             label: segment.label,
             color: getSegmentColor(segment.key, segment.label),
+            amountMinor: 0,
+            amountDisplay: "",
+            dayCount: 0,
+            signal: data.categorySignals?.[segment.key],
           },
         ]),
     ).values(),
-  );
+  ).map((item) => {
+    const breakdownItem = categoryItems.find((category) => category.key === item.key);
+    const dayCount = activeBars.filter((bar) => (isIncome ? bar.incomeSegments : bar.segments).some((segment) => segment.key === item.key)).length;
 
-  const legend = activeLegendItems.length ? (
-    <div aria-label={`${isIncome ? "Income" : "Expenses"} category icon legend`} className="flex gap-2 overflow-x-auto pb-1">
-      {activeLegendItems.map((item) => (
-        <CategoryColorIcon className="shrink-0" color={item.color} key={item.key} label={item.label} />
+    return {
+      ...item,
+      amountMinor: breakdownItem?.amountMinor ?? 0,
+      amountDisplay: breakdownItem?.amountDisplay ?? "",
+      dayCount,
+    };
+  });
+  const selectedCategory = selectedCategoryKey ? activeCategoryItems.find((item) => item.key === selectedCategoryKey) ?? null : null;
+  const selectedDay = selectedDayKey ? activeBars.find((bar) => bar.key === selectedDayKey) ?? null : null;
+  const selectedDayCategoryKeys = new Set((selectedDay ? (isIncome ? selectedDay.incomeSegments : selectedDay.segments) : []).map((segment) => segment.key));
+
+  const legend = activeCategoryItems.length ? (
+    <div aria-label={`${isIncome ? "Income" : "Expenses"} category bubbles`} className="flex scroll-px-3 gap-2 overflow-x-auto px-1 pb-2 pt-1">
+      {activeCategoryItems.map((item) => (
+        <BarsCategoryBubble
+          isDimmed={Boolean(selectedDay && !selectedDayCategoryKeys.has(item.key) && selectedCategoryKey !== item.key)}
+          isSelected={selectedCategoryKey === item.key}
+          item={item}
+          key={item.key}
+          onSelect={() => setSelectedCategoryKey((current) => (current === item.key ? null : item.key))}
+          setRef={(node) => {
+            if (node) {
+              bubbleRefs.current.set(item.key, node);
+            } else {
+              bubbleRefs.current.delete(item.key);
+            }
+          }}
+        />
       ))}
     </div>
   ) : null;
@@ -853,6 +1136,12 @@ function TimeframeBarsChart({
       <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by day`} role="img">
         <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
         {legend}
+        {selectedCategory ? (
+          <BarsCategoryFocusPanel
+            category={selectedCategory}
+            onInspect={(kind) => setDetailSheet({ category: selectedCategory, kind })}
+          />
+        ) : null}
         <div className="space-y-2">
           {activeBars.map((bar) => {
             const amountMinor = isIncome ? bar.incomeAmountMinor : bar.amountMinor;
@@ -861,9 +1150,11 @@ function TimeframeBarsChart({
             const width = `${Math.max(10, Math.round((amountMinor / dayMax) * 100))}%`;
             const label = formatSpendingDayLabel(bar);
             const isSelected = selectedDayKey === bar.key;
+            const containsSelectedCategory = selectedCategoryKey ? segments.some((segment) => segment.key === selectedCategoryKey) : true;
+            const isBarDimmed = Boolean(selectedCategoryKey && !containsSelectedCategory);
 
             return (
-              <div className="space-y-2" key={bar.key}>
+              <div className={`space-y-2 transition-opacity ${isBarDimmed ? "opacity-35" : "opacity-100"}`} key={bar.key}>
                 <button
                   aria-label={`${label}, ${amountDisplay} ${context}, ${isSelected ? "hide" : "tap for"} category breakdown`}
                   aria-pressed={isSelected}
@@ -883,7 +1174,9 @@ function TimeframeBarsChart({
                       {segments.map((segment, index) => (
                         <span
                           aria-label={`${label} ${segment.label} ${context} ${segment.amountDisplay}`}
-                          className={`h-full ${index > 0 ? "border-l border-white/80" : ""}`}
+                          className={`h-full transition-opacity ${
+                            index > 0 ? "border-l border-white/80" : ""
+                          } ${selectedCategoryKey && containsSelectedCategory && segment.key !== selectedCategoryKey ? "opacity-35" : "opacity-100"}`}
                           key={segment.key}
                           role="img"
                           style={{
@@ -897,11 +1190,21 @@ function TimeframeBarsChart({
                   </span>
                   <span className="whitespace-nowrap text-xs font-semibold text-slate-800">{amountDisplay}</span>
                 </button>
-                {isSelected ? <BarsDayBreakdownPanel bar={bar} isIncome={isIncome} segments={segments} totalDisplay={amountDisplay} totalMinor={amountMinor} /> : null}
+                {isSelected ? (
+                  <BarsDayBreakdownPanel
+                    bar={bar}
+                    isIncome={isIncome}
+                    segments={segments}
+                    selectedCategoryKey={selectedCategoryKey}
+                    totalDisplay={amountDisplay}
+                    totalMinor={amountMinor}
+                  />
+                ) : null}
               </div>
             );
           })}
         </div>
+        <BarsReadOnlyDetailSheet detail={detailSheet} onClose={() => setDetailSheet(null)} />
       </div>
     );
   }
@@ -910,6 +1213,12 @@ function TimeframeBarsChart({
     <div className="space-y-3">
       <p className="text-xs leading-5 text-slate-500">Showing monthly tracked {isIncome ? "income" : "spending"}.</p>
       {legend}
+      {selectedCategory ? (
+        <BarsCategoryFocusPanel
+          category={selectedCategory}
+          onInspect={(kind) => setDetailSheet({ category: selectedCategory, kind })}
+        />
+      ) : null}
       <div
         className="grid min-h-44 grid-cols-[repeat(auto-fit,minmax(2.25rem,1fr))] items-end gap-2"
         aria-label={`Tracked ${isIncome ? "income" : "spending"} by month`}
@@ -920,9 +1229,11 @@ function TimeframeBarsChart({
           const amountDisplay = isIncome ? bar.incomeAmountDisplay : bar.amountDisplay;
           const segments = isIncome ? bar.incomeSegments : bar.segments;
           const height = amountMinor > 0 ? Math.max(8, Math.round((amountMinor / max) * 128)) : 2;
+          const containsSelectedCategory = selectedCategoryKey ? segments.some((segment) => segment.key === selectedCategoryKey) : true;
+          const isBarDimmed = Boolean(selectedCategoryKey && !containsSelectedCategory);
 
           return (
-            <div className="flex min-w-0 flex-col items-center gap-2" key={bar.key}>
+            <div className={`flex min-w-0 flex-col items-center gap-2 transition-opacity ${isBarDimmed ? "opacity-35" : "opacity-100"}`} key={bar.key}>
               <div className="flex h-32 w-full items-end rounded-md bg-slate-50 px-1">
                 <div
                   aria-label={`${bar.label} tracked ${isIncome ? "income" : "spending"} ${amountDisplay}`}
@@ -933,7 +1244,9 @@ function TimeframeBarsChart({
                     segments.map((segment) => (
                       <span
                         aria-label={`${bar.label} ${segment.label} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
-                        className="h-full"
+                        className={`h-full transition-opacity ${
+                          selectedCategoryKey && containsSelectedCategory && segment.key !== selectedCategoryKey ? "opacity-35" : "opacity-100"
+                        }`}
                         key={segment.key}
                         role="img"
                         style={{
@@ -952,6 +1265,7 @@ function TimeframeBarsChart({
           );
         })}
       </div>
+      <BarsReadOnlyDetailSheet detail={detailSheet} onClose={() => setDetailSheet(null)} />
     </div>
   );
 }
@@ -960,17 +1274,26 @@ function BarsDayBreakdownPanel({
   bar,
   isIncome,
   segments,
+  selectedCategoryKey,
   totalDisplay,
   totalMinor,
 }: {
   bar: InsightsData["timeframeBars"][number];
   isIncome: boolean;
   segments: InsightsData["timeframeBars"][number]["segments"];
+  selectedCategoryKey?: string | null;
   totalDisplay: string;
   totalMinor: number;
 }) {
   const label = formatSpendingDayLabel(bar);
   const context = isIncome ? "income" : "spending";
+  const orderedSegments =
+    selectedCategoryKey && segments.some((segment) => segment.key === selectedCategoryKey)
+      ? [
+          ...segments.filter((segment) => segment.key === selectedCategoryKey),
+          ...segments.filter((segment) => segment.key !== selectedCategoryKey),
+        ]
+      : segments;
 
   return (
     <div className="rounded-lg border border-slate-100 bg-white px-3 py-2 shadow-sm" aria-label={`${label} ${context} category breakdown`}>
@@ -979,7 +1302,7 @@ function BarsDayBreakdownPanel({
         <p className="min-w-0 truncate text-right text-xs font-medium text-slate-500">Total {totalDisplay}</p>
       </div>
       <div className="space-y-1.5">
-        {segments.map((segment) => {
+        {orderedSegments.map((segment) => {
           const visuals = getCategoryVisualsByName(segment.label);
           const SegmentIcon = visuals.icon;
           const percentage = totalMinor > 0 ? Math.round((Math.max(segment.amountMinor, 0) / totalMinor) * 100) : 0;
