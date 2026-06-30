@@ -1062,6 +1062,19 @@ describe("insights overview", () => {
         netDisplay: `-$${amountDollars}`,
         movementMinor: amountMinor,
         transactionCount: 1,
+        recentEntries: [
+          {
+            id: `category-${index + 1}-spending`,
+            title: `Category ${index + 1} item`,
+            transactionType: "expense",
+            amountMinor,
+            amountDisplay: `$${amountDollars}`,
+            displayAmountMinor: amountMinor,
+            displayAmountDisplay: `$${amountDollars}`,
+            occurredAt: "2026-04-21T12:00:00.000Z",
+            occurredLabel: "Apr 21",
+          },
+        ],
       });
     });
 
@@ -1091,6 +1104,183 @@ describe("insights overview", () => {
     expect(within(card).getByRole("button", { name: "Hide Category 12 details" })).toBeInTheDocument();
     expect(within(card).getByText("Category 12")).toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: "Show Category 11 details" })).not.toBeInTheDocument();
+  });
+
+  it("updates Trend category icons and details cumulatively through the selected trend point", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        selectedMonthTrendDays: [
+          {
+            key: "2026-04-10",
+            label: "10",
+            incomeMinor: 10000,
+            incomeDisplay: "$100",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            cumulativeIncomeMinor: 10000,
+            cumulativeIncomeDisplay: "$100",
+            cumulativeExpenseMinor: 0,
+            cumulativeExpenseDisplay: "$0",
+            netMinor: 10000,
+            netDisplay: "$100",
+            transactionCount: 1,
+          },
+          {
+            key: "2026-04-20",
+            label: "20",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
+            expenseMinor: 5000,
+            expenseDisplay: "$50",
+            cumulativeIncomeMinor: 10000,
+            cumulativeIncomeDisplay: "$100",
+            cumulativeExpenseMinor: 5000,
+            cumulativeExpenseDisplay: "$50",
+            netMinor: 5000,
+            netDisplay: "$50",
+            transactionCount: 1,
+          },
+          {
+            key: "2026-04-30",
+            label: "30",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
+            expenseMinor: 23000,
+            expenseDisplay: "$230",
+            cumulativeIncomeMinor: 10000,
+            cumulativeIncomeDisplay: "$100",
+            cumulativeExpenseMinor: 28000,
+            cumulativeExpenseDisplay: "$280",
+            netMinor: -18000,
+            netDisplay: "-$180",
+            transactionCount: 2,
+          },
+        ],
+        trendCategoryBreakdown: [
+          makeCategory({
+            key: "other",
+            label: "Other",
+            amountMinor: 18000,
+            amountDisplay: "-$180",
+            incomeMinor: 10000,
+            incomeDisplay: "$100",
+            expenseMinor: 28000,
+            expenseDisplay: "$280",
+            netMinor: -18000,
+            netDisplay: "-$180",
+            movementMinor: 38000,
+            transactionCount: 3,
+            recentEntries: [
+              {
+                id: "other-income",
+                title: "Side sale",
+                transactionType: "income",
+                amountMinor: 10000,
+                amountDisplay: "$100",
+                displayAmountMinor: 10000,
+                displayAmountDisplay: "$100",
+                occurredAt: "2026-04-05T12:00:00.000Z",
+                occurredLabel: "Apr 5",
+                createdAt: "2026-04-05T12:30:00.000Z",
+              },
+              {
+                id: "other-spending",
+                title: "Supplies",
+                transactionType: "expense",
+                amountMinor: 5000,
+                amountDisplay: "$50",
+                displayAmountMinor: 5000,
+                displayAmountDisplay: "$50",
+                occurredAt: "2026-04-18T12:00:00.000Z",
+                occurredLabel: "Apr 18",
+                createdAt: "2026-04-18T12:30:00.000Z",
+              },
+              {
+                id: "other-later-spending",
+                title: "Later supplies",
+                transactionType: "expense",
+                amountMinor: 23000,
+                amountDisplay: "$230",
+                displayAmountMinor: 23000,
+                displayAmountDisplay: "$230",
+                occurredAt: "2026-04-25T12:00:00.000Z",
+                occurredLabel: "Apr 25",
+                createdAt: "2026-04-25T12:30:00.000Z",
+              },
+            ],
+          }),
+          makeCategory({
+            key: "travel",
+            label: "Travel",
+            amountMinor: 3000,
+            amountDisplay: "$30",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
+            expenseMinor: 3000,
+            expenseDisplay: "$30",
+            netMinor: -3000,
+            netDisplay: "-$30",
+            movementMinor: 3000,
+            transactionCount: 1,
+            recentEntries: [
+              {
+                id: "travel-spending",
+                title: "Train",
+                transactionType: "expense",
+                amountMinor: 3000,
+                amountDisplay: "$30",
+                displayAmountMinor: 3000,
+                displayAmountDisplay: "$30",
+                occurredAt: "2026-04-25T13:00:00.000Z",
+                occurredLabel: "Apr 25",
+                createdAt: "2026-04-25T13:30:00.000Z",
+              },
+            ],
+          }),
+        ],
+      }),
+    );
+
+    const card = screen.getByTestId("timeframe-insights-card");
+    const iconButtons = within(card).getAllByRole("button", { name: /details$/ });
+    expect(iconButtons.map((button) => button.getAttribute("aria-label"))).toEqual(["Show Other details", "Show Travel details"]);
+    expect(iconButtons[0]?.parentElement).toHaveClass("grid", "justify-center");
+    expect(iconButtons[0]?.parentElement?.className).toContain("minmax(2.625rem,2.875rem)");
+    expect(within(card).getByRole("button", { name: "Show Travel details" })).toBeInTheDocument();
+
+    const scrubLayer = screen.getByLabelText("Scrub selected month trend chart");
+    vi.spyOn(scrubLayer, "getBoundingClientRect").mockReturnValue({
+      bottom: 144,
+      height: 144,
+      left: 0,
+      right: 300,
+      top: 0,
+      width: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    dispatchPointerEvent(scrubLayer, "pointerdown", { clientX: 150, pointerId: 1, pointerType: "touch" });
+
+    expect(within(card).getByRole("button", { name: /Through Apr 20/ })).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Travel details" })).not.toBeInTheDocument();
+    expect(within(card).getByLabelText("Other income and spending mix")).toHaveStyle({
+      background: "conic-gradient(#10B981 0% 67%, #F43F5E 67% 100%)",
+    });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show Other details" }));
+
+    expect(within(card).getAllByText("Through Apr 20").length).toBeGreaterThan(0);
+    expect(within(card).getByText("Side sale")).toBeInTheDocument();
+    expect(within(card).getByText("Supplies")).toBeInTheDocument();
+    expect(within(card).queryByText("Later supplies")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: /Through Apr 20/ }));
+
+    expect(within(card).queryByRole("button", { name: /Through Apr 20/ })).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Travel details" })).toBeInTheDocument();
   });
 
   it("keeps Bars category breakdown on the selected expense or income segment", () => {
@@ -1204,7 +1394,7 @@ describe("insights overview", () => {
     expect(screen.getByText("Spending: $12")).toBeInTheDocument();
     expect(screen.getByText("Net: + $38")).toBeInTheDocument();
 
-    dispatchPointerEvent(document.body, "pointerdown", { clientX: 0, pointerId: 2, pointerType: "touch" });
+    fireEvent.click(screen.getByRole("button", { name: /Through Apr 15/ }));
 
     expect(screen.queryByText("Income: $50")).not.toBeInTheDocument();
     expect(screen.queryByText("Spending: $12")).not.toBeInTheDocument();

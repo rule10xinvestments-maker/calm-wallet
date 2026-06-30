@@ -30,9 +30,12 @@ type TrendCategoryItem = SpendingMixCategoryItem & {
   netMinor?: number;
   netDisplay?: string;
   movementMinor?: number;
+  firstOccurredAt?: string;
+  firstCreatedAt?: string | null;
 };
 type MonthPickerMonth = InsightsData["monthPickerYears"][number]["months"][number];
 type ChartMode = InsightsData["selectedChartMode"];
+type TrendPointSelection = InsightsData["selectedMonthTrendDays"][number] | null;
 
 type InsightsQueryButtonProps = {
   "aria-current"?: "date" | "true";
@@ -528,31 +531,23 @@ export function getNearestTrendPointIndex(clientX: number, boundsLeft: number, b
   return Math.min(pointCount - 1, Math.max(0, Math.round(normalizedX * (pointCount - 1))));
 }
 
-function TimeframeTrendChart({ data }: { data: InsightsData }) {
+function TimeframeTrendChart({
+  data,
+  selectedDay,
+  onSelectedDayChange,
+}: {
+  data: InsightsData;
+  selectedDay: TrendPointSelection;
+  onSelectedDayChange: (day: TrendPointSelection) => void;
+}) {
   const days = data.selectedMonthTrendDays;
   const hasIncome = days.some((day) => day.cumulativeIncomeMinor > 0);
   const hasSpending = days.some((day) => day.cumulativeExpenseMinor > 0);
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const chartRootRef = useRef<HTMLDivElement | null>(null);
   const scrubLayerRef = useRef<HTMLDivElement | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (selectedDayIndex === null) {
-      return;
-    }
-
-    function clearTrendPointOnOutsidePointerDown(event: PointerEvent) {
-      if (chartRootRef.current?.contains(event.target as Node)) {
-        return;
-      }
-
-      activePointerIdRef.current = null;
-      setSelectedDayIndex(null);
-    }
-
-    document.addEventListener("pointerdown", clearTrendPointOnOutsidePointerDown);
-    return () => document.removeEventListener("pointerdown", clearTrendPointOnOutsidePointerDown);
-  }, [selectedDayIndex]);
+  const selectedDayIndex = selectedDay ? days.findIndex((day) => day.key === selectedDay.key) : null;
+  const effectiveSelectedDayIndex = selectedDayIndex !== null && selectedDayIndex >= 0 ? selectedDayIndex : null;
 
   if (!hasIncome && !hasSpending) {
     return (
@@ -575,8 +570,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
   const firstDay = days[0];
   const lastDay = days[days.length - 1];
   const lastTrendDay = lastDay ?? days[0];
-  const selectedDay = selectedDayIndex === null ? null : days[selectedDayIndex] ?? null;
-  const selectedX = selectedDayIndex === null ? 50 : xForIndex(selectedDayIndex);
+  const selectedX = effectiveSelectedDayIndex === null ? 50 : xForIndex(effectiveSelectedDayIndex);
   const tooltipLeft = Math.min(74, Math.max(6, selectedX));
   const tooltipTranslate = selectedX > 74 ? "-100%" : selectedX < 26 ? "0" : "-50%";
   const note = !hasIncome ? "No income tracked this month yet." : !hasSpending ? "No spending tracked this month yet." : null;
@@ -593,7 +587,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
       return;
     }
 
-    setSelectedDayIndex(getNearestTrendPointIndex(clientX, bounds.left, bounds.width, days.length));
+    onSelectedDayChange(days[getNearestTrendPointIndex(clientX, bounds.left, bounds.width, days.length)] ?? null);
   };
 
   return (
@@ -647,7 +641,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
             <path aria-label="Cumulative spending line" className="stroke-rose-600" d={spendingPath} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.15" />
           </>
         ) : null}
-        {selectedDayIndex !== null ? (
+        {effectiveSelectedDayIndex !== null ? (
           <line
             aria-hidden="true"
             className="stroke-slate-300"
@@ -659,7 +653,7 @@ function TimeframeTrendChart({ data }: { data: InsightsData }) {
             y2="92"
           />
         ) : null}
-        {selectedDayIndex !== null && selectedDay ? (
+        {effectiveSelectedDayIndex !== null && selectedDay ? (
           <>
             {hasIncome ? (
               <circle aria-hidden="true" className="fill-white stroke-emerald-600" cx={selectedX} cy={yForValue(selectedDay.cumulativeIncomeMinor)} r="1.7" strokeWidth="0.8" />
@@ -1607,6 +1601,104 @@ function sortTrendDetailEntries(entries: TrendCategoryItem["recentEntries"]) {
   });
 }
 
+function getTrendEntryDisplayMinor(entry: TrendCategoryItem["recentEntries"][number]) {
+  return Math.max(entry.displayAmountMinor ?? entry.amountMinor, 0);
+}
+
+function getTrendEntryTime(entry: TrendCategoryItem["recentEntries"][number]) {
+  const occurredTime = new Date(entry.occurredAt).getTime();
+  return Number.isFinite(occurredTime) ? occurredTime : 0;
+}
+
+function isTrendEntryThroughDate(entry: TrendCategoryItem["recentEntries"][number], selectedDay: TrendPointSelection) {
+  if (!selectedDay) {
+    return true;
+  }
+
+  return getTrendEntryTime(entry) <= new Date(`${selectedDay.key}T23:59:59.999`).getTime();
+}
+
+function formatTrendScopedAmount(amountMinor: number, displayCurrency: string, entries: TrendCategoryItem["recentEntries"]) {
+  const prefix = entries.some((entry) => entry.displayAmountApproximate) && amountMinor !== 0 ? "â‰ˆ " : "";
+  return `${prefix}${formatMoney(amountMinor, displayCurrency)}`;
+}
+
+function getTrendScopedNetDisplay(amountMinor: number, displayCurrency: string, entries: TrendCategoryItem["recentEntries"]) {
+  const display = formatTrendScopedAmount(Math.abs(amountMinor), displayCurrency, entries);
+
+  if (amountMinor > 0) {
+    return `+${display}`;
+  }
+
+  if (amountMinor < 0) {
+    return `-${display}`;
+  }
+
+  return display;
+}
+
+function buildCumulativeTrendItems({
+  displayCurrency,
+  items,
+  selectedDay,
+}: {
+  displayCurrency: string;
+  items: TrendCategoryItem[];
+  selectedDay: TrendPointSelection;
+}): TrendCategoryItem[] {
+  return items
+    .map((item) => {
+      const scopedEntries = item.recentEntries.filter((entry) => isTrendEntryThroughDate(entry, selectedDay));
+      const incomeEntries = scopedEntries.filter((entry) => entry.transactionType === "income");
+      const expenseEntries = scopedEntries.filter((entry) => entry.transactionType !== "income");
+      const incomeMinor = incomeEntries.reduce((sum, entry) => sum + getTrendEntryDisplayMinor(entry), 0);
+      const expenseMinor = expenseEntries.reduce((sum, entry) => sum + getTrendEntryDisplayMinor(entry), 0);
+      const movementMinor = incomeMinor + expenseMinor;
+      const netMinor = incomeMinor - expenseMinor;
+      const firstEntry = sortTrendDetailEntries(scopedEntries).at(-1);
+
+      return {
+        ...item,
+        amountMinor: incomeMinor > 0 && expenseMinor === 0 ? incomeMinor : expenseMinor > 0 && incomeMinor === 0 ? expenseMinor : Math.abs(netMinor),
+        amountDisplay:
+          incomeMinor > 0 && expenseMinor === 0
+            ? formatTrendScopedAmount(incomeMinor, displayCurrency, incomeEntries)
+            : expenseMinor > 0 && incomeMinor === 0
+              ? formatTrendScopedAmount(expenseMinor, displayCurrency, expenseEntries)
+              : getTrendScopedNetDisplay(netMinor, displayCurrency, scopedEntries),
+        incomeMinor,
+        incomeDisplay: formatTrendScopedAmount(incomeMinor, displayCurrency, incomeEntries),
+        expenseMinor,
+        expenseDisplay: formatTrendScopedAmount(expenseMinor, displayCurrency, expenseEntries),
+        netMinor,
+        netDisplay: getTrendScopedNetDisplay(netMinor, displayCurrency, scopedEntries),
+        movementMinor,
+        transactionCount: scopedEntries.length,
+        recentEntries: scopedEntries,
+        firstOccurredAt: firstEntry?.occurredAt,
+        firstCreatedAt: firstEntry?.createdAt,
+      };
+    })
+    .filter((item) => (item.movementMinor ?? 0) > 0)
+    .sort((left, right) => {
+      const leftOccurred = new Date(left.firstOccurredAt ?? "").getTime();
+      const rightOccurred = new Date(right.firstOccurredAt ?? "").getTime();
+      const occurredDelta = (Number.isFinite(leftOccurred) ? leftOccurred : Number.MAX_SAFE_INTEGER) - (Number.isFinite(rightOccurred) ? rightOccurred : Number.MAX_SAFE_INTEGER);
+      if (occurredDelta !== 0) {
+        return occurredDelta;
+      }
+
+      const leftCreated = new Date(left.firstCreatedAt ?? "").getTime();
+      const rightCreated = new Date(right.firstCreatedAt ?? "").getTime();
+      const createdDelta = (Number.isFinite(leftCreated) ? leftCreated : Number.MAX_SAFE_INTEGER) - (Number.isFinite(rightCreated) ? rightCreated : Number.MAX_SAFE_INTEGER);
+      if (createdDelta !== 0) {
+        return createdDelta;
+      }
+
+      return (right.movementMinor ?? Math.abs(right.amountMinor)) - (left.movementMinor ?? Math.abs(left.amountMinor)) || left.label.localeCompare(right.label);
+    });
+}
+
 function TrendCategoryEntryList({
   entries,
   tone,
@@ -1654,21 +1746,29 @@ function TrendCategoryEntryList({
 function TrendCategoryExplorer({
   displayCurrency,
   items,
+  onClearSelectedDay,
+  selectedDay,
 }: {
   displayCurrency: string;
   items: TrendCategoryItem[];
+  onClearSelectedDay: () => void;
+  selectedDay: TrendPointSelection;
 }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
+
+  const sortedItems = buildCumulativeTrendItems({ displayCurrency, items, selectedDay });
+
+  useEffect(() => {
+    if (selectedKey && !sortedItems.some((item) => item.key === selectedKey)) {
+      setSelectedKey(null);
+    }
+  }, [selectedKey, sortedItems]);
 
   if (!items.length) {
     return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked money movement in this period.</p>;
   }
 
-  const sortedItems = [...items].sort((left, right) => {
-    const movementDelta = (right.movementMinor ?? Math.abs(right.amountMinor)) - (left.movementMinor ?? Math.abs(left.amountMinor));
-    return movementDelta || left.label.localeCompare(right.label);
-  });
   const visibleLimit = 10;
   const selectedItem = selectedKey ? sortedItems.find((item) => item.key === selectedKey) ?? null : null;
   const topItems = sortedItems.slice(0, visibleLimit);
@@ -1699,10 +1799,39 @@ function TrendCategoryExplorer({
     : selectedIsIncomeOnly
       ? "text-emerald-700"
       : "text-rose-700";
+  const selectedDayLabel = selectedDay ? formatSpendingDayLabel(selectedDay) : null;
+
+  if (!sortedItems.length) {
+    return (
+      <div className="space-y-2">
+        {selectedDayLabel ? (
+          <button
+            className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            onClick={onClearSelectedDay}
+            type="button"
+          >
+            Through {selectedDayLabel} <X aria-hidden="true" className="h-3 w-3" />
+          </button>
+        ) : null}
+        <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+          {selectedDayLabel ? `No entries yet by ${selectedDayLabel}.` : "No tracked money movement in this period."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      {selectedDayLabel ? (
+        <button
+          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          onClick={onClearSelectedDay}
+          type="button"
+        >
+          Through {selectedDayLabel} <X aria-hidden="true" className="h-3 w-3" />
+        </button>
+      ) : null}
+      <div className="grid justify-center gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(2.625rem,2.875rem))]">
         {gridItems.map((item) => {
           const isSelected = selectedKey === item.key;
 
@@ -1710,7 +1839,7 @@ function TrendCategoryExplorer({
             <button
               aria-label={`${isSelected ? "Hide" : "Show"} ${item.label} details`}
               aria-pressed={isSelected}
-              className={`rounded-full p-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-full p-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                 isSelected ? "bg-slate-100 ring-2 ring-slate-300" : "hover:bg-slate-50"
               }`}
               key={item.key}
@@ -1738,6 +1867,7 @@ function TrendCategoryExplorer({
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">{selectedItem.label}</p>
               <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount)}</p>
+              {selectedDayLabel ? <p className="text-xs text-slate-500">Through {selectedDayLabel}</p> : null}
             </div>
             <p className={`whitespace-nowrap text-sm font-semibold ${selectedAmountClass}`}>{selectedAmountDisplay}</p>
           </div>
@@ -1906,6 +2036,7 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
 function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
   const [mixSegment, setMixSegment] = useState<SpendingMixSegment>("expenses");
   const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
+  const [selectedTrendDay, setSelectedTrendDay] = useState<TrendPointSelection>(null);
   const activeSegment = data.selectedChartMode === "bars" ? barsSegment : mixSegment;
   const isBarsIncome = data.selectedChartMode === "bars" && barsSegment === "income";
   const breakdownItems = isBarsIncome ? buildBarsIncomeCategoryBreakdown(data) : data.timeframeCategoryBreakdown;
@@ -1927,6 +2058,10 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   const contextLine = isTrend
     ? `${periodContextLabel} · Income and spending trend`
     : `${periodContextLabel} · ${data.displayCurrency} tracked ${activeSegment}`;
+
+  useEffect(() => {
+    setSelectedTrendDay(null);
+  }, [data.selectedChartMode, data.selectedMonth, data.selectedTimeframe, data.displayCurrency]);
 
   return (
     <Card className="rounded-lg" data-testid="timeframe-insights-card">
@@ -1950,7 +2085,9 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
           {isTrend ? null : <p className="text-base font-semibold text-slate-900 sm:text-lg">{primaryValueLine}</p>}
           <p className="text-sm leading-5 text-slate-500">{contextLine}</p>
         </div>
-        {data.selectedChartMode === "trend" ? <TimeframeTrendChart data={data} /> : null}
+        {data.selectedChartMode === "trend" ? (
+          <TimeframeTrendChart data={data} selectedDay={selectedTrendDay} onSelectedDayChange={setSelectedTrendDay} />
+        ) : null}
         {data.selectedChartMode === "bars" ? <TimeframeBarsChart barsSegment={barsSegment} data={data} /> : null}
         {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} segment={mixSegment} /> : null}
         {data.selectedChartMode === "mix" ? null : (
@@ -1960,6 +2097,8 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
               <TrendCategoryExplorer
                 displayCurrency={data.displayCurrency}
                 items={trendBreakdownItems}
+                onClearSelectedDay={() => setSelectedTrendDay(null)}
+                selectedDay={selectedTrendDay}
               />
             ) : (
               <TimeframeCategoryBreakdown
