@@ -428,7 +428,10 @@ export async function createSupabaseTransactionService() {
         .select("*")
         .eq("user_id", userId)
         .is("deleted_forever_at", null)
-        .order("occurred_at", { ascending: false });
+        .order("occurred_at", { ascending: false })
+        .order("created_at", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .order("id", { ascending: false });
 
       if (!filters.includeDeleted) {
         query = query.is("deleted_at", null);

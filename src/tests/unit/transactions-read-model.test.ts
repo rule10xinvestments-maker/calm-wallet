@@ -11,6 +11,7 @@ import {
   mapTransactionsToListItems,
   normalizeInsightsChartMode,
   resolveInsightsMonthStatus,
+  sortActivityTransactions,
 } from "@/lib/server/transactions-read-model";
 import type { Budget } from "@/domain/budgets/types";
 import type { Transaction } from "@/domain/transactions/types";
@@ -104,6 +105,79 @@ describe("transactions read model", () => {
       "income-1",
       "review-1",
       "income-review-1",
+    ]);
+  });
+
+  it("sorts same-day Activity transactions by newest saved first without grouping recurring separately", () => {
+    const transactions = [
+      makeTransaction({
+        id: "unnamed",
+        itemName: null,
+        merchant: null,
+        note: null,
+        occurredAt: "2026-06-30T12:00:00.000Z",
+        createdAt: "2026-06-30T09:00:00.000Z",
+        updatedAt: "2026-06-30T09:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "moni",
+        itemName: "Moni",
+        occurredAt: "2026-06-30T12:00:00.000Z",
+        createdAt: "2026-06-30T10:00:00.000Z",
+        updatedAt: "2026-06-30T10:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "cold",
+        itemName: "Cold",
+        occurredAt: "2026-06-30T12:00:00.000Z",
+        createdAt: "2026-06-30T11:00:00.000Z",
+        updatedAt: "2026-06-30T11:00:00.000Z",
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      }),
+      makeTransaction({
+        id: "income",
+        transactionType: "income",
+        itemName: "Income",
+        occurredAt: "2026-06-29T12:00:00.000Z",
+        createdAt: "2026-06-30T12:00:00.000Z",
+        updatedAt: "2026-06-30T12:00:00.000Z",
+      }),
+    ];
+
+    expect(sortActivityTransactions(transactions).map((transaction) => transaction.id)).toEqual([
+      "cold",
+      "moni",
+      "unnamed",
+      "income",
+    ]);
+  });
+
+  it("uses updated time and id as deterministic Activity ordering fallbacks", () => {
+    const transactions = [
+      makeTransaction({
+        id: "aaa",
+        occurredAt: "2026-06-30T08:00:00.000Z",
+        createdAt: "",
+        updatedAt: "2026-06-30T10:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "zzz",
+        occurredAt: "2026-06-30T12:00:00.000Z",
+        createdAt: "",
+        updatedAt: "2026-06-30T10:00:00.000Z",
+      }),
+      makeTransaction({
+        id: "middle",
+        occurredAt: "2026-06-30T14:00:00.000Z",
+        createdAt: "",
+        updatedAt: "2026-06-30T11:00:00.000Z",
+      }),
+    ];
+
+    expect(sortActivityTransactions(transactions).map((transaction) => transaction.id)).toEqual([
+      "middle",
+      "zzz",
+      "aaa",
     ]);
   });
 

@@ -26,6 +26,8 @@ export type TransactionListItem = {
   note: string | null;
   occurredAt: string;
   deletedAt: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   categoryId: string | null;
   reviewState: ReviewState;
   uncertaintyReason: string | null;
@@ -433,6 +435,43 @@ export function filterTransactionsForView(transactions: Transaction[], view: Tra
   });
 }
 
+function getActivityDateKey(transaction: Pick<Transaction, "occurredAt">) {
+  return transaction.occurredAt.slice(0, 10);
+}
+
+function getSortableTime(value: string | null | undefined) {
+  if (!value) {
+    return 0;
+  }
+
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+export function sortActivityTransactions(transactions: Transaction[]) {
+  return [...transactions].sort((left, right) => {
+    const dateComparison = getActivityDateKey(right).localeCompare(getActivityDateKey(left));
+
+    if (dateComparison !== 0) {
+      return dateComparison;
+    }
+
+    const createdComparison = getSortableTime(right.createdAt) - getSortableTime(left.createdAt);
+
+    if (createdComparison !== 0) {
+      return createdComparison;
+    }
+
+    const updatedComparison = getSortableTime(right.updatedAt) - getSortableTime(left.updatedAt);
+
+    if (updatedComparison !== 0) {
+      return updatedComparison;
+    }
+
+    return right.id.localeCompare(left.id);
+  });
+}
+
 export function mapTransactionsToListItems(
   transactions: Transaction[],
   categoryLabels: Record<string, string>,
@@ -463,6 +502,8 @@ export function mapTransactionsToListItems(
       note: transaction.note,
       occurredAt: transaction.occurredAt,
       deletedAt: transaction.deletedAt,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
       categoryId: transaction.categoryId,
       reviewState: transaction.reviewState,
       uncertaintyReason: transaction.uncertaintyReason,
@@ -2168,7 +2209,7 @@ export async function loadTransactionsPageData(args: {
     [] as FxRate[],
   );
 
-  const filtered = filterTransactionsForView(transactions, args.view, args.query);
+  const filtered = sortActivityTransactions(filterTransactionsForView(transactions, args.view, args.query));
   const limitStatuses = buildActivityLimitStatuses({
     transactions,
     budgets: activityLimits,
