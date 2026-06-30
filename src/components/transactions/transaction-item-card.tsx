@@ -199,6 +199,9 @@ export function TransactionItemCard({
   const [selectedRecurringOpenEnded, setSelectedRecurringOpenEnded] = useState(!item.recurringEndDate);
   const [selectedRecurringPaused, setSelectedRecurringPaused] = useState(Boolean(item.recurringPausedAt));
   const [selectedRecurringManageIntent, setSelectedRecurringManageIntent] = useState<"update" | "pause" | "resume" | "stop">("update");
+  const [quickRecurringManageIntent, setQuickRecurringManageIntent] = useState<"pause" | "resume" | "stop">(
+    item.recurringPausedAt ? "resume" : "pause",
+  );
   const [detailsValidationMessage, setDetailsValidationMessage] = useState<string | null>(null);
   const [pendingRecategorizedItem, setPendingRecategorizedItem] = useState<TransactionListItem | null>(null);
   const [pendingDetailsItem, setPendingDetailsItem] = useState<TransactionListItem | null>(null);
@@ -209,6 +212,7 @@ export function TransactionItemCard({
   const previousItemRef = useRef(item);
   const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const detailsFormRef = useRef<HTMLFormElement | null>(null);
+  const quickRecurringFormRef = useRef<HTMLFormElement | null>(null);
   const deleteNotifiedRef = useRef(false);
   const [recategorizeState, recategorizeFormAction] = useActionState(recategorizeAction, initialState);
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
@@ -321,6 +325,7 @@ export function TransactionItemCard({
       setSelectedRecurringOpenEnded(!item.recurringEndDate);
       setSelectedRecurringPaused(Boolean(item.recurringPausedAt));
       setSelectedRecurringManageIntent("update");
+      setQuickRecurringManageIntent(item.recurringPausedAt ? "resume" : "pause");
       setDetailsValidationMessage(null);
       setIsNotePanelOpen(false);
       setIsCategoryPickerOpen(false);
@@ -428,8 +433,7 @@ export function TransactionItemCard({
     prepareRecategorizedItem(String(formData.get("categoryId") ?? selectedCategoryId), true);
   }
 
-  function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
-    const formData = new FormData(event.currentTarget);
+  function prepareDetailsSubmit(formData: FormData, options: { preventDefault: () => void; validateEndDate: boolean }) {
     const amountValue = String(formData.get("amount") ?? "").trim();
     const transactionTypeValue = String(formData.get("transactionType") ?? displayItem.amountTone);
     const transactionType = transactionTypeValue === "income" ? "income" : "expense";
@@ -464,8 +468,8 @@ export function TransactionItemCard({
       : displayItem.recurringStartDate ?? displayItem.recurringOccurrenceDate ?? occurredAt.slice(0, 10);
     const recurringEndDateValue = String(formData.get("recurringEndDate") ?? "").trim();
     const recurringManageIntentValue = String(formData.get("recurringManageIntent") ?? "update");
-    if (recurringEnabled && recurringManageIntentValue !== "stop" && !selectedRecurringOpenEnded && !recurringEndDateValue) {
-      event.preventDefault();
+    if (options.validateEndDate && recurringEnabled && recurringManageIntentValue !== "stop" && !selectedRecurringOpenEnded && !recurringEndDateValue) {
+      options.preventDefault();
       setDetailsValidationMessage("Choose an end date or repeat until turned off.");
       return;
     }
@@ -530,7 +534,22 @@ export function TransactionItemCard({
     setSelectedRecurringOpenEnded(!recurringEndDate);
     setSelectedRecurringPaused(Boolean(nextRecurringPaused));
     setSelectedRecurringManageIntent("update");
+    setQuickRecurringManageIntent(nextRecurringPaused ? "resume" : "pause");
     setIsStopRecurringConfirmOpen(false);
+  }
+
+  function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
+    prepareDetailsSubmit(new FormData(event.currentTarget), {
+      preventDefault: () => event.preventDefault(),
+      validateEndDate: true,
+    });
+  }
+
+  function handleQuickRecurringSubmit(event: FormEvent<HTMLFormElement>) {
+    prepareDetailsSubmit(new FormData(event.currentTarget), {
+      preventDefault: () => event.preventDefault(),
+      validateEndDate: false,
+    });
   }
 
   function handleNoteSubmit(event: FormEvent<HTMLFormElement>) {
@@ -767,8 +786,12 @@ export function TransactionItemCard({
                     onClick={() => {
                       setSelectedRecurringEnabled(false);
                       setSelectedRecurringManageIntent("stop");
+                      setQuickRecurringManageIntent("stop");
                       setIsStopRecurringConfirmOpen(false);
-                      window.setTimeout(() => detailsFormRef.current?.requestSubmit(), 0);
+                      window.setTimeout(
+                        () => (recurringMode && !isEditingDetails ? quickRecurringFormRef.current : detailsFormRef.current)?.requestSubmit(),
+                        0,
+                      );
                     }}
                     type="button"
                   >
@@ -797,6 +820,54 @@ export function TransactionItemCard({
                 Recurring
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-600">{getRecurringDetailsText(displayItem)}</p>
+              {recurringMode && !isEditingDetails ? (
+                <form
+                  action={updateFormAction}
+                  className="mt-2 grid grid-cols-2 gap-2"
+                  onSubmit={handleQuickRecurringSubmit}
+                  ref={quickRecurringFormRef}
+                >
+                  <input name="transactionId" type="hidden" value={item.id} />
+                  <input name="transactionType" type="hidden" value={displayItem.amountTone} />
+                  <input name="amount" type="hidden" value={formatAmountInput(displayItem.amountMinor)} />
+                  <input name="currency" type="hidden" value={displayItem.currency} />
+                  <input name="itemName" type="hidden" value={displayItem.itemName ?? displayItem.title} />
+                  <input name="merchant" type="hidden" value={displayItem.merchant ?? ""} />
+                  <input name="note" type="hidden" value={displayItem.note ?? ""} />
+                  <input name="occurredAt" type="hidden" value={displayItem.occurredAt.slice(0, 10)} />
+                  <input name="categoryId" type="hidden" value={selectedCategoryId} />
+                  <input name="reviewState" type="hidden" value={getEditableReviewState(displayItem.reviewState)} />
+                  <input name="uncertaintyReason" type="hidden" value={displayItem.uncertaintyReason ?? ""} />
+                  <input name="recurringRuleId" type="hidden" value={displayItem.recurringRuleId ?? ""} />
+                  <input name="recurringEnabled" type="hidden" value={quickRecurringManageIntent === "stop" ? "off" : "on"} />
+                  <input name="recurringFrequency" type="hidden" value={displayItem.recurringFrequency ?? selectedRecurringFrequency} />
+                  <input
+                    name="recurringStartDate"
+                    type="hidden"
+                    value={displayItem.recurringStartDate ?? displayItem.recurringOccurrenceDate ?? displayItem.occurredAt.slice(0, 10)}
+                  />
+                  <input name="recurringEndDate" type="hidden" value={displayItem.recurringEndDate ?? ""} />
+                  <input name="recurringManageIntent" type="hidden" value={quickRecurringManageIntent} />
+                  <button
+                    className="min-h-9 rounded-xl border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-800 transition hover:bg-sky-50"
+                    onClick={() => {
+                      const intent = displayItem.recurringPausedAt ? "resume" : "pause";
+                      setQuickRecurringManageIntent(intent);
+                      window.setTimeout(() => quickRecurringFormRef.current?.requestSubmit(), 0);
+                    }}
+                    type="button"
+                  >
+                    {displayItem.recurringPausedAt ? "Resume" : "Pause"}
+                  </button>
+                  <button
+                    className="min-h-9 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                    onClick={() => setIsStopRecurringConfirmOpen(true)}
+                    type="button"
+                  >
+                    Stop
+                  </button>
+                </form>
+              ) : null}
             </div>
           ) : null}
 

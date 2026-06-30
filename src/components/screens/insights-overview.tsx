@@ -1054,6 +1054,9 @@ function TimeframeBarsChart({
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
   const categoryItems = isIncome ? data.incomeCategoryBreakdown : data.categoryBreakdown;
+  const categorySignals = isIncome
+    ? data.categorySignalsByType?.income ?? {}
+    : data.categorySignalsByType?.expenses ?? data.categorySignals ?? {};
   const categoryColorMap = new Map(categoryItems.map((item) => [item.key, getCategoryChartColor(item)]));
   const activeBars = data.timeframeBars.filter((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor) > 0);
   const getSegmentColor = (key: string, label: string) => categoryColorMap.get(key) ?? getCategoryChartColor({ label });
@@ -1089,7 +1092,7 @@ function TimeframeBarsChart({
             amountMinor: 0,
             amountDisplay: "",
             dayCount: 0,
-            signal: data.categorySignals?.[segment.key],
+            signal: categorySignals[segment.key],
           },
         ]),
     ).values(),

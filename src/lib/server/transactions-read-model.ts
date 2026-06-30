@@ -154,6 +154,10 @@ export type InsightsData = {
     currency: string;
   }>;
   categorySignals?: Record<string, InsightsCategorySignal>;
+  categorySignalsByType?: {
+    expenses: Record<string, InsightsCategorySignal>;
+    income: Record<string, InsightsCategorySignal>;
+  };
   clientViews?: Record<string, InsightsClientView>;
 };
 
@@ -1665,13 +1669,21 @@ export function buildInsightsData(
       };
     })
     .sort((a, b) => b.percentUsed - a.percentUsed);
-  const categorySignals = buildInsightsCategorySignals({
+  const expenseCategorySignals = buildInsightsCategorySignals({
     budgetProgress,
     categoryLabels,
     displayCurrency,
     rateLookup,
     recurringRules,
-    selectedPeriodTransactions,
+    selectedPeriodTransactions: selectedPeriodTransactions.filter((transaction) => transaction.transactionType === "expense"),
+  });
+  const incomeCategorySignals = buildInsightsCategorySignals({
+    budgetProgress: [],
+    categoryLabels,
+    displayCurrency,
+    rateLookup,
+    recurringRules,
+    selectedPeriodTransactions: selectedPeriodTransactions.filter((transaction) => transaction.transactionType === "income"),
   });
 
   return {
@@ -1730,7 +1742,11 @@ export function buildInsightsData(
     largestRecentExpenses,
     budgetCategoryOptions,
     budgetProgress,
-    categorySignals,
+    categorySignals: expenseCategorySignals,
+    categorySignalsByType: {
+      expenses: expenseCategorySignals,
+      income: incomeCategorySignals,
+    },
   };
 }
 

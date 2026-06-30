@@ -1403,6 +1403,71 @@ describe("insights overview", () => {
     expect(screen.queryByRole("button", { name: "Inspect Education recurring details" })).not.toBeInTheDocument();
   });
 
+  it("filters Bars recurring metadata by the selected expense or income segment", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "1M",
+        categoryBreakdown: [
+          makeCategory({ key: "other", label: "Other", amountMinor: 1000, amountDisplay: "RON 10", transactionCount: 1 }),
+        ],
+        incomeCategoryBreakdown: [
+          makeCategory({ key: "other", label: "Other", amountMinor: 1400, amountDisplay: "RON 14", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 1000,
+            amountDisplay: "RON 10",
+            incomeAmountMinor: 1400,
+            incomeAmountDisplay: "RON 14",
+            segments: [{ key: "other", label: "Other", amountMinor: 1000, amountDisplay: "RON 10", transactionCount: 1 }],
+            incomeSegments: [{ key: "other", label: "Other", amountMinor: 1400, amountDisplay: "RON 14", transactionCount: 1 }],
+          }),
+        ],
+        categorySignalsByType: {
+          expenses: {},
+          income: {
+            other: {
+              recurring: {
+                count: 1,
+                activeCount: 1,
+                pausedCount: 0,
+                monthlyTotalMinor: 5600,
+                monthlyTotalDisplay: "RON 56",
+                items: [
+                  {
+                    id: "income-recurring",
+                    title: "Cold",
+                    amountDisplay: "RON 14",
+                    tone: "Income",
+                    frequency: "weekly",
+                    nextDateLabel: "Apr 10",
+                    status: "Active",
+                  },
+                ],
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Select Other focus" }));
+
+    expect(screen.queryByText("Recurring")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cold")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select Other focus" }));
+
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Inspect Other recurring details" }));
+    expect(screen.getByText("Cold")).toBeInTheDocument();
+    expect(screen.getByText(/Income.*Weekly.*Apr 10.*Active/)).toBeInTheDocument();
+  });
+
   it("selects and collapses a Bars day category breakdown", () => {
     renderInsights(
       makeInsightsData({

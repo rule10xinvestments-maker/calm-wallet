@@ -468,6 +468,70 @@ describe("transactions read model", () => {
         }),
       ],
     });
+    expect(data.categorySignalsByType?.expenses.housing?.recurring).toMatchObject({
+      activeCount: 1,
+    });
+  });
+
+  it("keeps Insights recurring metadata separated between expense and income Bars", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "expense-cold",
+          transactionType: "expense",
+          amountMinor: 1000,
+          currency: "RON",
+          categoryId: "other",
+          itemName: "Expense Cold",
+          occurredAt: "2026-06-10T12:00:00.000Z",
+          recurringRuleId: "rule-expense",
+          recurringOccurrenceDate: "2026-06-10",
+        }),
+        makeTransaction({
+          id: "income-cold",
+          transactionType: "income",
+          amountMinor: 1400,
+          currency: "RON",
+          categoryId: "other",
+          itemName: "Cold",
+          occurredAt: "2026-06-11T12:00:00.000Z",
+          recurringRuleId: "rule-income",
+          recurringOccurrenceDate: "2026-06-11",
+        }),
+      ],
+      { other: "Other" },
+      "RON",
+      new Date("2026-06-15T12:00:00.000Z"),
+      [],
+      [],
+      [],
+      "RON",
+      "2026-06",
+      "1M",
+      "bars",
+      {
+        "rule-expense": {
+          id: "rule-expense",
+          frequency: "monthly",
+          startDate: "2026-06-10",
+          endDate: null,
+          pausedAt: null,
+        },
+        "rule-income": {
+          id: "rule-income",
+          frequency: "weekly",
+          startDate: "2026-06-11",
+          endDate: null,
+          pausedAt: null,
+        },
+      },
+    );
+
+    expect(data.categorySignalsByType?.expenses.other?.recurring?.items.map((item) => item.title)).toEqual(["Expense Cold"]);
+    expect(data.categorySignalsByType?.income.other?.recurring?.items.map((item) => item.title)).toEqual(["Cold"]);
+    expect(data.categorySignalsByType?.expenses.other?.recurring?.items[0]?.tone).toBe("Spend");
+    expect(data.categorySignalsByType?.income.other?.recurring?.items[0]?.tone).toBe("Income");
+    expect(data.categorySignals?.other?.recurring?.items.map((item) => item.title)).toEqual(["Expense Cold"]);
   });
 
   it("does not build Insights recurring category signals when all recurring items are paused", () => {

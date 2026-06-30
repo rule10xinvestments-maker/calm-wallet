@@ -258,6 +258,110 @@ describe("transaction item card", () => {
     expect(screen.getByText("Dining · Monthly · Paused")).toBeInTheDocument();
   });
 
+  it("shows fast pause and stop controls for active rows in Recurring mode", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-26",
+        title: "Bill",
+        itemName: "Bill",
+        subtitle: "Jun 26",
+      }),
+      recurringMode: true,
+      updateAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /bill/i }));
+
+    expect(screen.getByText("Monthly · Starts Jun 26, 2026 · Until turned off")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+
+    await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
+    const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+    expect(formData.get("recurringEnabled")).toBe("on");
+    expect(formData.get("recurringManageIntent")).toBe("pause");
+    expect(formData.get("recurringRuleId")).toBe("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+  });
+
+  it("shows fast resume and stop controls for paused rows in Recurring mode", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+        recurringFrequency: "weekly",
+        recurringStartDate: "2026-06-26",
+        recurringPausedAt: "2026-06-27T10:00:00.000Z",
+        title: "Bill",
+        itemName: "Bill",
+        subtitle: "Jun 26",
+      }),
+      recurringMode: true,
+      updateAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /bill/i }));
+
+    expect(screen.getByText("Dining · Weekly · Paused")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume" }));
+
+    await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
+    const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+    expect(formData.get("recurringEnabled")).toBe("on");
+    expect(formData.get("recurringManageIntent")).toBe("resume");
+  });
+
+  it("confirms fast stop controls in Recurring mode before ending future repeats", async () => {
+    const updateAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Changes saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+        recurringFrequency: "monthly",
+        recurringStartDate: "2026-06-26",
+        title: "Bill",
+        itemName: "Bill",
+        subtitle: "Jun 26",
+      }),
+      recurringMode: true,
+      updateAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /bill/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Stop" }));
+
+    expect(screen.getByRole("dialog", { name: "Stop recurring?" })).toBeInTheDocument();
+    expect(updateAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Stop future repeats" }));
+
+    await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
+    const [, formData] = updateAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+    expect(formData.get("recurringEnabled")).toBe("off");
+    expect(formData.get("recurringManageIntent")).toBe("stop");
+  });
+
   it("shows recurring details when a recurring row is expanded", () => {
     renderCard({
       item: makeItem({
