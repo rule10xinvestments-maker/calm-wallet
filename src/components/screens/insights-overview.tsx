@@ -30,6 +30,7 @@ type TrendCategoryItem = SpendingMixCategoryItem & {
   netMinor?: number;
   netDisplay?: string;
   movementMinor?: number;
+  periodMovementMinor?: number;
   firstOccurredAt?: string;
   firstCreatedAt?: string | null;
 };
@@ -763,7 +764,7 @@ function TrendCategoryMixIcon({ item }: { item: TrendCategoryItem }) {
   const incomePercent = movementMinor > 0 ? Math.round((incomeMinor / movementMinor) * 100) : 0;
   const ringBackground =
     movementMinor <= 0
-      ? visuals.bg
+      ? "conic-gradient(#CBD5E1 0% 100%)"
       : incomePercent >= 100
         ? "conic-gradient(#10B981 0% 100%)"
         : incomePercent <= 0
@@ -773,13 +774,13 @@ function TrendCategoryMixIcon({ item }: { item: TrendCategoryItem }) {
   return (
     <span
       aria-label={`${item.label} income and spending mix`}
-      className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white"
+      className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white transition-[background,opacity,transform] duration-200"
       role="img"
       style={{ background: ringBackground }}
     >
       <span
         aria-hidden="true"
-        className="absolute inset-[4px] rounded-full border border-white bg-white"
+        className="absolute inset-[4px] rounded-full border border-white bg-white transition-transform duration-200"
       />
       <CategoryIcon aria-hidden="true" className="relative h-4 w-4" style={{ color: visuals.primary }} />
     </span>
@@ -1648,6 +1649,8 @@ function buildCumulativeTrendItems({
 }): TrendCategoryItem[] {
   return items
     .map((item) => {
+      const periodMovementMinor =
+        item.movementMinor ?? item.recentEntries.reduce((sum, entry) => sum + getTrendEntryDisplayMinor(entry), 0) ?? Math.abs(item.amountMinor);
       const scopedEntries = item.recentEntries.filter((entry) => isTrendEntryThroughDate(entry, selectedDay));
       const incomeEntries = scopedEntries.filter((entry) => entry.transactionType === "income");
       const expenseEntries = scopedEntries.filter((entry) => entry.transactionType !== "income");
@@ -1655,7 +1658,7 @@ function buildCumulativeTrendItems({
       const expenseMinor = expenseEntries.reduce((sum, entry) => sum + getTrendEntryDisplayMinor(entry), 0);
       const movementMinor = incomeMinor + expenseMinor;
       const netMinor = incomeMinor - expenseMinor;
-      const firstEntry = sortTrendDetailEntries(scopedEntries).at(-1);
+      const firstEntry = sortTrendDetailEntries(item.recentEntries).at(-1);
 
       return {
         ...item,
@@ -1673,13 +1676,14 @@ function buildCumulativeTrendItems({
         netMinor,
         netDisplay: getTrendScopedNetDisplay(netMinor, displayCurrency, scopedEntries),
         movementMinor,
+        periodMovementMinor,
         transactionCount: scopedEntries.length,
         recentEntries: scopedEntries,
         firstOccurredAt: firstEntry?.occurredAt,
         firstCreatedAt: firstEntry?.createdAt,
       };
     })
-    .filter((item) => (item.movementMinor ?? 0) > 0)
+    .filter((item) => (item.periodMovementMinor ?? 0) > 0)
     .sort((left, right) => {
       const leftOccurred = new Date(left.firstOccurredAt ?? "").getTime();
       const rightOccurred = new Date(right.firstOccurredAt ?? "").getTime();
@@ -1781,6 +1785,8 @@ function TrendCategoryExplorer({
   const shouldShowToggle = sortedItems.length > visibleLimit;
   const selectedIncomeMinor = Math.max(selectedItem?.incomeMinor ?? 0, 0);
   const selectedExpenseMinor = Math.max(selectedItem?.expenseMinor ?? 0, 0);
+  const selectedMovementMinor = selectedIncomeMinor + selectedExpenseMinor;
+  const selectedHasMovement = selectedMovementMinor > 0;
   const selectedIsMixed = selectedIncomeMinor > 0 && selectedExpenseMinor > 0;
   const selectedIsIncomeOnly = selectedIncomeMinor > 0 && selectedExpenseMinor === 0;
   const selectedIncomeEntries = selectedItem
@@ -1798,7 +1804,9 @@ function TrendCategoryExplorer({
         : "text-slate-800"
     : selectedIsIncomeOnly
       ? "text-emerald-700"
-      : "text-rose-700";
+      : selectedHasMovement
+        ? "text-rose-700"
+        : "text-slate-500";
   const selectedDayLabel = selectedDay ? formatSpendingDayLabel(selectedDay) : null;
 
   if (!sortedItems.length) {
@@ -1831,16 +1839,17 @@ function TrendCategoryExplorer({
           Through {selectedDayLabel} <X aria-hidden="true" className="h-3 w-3" />
         </button>
       ) : null}
-      <div className="grid justify-center gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(2.625rem,2.875rem))]">
+      <div className="grid justify-center gap-1 [grid-template-columns:repeat(auto-fit,minmax(2.375rem,2.625rem))]">
         {gridItems.map((item) => {
           const isSelected = selectedKey === item.key;
+          const hasMovement = (item.movementMinor ?? 0) > 0;
 
           return (
             <button
               aria-label={`${isSelected ? "Hide" : "Show"} ${item.label} details`}
               aria-pressed={isSelected}
-              className={`flex h-11 w-11 items-center justify-center rounded-full p-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                isSelected ? "bg-slate-100 ring-2 ring-slate-300" : "hover:bg-slate-50"
+              className={`flex h-10 w-10 items-center justify-center rounded-full p-0.5 transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                isSelected ? "bg-slate-100 opacity-100 ring-2 ring-slate-300 scale-105" : hasMovement ? "opacity-100 hover:bg-slate-50" : "opacity-35 hover:opacity-65"
               }`}
               key={item.key}
               onClick={() => setSelectedKey(isSelected ? null : item.key)}
@@ -1869,9 +1878,9 @@ function TrendCategoryExplorer({
               <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount)}</p>
               {selectedDayLabel ? <p className="text-xs text-slate-500">Through {selectedDayLabel}</p> : null}
             </div>
-            <p className={`whitespace-nowrap text-sm font-semibold ${selectedAmountClass}`}>{selectedAmountDisplay}</p>
+            <p className={`whitespace-nowrap text-sm font-semibold ${selectedAmountClass}`}>{selectedHasMovement ? selectedAmountDisplay : formatMoney(0, displayCurrency)}</p>
           </div>
-          <div className="mb-3 grid gap-2 text-xs text-slate-600">
+          {selectedHasMovement ? <div className="mb-3 grid gap-2 text-xs text-slate-600">
             {selectedIncomeMinor > 0 ? (
               <div className="grid grid-cols-[1fr_auto] gap-3">
                 <span>Income</span>
@@ -1884,8 +1893,10 @@ function TrendCategoryExplorer({
                 <span className="font-medium text-rose-700">{selectedItem.expenseDisplay ?? formatMoney(selectedExpenseMinor, displayCurrency)}</span>
               </div>
             ) : null}
-          </div>
-          {selectedIsMixed ? (
+          </div> : null}
+          {!selectedHasMovement && selectedDayLabel ? (
+            <p className="rounded-lg bg-white px-3 py-2 text-xs text-slate-500">No entries yet by {selectedDayLabel}.</p>
+          ) : selectedIsMixed ? (
             <div className="space-y-3">
               {selectedIncomeEntries.length ? (
                 <div className="space-y-2">

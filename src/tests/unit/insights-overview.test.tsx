@@ -1246,7 +1246,7 @@ describe("insights overview", () => {
     const iconButtons = within(card).getAllByRole("button", { name: /details$/ });
     expect(iconButtons.map((button) => button.getAttribute("aria-label"))).toEqual(["Show Other details", "Show Travel details"]);
     expect(iconButtons[0]?.parentElement).toHaveClass("grid", "justify-center");
-    expect(iconButtons[0]?.parentElement?.className).toContain("minmax(2.625rem,2.875rem)");
+    expect(iconButtons[0]?.parentElement?.className).toContain("minmax(2.375rem,2.625rem)");
     expect(within(card).getByRole("button", { name: "Show Travel details" })).toBeInTheDocument();
 
     const scrubLayer = screen.getByLabelText("Scrub selected month trend chart");
@@ -1265,7 +1265,9 @@ describe("insights overview", () => {
     dispatchPointerEvent(scrubLayer, "pointerdown", { clientX: 150, pointerId: 1, pointerType: "touch" });
 
     expect(within(card).getByRole("button", { name: /Through Apr 20/ })).toBeInTheDocument();
-    expect(within(card).queryByRole("button", { name: "Show Travel details" })).not.toBeInTheDocument();
+    const futureTravelButton = within(card).getByRole("button", { name: "Show Travel details" });
+    expect(futureTravelButton).toBeInTheDocument();
+    expect(futureTravelButton).toHaveClass("opacity-35");
     expect(within(card).getByLabelText("Other income and spending mix")).toHaveStyle({
       background: "conic-gradient(#10B981 0% 67%, #F43F5E 67% 100%)",
     });
@@ -1277,10 +1279,18 @@ describe("insights overview", () => {
     expect(within(card).getByText("Supplies")).toBeInTheDocument();
     expect(within(card).queryByText("Later supplies")).not.toBeInTheDocument();
 
+    fireEvent.click(futureTravelButton);
+
+    expect(within(card).getByText("No entries yet by Apr 20.")).toBeInTheDocument();
+    expect(within(card).queryByText("Train")).not.toBeInTheDocument();
+
     fireEvent.click(within(card).getByRole("button", { name: /Through Apr 20/ }));
 
     expect(within(card).queryByRole("button", { name: /Through Apr 20/ })).not.toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "Show Travel details" })).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Hide Travel details" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Show Travel details" }));
+
+    expect(within(card).getByText("Train")).toBeInTheDocument();
   });
 
   it("keeps Bars category breakdown on the selected expense or income segment", () => {
