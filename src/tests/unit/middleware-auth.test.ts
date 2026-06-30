@@ -44,7 +44,7 @@ describe("auth middleware", () => {
       },
       error: null,
     });
-    const { middleware } = await import("../../../middleware");
+    const { middleware } = await import("../../middleware");
 
     const response = await middleware(new NextRequest("https://calm-wallet.example/assistant"));
 
@@ -70,7 +70,7 @@ describe("auth middleware", () => {
       },
       error: null,
     });
-    const { middleware } = await import("../../../middleware");
+    const { middleware } = await import("../../middleware");
 
     const response = await middleware(new NextRequest("https://calm-wallet.example/insights?chart=mix"));
 
@@ -80,5 +80,20 @@ describe("auth middleware", () => {
     );
     expect(getUser).toHaveBeenCalledOnce();
     expect(getSession).toHaveBeenCalledOnce();
+  });
+
+  it("matches exact protected roots as well as nested protected routes", async () => {
+    const { config } = await import("../../middleware");
+
+    expect(config.matcher).toEqual(
+      expect.arrayContaining([
+        "/assistant",
+        "/assistant/:path*",
+        "/transactions",
+        "/transactions/:path*",
+        "/insights",
+        "/insights/:path*",
+      ]),
+    );
   });
 });

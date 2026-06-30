@@ -1,8 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR ?? `playwright-results/run-${process.pid}`;
+
 export default defineConfig({
   testDir: "./src/tests/e2e",
   fullyParallel: true,
+  outputDir,
   use: {
     baseURL: "http://127.0.0.1:3100",
     trace: "on-first-retry",
