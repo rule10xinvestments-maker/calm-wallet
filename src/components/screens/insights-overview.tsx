@@ -22,6 +22,15 @@ import { formatTransactionTitleForDisplay } from "@/lib/utils";
 type SpendingMixSegment = "expenses" | "income";
 
 type SpendingMixCategoryItem = InsightsData["categoryBreakdown"][number];
+type TrendCategoryItem = SpendingMixCategoryItem & {
+  incomeMinor?: number;
+  incomeDisplay?: string;
+  expenseMinor?: number;
+  expenseDisplay?: string;
+  netMinor?: number;
+  netDisplay?: string;
+  movementMinor?: number;
+};
 type MonthPickerMonth = InsightsData["monthPickerYears"][number]["months"][number];
 type ChartMode = InsightsData["selectedChartMode"];
 
@@ -747,6 +756,39 @@ function CategoryShareIcon({
         style={{ backgroundColor: visuals.bg }}
       />
       <CategoryIcon aria-hidden="true" className="relative h-4 w-4" />
+    </span>
+  );
+}
+
+function TrendCategoryMixIcon({ item }: { item: TrendCategoryItem }) {
+  const visuals = getCategoryVisualsByName(item.label);
+  const CategoryIcon = visuals.icon;
+  const incomeMinor = Math.max(item.incomeMinor ?? 0, 0);
+  const expenseMinor = Math.max(item.expenseMinor ?? 0, 0);
+  const movementMinor = incomeMinor + expenseMinor;
+  const incomePercent = movementMinor > 0 ? Math.round((incomeMinor / movementMinor) * 100) : 0;
+  const ringBackground =
+    movementMinor <= 0
+      ? visuals.bg
+      : incomePercent >= 100
+        ? "conic-gradient(#10B981 0% 100%)"
+        : incomePercent <= 0
+          ? "conic-gradient(#F43F5E 0% 100%)"
+          : `conic-gradient(#10B981 0% ${incomePercent}%, #F43F5E ${incomePercent}% 100%)`;
+
+  return (
+    <span
+      aria-label={`${item.label} income and spending mix`}
+      className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white"
+      role="img"
+      style={{ background: ringBackground }}
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-[4px] rounded-full border"
+        style={{ backgroundColor: visuals.bg, borderColor: visuals.border }}
+      />
+      <CategoryIcon aria-hidden="true" className="relative h-4 w-4" style={{ color: visuals.primary }} />
     </span>
   );
 }
@@ -1519,6 +1561,77 @@ function TimeframeCategoryBreakdown({
   );
 }
 
+function formatTransactionCountLabel(count: number) {
+  return `${count} ${count === 1 ? "transaction" : "transactions"}`;
+}
+
+function formatTrendNetAmountDisplay(item: TrendCategoryItem) {
+  const netMinor = item.netMinor ?? item.amountMinor;
+  const display = item.netDisplay ?? item.amountDisplay;
+
+  if (netMinor > 0 && !display.startsWith("+")) {
+    return `+${display}`;
+  }
+
+  return display;
+}
+
+function TrendCategoryBreakdown({
+  displayCurrency,
+  items,
+  totalExpenseMinor,
+  totalIncomeMinor,
+}: {
+  displayCurrency: string;
+  items: TrendCategoryItem[];
+  totalExpenseMinor: number;
+  totalIncomeMinor: number;
+}) {
+  if (!items.length) {
+    return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked money movement in this period.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => {
+        const incomeMinor = Math.max(item.incomeMinor ?? 0, 0);
+        const expenseMinor = Math.max(item.expenseMinor ?? 0, 0);
+        const isMixed = incomeMinor > 0 && expenseMinor > 0;
+        const isIncomeOnly = incomeMinor > 0 && expenseMinor === 0;
+        const countLabel = formatTransactionCountLabel(item.transactionCount);
+        const subtitle = isMixed
+          ? `Income ${item.incomeDisplay ?? formatMoney(incomeMinor, displayCurrency)} · Spending ${
+              item.expenseDisplay ?? formatMoney(expenseMinor, displayCurrency)
+            } · ${countLabel}`
+          : isIncomeOnly
+            ? `${totalIncomeMinor > 0 ? Math.round((incomeMinor / totalIncomeMinor) * 100) : 0}% of income · ${countLabel}`
+            : `${totalExpenseMinor > 0 ? Math.round((expenseMinor / totalExpenseMinor) * 100) : 0}% of spending · ${countLabel}`;
+        const amountDisplay = isMixed ? formatTrendNetAmountDisplay(item) : item.amountDisplay;
+        const amountClass = isMixed
+          ? (item.netMinor ?? 0) > 0
+            ? "text-emerald-700"
+            : (item.netMinor ?? 0) < 0
+              ? "text-rose-700"
+              : "text-slate-800"
+          : isIncomeOnly
+            ? "text-emerald-700"
+            : "text-rose-700";
+
+        return (
+          <div className="grid grid-cols-[2.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
+            <TrendCategoryMixIcon item={item} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
+              <p className="text-xs leading-5 text-slate-500">{subtitle}</p>
+            </div>
+            <p className={`whitespace-nowrap text-sm font-semibold ${amountClass}`}>{amountDisplay}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function getMonthlySnapshotConversionDetails(data: InsightsData) {
   const converted = data.selectedPeriodConvertedCurrencyBreakdowns.filter((breakdown) => breakdown.currency !== data.displayCurrency);
   const income = converted.filter((breakdown) => breakdown.incomeMinor > 0 && breakdown.incomeDisplayMinor !== null);
@@ -1645,6 +1758,7 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   const activeSegment = data.selectedChartMode === "bars" ? barsSegment : mixSegment;
   const isBarsIncome = data.selectedChartMode === "bars" && barsSegment === "income";
   const breakdownItems = isBarsIncome ? buildBarsIncomeCategoryBreakdown(data) : data.timeframeCategoryBreakdown;
+  const trendBreakdownItems = data.trendCategoryBreakdown ?? [];
   const breakdownSegment = isBarsIncome ? "income" : "expenses";
   const breakdownEmptyMessage = isBarsIncome ? "No income tracked for this month yet." : "No tracked spending in this timeframe yet.";
   const isTrend = data.selectedChartMode === "trend";
@@ -1691,13 +1805,22 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
         {data.selectedChartMode === "mix" ? null : (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-slate-900">Category breakdown</p>
-            <TimeframeCategoryBreakdown
-              emptyMessage={breakdownEmptyMessage}
-              expandable={data.selectedChartMode === "bars"}
-              items={breakdownItems}
-              segment={breakdownSegment}
-              showIcons={data.selectedChartMode === "bars"}
-            />
+            {isTrend ? (
+              <TrendCategoryBreakdown
+                displayCurrency={data.displayCurrency}
+                items={trendBreakdownItems}
+                totalExpenseMinor={data.selectedPeriodExpenseDisplayMinor}
+                totalIncomeMinor={data.selectedPeriodIncomeDisplayMinor}
+              />
+            ) : (
+              <TimeframeCategoryBreakdown
+                emptyMessage={breakdownEmptyMessage}
+                expandable={data.selectedChartMode === "bars"}
+                items={breakdownItems}
+                segment={breakdownSegment}
+                showIcons
+              />
+            )}
           </div>
         )}
       </CardContent>

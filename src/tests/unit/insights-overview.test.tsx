@@ -223,6 +223,7 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
       },
     ],
     timeframeCategoryBreakdown: [makeCategory({ transactionCount: 2 })],
+    trendCategoryBreakdown: [makeCategory({ transactionCount: 2, expenseMinor: 2000, expenseDisplay: "$20", movementMinor: 2000 })],
     currentMonth: "2026-04",
     previousMonth: "2026-03",
     nextMonth: "2026-05",
@@ -888,6 +889,122 @@ describe("insights overview", () => {
     expect(screen.queryByText(/across \d+ tracked transactions/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Expenses" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
+  });
+
+  it("renders Trend category breakdown with income-only, spending-only, and mixed category rows", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "trend",
+        selectedPeriodIncomeDisplayMinor: 150000,
+        selectedPeriodExpenseDisplayMinor: 102000,
+        trendCategoryBreakdown: [
+          makeCategory({
+            key: "other",
+            label: "Other",
+            amountMinor: 10000,
+            amountDisplay: "$100",
+            incomeMinor: 100000,
+            incomeDisplay: "$1,000",
+            expenseMinor: 90000,
+            expenseDisplay: "$900",
+            netMinor: 10000,
+            netDisplay: "$100",
+            movementMinor: 190000,
+            transactionCount: 2,
+          }),
+          makeCategory({
+            key: "salary",
+            label: "Salary",
+            amountMinor: 50000,
+            amountDisplay: "$500",
+            incomeMinor: 50000,
+            incomeDisplay: "$500",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            netMinor: 50000,
+            netDisplay: "$500",
+            movementMinor: 50000,
+            transactionCount: 1,
+          }),
+          makeCategory({
+            key: "housing",
+            label: "Housing",
+            amountMinor: 12000,
+            amountDisplay: "$120",
+            incomeMinor: 0,
+            incomeDisplay: "$0",
+            expenseMinor: 12000,
+            expenseDisplay: "$120",
+            netMinor: -12000,
+            netDisplay: "-$120",
+            movementMinor: 12000,
+            transactionCount: 1,
+          }),
+        ],
+      }),
+    );
+
+    const card = screen.getByTestId("timeframe-insights-card");
+    const text = card.textContent ?? "";
+
+    expect(text.indexOf("Other")).toBeLessThan(text.indexOf("Salary"));
+    expect(text.indexOf("Salary")).toBeLessThan(text.indexOf("Housing"));
+    expect(within(card).getByText("Income $1,000 · Spending $900 · 2 transactions")).toBeInTheDocument();
+    expect(within(card).getByText("+$100")).toBeInTheDocument();
+    expect(within(card).getByText("33% of income · 1 transaction")).toBeInTheDocument();
+    expect(within(card).getByText("12% of spending · 1 transaction")).toBeInTheDocument();
+    expect(within(card).getByLabelText("Other income and spending mix")).toBeInTheDocument();
+    expect(within(card).getByLabelText("Salary income and spending mix")).toBeInTheDocument();
+    expect(within(card).getByLabelText("Housing income and spending mix")).toBeInTheDocument();
+  });
+
+  it("keeps Bars category breakdown on the selected expense or income segment", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        categoryBreakdown: [makeCategory({ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 })],
+        timeframeCategoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }),
+        ],
+        incomeCategoryBreakdown: [
+          makeCategory({ key: "salary", label: "Salary", amountMinor: 50000, amountDisplay: "$500", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 12000,
+            amountDisplay: "$120",
+            incomeAmountMinor: 50000,
+            incomeAmountDisplay: "$500",
+            segments: [{ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }],
+            incomeSegments: [{ key: "salary", label: "Salary", amountMinor: 50000, amountDisplay: "$500", transactionCount: 1 }],
+          }),
+        ],
+        trendCategoryBreakdown: [
+          makeCategory({
+            key: "salary",
+            label: "Salary",
+            amountMinor: 50000,
+            amountDisplay: "$500",
+            incomeMinor: 50000,
+            expenseMinor: 0,
+            movementMinor: 50000,
+            transactionCount: 1,
+          }),
+        ],
+      }),
+    );
+
+    const card = screen.getByTestId("timeframe-insights-card");
+
+    expect(within(card).getByText("Housing")).toBeInTheDocument();
+    expect(within(card).queryByText("Salary")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Income" }));
+
+    expect(within(card).getByText("Salary")).toBeInTheDocument();
+    expect(within(card).queryByText("Housing")).not.toBeInTheDocument();
   });
 
   it("shows income and spending tooltip content on interaction", () => {
@@ -1856,7 +1973,7 @@ describe("insights overview", () => {
     expect(screen.getByLabelText("Apr tracked spending $12")).toBeInTheDocument();
   });
 
-  it("shows timeframe category totals with percentage and transaction count without changing Trend rows", () => {
+  it("shows combined Trend category totals instead of expense-only timeframe rows", () => {
     renderInsights(
       makeInsightsData({
         selectedChartMode: "trend",
@@ -1869,6 +1986,22 @@ describe("insights overview", () => {
           makeCategory({ key: "groceries", label: "Groceries", amountMinor: 7500, amountDisplay: "$75", transactionCount: 3 }),
           makeCategory({ key: "dining", label: "Dining", amountMinor: 2500, amountDisplay: "$25", transactionCount: 1 }),
         ],
+        trendCategoryBreakdown: [
+          makeCategory({
+            key: "salary",
+            label: "Salary",
+            amountMinor: 5000,
+            amountDisplay: "$50",
+            incomeMinor: 5000,
+            incomeDisplay: "$50",
+            expenseMinor: 0,
+            expenseDisplay: "$0",
+            netMinor: 5000,
+            netDisplay: "$50",
+            movementMinor: 5000,
+            transactionCount: 1,
+          }),
+        ],
       }),
     );
 
@@ -1878,10 +2011,11 @@ describe("insights overview", () => {
     expect(screen.queryByText("$100 across 4 tracked transactions")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Expenses" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Income" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("img", { name: "Groceries chart color and category icon" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("img", { name: "Dining chart color and category icon" })).not.toBeInTheDocument();
-    expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
-    expect(screen.getByText("25% of spending - 1 transaction")).toBeInTheDocument();
+    expect(screen.queryByText("75% of spending - 3 transactions")).not.toBeInTheDocument();
+    expect(screen.queryByText("25% of spending - 1 transaction")).not.toBeInTheDocument();
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.getByText("100% of income · 1 transaction")).toBeInTheDocument();
+    expect(screen.getByLabelText("Salary income and spending mix")).toBeInTheDocument();
   });
 
   it("renders Bars category breakdown with Mix-style icons and the Needs category review badge", () => {

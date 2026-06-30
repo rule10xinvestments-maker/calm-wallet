@@ -118,6 +118,7 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
       },
     ],
     timeframeCategoryBreakdown: [],
+    trendCategoryBreakdown: [],
     currentMonth: month,
     previousMonth: formatMonth(previousMonthDate),
     nextMonth: formatMonth(nextMonthDate),

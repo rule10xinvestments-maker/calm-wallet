@@ -109,6 +109,7 @@ export type InsightsData = {
   timeframeBars: InsightsTimeframeBar[];
   selectedMonthTrendDays: InsightsMonthTrendDay[];
   timeframeCategoryBreakdown: InsightsCategoryBreakdownItem[];
+  trendCategoryBreakdown: InsightsCategoryBreakdownItem[];
   currentMonth: string;
   previousMonth: string;
   nextMonth: string;
@@ -263,6 +264,13 @@ export type InsightsCategoryBreakdownItem = {
   label: string;
   amountMinor: number;
   amountDisplay: string;
+  incomeMinor?: number;
+  incomeDisplay?: string;
+  expenseMinor?: number;
+  expenseDisplay?: string;
+  netMinor?: number;
+  netDisplay?: string;
+  movementMinor?: number;
   transactionCount: number;
   recentEntries: Array<{
     id: string;
@@ -1352,6 +1360,154 @@ function buildInsightsCategoryBreakdown(args: {
     }));
 }
 
+function formatInsightsCategoryDisplay(args: {
+  amountMinor: number;
+  displayCurrency: string;
+  originalCurrencies: Set<string>;
+  hasMissingRates: boolean;
+}) {
+  if (args.hasMissingRates) {
+    return `${formatInsightsMoney(args.amountMinor, args.displayCurrency)} + rate unavailable`;
+  }
+
+  return `${args.originalCurrencies.size > 1 || !args.originalCurrencies.has(args.displayCurrency) ? "≈ " : ""}${formatInsightsMoney(
+    args.amountMinor,
+    args.displayCurrency,
+  )}`;
+}
+
+function buildInsightsTrendCategoryBreakdown(args: {
+  transactions: Transaction[];
+  categoryLabels: Record<string, string>;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}) {
+  const categoryTotals = new Map<
+    string,
+    {
+      label: string;
+      incomeMinor: number;
+      expenseMinor: number;
+      transactionCount: number;
+      incomeOriginalCurrencies: Set<string>;
+      expenseOriginalCurrencies: Set<string>;
+      hasMissingIncomeRates: boolean;
+      hasMissingExpenseRates: boolean;
+      entries: Transaction[];
+    }
+  >();
+
+  args.transactions.forEach((transaction) => {
+    const category = getInsightsCategoryMeta(transaction, args.categoryLabels);
+    const sourceCurrency = normalizeCurrency(transaction.currency);
+    const conversionRate = getConversionRate(sourceCurrency, args.displayCurrency, args.rateLookup);
+    const displayAmountMinor = conversionRate === null ? 0 : convertMinor(transaction.amountMinor, conversionRate);
+    const current = categoryTotals.get(category.key) ?? {
+      label: category.label,
+      incomeMinor: 0,
+      expenseMinor: 0,
+      transactionCount: 0,
+      incomeOriginalCurrencies: new Set<string>(),
+      expenseOriginalCurrencies: new Set<string>(),
+      hasMissingIncomeRates: false,
+      hasMissingExpenseRates: false,
+      entries: [],
+    };
+
+    if (transaction.transactionType === "income") {
+      current.incomeMinor += displayAmountMinor;
+      current.incomeOriginalCurrencies.add(sourceCurrency);
+      current.hasMissingIncomeRates = current.hasMissingIncomeRates || conversionRate === null;
+    } else {
+      current.expenseMinor += displayAmountMinor;
+      current.expenseOriginalCurrencies.add(sourceCurrency);
+      current.hasMissingExpenseRates = current.hasMissingExpenseRates || conversionRate === null;
+    }
+
+    current.transactionCount += 1;
+    current.entries.push(transaction);
+    categoryTotals.set(category.key, current);
+  });
+
+  return Array.from(categoryTotals.entries())
+    .map(([key, value]) => {
+      const movementMinor = value.incomeMinor + value.expenseMinor;
+      const netMinor = value.incomeMinor - value.expenseMinor;
+      const isIncomeOnly = value.incomeMinor > 0 && value.expenseMinor === 0;
+      const isExpenseOnly = value.expenseMinor > 0 && value.incomeMinor === 0;
+      const amountMinor = isIncomeOnly ? value.incomeMinor : isExpenseOnly ? value.expenseMinor : netMinor;
+      const amountDisplay = isIncomeOnly
+        ? formatInsightsCategoryDisplay({
+            amountMinor: value.incomeMinor,
+            displayCurrency: args.displayCurrency,
+            originalCurrencies: value.incomeOriginalCurrencies,
+            hasMissingRates: value.hasMissingIncomeRates,
+          })
+        : isExpenseOnly
+          ? formatInsightsCategoryDisplay({
+              amountMinor: value.expenseMinor,
+              displayCurrency: args.displayCurrency,
+              originalCurrencies: value.expenseOriginalCurrencies,
+              hasMissingRates: value.hasMissingExpenseRates,
+            })
+          : `${netMinor >= 0 ? "" : "-"}${formatInsightsMoney(Math.abs(netMinor), args.displayCurrency)}`;
+
+      return {
+        key,
+        label: value.label,
+        amountMinor,
+        amountDisplay,
+        incomeMinor: value.incomeMinor,
+        incomeDisplay: formatInsightsCategoryDisplay({
+          amountMinor: value.incomeMinor,
+          displayCurrency: args.displayCurrency,
+          originalCurrencies: value.incomeOriginalCurrencies,
+          hasMissingRates: value.hasMissingIncomeRates,
+        }),
+        expenseMinor: value.expenseMinor,
+        expenseDisplay: formatInsightsCategoryDisplay({
+          amountMinor: value.expenseMinor,
+          displayCurrency: args.displayCurrency,
+          originalCurrencies: value.expenseOriginalCurrencies,
+          hasMissingRates: value.hasMissingExpenseRates,
+        }),
+        netMinor,
+        netDisplay: amountDisplay,
+        movementMinor,
+        transactionCount: value.transactionCount,
+        recentEntries: value.entries
+          .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+          .slice(0, 5)
+          .map((transaction) => {
+            const sourceCurrency = normalizeCurrency(transaction.currency);
+            const conversionRate = getConversionRate(sourceCurrency, args.displayCurrency, args.rateLookup);
+            const displayAmountMinor = conversionRate === null ? 0 : convertMinor(transaction.amountMinor, conversionRate);
+            const displayAmountApproximate = conversionRate !== null && sourceCurrency !== args.displayCurrency;
+
+            return {
+              id: transaction.id,
+              title: getTransactionDisplayTitle(transaction),
+              amountMinor: transaction.amountMinor,
+              amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency),
+              displayAmountMinor,
+              displayAmountDisplay:
+                conversionRate === null
+                  ? `${formatInsightsMoney(displayAmountMinor, args.displayCurrency)} + rate unavailable`
+                  : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, args.displayCurrency)}`,
+              displayAmountApproximate,
+              displayAmountUnavailable: conversionRate === null,
+              occurredAt: transaction.occurredAt,
+              occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              }),
+            };
+          }),
+      };
+    })
+    .sort((a, b) => (b.movementMinor ?? 0) - (a.movementMinor ?? 0) || a.label.localeCompare(b.label));
+}
+
 function sumBreakdowns(transactions: Transaction[]) {
   const totals = new Map<string, { incomeMinor: number; expenseMinor: number }>();
 
@@ -1600,6 +1756,12 @@ export function buildInsightsData(
     displayCurrency,
     rateLookup,
   });
+  const trendCategoryBreakdown = buildInsightsTrendCategoryBreakdown({
+    transactions: timeframeTransactions,
+    categoryLabels,
+    displayCurrency,
+    rateLookup,
+  });
   const timeframeBars = buildInsightsTimeframeBars({
     timeframe: selectedTimeframe,
     transactions: timeframeTransactions,
@@ -1725,6 +1887,7 @@ export function buildInsightsData(
     timeframeBars,
     selectedMonthTrendDays,
     timeframeCategoryBreakdown,
+    trendCategoryBreakdown,
     currentMonth: currentMonthKey,
     previousMonth: toMonthKey(shiftMonth(monthStart, -1)),
     nextMonth: toMonthKey(shiftMonth(monthStart, 1)),

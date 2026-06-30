@@ -1225,6 +1225,53 @@ describe("transactions read model", () => {
     expect(data.selectedMonthTrendDays.some((day) => day.key === "2026-03-10")).toBe(false);
   });
 
+  it("builds Trend category breakdown from income, spending, and mixed category movement", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "salary", transactionType: "income", amountMinor: 50000, categoryId: "salary", itemName: "Salary" }),
+        makeTransaction({ id: "housing", transactionType: "expense", amountMinor: 12000, categoryId: "housing", itemName: "Rent" }),
+        makeTransaction({ id: "other-income", transactionType: "income", amountMinor: 100000, categoryId: "other", itemName: "Sale" }),
+        makeTransaction({ id: "other-spend", transactionType: "expense", amountMinor: 90000, categoryId: "other", itemName: "Supplies" }),
+      ],
+      { salary: "Salary", housing: "Housing", other: "Other" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-04",
+      "1M",
+      "trend",
+    );
+
+    expect(data.trendCategoryBreakdown.map((item) => item.label)).toEqual(["Other", "Salary", "Housing"]);
+    expect(data.trendCategoryBreakdown[0]).toMatchObject({
+      label: "Other",
+      incomeMinor: 100000,
+      expenseMinor: 90000,
+      netMinor: 10000,
+      movementMinor: 190000,
+      transactionCount: 2,
+      amountDisplay: "$100",
+      incomeDisplay: "$1,000",
+      expenseDisplay: "$900",
+    });
+    expect(data.trendCategoryBreakdown[1]).toMatchObject({
+      label: "Salary",
+      incomeMinor: 50000,
+      expenseMinor: 0,
+      amountDisplay: "$500",
+    });
+    expect(data.trendCategoryBreakdown[2]).toMatchObject({
+      label: "Housing",
+      incomeMinor: 0,
+      expenseMinor: 12000,
+      amountDisplay: "$120",
+    });
+    expect(data.timeframeCategoryBreakdown.map((item) => item.label)).toEqual(["Other", "Housing"]);
+  });
+
   it("builds All timeframe category totals across tracked expense history", () => {
     const data = buildInsightsData(
       [
