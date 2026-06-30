@@ -484,6 +484,22 @@ function formatSpendingDayLabel(bar: { key: string; label: string }) {
   }).format(date);
 }
 
+function getBarsBucketLabel(bar: InsightsData["timeframeBars"][number]) {
+  if (bar.granularity === "day") {
+    return formatSpendingDayLabel(bar);
+  }
+
+  return bar.label;
+}
+
+function getBarsBucketRangeLabel(bar: InsightsData["timeframeBars"][number]) {
+  if (bar.granularity === "day") {
+    return formatSpendingDayLabel(bar);
+  }
+
+  return bar.rangeLabel ?? bar.label;
+}
+
 function buildSmoothTrendPath(points: Array<{ x: number; y: number }>) {
   if (!points.length) {
     return "";
@@ -916,14 +932,17 @@ function BarsCategoryBubble({
 
 function BarsCategoryFocusPanel({
   category,
+  bucketLabel,
   onInspect,
 }: {
   category: BarsCategoryItem;
+  bucketLabel: "Day" | "Week" | "Month";
   onInspect: (kind: "limit" | "recurring") => void;
 }) {
   const limit = category.signal?.limit;
   const recurring = category.signal?.recurring?.activeCount ? category.signal.recurring : undefined;
   const visuals = getCategoryVisualsByName(category.label);
+  const bucketNoun = bucketLabel.toLowerCase();
 
   return (
     <div className="-mt-1 rounded-lg border bg-white px-3 py-2.5 shadow-sm transition" style={{ borderColor: visuals.border }}>
@@ -933,9 +952,9 @@ function BarsCategoryFocusPanel({
             {category.label}
           </p>
           <p className="text-xs leading-5 text-slate-500">
-            {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? "day" : "days"} this period
+            {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? bucketNoun : `${bucketNoun}s`} this period
           </p>
-          <p className="text-[11px] leading-4 text-slate-400">Day amounts show {category.label} only</p>
+          <p className="text-[11px] leading-4 text-slate-400">{bucketLabel} amounts show {category.label} only</p>
         </div>
       </div>
       {limit || recurring ? (
@@ -1108,6 +1127,8 @@ function TimeframeBarsChart({
   const isIncome = barsSegment === "income";
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
+  const bucketLabel = granularity === "week" ? "Week" : granularity === "month" ? "Month" : "Day";
+  const bucketLabelPlural = granularity === "week" ? "weeks" : granularity === "month" ? "months" : "days";
   const categoryItems = isIncome ? data.incomeCategoryBreakdown : data.categoryBreakdown;
   const categorySignals = isIncome
     ? data.categorySignalsByType?.income ?? {}
@@ -1191,26 +1212,29 @@ function TimeframeBarsChart({
     </div>
   ) : null;
 
-  if (granularity === "day") {
-    const dayMax = Math.max(...activeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
+  if (granularity === "day" || granularity === "week") {
+    const bucketMax = Math.max(...activeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
 
     if (!activeBars.length) {
+      const emptyPeriodLabel = granularity === "day" ? "month" : "period";
+
       return (
-        <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by day`} role="img">
-          <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
+        <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by ${granularity}`} role="img">
+          <p className="text-xs leading-5 text-slate-500">Showing {bucketLabelPlural} with tracked {isIncome ? "income" : "spending"}.</p>
           <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
-            {isIncome ? "No income tracked for this month yet." : "No spending tracked for this month yet."}
+            {isIncome ? `No income tracked for this ${emptyPeriodLabel} yet.` : `No spending tracked for this ${emptyPeriodLabel} yet.`}
           </p>
         </div>
       );
     }
 
     return (
-      <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by day`} role="img">
-        <p className="text-xs leading-5 text-slate-500">Showing days with tracked {isIncome ? "income" : "spending"}.</p>
+      <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by ${granularity}`} role="img">
+        <p className="text-xs leading-5 text-slate-500">Showing {bucketLabelPlural} with tracked {isIncome ? "income" : "spending"}.</p>
         {legend}
         {selectedCategory ? (
           <BarsCategoryFocusPanel
+            bucketLabel={bucketLabel}
             category={selectedCategory}
             onInspect={(kind) => setDetailSheet({ category: selectedCategory, kind })}
           />
@@ -1220,8 +1244,8 @@ function TimeframeBarsChart({
             const amountMinor = isIncome ? bar.incomeAmountMinor : bar.amountMinor;
             const amountDisplay = isIncome ? bar.incomeAmountDisplay : bar.amountDisplay;
             const segments = isIncome ? bar.incomeSegments : bar.segments;
-            const width = `${Math.max(10, Math.round((amountMinor / dayMax) * 100))}%`;
-            const label = formatSpendingDayLabel(bar);
+            const width = `${Math.max(10, Math.round((amountMinor / bucketMax) * 100))}%`;
+            const label = getBarsBucketLabel(bar);
             const isSelected = selectedDayKey === bar.key;
             const containsSelectedCategory = selectedCategoryKey ? segments.some((segment) => segment.key === selectedCategoryKey) : true;
             const isBarDimmed = Boolean(selectedCategoryKey && !containsSelectedCategory);
@@ -1286,10 +1310,11 @@ function TimeframeBarsChart({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs leading-5 text-slate-500">Showing monthly tracked {isIncome ? "income" : "spending"}.</p>
+      <p className="text-xs leading-5 text-slate-500">Showing months with tracked {isIncome ? "income" : "spending"}.</p>
       {legend}
       {selectedCategory ? (
         <BarsCategoryFocusPanel
+          bucketLabel={bucketLabel}
           category={selectedCategory}
           onInspect={(kind) => setDetailSheet({ category: selectedCategory, kind })}
         />
@@ -1299,7 +1324,7 @@ function TimeframeBarsChart({
         aria-label={`Tracked ${isIncome ? "income" : "spending"} by month`}
         role="img"
       >
-        {data.timeframeBars.map((bar) => {
+        {activeBars.map((bar) => {
           const amountMinor = isIncome ? bar.incomeAmountMinor : bar.amountMinor;
           const amountDisplay = isIncome ? bar.incomeAmountDisplay : bar.amountDisplay;
           const segments = isIncome ? bar.incomeSegments : bar.segments;
@@ -1360,7 +1385,7 @@ function BarsDayBreakdownPanel({
   totalDisplay: string;
   totalMinor: number;
 }) {
-  const label = formatSpendingDayLabel(bar);
+  const label = getBarsBucketRangeLabel(bar);
   const context = isIncome ? "income" : "spending";
   const orderedSegments =
     selectedCategoryKey && segments.some((segment) => segment.key === selectedCategoryKey)

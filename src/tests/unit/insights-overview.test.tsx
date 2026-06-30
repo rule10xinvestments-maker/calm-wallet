@@ -1620,6 +1620,84 @@ describe("insights overview", () => {
     expect(screen.getByLabelText("Apr 5 Salary income $30")).toBeInTheDocument();
   });
 
+  it("renders 3M Bars as weekly buckets with bucket-aware category focus", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        selectedTimeframe: "3M",
+        categoryBreakdown: [
+          makeCategory({ key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 }),
+          makeCategory({ key: "groceries", label: "Groceries", amountMinor: 5000, amountDisplay: "$50", transactionCount: 2 }),
+        ],
+        selectedPeriodIncomeDisplayMinor: 7000,
+        incomeCategoryBreakdown: [
+          makeCategory({ key: "salary", label: "Salary", amountMinor: 7000, amountDisplay: "$70", transactionCount: 1 }),
+        ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-01",
+            label: "Apr 1",
+            rangeLabel: "Apr 1–7",
+            amountMinor: 15000,
+            amountDisplay: "$150",
+            transactionCount: 3,
+            granularity: "week",
+            segments: [
+              { key: "housing", label: "Housing", amountMinor: 12000, amountDisplay: "$120", transactionCount: 1 },
+              { key: "groceries", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 },
+            ],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-08",
+            label: "Apr 8",
+            rangeLabel: "Apr 8–14",
+            amountMinor: 2000,
+            amountDisplay: "$20",
+            transactionCount: 1,
+            granularity: "week",
+            segments: [{ key: "groceries", label: "Groceries", amountMinor: 2000, amountDisplay: "$20", transactionCount: 1 }],
+          }),
+          makeTimeframeBar({
+            key: "2026-04-15",
+            label: "Apr 15",
+            rangeLabel: "Apr 15–21",
+            amountMinor: 0,
+            amountDisplay: "$0",
+            incomeAmountMinor: 7000,
+            incomeAmountDisplay: "$70",
+            transactionCount: 1,
+            granularity: "week",
+            segments: [],
+            incomeSegments: [{ key: "salary", label: "Salary", amountMinor: 7000, amountDisplay: "$70", transactionCount: 1 }],
+          }),
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("img", { name: "Tracked spending by week" })).toBeInTheDocument();
+    expect(screen.getByText("Showing weeks with tracked spending.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 1, $150 spending, tap for category breakdown" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr 1 Housing spending $120")).toBeInTheDocument();
+    expect(screen.queryByText("Apr 15")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Apr 1, $150 spending, tap for category breakdown" }));
+
+    expect(screen.getByLabelText("Apr 1–7 spending category breakdown")).toBeInTheDocument();
+    expect(screen.getByText("Total $150")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Select Housing focus" }));
+
+    expect(screen.getByText("Week amounts show Housing only")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 1, $120 spending, hide category breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 8, $20 spending, tap for category breakdown" }).parentElement).toHaveClass("opacity-35");
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+
+    expect(screen.getByRole("img", { name: "Tracked income by week" })).toBeInTheDocument();
+    expect(screen.getByText("Showing weeks with tracked income.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 15, $70 income, tap for category breakdown" })).toBeInTheDocument();
+  });
+
   it("keeps Bars Expenses category breakdown on expense categories", () => {
     renderInsights(
       makeInsightsData({

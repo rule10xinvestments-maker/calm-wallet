@@ -1065,7 +1065,7 @@ describe("transactions read model", () => {
     expect(aprilExpense.occurredAt).toBe("2026-04-10T00:00:00.000Z");
   });
 
-  it("builds timeframe spending months and cumulative trend totals", () => {
+  it("builds timeframe spending months and weekly 3M bar buckets", () => {
     const data = buildInsightsData(
       [
         makeTransaction({ id: "jan", amountMinor: 1000, occurredAt: "2026-01-10T00:00:00.000Z" }),
@@ -1099,10 +1099,54 @@ describe("transactions read model", () => {
       ["2026-03", 0, 2000],
       ["2026-04", 3000, 5000],
     ]);
-    expect(data.timeframeBars.map((bar) => [bar.key, bar.amountMinor, bar.granularity])).toEqual([
-      ["2026-02", 2000, "month"],
-      ["2026-03", 0, "month"],
-      ["2026-04", 3000, "month"],
+    expect(data.timeframeBars.map((bar) => [bar.key, bar.label, bar.rangeLabel, bar.amountMinor, bar.incomeAmountMinor, bar.granularity])).toEqual([
+      ["2026-02-08", "Feb 8", "Feb 8–14", 2000, 0, "week"],
+      ["2026-03-08", "Mar 8", "Mar 8–14", 0, 9000, "week"],
+      ["2026-04-05", "Apr 5", "Apr 5–11", 3000, 0, "week"],
+    ]);
+  });
+
+  it("keeps 3M weekly bar totals in one bucket each and excludes empty weeks", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "apr-02-housing", amountMinor: 1000, categoryId: "housing", occurredAt: "2026-04-02T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-07-food", amountMinor: 2000, categoryId: "food", occurredAt: "2026-04-07T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-08-food", amountMinor: 3000, categoryId: "food", occurredAt: "2026-04-08T10:00:00.000Z" }),
+        makeTransaction({
+          id: "jun-30-income",
+          transactionType: "income",
+          amountMinor: 4000,
+          categoryId: "salary",
+          occurredAt: "2026-06-30T10:00:00.000Z",
+        }),
+      ],
+      { food: "Groceries", housing: "Housing", salary: "Salary" },
+      "USD",
+      new Date("2026-06-30T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-06",
+      "3M",
+      "bars",
+    );
+
+    expect(data.timeframeBars.map((bar) => [bar.key, bar.rangeLabel, bar.amountMinor, bar.incomeAmountMinor])).toEqual([
+      ["2026-04-01", "Apr 1–7", 3000, 0],
+      ["2026-04-08", "Apr 8–14", 3000, 0],
+      ["2026-06-24", "Jun 24–30", 0, 4000],
+    ]);
+    expect(data.timeframeBars.flatMap((bar) => bar.segments).reduce((sum, segment) => sum + segment.amountMinor, 0)).toBe(6000);
+    expect(data.timeframeBars[0].segments).toEqual([
+      { key: "food", label: "Groceries", amountMinor: 2000, amountDisplay: "$20", transactionCount: 1 },
+      { key: "housing", label: "Housing", amountMinor: 1000, amountDisplay: "$10", transactionCount: 1 },
+    ]);
+    expect(data.timeframeBars[1].segments).toEqual([
+      { key: "food", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 },
+    ]);
+    expect(data.timeframeBars[2].incomeSegments).toEqual([
+      { key: "salary", label: "Salary", amountMinor: 4000, amountDisplay: "$40", transactionCount: 1 },
     ]);
   });
 

@@ -232,12 +232,13 @@ export type InsightsTimeframeMonth = {
 export type InsightsTimeframeBar = {
   key: string;
   label: string;
+  rangeLabel?: string;
   amountMinor: number;
   amountDisplay: string;
   incomeAmountMinor: number;
   incomeAmountDisplay: string;
   transactionCount: number;
-  granularity: "day" | "month";
+  granularity: "day" | "week" | "month";
   segments: InsightsTimeframeBarSegment[];
   incomeSegments: InsightsTimeframeBarSegment[];
 };
@@ -755,6 +756,24 @@ function shiftDay(date: Date, offset: number) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + offset));
 }
 
+function formatCompactBucketDate(date: Date) {
+  return date.toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+function formatBucketRangeLabel(start: Date, endExclusive: Date) {
+  const endInclusive = shiftDay(endExclusive, -1);
+  const startMonth = start.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const endMonth = endInclusive.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const startDay = start.getUTCDate();
+  const endDay = endInclusive.getUTCDate();
+
+  if (startMonth === endMonth) {
+    return `${startMonth} ${startDay}–${endDay}`;
+  }
+
+  return `${startMonth} ${startDay}–${endMonth} ${endDay}`;
+}
+
 function startOfCalendarWeek(date: Date) {
   const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const day = start.getUTCDay();
@@ -806,6 +825,63 @@ function buildInsightsTimeframeDailyBars(args: {
       incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency),
       transactionCount: expenseTransactions.length,
       granularity: "day",
+      segments,
+      incomeSegments,
+    });
+  }
+
+  return bars;
+}
+
+function buildInsightsTimeframeWeeklyBars(args: {
+  transactions: Transaction[];
+  periodStart: Date;
+  periodEnd: Date;
+  categoryLabels: Record<string, string>;
+  displayCurrency: string;
+  rateLookup: Map<string, FxRate>;
+}) {
+  const bars: InsightsTimeframeBar[] = [];
+
+  for (let cursor = args.periodStart; cursor < args.periodEnd; cursor = shiftDay(cursor, 7)) {
+    const weekStart = cursor;
+    const weekEnd = shiftDay(weekStart, 7) < args.periodEnd ? shiftDay(weekStart, 7) : args.periodEnd;
+    const transactions = args.transactions.filter((transaction) => {
+      const occurredAt = new Date(transaction.occurredAt);
+      return occurredAt >= weekStart && occurredAt < weekEnd;
+    });
+    const expenseTransactions = transactions.filter((transaction) => transaction.transactionType === "expense");
+    const incomeTransactions = transactions.filter((transaction) => transaction.transactionType === "income");
+
+    if (!expenseTransactions.length && !incomeTransactions.length) {
+      continue;
+    }
+
+    const segments = buildInsightsBarCategorySegments({
+      transactions: expenseTransactions,
+      categoryLabels: args.categoryLabels,
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const incomeSegments = buildInsightsBarCategorySegments({
+      transactions: incomeTransactions,
+      categoryLabels: args.categoryLabels,
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+    const amountMinor = segments.reduce((sum, segment) => sum + segment.amountMinor, 0);
+    const incomeAmountMinor = incomeSegments.reduce((sum, segment) => sum + segment.amountMinor, 0);
+
+    bars.push({
+      key: toDayKey(weekStart),
+      label: formatCompactBucketDate(weekStart),
+      rangeLabel: formatBucketRangeLabel(weekStart, weekEnd),
+      amountMinor,
+      amountDisplay: formatInsightsMoney(amountMinor, args.displayCurrency),
+      incomeAmountMinor,
+      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency),
+      transactionCount: transactions.length,
+      granularity: "week",
       segments,
       incomeSegments,
     });
@@ -922,6 +998,17 @@ function buildInsightsTimeframeBars(args: {
     return buildInsightsTimeframeDailyBars({
       transactions: args.transactions,
       monthStart: args.startMonth,
+      categoryLabels: args.categoryLabels,
+      displayCurrency: args.displayCurrency,
+      rateLookup: args.rateLookup,
+    });
+  }
+
+  if (args.timeframe === "3M") {
+    return buildInsightsTimeframeWeeklyBars({
+      transactions: args.transactions,
+      periodStart: args.startMonth,
+      periodEnd: shiftMonth(args.endMonth, 1),
       categoryLabels: args.categoryLabels,
       displayCurrency: args.displayCurrency,
       rateLookup: args.rateLookup,
