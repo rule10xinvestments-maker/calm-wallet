@@ -388,7 +388,168 @@ describe("insights overview", () => {
     expect(within(snapshot).getByText("Income")).toBeInTheDocument();
     expect(within(snapshot).getByText("Spending")).toBeInTheDocument();
     expect(within(snapshot).getByText("3 tracked transactions")).toBeInTheDocument();
+    expect(within(snapshot).queryByText("Contains converted currency")).not.toBeInTheDocument();
     expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
+  });
+
+  it("shows converted currency disclosure collapsed by default and expands grouped details", () => {
+    renderInsights(
+      makeInsightsData({
+        displayCurrency: "RON",
+        selectedPeriodIncomeDisplayMinor: 50000,
+        selectedPeriodExpenseDisplayMinor: 20000,
+        selectedPeriodConvertedCurrencyBreakdowns: [
+          {
+            currency: "RON",
+            incomeMinor: 10000,
+            expenseMinor: 2500,
+            netMinor: 7500,
+            incomeDisplay: "RON\u00a0100",
+            expenseDisplay: "RON\u00a025",
+            netDisplay: "RON\u00a075",
+            incomeDisplayMinor: 10000,
+            expenseDisplayMinor: 2500,
+            netDisplayMinor: 7500,
+            convertedIncomeDisplay: "RON\u00a0100",
+            convertedExpenseDisplay: "RON\u00a025",
+            convertedNetDisplay: "RON\u00a075",
+          },
+          {
+            currency: "USD",
+            incomeMinor: 9500,
+            expenseMinor: 16600,
+            netMinor: -7100,
+            incomeDisplay: "$95",
+            expenseDisplay: "$166",
+            netDisplay: "-$71",
+            incomeDisplayMinor: 47500,
+            expenseDisplayMinor: 83000,
+            netDisplayMinor: -35500,
+            convertedIncomeDisplay: "RON\u00a0475",
+            convertedExpenseDisplay: "RON\u00a0830",
+            convertedNetDisplay: "-RON\u00a0355",
+          },
+          {
+            currency: "EUR",
+            incomeMinor: 3000,
+            expenseMinor: 5000,
+            netMinor: -2000,
+            incomeDisplay: "EUR 30",
+            expenseDisplay: "EUR 50",
+            netDisplay: "-EUR 20",
+            incomeDisplayMinor: 15000,
+            expenseDisplayMinor: 25000,
+            netDisplayMinor: -10000,
+            convertedIncomeDisplay: "RON\u00a0150",
+            convertedExpenseDisplay: "RON\u00a0250",
+            convertedNetDisplay: "-RON\u00a0100",
+          },
+        ],
+      }),
+    );
+
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+
+    expect(within(snapshot).getByText(/RON\s+500/)).toBeInTheDocument();
+    expect(within(snapshot).getByText(/RON\s+200/)).toBeInTheDocument();
+    expect(within(snapshot).getByText("Contains converted currency")).toBeInTheDocument();
+    expect(within(snapshot).queryByText("Converted currency included")).not.toBeInTheDocument();
+    expect(within(snapshot).queryByText(/converted income/i)).not.toBeInTheDocument();
+    expect(within(snapshot).queryByText(/converted spending/i)).not.toBeInTheDocument();
+
+    fireEvent.click(within(snapshot).getByRole("button", { name: "Contains converted currency" }));
+
+    const details = within(snapshot).getByText("Converted currency included").closest("div");
+    expect(details).not.toBeNull();
+    expect(within(details as HTMLElement).getByText("Income")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("USD 95")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("EUR 30")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("Spending")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("USD 166")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("EUR 50")).toBeInTheDocument();
+    expect(within(details as HTMLElement).queryByText("RON 100")).not.toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("Shown in RON for this view. Original entries stay unchanged.")).toBeInTheDocument();
+
+    fireEvent.click(within(snapshot).getByRole("button", { name: "Contains converted currency" }));
+    expect(within(snapshot).queryByText("Converted currency included")).not.toBeInTheDocument();
+  });
+
+  it("hides converted disclosure when all entries already use the display currency", () => {
+    renderInsights(makeInsightsData());
+
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+
+    expect(within(snapshot).queryByText("Contains converted currency")).not.toBeInTheDocument();
+    expect(within(snapshot).queryByText("Converted currency included")).not.toBeInTheDocument();
+  });
+
+  it("shows only the Income section for income-only converted entries", () => {
+    renderInsights(
+      makeInsightsData({
+        displayCurrency: "RON",
+        selectedPeriodConvertedCurrencyBreakdowns: [
+          {
+            currency: "USD",
+            incomeMinor: 9500,
+            expenseMinor: 0,
+            netMinor: 9500,
+            incomeDisplay: "$95",
+            expenseDisplay: "$0",
+            netDisplay: "$95",
+            incomeDisplayMinor: 47500,
+            expenseDisplayMinor: 0,
+            netDisplayMinor: 47500,
+            convertedIncomeDisplay: "RON\u00a0475",
+            convertedExpenseDisplay: "RON\u00a00",
+            convertedNetDisplay: "RON\u00a0475",
+          },
+        ],
+      }),
+    );
+
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+    fireEvent.click(within(snapshot).getByRole("button", { name: "Contains converted currency" }));
+
+    const details = within(snapshot).getByText("Converted currency included").closest("div");
+    expect(details).not.toBeNull();
+    expect(within(details as HTMLElement).getByText("Income")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("USD 95")).toBeInTheDocument();
+    expect(within(details as HTMLElement).queryByText("Spending")).not.toBeInTheDocument();
+  });
+
+  it("shows only the Spending section for spending-only converted entries", () => {
+    renderInsights(
+      makeInsightsData({
+        displayCurrency: "EUR",
+        selectedPeriodConvertedCurrencyBreakdowns: [
+          {
+            currency: "USD",
+            incomeMinor: 0,
+            expenseMinor: 16600,
+            netMinor: -16600,
+            incomeDisplay: "$0",
+            expenseDisplay: "$166",
+            netDisplay: "-$166",
+            incomeDisplayMinor: 0,
+            expenseDisplayMinor: 15300,
+            netDisplayMinor: -15300,
+            convertedIncomeDisplay: "EUR 0",
+            convertedExpenseDisplay: "EUR 153",
+            convertedNetDisplay: "-EUR 153",
+          },
+        ],
+      }),
+    );
+
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+    fireEvent.click(within(snapshot).getByRole("button", { name: "Contains converted currency" }));
+
+    const details = within(snapshot).getByText("Converted currency included").closest("div");
+    expect(details).not.toBeNull();
+    expect(within(details as HTMLElement).queryByText("Income")).not.toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("Spending")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("USD 166")).toBeInTheDocument();
+    expect(within(details as HTMLElement).getByText("Shown in EUR for this view. Original entries stay unchanged.")).toBeInTheDocument();
   });
 
   it("shows zero monthly net for an empty selected month instead of the cumulative tracked balance", () => {
@@ -536,7 +697,8 @@ describe("insights overview", () => {
   it("renders timeframe presets and preserves currency in timeframe URLs", () => {
     renderInsights(makeInsightsData({ displayCurrency: "RON", availableDisplayCurrencies: ["RON", "USD"] }));
 
-    expect(screen.getByText("Tracked spending only. Not a bank statement.")).toBeInTheDocument();
+    expect(screen.getByText("Tracked money only. Not a bank statement.")).toBeInTheDocument();
+    expect(screen.queryByText("Tracked spending only. Not a bank statement.")).not.toBeInTheDocument();
     const timeframe3mLink = screen.getByRole("button", { name: "3M" });
     const timeframeAllLink = screen.getByRole("button", { name: "All" });
 
@@ -2551,7 +2713,8 @@ describe("insights overview", () => {
       }),
     );
 
-    expect(screen.getAllByText(/Includes\s+€5\s+converted/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Includes\s+.*converted/)).not.toBeInTheDocument();
+    expect(screen.getByText("Contains converted currency")).toBeInTheDocument();
     expect(screen.queryByText(/approximate/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/approx/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Converted totals are approximate. Original transactions stay unchanged.")).not.toBeInTheDocument();

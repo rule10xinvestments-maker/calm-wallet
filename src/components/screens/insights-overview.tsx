@@ -8,6 +8,7 @@ import {
   ChevronRight,
   CircleGauge,
   Eye,
+  Info,
   Repeat2,
   X,
 } from "lucide-react";
@@ -55,6 +56,15 @@ function formatMoney(amountMinor: number, currency: string) {
     minimumFractionDigits: amountMinor % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(amountMinor / 100);
+}
+
+function formatOriginalCurrencyAmount(amountMinor: number, currency: string) {
+  const amount = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: amountMinor % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amountMinor / 100);
+
+  return `${currency} ${amount}`;
 }
 
 function getApproxPrefix(data: InsightsData, amountMinor: number) {
@@ -1509,29 +1519,20 @@ function TimeframeCategoryBreakdown({
   );
 }
 
-function getMonthlySnapshotConversionNote(data: InsightsData) {
+function getMonthlySnapshotConversionDetails(data: InsightsData) {
   const converted = data.selectedPeriodConvertedCurrencyBreakdowns.filter((breakdown) => breakdown.currency !== data.displayCurrency);
-  const parts: string[] = [];
+  const income = converted.filter((breakdown) => breakdown.incomeMinor > 0 && breakdown.incomeDisplayMinor !== null);
+  const spending = converted.filter((breakdown) => breakdown.expenseMinor > 0 && breakdown.expenseDisplayMinor !== null);
+  const hasMissingRates = converted.some(
+    (breakdown) => breakdown.incomeDisplayMinor === null || breakdown.expenseDisplayMinor === null || breakdown.netDisplayMinor === null,
+  );
 
-  converted.forEach((breakdown) => {
-    if (breakdown.incomeMinor > 0 && breakdown.incomeDisplayMinor !== null) {
-      parts.push(`${formatMoney(breakdown.incomeMinor, breakdown.currency)} converted income`);
-    }
-
-    if (breakdown.expenseMinor > 0 && breakdown.expenseDisplayMinor !== null) {
-      parts.push(`${formatMoney(breakdown.expenseMinor, breakdown.currency)} converted spending`);
-    }
-  });
-
-  if (parts.length) {
-    return `Includes ${parts.join(" / ")}`;
-  }
-
-  if (converted.some((breakdown) => breakdown.incomeDisplayMinor === null || breakdown.expenseDisplayMinor === null || breakdown.netDisplayMinor === null)) {
-    return "Some currencies need a rate before they can be included.";
-  }
-
-  return null;
+  return {
+    income,
+    spending,
+    hasConvertedEntries: income.length > 0 || spending.length > 0,
+    missingRateNote: hasMissingRates ? "Some currencies need a rate before they can be included." : null,
+  };
 }
 
 function getSnapshotHero(data: InsightsData) {
@@ -1549,7 +1550,8 @@ function getSnapshotHero(data: InsightsData) {
 }
 
 function MonthlySnapshotCard({ data }: { data: InsightsData }) {
-  const conversionNote = getMonthlySnapshotConversionNote(data);
+  const [isConversionDetailsOpen, setIsConversionDetailsOpen] = useState(false);
+  const conversionDetails = getMonthlySnapshotConversionDetails(data);
   const hero = getSnapshotHero(data);
 
   return (
@@ -1591,7 +1593,46 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
           <p>
             {data.selectedPeriodTransactionCount} tracked {data.selectedPeriodTransactionCount === 1 ? "transaction" : "transactions"}
           </p>
-          {conversionNote ? <p>{conversionNote}</p> : null}
+          {conversionDetails.hasConvertedEntries ? (
+            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/70">
+              <button
+                aria-expanded={isConversionDetailsOpen}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs font-medium text-slate-600"
+                onClick={() => setIsConversionDetailsOpen((current) => !current)}
+                type="button"
+              >
+                <span>Contains converted currency</span>
+                <Info aria-hidden="true" className="size-3.5 shrink-0 text-slate-400" strokeWidth={2.2} />
+              </button>
+              {isConversionDetailsOpen ? (
+                <div className="border-t border-slate-200 px-3 pb-3 pt-2 text-xs leading-5 text-slate-600">
+                  <p className="font-semibold text-slate-800">Converted currency included</p>
+                  {conversionDetails.income.length ? (
+                    <div className="mt-2">
+                      <p className="font-medium text-slate-700">Income</p>
+                      <div className="mt-1 grid gap-1">
+                        {conversionDetails.income.map((breakdown) => (
+                          <p key={`income-${breakdown.currency}`}>{formatOriginalCurrencyAmount(breakdown.incomeMinor, breakdown.currency)}</p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {conversionDetails.spending.length ? (
+                    <div className="mt-2">
+                      <p className="font-medium text-slate-700">Spending</p>
+                      <div className="mt-1 grid gap-1">
+                        {conversionDetails.spending.map((breakdown) => (
+                          <p key={`spending-${breakdown.currency}`}>{formatOriginalCurrencyAmount(breakdown.expenseMinor, breakdown.currency)}</p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-slate-500">Shown in {data.displayCurrency} for this view. Original entries stay unchanged.</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {conversionDetails.missingRateNote ? <p className="mt-2">{conversionDetails.missingRateNote}</p> : null}
         </div>
       </CardContent>
     </Card>
@@ -2252,7 +2293,7 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
       <ScreenHeader
         eyebrow="Insights"
         title="Monthly clarity"
-        description="Tracked spending only. Not a bank statement."
+        description="Tracked money only. Not a bank statement."
       />
       <InsightsControlBar data={activeData} onSelect={selectInsightsView} />
       {loadError ? (
