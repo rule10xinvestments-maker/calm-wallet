@@ -1045,9 +1045,9 @@ describe("insights overview", () => {
   });
 
   it("keeps Trend category icons compact with Show all and keeps a selected hidden category visible", () => {
-    const categories = Array.from({ length: 12 }, (_, index) => {
-      const amountMinor = 12000 - index * 1000;
-      const amountDollars = 120 - index * 10;
+    const categories = Array.from({ length: 15 }, (_, index) => {
+      const amountMinor = 15000 - index * 1000;
+      const amountDollars = 150 - index * 10;
 
       return makeCategory({
         key: `category-${index + 1}`,
@@ -1088,22 +1088,22 @@ describe("insights overview", () => {
     const card = screen.getByTestId("timeframe-insights-card");
 
     expect(within(card).getByText("Categories on this trend")).toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "Show Category 10 details" })).toBeInTheDocument();
-    expect(within(card).queryByRole("button", { name: "Show Category 11 details" })).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Category 12 details" })).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Category 13 details" })).not.toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Show all" })).toBeInTheDocument();
 
     fireEvent.click(within(card).getByRole("button", { name: "Show all" }));
 
     expect(within(card).getByRole("button", { name: "Show fewer" })).toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "Show Category 11 details" })).toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "Show Category 12 details" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Category 13 details" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Category 15 details" })).toBeInTheDocument();
 
-    fireEvent.click(within(card).getByRole("button", { name: "Show Category 12 details" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Show Category 15 details" }));
     fireEvent.click(within(card).getByRole("button", { name: "Show fewer" }));
 
-    expect(within(card).getByRole("button", { name: "Hide Category 12 details" })).toBeInTheDocument();
-    expect(within(card).getByText("Category 12")).toBeInTheDocument();
-    expect(within(card).queryByRole("button", { name: "Show Category 11 details" })).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Hide Category 15 details" })).toBeInTheDocument();
+    expect(within(card).getByText("Category 15")).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Category 13 details" })).not.toBeInTheDocument();
   });
 
   it("updates Trend category icons and details cumulatively through the selected trend point", () => {
@@ -1179,7 +1179,8 @@ describe("insights overview", () => {
                 amountMinor: 10000,
                 amountDisplay: "$100",
                 displayAmountMinor: 10000,
-                displayAmountDisplay: "$100",
+                displayAmountDisplay: "≈ $100",
+                displayAmountApproximate: true,
                 occurredAt: "2026-04-05T12:00:00.000Z",
                 occurredLabel: "Apr 5",
                 createdAt: "2026-04-05T12:30:00.000Z",
@@ -1276,6 +1277,8 @@ describe("insights overview", () => {
 
     expect(within(card).getAllByText("Through Apr 20").length).toBeGreaterThan(0);
     expect(within(card).getByText("Side sale")).toBeInTheDocument();
+    expect(within(card).getAllByText("≈ $100").length).toBeGreaterThan(0);
+    expect(within(card).queryByText(/â‰ˆ|Ã¢/)).not.toBeInTheDocument();
     expect(within(card).getByText("Supplies")).toBeInTheDocument();
     expect(within(card).queryByText("Later supplies")).not.toBeInTheDocument();
 

@@ -62,6 +62,8 @@ type InsightsOverviewProps = {
   loadError?: boolean;
 };
 
+const APPROXIMATE_SYMBOL = "≈";
+
 function formatMoney(amountMinor: number, currency: string) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -81,7 +83,7 @@ function formatOriginalCurrencyAmount(amountMinor: number, currency: string) {
 }
 
 function getApproxPrefix(data: InsightsData, amountMinor: number) {
-  return data.hasConvertedCurrencies && amountMinor !== 0 ? "≈ " : "";
+  return data.hasConvertedCurrencies && amountMinor !== 0 ? `${APPROXIMATE_SYMBOL} ` : "";
 }
 
 function preventMouseFocus(event: MouseEvent<HTMLButtonElement>) {
@@ -1620,7 +1622,7 @@ function isTrendEntryThroughDate(entry: TrendCategoryItem["recentEntries"][numbe
 }
 
 function formatTrendScopedAmount(amountMinor: number, displayCurrency: string, entries: TrendCategoryItem["recentEntries"]) {
-  const prefix = entries.some((entry) => entry.displayAmountApproximate) && amountMinor !== 0 ? "â‰ˆ " : "";
+  const prefix = entries.some((entry) => entry.displayAmountApproximate) && amountMinor !== 0 ? `${APPROXIMATE_SYMBOL} ` : "";
   return `${prefix}${formatMoney(amountMinor, displayCurrency)}`;
 }
 
@@ -1721,7 +1723,7 @@ function TrendCategoryEntryList({
       {entries.map((entry) => {
         const amountDisplay = entry.displayAmountDisplay ?? entry.amountDisplay;
         const signedAmount =
-          tone === "income" || amountDisplay.startsWith("-") || amountDisplay.startsWith("+") || amountDisplay.startsWith("≈ ")
+          tone === "income" || amountDisplay.startsWith("-") || amountDisplay.startsWith("+") || amountDisplay.startsWith(`${APPROXIMATE_SYMBOL} `)
             ? amountDisplay
             : `-${amountDisplay}`;
 
@@ -1773,7 +1775,7 @@ function TrendCategoryExplorer({
     return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked money movement in this period.</p>;
   }
 
-  const visibleLimit = 10;
+  const visibleLimit = 12;
   const selectedItem = selectedKey ? sortedItems.find((item) => item.key === selectedKey) ?? null : null;
   const topItems = sortedItems.slice(0, visibleLimit);
   const gridItems =
