@@ -237,9 +237,12 @@ describe("transactions overview", () => {
       />,
     );
 
+    const owedButton = screen.getByRole("button", { name: "Owed" });
     expect(screen.getByRole("button", { name: currentMonthLabel() })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "Summary" })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("button", { name: "Owed" })).toHaveAttribute("aria-expanded", "false");
+    expect(owedButton).toHaveAttribute("aria-expanded", "false");
+    expect(owedButton).toHaveTextContent("Owed");
+    expect(owedButton).not.toHaveTextContent("O...");
     expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Last month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
@@ -265,14 +268,40 @@ describe("transactions overview", () => {
 
     expect(owedPanel).toBeInTheDocument();
     expect(within(owedPanel).getByText(/owed to you/)).toBeInTheDocument();
-    expect(within(owedPanel).getByRole("button", { name: /Owed to me/ })).toBeInTheDocument();
-    expect(within(owedPanel).getByRole("button", { name: /I owe/ })).toBeInTheDocument();
+    expect(within(owedPanel).getByText("Owed to me")).toBeInTheDocument();
+    expect(within(owedPanel).getByText("I owe")).toBeInTheDocument();
+    expect(within(owedPanel).queryByText("Money others should pay back.")).not.toBeInTheDocument();
+    expect(within(owedPanel).queryByText("Money I need to pay.")).not.toBeInTheDocument();
+    expect(owedPanel.querySelector(".lucide-minus")).not.toBeInTheDocument();
     expect(within(owedPanel).getByRole("button", { name: /Create owed note/ })).toBeInTheDocument();
 
-    fireEvent.click(within(owedPanel).getByRole("button", { name: /Owed to me/ }));
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /Mira/ }));
+    expect(within(owedPanel).getByRole("button", { name: "Add" })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: "Subtract" })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: "Note" })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: "Settle" })).toBeInTheDocument();
     expect(within(owedPanel).getByText("Mira")).toBeInTheDocument();
     expect(screen.getByText("Market transaction")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
+  });
+
+  it("shows compact empty Owed management with a create action", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "Market transaction" })]}
+        owedNotes={[]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Owed" }));
+
+    const owedPanel = screen.getByText("Money owed").closest(".rounded-2xl") as HTMLElement;
+    expect(within(owedPanel).getByText("No open money reminders.")).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: /Create owed note/ })).toBeInTheDocument();
+    expect(within(owedPanel).queryByText("Add a money reminder.")).not.toBeInTheDocument();
   });
 
   it("filters recurring entries through the sixth top filter and hides month controls", () => {

@@ -681,7 +681,7 @@ export function AssistantComposer({
         </Button>
       </form>
 
-      <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-5" : "grid-cols-3"}`}>
+      <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
         {(importsEnabled ? importActionPanelItems : betaActionPanelItems).map(({ id, label, Icon }) => {
           const isOpen = openPanel === id;
 
@@ -1439,16 +1439,16 @@ export function AssistantComposer({
               Close
             </button>
           </div>
-          <MoneyOwedPanel
-            adjustAmountAction={adjustOwedNoteAmountAction}
-            createAction={createOwedNoteAction}
-            defaultCurrency={supportedDefaultCurrency}
-            notes={owedNotes}
-            settleAction={settleOwedNoteAction}
-            summary={false}
-            title="Money owed"
-            updateNoteAction={updateOwedNoteNoteAction}
-          />
+            <MoneyOwedPanel
+              adjustAmountAction={adjustOwedNoteAmountAction}
+              createAction={createOwedNoteAction}
+              defaultCurrency={supportedDefaultCurrency}
+              notes={owedNotes}
+              settleAction={settleOwedNoteAction}
+              summary={false}
+              title={null}
+              updateNoteAction={updateOwedNoteNoteAction}
+            />
         </div>
       ) : null}
 

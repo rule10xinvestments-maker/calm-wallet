@@ -136,6 +136,7 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limits" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Money owed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Money owed" }).closest(".grid")).toHaveClass("grid-cols-2");
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
@@ -158,13 +159,15 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Money owed" }));
 
     expect(screen.getByText("Create and update money reminders.")).toBeInTheDocument();
+    const moneyOwedPanel = screen.getByText("Create and update money reminders.").closest(".rounded-2xl") as HTMLElement;
+    expect(within(moneyOwedPanel).getAllByText("Money owed")).toHaveLength(1);
     expect(screen.getByRole("button", { name: /Owed to me/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /I owe/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Create owed note/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Owed to me/ }));
     expect(screen.getByText("Mira")).toBeInTheDocument();
-    expect(screen.getByText("Coffee · Updated Jul 1")).toBeInTheDocument();
+    expect(screen.getByText(/Coffee.*Updated Jul 1/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Create owed note/ }));
     expect(screen.queryByText("Mira")).not.toBeInTheDocument();

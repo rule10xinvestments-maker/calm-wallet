@@ -1412,10 +1412,10 @@ export function TransactionsOverview({
               </div>
             ) : (
               <>
-                <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-3" : "grid-cols-1"}`}>
+                <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_5.25rem]" : "grid-cols-1"}`}>
                   <button
                     aria-expanded={isTimeframeOpen}
-                    className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                    className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50 min-[390px]:px-3"
                     onClick={() => {
                       setIsTimeframeOpen((isOpen) => {
                         if (isOpen && activePeriod !== "custom") {
@@ -1441,7 +1441,7 @@ export function TransactionsOverview({
                   {shouldShowSummaryControl ? (
                     <button
                       aria-expanded={isSummaryOpen}
-                      className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                      className="flex min-h-10 items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50 min-[390px]:gap-2 min-[390px]:px-3"
                       onClick={() => setIsSummaryOpen((isOpen) => !isOpen)}
                       type="button"
                     >
@@ -1457,13 +1457,13 @@ export function TransactionsOverview({
                   {shouldShowSummaryControl ? (
                     <button
                       aria-expanded={isOwedOpen}
-                      className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                      className="flex min-h-10 items-center justify-between gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
                       onClick={() => setIsOwedOpen((isOpen) => !isOpen)}
                       type="button"
                     >
-                      <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="flex min-w-0 items-center gap-1">
                         <HandCoins aria-hidden="true" className="shrink-0 text-slate-500" size={15} strokeWidth={2.2} />
-                        <span className="truncate">Owed</span>
+                        <span className="whitespace-nowrap">Owed</span>
                       </span>
                       <ChevronDown
                         aria-hidden="true"
@@ -1654,6 +1654,7 @@ export function TransactionsOverview({
                 settleAction={settleOwedNoteAction}
                 title="Money owed"
                 updateNoteAction={updateOwedNoteNoteAction}
+                variant="activity"
               />
             ) : null}
             {!shouldShowSummaryControl && !isDeletedView && !isRecurringView ? (
