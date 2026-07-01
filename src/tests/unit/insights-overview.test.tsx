@@ -1676,7 +1676,9 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("img", { name: "Tracked spending by week" })).toBeInTheDocument();
     expect(screen.getByText("Showing weeks with tracked spending.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apr 1–7, $150 spending, tap for category breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 1–7, $150 spending, tap for category breakdown" })).toHaveClass(
+      "grid-cols-[5.85rem_minmax(0,1fr)_auto]",
+    );
     expect(screen.getByLabelText("Apr 1–7 Housing spending $120")).toBeInTheDocument();
     expect(screen.queryByText("Apr 15")).not.toBeInTheDocument();
 

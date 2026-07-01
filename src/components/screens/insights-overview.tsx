@@ -1255,19 +1255,22 @@ function TimeframeBarsChart({
             const isBarDimmed = Boolean(selectedCategoryKey && !containsSelectedCategory);
             const selectedCategorySegment = selectedCategoryKey ? segments.find((segment) => segment.key === selectedCategoryKey) ?? null : null;
             const rowAmountDisplay = selectedCategorySegment?.amountDisplay ?? amountDisplay;
+            const rowGridClass =
+              granularity === "week" ? "grid-cols-[5.85rem_minmax(0,1fr)_auto]" : "grid-cols-[3.25rem_minmax(0,1fr)_auto]";
+            const labelClass = granularity === "week" ? "text-[11px]" : "text-xs";
 
             return (
               <div className={`space-y-2 transition-opacity ${isBarDimmed ? "opacity-35" : "opacity-100"}`} key={bar.key}>
                 <button
                   aria-label={`${label}, ${rowAmountDisplay} ${context}, ${isSelected ? "hide" : "tap for"} category breakdown`}
                   aria-pressed={isSelected}
-                  className={`grid w-full grid-cols-[3.25rem_1fr_auto] items-center gap-2 rounded-lg px-1 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                  className={`grid w-full ${rowGridClass} items-center gap-2 rounded-lg px-1 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                     isSelected ? "bg-slate-50 ring-1 ring-slate-200" : ""
                   }`}
                   onClick={() => setSelectedDayKey(isSelected ? null : bar.key)}
                   type="button"
                 >
-                  <span className="whitespace-nowrap text-xs font-medium text-slate-600">{label}</span>
+                  <span className={`whitespace-nowrap ${labelClass} font-medium text-slate-600`}>{label}</span>
                   <span className="h-8 overflow-hidden rounded-lg bg-slate-100">
                     <span
                       aria-label={`${label} tracked ${context} ${amountDisplay}`}
