@@ -1112,6 +1112,7 @@ describe("transactions read model", () => {
         makeTransaction({ id: "apr-02-housing", amountMinor: 1000, categoryId: "housing", occurredAt: "2026-04-02T10:00:00.000Z" }),
         makeTransaction({ id: "apr-07-food", amountMinor: 2000, categoryId: "food", occurredAt: "2026-04-07T10:00:00.000Z" }),
         makeTransaction({ id: "apr-08-food", amountMinor: 3000, categoryId: "food", occurredAt: "2026-04-08T10:00:00.000Z" }),
+        makeTransaction({ id: "may-01-travel", amountMinor: 5000, categoryId: "travel", occurredAt: "2026-05-01T10:00:00.000Z" }),
         makeTransaction({
           id: "jun-30-income",
           transactionType: "income",
@@ -1120,7 +1121,7 @@ describe("transactions read model", () => {
           occurredAt: "2026-06-30T10:00:00.000Z",
         }),
       ],
-      { food: "Groceries", housing: "Housing", salary: "Salary" },
+      { food: "Groceries", housing: "Housing", salary: "Salary", travel: "Travel" },
       "USD",
       new Date("2026-06-30T00:00:00.000Z"),
       [],
@@ -1135,9 +1136,10 @@ describe("transactions read model", () => {
     expect(data.timeframeBars.map((bar) => [bar.key, bar.rangeLabel, bar.amountMinor, bar.incomeAmountMinor])).toEqual([
       ["2026-04-01", "Apr 1–7", 3000, 0],
       ["2026-04-08", "Apr 8–14", 3000, 0],
+      ["2026-04-29", "Apr 29–May 5", 5000, 0],
       ["2026-06-24", "Jun 24–30", 0, 4000],
     ]);
-    expect(data.timeframeBars.flatMap((bar) => bar.segments).reduce((sum, segment) => sum + segment.amountMinor, 0)).toBe(6000);
+    expect(data.timeframeBars.flatMap((bar) => bar.segments).reduce((sum, segment) => sum + segment.amountMinor, 0)).toBe(11000);
     expect(data.timeframeBars[0].segments).toEqual([
       { key: "food", label: "Groceries", amountMinor: 2000, amountDisplay: "$20", transactionCount: 1 },
       { key: "housing", label: "Housing", amountMinor: 1000, amountDisplay: "$10", transactionCount: 1 },
@@ -1145,7 +1147,10 @@ describe("transactions read model", () => {
     expect(data.timeframeBars[1].segments).toEqual([
       { key: "food", label: "Groceries", amountMinor: 3000, amountDisplay: "$30", transactionCount: 1 },
     ]);
-    expect(data.timeframeBars[2].incomeSegments).toEqual([
+    expect(data.timeframeBars[2].segments).toEqual([
+      { key: "travel", label: "Travel", amountMinor: 5000, amountDisplay: "$50", transactionCount: 1 },
+    ]);
+    expect(data.timeframeBars[3].incomeSegments).toEqual([
       { key: "salary", label: "Salary", amountMinor: 4000, amountDisplay: "$40", transactionCount: 1 },
     ]);
   });

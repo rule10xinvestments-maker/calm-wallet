@@ -1676,11 +1676,11 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("img", { name: "Tracked spending by week" })).toBeInTheDocument();
     expect(screen.getByText("Showing weeks with tracked spending.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apr 1, $150 spending, tap for category breakdown" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Apr 1 Housing spending $120")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 1–7, $150 spending, tap for category breakdown" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Apr 1–7 Housing spending $120")).toBeInTheDocument();
     expect(screen.queryByText("Apr 15")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Apr 1, $150 spending, tap for category breakdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apr 1–7, $150 spending, tap for category breakdown" }));
 
     expect(screen.getByLabelText("Apr 1–7 spending category breakdown")).toBeInTheDocument();
     expect(screen.getByText("Total $150")).toBeInTheDocument();
@@ -1688,14 +1688,14 @@ describe("insights overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Select Housing focus" }));
 
     expect(screen.getByText("Week amounts show Housing only")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apr 1, $120 spending, hide category breakdown" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apr 8, $20 spending, tap for category breakdown" }).parentElement).toHaveClass("opacity-35");
+    expect(screen.getByRole("button", { name: "Apr 1–7, $120 spending, hide category breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 8–14, $20 spending, tap for category breakdown" }).parentElement).toHaveClass("opacity-35");
 
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
 
     expect(screen.getByRole("img", { name: "Tracked income by week" })).toBeInTheDocument();
     expect(screen.getByText("Showing weeks with tracked income.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apr 15, $70 income, tap for category breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 15–21, $70 income, tap for category breakdown" })).toBeInTheDocument();
   });
 
   it("keeps Bars Expenses category breakdown on expense categories", () => {

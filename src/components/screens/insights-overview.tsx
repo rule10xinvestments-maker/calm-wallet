@@ -489,6 +489,10 @@ function getBarsBucketLabel(bar: InsightsData["timeframeBars"][number]) {
     return formatSpendingDayLabel(bar);
   }
 
+  if (bar.granularity === "week") {
+    return bar.rangeLabel ?? bar.label;
+  }
+
   return bar.label;
 }
 
