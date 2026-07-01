@@ -8,9 +8,17 @@ import {
   restoreTransactionAction,
   updateTransactionAction,
 } from "@/lib/actions/transactions";
+import {
+  adjustOwedNoteAmountAction,
+  createOwedNoteAction,
+  settleOwedNoteAction,
+  updateOwedNoteNoteAction,
+} from "@/lib/actions/owed-notes";
 import { initialTransactionMutationState } from "@/lib/actions/transactions-state";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { generateDueRecurringTransactionsForUserSafely } from "@/domain/recurring/service";
+import { createSupabaseOwedNotesService } from "@/domain/owed-notes/service";
+import type { OwedNote } from "@/domain/owed-notes/types";
 import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { loadAuthenticatedStagedImportBundle } from "@/lib/server/imports-loader";
 import { loadStagedImportList } from "@/lib/server/imports-list";
@@ -92,6 +100,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   let stagedImports: Awaited<ReturnType<typeof loadStagedImportList>> = [];
   let stagedImportBundles: Awaited<ReturnType<typeof loadAuthenticatedStagedImportBundle>>[] = [];
   let stagedImportProgress: Awaited<ReturnType<typeof loadStagedImportReviewProgress>>[] = [];
+  let owedNotes: OwedNote[] = [];
   const importsEnabled = areImportsEnabled();
 
   try {
@@ -100,6 +109,14 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       userId: user.id,
       view: "all",
     });
+
+    try {
+      const owedNotesService = await createSupabaseOwedNotesService();
+      owedNotes = await owedNotesService.listOpenOwedNotes(user.id);
+    } catch (error) {
+      logProtectedRouteLoadFailure("transactions", error);
+      owedNotes = [];
+    }
 
     if (importsEnabled) {
       stagedImports = await loadStagedImportList();
@@ -171,6 +188,8 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       deleteAction={deleteTransactionAction}
       displayCurrency={data.displayCurrency}
       availableDisplayCurrencies={data.availableDisplayCurrencies}
+      adjustOwedNoteAmountAction={adjustOwedNoteAmountAction}
+      createOwedNoteAction={createOwedNoteAction}
       fxRates={data.fxRates}
       initialActionState={initialTransactionMutationState}
       initialReviewActionState={initialImportCandidateReviewDecisionActionState}
@@ -181,10 +200,13 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       recentlyDeletedItems={data.recentlyDeletedItems}
       restoreAction={restoreTransactionAction}
       reviewAction={reviewImportCandidateAction}
+      owedNotes={owedNotes}
       importsEnabled={importsEnabled}
+      settleOwedNoteAction={settleOwedNoteAction}
       stagedImportDetails={stagedImportDetails}
       stagedImports={stagedImports ?? []}
       updateAction={updateTransactionAction}
+      updateOwedNoteNoteAction={updateOwedNoteNoteAction}
       loadError={loadError}
     />
   );

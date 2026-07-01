@@ -5,6 +5,7 @@ import { initialImportCandidateReviewDecisionActionState } from "@/lib/actions/i
 import type { ImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
 import type { TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { StagedImportListItem } from "@/lib/server/imports-list";
+import type { OwedNote } from "@/domain/owed-notes/types";
 
 vi.mock("@/components/transactions/transaction-item-card", () => ({
   TransactionItemCard: ({ item, recurringMode }: { item: TransactionListItem; recurringMode?: boolean }) => (
@@ -146,6 +147,11 @@ function makeOverviewProps() {
     importsEnabled: true,
     displayCurrency: "USD",
     availableDisplayCurrencies: ["USD", "EUR", "RON"],
+    owedNotes: [],
+    createOwedNoteAction: vi.fn(async () => ({ status: "idle" as const, message: null, note: null })),
+    adjustOwedNoteAmountAction: vi.fn(async () => ({ status: "idle" as const, message: null, note: null })),
+    updateOwedNoteNoteAction: vi.fn(async () => ({ status: "idle" as const, message: null, note: null })),
+    settleOwedNoteAction: vi.fn(async () => ({ status: "idle" as const, message: null, note: null })),
     fxRates: [
       {
         baseCurrency: "EUR",
@@ -172,6 +178,25 @@ function makeOverviewProps() {
         fetchedAt: "2026-06-01T00:00:00.000Z",
       },
     ],
+  };
+}
+
+function makeOwedNote(overrides: Partial<OwedNote> = {}): OwedNote {
+  return {
+    id: "owed-1",
+    userId: "user-1",
+    direction: "owed_to_me",
+    personName: "Mira",
+    originalAmount: 25,
+    currentAmount: 25,
+    currency: "RON",
+    note: "Coffee",
+    status: "open",
+    settledAt: null,
+    dueDate: null,
+    createdAt: "2026-07-01T00:00:00.000Z",
+    updatedAt: "2026-07-01T00:00:00.000Z",
+    ...overrides,
   };
 }
 
@@ -214,12 +239,40 @@ describe("transactions overview", () => {
 
     expect(screen.getByRole("button", { name: currentMonthLabel() })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "Summary" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Owed" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Last month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "USD" })).not.toBeInTheDocument();
     expect(screen.queryByText("entries shown")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
     expect(screen.getByText("visible history")).toBeInTheDocument();
+  });
+
+  it("expands Owed below the controls and keeps owed notes separate from transaction rows", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "Market transaction" })]}
+        owedNotes={[makeOwedNote(), makeOwedNote({ id: "owed-2", direction: "i_owe", personName: "Ana", currentAmount: 10, note: null })]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Owed" }));
+
+    const owedPanel = screen.getByText("Money owed").closest(".rounded-2xl") as HTMLElement;
+
+    expect(owedPanel).toBeInTheDocument();
+    expect(within(owedPanel).getByText(/owed to you/)).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: /Owed to me/ })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: /I owe/ })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: /Create owed note/ })).toBeInTheDocument();
+
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /Owed to me/ }));
+    expect(within(owedPanel).getByText("Mira")).toBeInTheDocument();
+    expect(screen.getByText("Market transaction")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
   });
 
   it("filters recurring entries through the sixth top filter and hides month controls", () => {
@@ -1852,7 +1905,7 @@ describe("transactions overview", () => {
           transactionType: "expense" as const,
           amountMinor: null,
           currency: "RON",
-          occurredAt: "2026-06-15T10:00:00.000Z",
+          occurredAt: dateInCurrentMonth(15),
           description: "Receipt image: receipt.jpg",
           merchantGuess: null,
           categoryId: "cat-groceries",
@@ -1870,7 +1923,7 @@ describe("transactions overview", () => {
           transactionType: "expense" as const,
           amountMinor: 4250,
           currency: "RON",
-          occurredAt: "2026-06-15T10:00:00.000Z",
+          occurredAt: dateInCurrentMonth(15),
           categoryId: "cat-groceries",
           itemName: "Receipt image: receipt.jpg",
           merchant: "Market",

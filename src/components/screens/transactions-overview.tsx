@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, List, MinusCircle, PlusCircle, Repeat2, Search, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, HandCoins, List, MinusCircle, PlusCircle, Repeat2, Search, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -16,9 +17,12 @@ import type {
   TransactionsView,
 } from "@/lib/server/transactions-read-model";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
+import type { OwedNote } from "@/domain/owed-notes/types";
+import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
+type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
 type ImportReviewActionHandler = (
   state: ImportCandidateReviewDecisionActionState,
   formData: FormData,
@@ -474,7 +478,16 @@ type TransactionsOverviewProps = {
   displayCurrency: string;
   availableDisplayCurrencies: string[];
   fxRates: DisplayFxRate[];
+  owedNotes?: OwedNote[];
+  createOwedNoteAction?: OwedNoteActionHandler;
+  adjustOwedNoteAmountAction?: OwedNoteActionHandler;
+  updateOwedNoteNoteAction?: OwedNoteActionHandler;
+  settleOwedNoteAction?: OwedNoteActionHandler;
 };
+
+async function noopOwedNoteAction(state: OwedNoteActionState) {
+  return state;
+}
 
 function ReviewActionMessage({ state }: { state: ImportCandidateReviewDecisionActionState }) {
   if (state.status === "idle" || !state.message) {
@@ -1146,6 +1159,11 @@ export function TransactionsOverview({
   displayCurrency,
   availableDisplayCurrencies,
   fxRates,
+  owedNotes = [],
+  createOwedNoteAction = noopOwedNoteAction,
+  adjustOwedNoteAmountAction = noopOwedNoteAction,
+  updateOwedNoteNoteAction = noopOwedNoteAction,
+  settleOwedNoteAction = noopOwedNoteAction,
 }: TransactionsOverviewProps) {
   const currentDate = useMemo(() => new Date(), []);
   const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
@@ -1162,6 +1180,7 @@ export function TransactionsOverview({
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
   const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isOwedOpen, setIsOwedOpen] = useState(false);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
   const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
@@ -1258,6 +1277,7 @@ export function TransactionsOverview({
   useEffect(() => {
     if (!shouldShowSummaryControl) {
       setIsSummaryOpen(false);
+      setIsOwedOpen(false);
     }
   }, [shouldShowSummaryControl]);
 
@@ -1392,7 +1412,7 @@ export function TransactionsOverview({
               </div>
             ) : (
               <>
-                <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-2" : "grid-cols-1"}`}>
+                <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-3" : "grid-cols-1"}`}>
                   <button
                     aria-expanded={isTimeframeOpen}
                     className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
@@ -1429,6 +1449,25 @@ export function TransactionsOverview({
                       <ChevronDown
                         aria-hidden="true"
                         className={`shrink-0 text-slate-500 transition ${isSummaryOpen ? "rotate-180" : ""}`}
+                        size={15}
+                        strokeWidth={2.2}
+                      />
+                    </button>
+                  ) : null}
+                  {shouldShowSummaryControl ? (
+                    <button
+                      aria-expanded={isOwedOpen}
+                      className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                      onClick={() => setIsOwedOpen((isOpen) => !isOpen)}
+                      type="button"
+                    >
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <HandCoins aria-hidden="true" className="shrink-0 text-slate-500" size={15} strokeWidth={2.2} />
+                        <span className="truncate">Owed</span>
+                      </span>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={`shrink-0 text-slate-500 transition ${isOwedOpen ? "rotate-180" : ""}`}
                         size={15}
                         strokeWidth={2.2}
                       />
@@ -1605,6 +1644,17 @@ export function TransactionsOverview({
                   )}
                 </div>
               </div>
+            ) : null}
+            {shouldShowSummaryControl && isOwedOpen ? (
+              <MoneyOwedPanel
+                adjustAmountAction={adjustOwedNoteAmountAction}
+                createAction={createOwedNoteAction}
+                defaultCurrency={activeDisplayCurrency}
+                notes={owedNotes}
+                settleAction={settleOwedNoteAction}
+                title="Money owed"
+                updateNoteAction={updateOwedNoteNoteAction}
+              />
             ) : null}
             {!shouldShowSummaryControl && !isDeletedView && !isRecurringView ? (
               <p className="px-1 text-xs font-medium text-slate-500">{contextEntryLabel}</p>

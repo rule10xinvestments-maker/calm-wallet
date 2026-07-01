@@ -14,6 +14,8 @@ export type ParseQuality = "unknown" | "low" | "medium" | "high";
 export type AcceptanceState = "pending" | "accepted" | "rejected";
 export type UserCategorySignalType = "merchant" | "phrase" | "import_description";
 export type RecurringFrequency = "weekly" | "monthly" | "yearly";
+export type OwedNoteDirection = "owed_to_me" | "i_owe";
+export type OwedNoteStatus = "open" | "settled";
 
 export type Database = {
   public: {
@@ -483,6 +485,53 @@ export type Database = {
           period?: "weekly" | "monthly";
           repeats?: boolean;
           is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      owed_notes: {
+        Row: {
+          id: string;
+          user_id: string;
+          direction: OwedNoteDirection;
+          person_name: string;
+          original_amount: number;
+          current_amount: number;
+          currency: string;
+          note: string | null;
+          status: OwedNoteStatus;
+          settled_at: string | null;
+          due_date: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          direction: OwedNoteDirection;
+          person_name: string;
+          original_amount: number;
+          current_amount: number;
+          currency: string;
+          note?: string | null;
+          status?: OwedNoteStatus;
+          settled_at?: string | null;
+          due_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          direction?: OwedNoteDirection;
+          person_name?: string;
+          original_amount?: number;
+          current_amount?: number;
+          currency?: string;
+          note?: string | null;
+          status?: OwedNoteStatus;
+          settled_at?: string | null;
+          due_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };

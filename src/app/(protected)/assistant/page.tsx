@@ -2,9 +2,17 @@ import { AssistantOverview } from "@/components/screens/assistant-overview";
 import { assistantAction } from "@/lib/actions/assistant";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
 import { pauseCategoryLimitAction, resumeCategoryLimitAction, deleteMonthlyCategoryBudgetAction, upsertCategoryLimitAction } from "@/lib/actions/budgets";
+import {
+  adjustOwedNoteAmountAction,
+  createOwedNoteAction,
+  settleOwedNoteAction,
+  updateOwedNoteNoteAction,
+} from "@/lib/actions/owed-notes";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { createSupabaseBudgetService } from "@/domain/budgets/service";
+import { createSupabaseOwedNotesService } from "@/domain/owed-notes/service";
 import type { Budget } from "@/domain/budgets/types";
+import type { OwedNote } from "@/domain/owed-notes/types";
 import { generateDueRecurringTransactionsForUserSafely } from "@/domain/recurring/service";
 import { loadAssistantRecentTransactions, loadControlledCategoryOptions, loadDefaultCurrency } from "@/lib/server/transactions-read-model";
 import { logProtectedRouteLoadFailure } from "@/lib/server/protected-route-fallbacks";
@@ -22,6 +30,7 @@ export default async function AssistantPage() {
   let recentTransactions: Awaited<ReturnType<typeof loadAssistantRecentTransactions>> = [];
   let categoryOptions: Awaited<ReturnType<typeof loadControlledCategoryOptions>> = [];
   let categoryLimits: Budget[] = [];
+  let owedNotes: OwedNote[] = [];
   let defaultCurrency = "USD";
 
   try {
@@ -35,6 +44,14 @@ export default async function AssistantPage() {
       budgetService.listCategoryLimits(user.id, { monthStart, includePaused: true }),
       loadDefaultCurrency(user.id),
     ]);
+
+    try {
+      const owedNotesService = await createSupabaseOwedNotesService();
+      owedNotes = await owedNotesService.listOpenOwedNotes(user.id);
+    } catch (error) {
+      logProtectedRouteLoadFailure("assistant", error);
+      owedNotes = [];
+    }
   } catch (error) {
     loadError = true;
     logProtectedRouteLoadFailure("assistant", error);
@@ -43,14 +60,19 @@ export default async function AssistantPage() {
   return (
     <AssistantOverview
       action={assistantAction}
+      adjustOwedNoteAmountAction={adjustOwedNoteAmountAction}
       initialState={initialAssistantActionState}
       categoryLimits={categoryLimits}
       categoryOptions={categoryOptions}
+      createOwedNoteAction={createOwedNoteAction}
       deleteLimitAction={deleteMonthlyCategoryBudgetAction}
       defaultCurrency={defaultCurrency}
+      owedNotes={owedNotes}
       recentTransactions={recentTransactions}
       pauseLimitAction={pauseCategoryLimitAction}
       resumeLimitAction={resumeCategoryLimitAction}
+      settleOwedNoteAction={settleOwedNoteAction}
+      updateOwedNoteNoteAction={updateOwedNoteNoteAction}
       upsertLimitAction={upsertCategoryLimitAction}
       loadError={loadError}
     />

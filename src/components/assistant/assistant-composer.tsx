@@ -6,6 +6,7 @@ import {
   ChevronDown,
   CircleGauge,
   FileSpreadsheet,
+  HandCoins,
   History,
   Plus,
   Receipt,
@@ -18,10 +19,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import { initialBudgetActionState, type BudgetActionState } from "@/lib/actions/budgets-state";
 import type { Budget } from "@/domain/budgets/types";
+import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
+import type { OwedNote } from "@/domain/owed-notes/types";
 import {
   uploadReceiptImageAction,
   uploadCsvBankStatementAction,
@@ -36,6 +40,7 @@ import type { AssistantActionState } from "@/lib/server/assistant";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
+type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
 
 type AssistantComposerProps = {
   action: AssistantActionHandler;
@@ -48,6 +53,11 @@ type AssistantComposerProps = {
   pauseLimitAction?: BudgetActionHandler;
   resumeLimitAction?: BudgetActionHandler;
   deleteLimitAction?: BudgetActionHandler;
+  owedNotes?: OwedNote[];
+  createOwedNoteAction?: OwedNoteActionHandler;
+  adjustOwedNoteAmountAction?: OwedNoteActionHandler;
+  updateOwedNoteNoteAction?: OwedNoteActionHandler;
+  settleOwedNoteAction?: OwedNoteActionHandler;
   importsEnabled?: boolean;
 };
 
@@ -58,7 +68,7 @@ type UploadFlowState = {
   filename: string | null;
 };
 
-type ActionPanel = "receipt" | "statement" | "recent" | "manual" | "limits";
+type ActionPanel = "receipt" | "statement" | "recent" | "manual" | "limits" | "owed";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
 type ManualCategoryOption = ControlledCategoryOption & { isSynthetic?: boolean };
@@ -181,26 +191,32 @@ function getReceiptUploadFailureMessage(error: unknown) {
 const importActionPanelItems: Array<{
   id: ActionPanel;
   label: string;
-  Icon: typeof Receipt;
+  Icon: LucideIcon;
 }> = [
   { id: "receipt", label: "Receipt", Icon: Receipt },
   { id: "statement", label: "Statement", Icon: FileSpreadsheet },
   { id: "recent", label: "Recent", Icon: History },
   { id: "manual", label: "Manual", Icon: Plus },
   { id: "limits", label: "Limits", Icon: CircleGauge },
+  { id: "owed", label: "Money owed", Icon: HandCoins },
 ];
 
 const betaActionPanelItems: Array<{
   id: ActionPanel;
   label: string;
-  Icon: typeof Receipt;
+  Icon: LucideIcon;
 }> = [
   { id: "recent", label: "Recent", Icon: History },
   { id: "manual", label: "Manual", Icon: Plus },
   { id: "limits", label: "Limits", Icon: CircleGauge },
+  { id: "owed", label: "Money owed", Icon: HandCoins },
 ];
 
 async function noopBudgetAction(state: BudgetActionState) {
+  return state;
+}
+
+async function noopOwedNoteAction(state: OwedNoteActionState) {
   return state;
 }
 
@@ -290,6 +306,11 @@ export function AssistantComposer({
   pauseLimitAction = noopBudgetAction,
   resumeLimitAction = noopBudgetAction,
   deleteLimitAction = noopBudgetAction,
+  owedNotes = [],
+  createOwedNoteAction = noopOwedNoteAction,
+  adjustOwedNoteAmountAction = noopOwedNoteAction,
+  updateOwedNoteNoteAction = noopOwedNoteAction,
+  settleOwedNoteAction = noopOwedNoteAction,
   importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
   const supportedDefaultCurrency = getSupportedManualCurrency(defaultCurrency);
@@ -350,6 +371,7 @@ export function AssistantComposer({
   const isRecentOpen = openPanel === "recent";
   const isManualPanelOpen = openPanel === "manual";
   const isLimitsPanelOpen = openPanel === "limits";
+  const isOwedPanelOpen = openPanel === "owed";
   const resetLimitForm = useCallback(() => {
     setEditingLimitId(null);
     setLimitAmount("");
@@ -1399,6 +1421,34 @@ export function AssistantComposer({
             )}
           </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {isOwedPanelOpen ? (
+        <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-slate-900">Money owed</p>
+              <p className="text-xs text-slate-500">Create and update money reminders.</p>
+            </div>
+            <button
+              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              onClick={() => setOpenPanel(null)}
+              type="button"
+            >
+              Close
+            </button>
+          </div>
+          <MoneyOwedPanel
+            adjustAmountAction={adjustOwedNoteAmountAction}
+            createAction={createOwedNoteAction}
+            defaultCurrency={supportedDefaultCurrency}
+            notes={owedNotes}
+            settleAction={settleOwedNoteAction}
+            summary={false}
+            title="Money owed"
+            updateNoteAction={updateOwedNoteNoteAction}
+          />
         </div>
       ) : null}
 

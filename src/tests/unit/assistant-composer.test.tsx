@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
 import type { Budget } from "@/domain/budgets/types";
+import type { OwedNote } from "@/domain/owed-notes/types";
 import type { AssistantActionState } from "@/lib/server/assistant";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 
@@ -19,6 +20,7 @@ vi.mock("@/lib/actions/imports", () => ({
 }));
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
+const owedAction = async () => ({ status: "idle" as const, message: null, note: null });
 
 function renderComposer(
   initialState: AssistantActionState = {
@@ -58,6 +60,25 @@ function openManualEntry() {
 
 function openLimitsPanel() {
   fireEvent.click(screen.getByRole("button", { name: "Limits" }));
+}
+
+function makeOwedNote(overrides: Partial<OwedNote> = {}): OwedNote {
+  return {
+    id: "owed-1",
+    userId: "user-1",
+    direction: "owed_to_me",
+    personName: "Mira",
+    originalAmount: 25,
+    currentAmount: 25,
+    currency: "RON",
+    note: "Coffee",
+    status: "open",
+    settledAt: null,
+    dueDate: null,
+    createdAt: "2026-07-01T00:00:00.000Z",
+    updatedAt: "2026-07-01T00:00:00.000Z",
+    ...overrides,
+  };
 }
 
 const manualCategoryOptions: ControlledCategoryOption[] = [
@@ -114,10 +135,40 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limits" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Money owed" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
     expect(screen.queryByText("Manual entry")).not.toBeInTheDocument();
+  });
+
+  it("opens Money owed with three compact expandable options", () => {
+    render(
+      <AssistantComposer
+        action={async () => ({ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] })}
+        adjustOwedNoteAmountAction={owedAction}
+        createOwedNoteAction={owedAction}
+        initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
+        owedNotes={[makeOwedNote(), makeOwedNote({ id: "owed-2", direction: "i_owe", personName: "Ana", currentAmount: 10, note: null })]}
+        settleOwedNoteAction={owedAction}
+        updateOwedNoteNoteAction={owedAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Money owed" }));
+
+    expect(screen.getByText("Create and update money reminders.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Owed to me/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /I owe/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Create owed note/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Owed to me/ }));
+    expect(screen.getByText("Mira")).toBeInTheDocument();
+    expect(screen.getByText("Coffee · Updated Jul 1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Create owed note/ }));
+    expect(screen.queryByText("Mira")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Person")).toBeInTheDocument();
   });
 
   it("prepares natural-language input without bypassing the assistant action", () => {
