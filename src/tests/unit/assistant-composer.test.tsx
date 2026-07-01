@@ -136,7 +136,8 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limits" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Money owed" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Money owed" }).closest(".grid")).toHaveClass("grid-cols-2");
+    expect(screen.getByRole("button", { name: "Money owed" }).closest(".grid")).toHaveClass("grid-cols-4");
+    expect(screen.getByRole("button", { name: "Money owed" }).closest(".grid")).not.toHaveClass("grid-cols-2");
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();

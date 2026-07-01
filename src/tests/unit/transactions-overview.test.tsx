@@ -238,10 +238,15 @@ describe("transactions overview", () => {
     );
 
     const owedButton = screen.getByRole("button", { name: "Owed" });
+    const summaryButton = screen.getByRole("button", { name: "Summary" });
+    const controlsRow = owedButton.closest(".grid") as HTMLElement;
+    expect(controlsRow).toHaveClass("grid-cols-3");
     expect(screen.getByRole("button", { name: currentMonthLabel() })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("button", { name: "Summary" })).toHaveAttribute("aria-expanded", "false");
+    expect(summaryButton).toHaveAttribute("aria-expanded", "false");
     expect(owedButton).toHaveAttribute("aria-expanded", "false");
+    expect(summaryButton).toHaveTextContent("Summary");
     expect(owedButton).toHaveTextContent("Owed");
+    expect(summaryButton).not.toHaveTextContent("Sum...");
     expect(owedButton).not.toHaveTextContent("O...");
     expect(screen.queryByRole("button", { name: "This month" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Last month" })).not.toBeInTheDocument();

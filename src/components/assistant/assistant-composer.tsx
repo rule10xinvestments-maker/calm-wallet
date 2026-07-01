@@ -681,7 +681,7 @@ export function AssistantComposer({
         </Button>
       </form>
 
-      <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
+      <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-3" : "grid-cols-4"}`}>
         {(importsEnabled ? importActionPanelItems : betaActionPanelItems).map(({ id, label, Icon }) => {
           const isOpen = openPanel === id;
 
@@ -696,7 +696,7 @@ export function AssistantComposer({
                 <input name="toolName" type="hidden" value="list_transactions" />
                 <button
                   aria-expanded={isOpen}
-                  className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium transition ${
+                  className={`flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium leading-tight transition ${
                     isOpen ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:bg-white/80"
                   }`}
                   disabled={isPending}
@@ -715,7 +715,7 @@ export function AssistantComposer({
                   }}
                   type="submit"
                 >
-                  <Icon aria-hidden="true" className="size-5" strokeWidth={2} />
+                  <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
                   <span>{label}</span>
                 </button>
               </form>
@@ -725,14 +725,14 @@ export function AssistantComposer({
           return (
             <button
               aria-expanded={isOpen}
-              className={`flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium transition ${
+              className={`flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium leading-tight transition ${
                 isOpen ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:bg-white/80"
               }`}
               key={id}
               onClick={() => togglePanel(id)}
               type="button"
             >
-              <Icon aria-hidden="true" className="size-5" strokeWidth={2} />
+              <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
               <span>{label}</span>
             </button>
           );

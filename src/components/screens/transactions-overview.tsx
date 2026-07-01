@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, HandCoins, List, MinusCircle, PlusCircle, Repeat2, Search, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, HandCoins, List, MinusCircle, PlusCircle, Repeat2, Search, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
@@ -1233,6 +1233,7 @@ export function TransactionsOverview({
   const summaryMode = getSummaryMode(activeView);
   const shouldShowSummaryControl = summaryMode !== "context" && activeView !== "recurring";
   const periodLabel = getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex);
+  const compactPeriodLabel = activePeriod === "month" ? getMonthLabel(selectedMonth.year, selectedMonth.monthIndex, "short") : "Custom";
   const currentMonthKey = getCurrentMonthKey(currentDate);
   const selectedMonthKey = getMonthKey(selectedMonth.year, selectedMonth.monthIndex);
   const monthOptions = useMemo(
@@ -1412,10 +1413,15 @@ export function TransactionsOverview({
               </div>
             ) : (
               <>
-                <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_5.25rem]" : "grid-cols-1"}`}>
+                <div className={`grid gap-2 ${shouldShowSummaryControl ? "grid-cols-3" : "grid-cols-1"}`}>
                   <button
+                    aria-label={periodLabel}
                     aria-expanded={isTimeframeOpen}
-                    className="flex min-h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50 min-[390px]:px-3"
+                    className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1.5 py-2 text-center text-xs font-semibold leading-tight transition ${
+                      isTimeframeOpen
+                        ? "border-sky-200 bg-sky-50 text-sky-800 shadow-sm"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-sky-200 hover:bg-sky-50"
+                    }`}
                     onClick={() => {
                       setIsTimeframeOpen((isOpen) => {
                         if (isOpen && activePeriod !== "custom") {
@@ -1427,50 +1433,37 @@ export function TransactionsOverview({
                     }}
                     type="button"
                   >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <CalendarDays aria-hidden="true" className="shrink-0 text-slate-500" size={15} strokeWidth={2.2} />
-                      <span className="truncate">{periodLabel}</span>
-                    </span>
-                    <ChevronDown
-                      aria-hidden="true"
-                      className={`shrink-0 text-slate-500 transition ${isTimeframeOpen ? "rotate-180" : ""}`}
-                      size={15}
-                      strokeWidth={2.2}
-                    />
+                    <CalendarDays aria-hidden="true" className={isTimeframeOpen ? "text-sky-700" : "text-slate-500"} size={16} strokeWidth={2.2} />
+                    <span className="w-full whitespace-nowrap">{compactPeriodLabel}</span>
                   </button>
                   {shouldShowSummaryControl ? (
                     <button
                       aria-expanded={isSummaryOpen}
-                      className="flex min-h-10 items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50 min-[390px]:gap-2 min-[390px]:px-3"
+                      className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1.5 py-2 text-center text-xs font-semibold leading-tight transition ${
+                        isSummaryOpen
+                          ? "border-sky-200 bg-sky-50 text-sky-800 shadow-sm"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-sky-200 hover:bg-sky-50"
+                      }`}
                       onClick={() => setIsSummaryOpen((isOpen) => !isOpen)}
                       type="button"
                     >
-                      <span className="truncate">Summary</span>
-                      <ChevronDown
-                        aria-hidden="true"
-                        className={`shrink-0 text-slate-500 transition ${isSummaryOpen ? "rotate-180" : ""}`}
-                        size={15}
-                        strokeWidth={2.2}
-                      />
+                      <List aria-hidden="true" className={isSummaryOpen ? "text-sky-700" : "text-slate-500"} size={16} strokeWidth={2.2} />
+                      <span className="w-full whitespace-nowrap">Summary</span>
                     </button>
                   ) : null}
                   {shouldShowSummaryControl ? (
                     <button
                       aria-expanded={isOwedOpen}
-                      className="flex min-h-10 items-center justify-between gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-sky-200 hover:bg-sky-50"
+                      className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1.5 py-2 text-center text-xs font-semibold leading-tight transition ${
+                        isOwedOpen
+                          ? "border-sky-200 bg-sky-50 text-sky-800 shadow-sm"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-sky-200 hover:bg-sky-50"
+                      }`}
                       onClick={() => setIsOwedOpen((isOpen) => !isOpen)}
                       type="button"
                     >
-                      <span className="flex min-w-0 items-center gap-1">
-                        <HandCoins aria-hidden="true" className="shrink-0 text-slate-500" size={15} strokeWidth={2.2} />
-                        <span className="whitespace-nowrap">Owed</span>
-                      </span>
-                      <ChevronDown
-                        aria-hidden="true"
-                        className={`shrink-0 text-slate-500 transition ${isOwedOpen ? "rotate-180" : ""}`}
-                        size={15}
-                        strokeWidth={2.2}
-                      />
+                      <HandCoins aria-hidden="true" className={isOwedOpen ? "text-sky-700" : "text-slate-500"} size={16} strokeWidth={2.2} />
+                      <span className="w-full whitespace-nowrap">Owed</span>
                     </button>
                   ) : null}
                 </div>
