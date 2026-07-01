@@ -135,9 +135,10 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limits" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Money owed" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Money owed" }).closest(".grid")).toHaveClass("grid-cols-4");
-    expect(screen.getByRole("button", { name: "Money owed" }).closest(".grid")).not.toHaveClass("grid-cols-2");
+    expect(screen.getByRole("button", { name: "Owed" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Money owed" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Owed" }).closest(".grid")).toHaveClass("grid-cols-4");
+    expect(screen.getByRole("button", { name: "Owed" }).closest(".grid")).not.toHaveClass("grid-cols-2");
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
@@ -157,7 +158,7 @@ describe("assistant composer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Money owed" }));
+    fireEvent.click(screen.getByRole("button", { name: "Owed" }));
 
     expect(screen.getByText("Create and update money reminders.")).toBeInTheDocument();
     const moneyOwedPanel = screen.getByText("Create and update money reminders.").closest(".rounded-2xl") as HTMLElement;
@@ -173,6 +174,45 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: /Create owed note/ }));
     expect(screen.queryByText("Mira")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Person")).toBeInTheDocument();
+  });
+
+  it("creates an owed note from Assistant and shows it in the correct list", async () => {
+    const createOwedNoteAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Money reminder saved.",
+      note: makeOwedNote({
+        id: "owed-created",
+        direction: "owed_to_me",
+        personName: "Danel",
+        originalAmount: 100,
+        currentAmount: 100,
+        currency: "RON",
+        note: null,
+      }),
+    }));
+
+    render(
+      <AssistantComposer
+        action={async () => ({ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] })}
+        adjustOwedNoteAmountAction={owedAction}
+        createOwedNoteAction={createOwedNoteAction}
+        initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
+        owedNotes={[]}
+        settleOwedNoteAction={owedAction}
+        updateOwedNoteNoteAction={owedAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Owed" }));
+    fireEvent.click(screen.getByRole("button", { name: /Create owed note/ }));
+    fireEvent.change(screen.getByLabelText("Person"), { target: { value: "Danel" } });
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(createOwedNoteAction).toHaveBeenCalled());
+    expect(await screen.findByText("Money reminder saved.")).toBeInTheDocument();
+    expect(await screen.findByText("Danel")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Person")).not.toBeInTheDocument();
   });
 
   it("prepares natural-language input without bypassing the assistant action", () => {

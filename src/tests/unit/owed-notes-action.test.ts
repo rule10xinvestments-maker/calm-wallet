@@ -65,6 +65,7 @@ describe("owed note actions", () => {
     formData.set("amount", "42.5");
     formData.set("currency", "ron");
     formData.set("note", "Dinner");
+    formData.set("dueDate", "");
 
     const result = await createOwedNoteAction({ status: "idle", message: null, note: null }, formData);
 
@@ -92,6 +93,27 @@ describe("owed note actions", () => {
 
     expect(result.status).toBe("error");
     expect(result.message).toBe("Amount needs a number.");
+
+    createOwedNote.mockRejectedValueOnce(new Error("Add a person name."));
+    const missingPersonResult = await createOwedNoteAction({ status: "idle", message: null, note: null }, formData);
+
+    expect(missingPersonResult.status).toBe("error");
+    expect(missingPersonResult.message).toBe("Add a person name.");
+  });
+
+  it("returns calm generic copy when create insert fails", async () => {
+    const { createOwedNoteAction } = await import("@/lib/actions/owed-notes");
+    const formData = new FormData();
+    formData.set("direction", "owed_to_me");
+    formData.set("personName", "Danel");
+    formData.set("amount", "100");
+    formData.set("currency", "RON");
+    createOwedNote.mockRejectedValueOnce(new Error("Could not find the table 'public.owed_notes' in the schema cache"));
+
+    const result = await createOwedNoteAction({ status: "idle", message: null, note: null }, formData);
+
+    expect(result.status).toBe("error");
+    expect(result.message).toBe("Money reminder could not be saved.");
   });
 
   it("adds, subtracts, updates notes, and settles", async () => {

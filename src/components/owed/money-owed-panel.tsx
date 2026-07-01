@@ -110,6 +110,7 @@ export function MoneyOwedPanel({
   const [editor, setEditor] = useState<OwedEditor>(null);
   const [activityExpandedNoteId, setActivityExpandedNoteId] = useState<string | null>(null);
   const [createDirection, setCreateDirection] = useState<OwedNoteDirection>("owed_to_me");
+  const [createFormKey, setCreateFormKey] = useState(0);
   const [createState, createFormAction, isCreatePending] = useActionState(createAction, initialOwedNoteActionState);
   const [adjustState, adjustFormAction, isAdjustPending] = useActionState(adjustAmountAction, initialOwedNoteActionState);
   const [noteState, noteFormAction, isNotePending] = useActionState(updateNoteAction, initialOwedNoteActionState);
@@ -125,6 +126,8 @@ export function MoneyOwedPanel({
       setLocalNotes((current) => [createState.note as OwedNote, ...current.filter((note) => note.id !== createState.note?.id)]);
       setExpandedSection(createState.note.direction);
       setActivityExpandedNoteId(createState.note.id);
+      setCreateDirection(createState.note.direction);
+      setCreateFormKey((key) => key + 1);
     }
   }, [createState]);
 
@@ -352,7 +355,7 @@ export function MoneyOwedPanel({
 
   function renderCreateForm(className = "space-y-3 rounded-2xl bg-white p-3") {
     return (
-      <form action={createFormAction} className={className}>
+      <form action={createFormAction} className={className} key={createFormKey}>
         <input name="direction" type="hidden" value={createDirection} />
         <div className="grid grid-cols-2 gap-2">
           {(["owed_to_me", "i_owe"] as const).map((direction) => (

@@ -198,7 +198,7 @@ const importActionPanelItems: Array<{
   { id: "recent", label: "Recent", Icon: History },
   { id: "manual", label: "Manual", Icon: Plus },
   { id: "limits", label: "Limits", Icon: CircleGauge },
-  { id: "owed", label: "Money owed", Icon: HandCoins },
+  { id: "owed", label: "Owed", Icon: HandCoins },
 ];
 
 const betaActionPanelItems: Array<{
@@ -209,7 +209,7 @@ const betaActionPanelItems: Array<{
   { id: "recent", label: "Recent", Icon: History },
   { id: "manual", label: "Manual", Icon: Plus },
   { id: "limits", label: "Limits", Icon: CircleGauge },
-  { id: "owed", label: "Money owed", Icon: HandCoins },
+  { id: "owed", label: "Owed", Icon: HandCoins },
 ];
 
 async function noopBudgetAction(state: BudgetActionState) {
