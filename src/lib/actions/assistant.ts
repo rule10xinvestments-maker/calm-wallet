@@ -104,6 +104,10 @@ export async function assistantAction(_prevState: AssistantActionState, formData
       occurredFrom: getOptionalFormString(formData, "occurredFrom"),
       occurredTo: getOptionalFormString(formData, "occurredTo"),
       categoryId: getOptionalFormString(formData, "categoryId"),
+      categoryIdSource:
+        formData.get("categoryIdSource") === "user" || formData.get("categoryIdSource") === "suggested"
+          ? (formData.get("categoryIdSource") as "user" | "suggested")
+          : undefined,
       categoryLabel: getOptionalFormString(formData, "categoryLabel"),
       questionKind:
         (formData.get("questionKind") as
@@ -133,6 +137,7 @@ export async function assistantAction(_prevState: AssistantActionState, formData
       input: assistantInput,
       transactionService,
       ...(recurringService ? { recurringService } : {}),
+      ...(manualToolName === "create_transaction" ? { categoryMemoryService: await createSupabaseCategoryMemoryService() } : {}),
       persistRuntimeLog: persistAssistantRuntimeLog,
     });
   } catch (error) {

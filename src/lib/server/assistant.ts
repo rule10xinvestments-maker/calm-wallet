@@ -42,6 +42,7 @@ export type AssistantCommandInput = {
   currency?: string;
   occurredAt?: string;
   categoryId?: string;
+  categoryIdSource?: "user" | "suggested";
   categoryLabel?: string;
   questionKind?:
     | "monthly_spending_total"
@@ -563,11 +564,37 @@ export async function runAssistantCommand(args: {
   input: AssistantCommandInput;
   transactionService: AssistantTransactionService;
   recurringService?: Pick<RecurringService, "createRecurringRule">;
+  categoryMemoryService?: Pick<CategoryMemoryService, "findCategoryMemoryMatch">;
   persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
 }) {
   let request: AiToolRequest = buildAssistantToolRequest(args.input);
 
   let recurringSetupFailed = false;
+
+  if (
+    request.toolName === "create_transaction" &&
+    args.categoryMemoryService &&
+    args.input.categoryIdSource !== "user"
+  ) {
+    const createRequest = request as AiToolRequest<"create_transaction">;
+    const memoryMatch = await args.categoryMemoryService.findCategoryMemoryMatch(args.userId, {
+      merchant: createRequest.input.merchant ?? undefined,
+      description: createRequest.input.itemName ?? createRequest.input.note ?? undefined,
+      transactionType: createRequest.input.transactionType,
+    });
+
+    if (memoryMatch?.strength === "strong") {
+      request = {
+        toolName: "create_transaction",
+        input: {
+          ...createRequest.input,
+          categoryId: memoryMatch.category.id,
+          reviewState: undefined,
+          uncertaintyReason: undefined,
+        },
+      } satisfies AiToolRequest<"create_transaction">;
+    }
+  }
 
   if (request.toolName === "create_transaction" && args.input.recurringEnabled) {
     const createRequest = request as AiToolRequest<"create_transaction">;
@@ -838,7 +865,7 @@ async function resolveCreateTransactionIntent(args: {
 }) {
   const memoryMatch = args.categoryMemoryService
     ? await args.categoryMemoryService.findCategoryMemoryMatch(args.userId, {
-        merchant: undefined,
+        merchant: args.intent.merchant,
         description: args.intent.note,
         transactionType: args.intent.transactionType,
       })

@@ -143,6 +143,12 @@ export async function executeRecategorizeTransaction(args: {
             signalValue: result.transaction.merchant,
           }
         : null,
+      result.transaction.itemName
+        ? {
+            signalType: "phrase" as const,
+            signalValue: result.transaction.itemName,
+          }
+        : null,
       result.transaction.note
         ? {
             signalType: "phrase" as const,

@@ -864,6 +864,9 @@ export function AssistantComposer({
               <input name="toolName" type="hidden" value="create_transaction" />
               <input name="transactionType" type="hidden" value={manualTransactionType} />
               {submittedManualCategoryId ? <input name="categoryId" type="hidden" value={submittedManualCategoryId} /> : null}
+              {submittedManualCategoryId ? (
+                <input name="categoryIdSource" type="hidden" value={manualCategoryWasSelected ? "user" : "suggested"} />
+              ) : null}
               <input name="categoryLabel" type="hidden" value={selectedCategoryLabel} />
               {manualDate ? <input name="occurredAt" type="hidden" value={manualDate} /> : null}
               {manualMerchant.trim() ? <input name="merchant" type="hidden" value={manualMerchant} /> : null}

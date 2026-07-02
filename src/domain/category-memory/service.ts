@@ -46,8 +46,15 @@ function assertResult<T>(result: { data: T | null; error: { message: string } | 
 }
 
 export function normalizeCategoryMemorySignal(value: string) {
+  const currencyTokens = "usd|dollar|dollars|dolar|dolari|eur|euro|euros|ron|lei|leu|gbp|cad|aud|chf|jpy";
+
   return value
     .toLowerCase()
+    .replace(/[\p{Sc}]/gu, " ")
+    .replace(new RegExp(`\\b[+-]?(?:\\d+(?:[.,]\\d{1,2})?|\\.\\d{1,2})(?:${currencyTokens})\\b`, "g"), " ")
+    .replace(new RegExp(`\\b(?:${currencyTokens})[+-]?(?:\\d+(?:[.,]\\d{1,2})?|\\.\\d{1,2})\\b`, "g"), " ")
+    .replace(new RegExp(`\\b(?:${currencyTokens})\\b`, "g"), " ")
+    .replace(/(^|\s)[+-]?(?:\d+(?:[.,]\d{1,2})?|\.\d{1,2})(?=\s|$)/g, " ")
     .replace(/[^a-z0-9\s&'-]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
@@ -93,8 +100,8 @@ function toSignalCandidates(input: FindCategoryMemoryMatchInput) {
   }
 
   if (description.length >= 3) {
-    signals.push({ signalType: "phrase", value: description, strong: description.length >= 5 });
-    signals.push({ signalType: "import_description", value: description, strong: description.length >= 5 });
+    signals.push({ signalType: "phrase", value: description, strong: description.length >= 4 });
+    signals.push({ signalType: "import_description", value: description, strong: description.length >= 4 });
   }
 
   return signals;

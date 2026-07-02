@@ -140,8 +140,43 @@ describe("transaction mutation helpers", () => {
       preferredCategoryId: "cat-1",
       preferredTransactionType: "expense",
     });
+    expect(recordCategoryCorrectionMemory).toHaveBeenCalledWith("user-1", {
+      signalType: "phrase",
+      signalValue: "Market",
+      preferredCategoryId: "cat-1",
+      preferredTransactionType: "expense",
+    });
     expect(result.status).toBe("success");
     expect(result.message).toBe("Category saved.");
+  });
+
+  it("learns from Activity recategorization when the transaction only has an item name", async () => {
+    const services = makeMutationServices();
+    vi.mocked(services.updateTransaction).mockResolvedValueOnce(
+      makeMutationResult({
+        itemName: "MLBB 10",
+        merchant: null,
+        note: null,
+        categoryId: "cat-1",
+      }),
+    );
+    const recordCategoryCorrectionMemory = vi.fn(async () => makeCategoryMemory());
+
+    await executeRecategorizeTransaction({
+      userId: "user-1",
+      transactionId: "txn-1",
+      categoryId: "cat-1",
+      transactionService: services,
+      categoryMemoryService: { recordCategoryCorrectionMemory },
+    });
+
+    expect(recordCategoryCorrectionMemory).toHaveBeenCalledOnce();
+    expect(recordCategoryCorrectionMemory).toHaveBeenCalledWith("user-1", {
+      signalType: "phrase",
+      signalValue: "MLBB 10",
+      preferredCategoryId: "cat-1",
+      preferredTransactionType: "expense",
+    });
   });
 
   it("does not create correction memory when a transaction is left uncategorized", async () => {

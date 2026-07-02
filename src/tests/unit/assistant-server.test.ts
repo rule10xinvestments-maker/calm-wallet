@@ -1541,6 +1541,119 @@ describe("assistant server integration", () => {
     );
   });
 
+  it("uses remembered categories for future Assistant quick-add labels", async () => {
+    const services = makeTransactionServices();
+    const findCategoryMemoryMatch = vi.fn(async () => ({
+      strength: "strong" as const,
+      category: {
+        id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        slug: "entertainment",
+        label: "Entertainment",
+        direction: "expense" as const,
+        isActive: true,
+      },
+      memory: {} as never,
+    }));
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "MLBB 10",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+      categoryMemoryService: {
+        findCategoryMemoryMatch,
+      },
+    });
+
+    expect(findCategoryMemoryMatch).toHaveBeenCalledWith("user-1", {
+      merchant: "MLBB",
+      description: undefined,
+      transactionType: "expense",
+    });
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        itemName: "MLBB",
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      }),
+      { actorType: "ai" },
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toMatchObject({
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+    expect(result.message).toBe("Saved $10.00 to tracked items.");
+  });
+
+  it("uses remembered categories for Manual saves when the current category is only suggested", async () => {
+    const services = makeTransactionServices();
+
+    await runAssistantCommand({
+      userId: "user-1",
+      input: {
+        toolName: "create_transaction",
+        transactionType: "expense",
+        amount: "10",
+        itemName: "MLBB 10",
+        categoryId: "44444444-4444-4444-4444-444444444444",
+        categoryIdSource: "suggested",
+      },
+      transactionService: services,
+      categoryMemoryService: {
+        findCategoryMemoryMatch: vi.fn(async () => ({
+          strength: "strong" as const,
+          category: {
+            id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            slug: "entertainment",
+            label: "Entertainment",
+            direction: "expense" as const,
+            isActive: true,
+          },
+          memory: {} as never,
+        })),
+      },
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        itemName: "MLBB 10",
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      }),
+      { actorType: "ai" },
+    );
+  });
+
+  it("keeps an explicit Manual category selection ahead of category memory", async () => {
+    const services = makeTransactionServices();
+    const findCategoryMemoryMatch = vi.fn();
+
+    await runAssistantCommand({
+      userId: "user-1",
+      input: {
+        toolName: "create_transaction",
+        transactionType: "expense",
+        amount: "10",
+        itemName: "MLBB",
+        categoryId: "99999999-9999-9999-9999-999999999999",
+        categoryIdSource: "user",
+      },
+      transactionService: services,
+      categoryMemoryService: {
+        findCategoryMemoryMatch,
+      },
+    });
+
+    expect(findCategoryMemoryMatch).not.toHaveBeenCalled();
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        categoryId: "99999999-9999-9999-9999-999999999999",
+      }),
+      { actorType: "ai" },
+    );
+  });
+
   it("keeps weak category memory matches reviewable", async () => {
     const services = makeTransactionServices();
 
