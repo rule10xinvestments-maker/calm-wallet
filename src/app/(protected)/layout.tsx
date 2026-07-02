@@ -1,6 +1,10 @@
 import { ProtectedShell } from "@/components/layout/protected-shell";
 import { signOutAction } from "@/lib/auth/actions";
-import { registerPushSubscriptionAction, updateNotificationPreferencesAction } from "@/lib/actions/notifications";
+import {
+  registerPushSubscriptionAction,
+  sendTestPushNotificationAction,
+  updateNotificationPreferencesAction,
+} from "@/lib/actions/notifications";
 import { getAccountHint } from "@/lib/auth/account-hint";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { createSupabaseNotificationService } from "@/domain/notifications/service";
@@ -40,6 +44,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
       notificationPreferences={notificationPreferences}
       notificationPreferencesAction={updateNotificationPreferencesAction}
       registerPushSubscriptionAction={registerPushSubscriptionAction}
+      sendTestPushNotificationAction={sendTestPushNotificationAction}
       onSignOut={signOutAction}
     >
       {children}

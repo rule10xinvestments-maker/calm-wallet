@@ -16,12 +16,17 @@ type HeaderSettingsButtonProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  sendTestPushNotificationAction: (
+    state: NotificationPreferencesActionState,
+    formData: FormData,
+  ) => Promise<NotificationPreferencesActionState>;
 };
 
 export function HeaderSettingsButton({
   notificationPreferences,
   notificationPreferencesAction,
   registerPushSubscriptionAction,
+  sendTestPushNotificationAction,
 }: HeaderSettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -65,6 +70,7 @@ export function HeaderSettingsButton({
                 action={notificationPreferencesAction}
                 preferences={notificationPreferences}
                 registerPushSubscriptionAction={registerPushSubscriptionAction}
+                sendTestPushNotificationAction={sendTestPushNotificationAction}
               />
             </div>
           </div>

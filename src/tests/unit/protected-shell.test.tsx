@@ -19,6 +19,7 @@ const notificationPreferences = {
 
 const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
+const sendTestPushNotificationAction = vi.fn(async () => initialNotificationPreferencesActionState);
 
 function setDisplayMode(standaloneMatches: boolean, fullscreenMatches = false) {
   Object.defineProperty(window, "matchMedia", {
@@ -53,6 +54,7 @@ function renderProtectedShell() {
         notificationPreferences={notificationPreferences}
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
+        sendTestPushNotificationAction={sendTestPushNotificationAction}
         onSignOut={vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>

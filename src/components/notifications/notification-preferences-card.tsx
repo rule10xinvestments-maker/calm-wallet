@@ -20,6 +20,10 @@ type NotificationPreferencesCardProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  sendTestPushNotificationAction: (
+    state: NotificationPreferencesActionState,
+    formData: FormData,
+  ) => Promise<NotificationPreferencesActionState>;
 };
 
 type BrowserNotificationStatus = "checking" | "unsupported" | "default" | "granted" | "denied";
@@ -77,6 +81,7 @@ export function NotificationPreferencesCard({
   preferences,
   action,
   registerPushSubscriptionAction,
+  sendTestPushNotificationAction,
 }: NotificationPreferencesCardProps) {
   const [state, formAction, isPending] = useActionState(action, {
     ...initialNotificationPreferencesActionState,
@@ -107,40 +112,40 @@ export function NotificationPreferencesCard({
     return "Notification permission is needed first.";
   }, [browserStatus, scheduledPushReady]);
 
-  function registerSubscriptionIfPossible() {
-    startBrowserTransition(async () => {
-      if (!vapidPublicKey) {
-        setBrowserMessage("Test notifications are ready. Scheduled reminders are not ready yet.");
-        return;
-      }
+  async function registerSubscriptionIfPossible() {
+    if (!vapidPublicKey) {
+      setBrowserMessage("Test notifications are ready. Scheduled reminders are not ready yet.");
+      return false;
+    }
 
-      try {
-        const registration = await getReadyServiceWorkerRegistration();
+    try {
+      const registration = await getReadyServiceWorkerRegistration();
 
-        if (!registration || !("pushManager" in registration)) {
-          setBrowserMessage("Notifications are not ready yet.");
-          return;
-        }
-
-        const existingSubscription = await registration.pushManager.getSubscription();
-        const subscription =
-          existingSubscription ??
-          (await registration.pushManager.subscribe({
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-            userVisibleOnly: true,
-          }));
-        const subscriptionJson = subscription.toJSON();
-        const formData = new FormData();
-        formData.set("endpoint", subscription.endpoint);
-        formData.set("p256dh", subscriptionJson.keys?.p256dh ?? "");
-        formData.set("auth", subscriptionJson.keys?.auth ?? "");
-        formData.set("userAgent", navigator.userAgent);
-        const result = await registerPushSubscriptionAction(initialNotificationPreferencesActionState, formData);
-        setBrowserMessage(result.status === "success" ? "Notifications are ready." : "Notifications are not ready yet.");
-      } catch {
+      if (!registration || !("pushManager" in registration)) {
         setBrowserMessage("Notifications are not ready yet.");
+        return false;
       }
-    });
+
+      const existingSubscription = await registration.pushManager.getSubscription();
+      const subscription =
+        existingSubscription ??
+        (await registration.pushManager.subscribe({
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+          userVisibleOnly: true,
+        }));
+      const subscriptionJson = subscription.toJSON();
+      const formData = new FormData();
+      formData.set("endpoint", subscription.endpoint);
+      formData.set("p256dh", subscriptionJson.keys?.p256dh ?? "");
+      formData.set("auth", subscriptionJson.keys?.auth ?? "");
+      formData.set("userAgent", navigator.userAgent);
+      const result = await registerPushSubscriptionAction(initialNotificationPreferencesActionState, formData);
+      setBrowserMessage(result.status === "success" ? "Notifications are ready." : "Notifications are not ready yet.");
+      return result.status === "success";
+    } catch {
+      setBrowserMessage("Notifications are not ready yet.");
+      return false;
+    }
   }
 
   function handleEnableNotifications() {
@@ -166,8 +171,24 @@ export function NotificationPreferencesCard({
         return;
       }
 
-      registerSubscriptionIfPossible();
+      await registerSubscriptionIfPossible();
     });
+  }
+
+  async function sendLocalTestNotification() {
+    const registration = await getReadyServiceWorkerRegistration();
+    const options: NotificationOptions = {
+      body: notificationCopyTemplates.test.body,
+      data: { url: "/assistant" },
+      icon: "/icons/calm-wallet-icon-192.png",
+      tag: "calm-wallet-test",
+    };
+
+    if (registration?.showNotification) {
+      await registration.showNotification(notificationCopyTemplates.test.title, options);
+    } else {
+      new Notification(notificationCopyTemplates.test.title, options);
+    }
   }
 
   function handleTestNotification() {
@@ -187,20 +208,17 @@ export function NotificationPreferencesCard({
       }
 
       try {
-        const registration = await getReadyServiceWorkerRegistration();
-        const options: NotificationOptions = {
-          body: notificationCopyTemplates.test.body,
-          data: { url: "/assistant" },
-          icon: "/icons/calm-wallet-icon-192.png",
-          tag: "calm-wallet-test",
-        };
+        if (vapidPublicKey) {
+          await registerSubscriptionIfPossible();
+          const serverResult = await sendTestPushNotificationAction(initialNotificationPreferencesActionState, new FormData());
 
-        if (registration?.showNotification) {
-          await registration.showNotification(notificationCopyTemplates.test.title, options);
-        } else {
-          new Notification(notificationCopyTemplates.test.title, options);
+          if (serverResult.status === "success") {
+            setBrowserMessage(serverResult.message);
+            return;
+          }
         }
 
+        await sendLocalTestNotification();
         setBrowserMessage("Test notification sent.");
       } catch {
         setBrowserMessage("Test notification could not be sent.");

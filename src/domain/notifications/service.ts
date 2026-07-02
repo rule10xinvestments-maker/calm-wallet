@@ -20,6 +20,7 @@ export type NotificationServiceAdapter = {
   insertPreferences(userId: string): QueryResult<NotificationPreferencesRow>;
   updatePreferences(userId: string, updates: NotificationPreferencesUpdateRow): QueryResult<NotificationPreferencesRow>;
   upsertPushSubscription(row: PushSubscriptionInsertRow): QueryResult<PushSubscriptionRow>;
+  listActivePushSubscriptions(userId: string): Promise<{ data: PushSubscriptionRow[] | null; error: { message: string } | null }>;
   disablePushSubscription(userId: string, endpoint: string, updates: PushSubscriptionUpdateRow): QueryResult<PushSubscriptionRow>;
 };
 
@@ -186,6 +187,16 @@ export function createNotificationService(adapter: NotificationServiceAdapter) {
       );
     },
 
+    async listActivePushSubscriptions(userId: string): Promise<PushSubscriptionRow[]> {
+      const result = await adapter.listActivePushSubscriptions(userId);
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      return result.data ?? [];
+    },
+
     async disablePushSubscription(userId: string, endpoint: string): Promise<PushSubscriptionRow> {
       return assertResult(
         await adapter.disablePushSubscription(userId, endpoint, {
@@ -215,6 +226,14 @@ export async function createSupabaseNotificationService() {
     },
     async upsertPushSubscription(row) {
       return supabase.from("push_subscriptions").upsert(row, { onConflict: "user_id,endpoint" }).select("*").single();
+    },
+    async listActivePushSubscriptions(userId) {
+      return supabase
+        .from("push_subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .is("disabled_at", null)
+        .order("updated_at", { ascending: false });
     },
     async disablePushSubscription(userId, endpoint, updates) {
       return supabase

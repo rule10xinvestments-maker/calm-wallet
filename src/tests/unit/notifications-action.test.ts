@@ -4,11 +4,16 @@ const requireAuthenticatedSession = vi.fn();
 const updateNotificationPreferences = vi.fn();
 const registerPushSubscription = vi.fn();
 const getNotificationPreferences = vi.fn();
+const listActivePushSubscriptions = vi.fn();
+const disablePushSubscription = vi.fn();
 const createSupabaseNotificationService = vi.fn(async () => ({
   updateNotificationPreferences,
   registerPushSubscription,
   getNotificationPreferences,
+  listActivePushSubscriptions,
+  disablePushSubscription,
 }));
+const sendWebPushNotification = vi.fn();
 const revalidatePath = vi.fn();
 
 vi.mock("@/lib/auth/guards", () => ({
@@ -17,6 +22,10 @@ vi.mock("@/lib/auth/guards", () => ({
 
 vi.mock("@/domain/notifications/service", () => ({
   createSupabaseNotificationService,
+}));
+
+vi.mock("@/lib/server/web-push-sender", () => ({
+  sendWebPushNotification,
 }));
 
 vi.mock("next/cache", () => ({
@@ -44,6 +53,21 @@ describe("notification actions", () => {
     requireAuthenticatedSession.mockResolvedValue({ user: { id: "user-1" } });
     updateNotificationPreferences.mockResolvedValue(makePreferences());
     getNotificationPreferences.mockResolvedValue(makePreferences());
+    listActivePushSubscriptions.mockResolvedValue([
+      {
+        id: "sub-1",
+        user_id: "user-1",
+        endpoint: "https://push.example.test/subscription",
+        p256dh: "p256dh-key",
+        auth: "auth-key",
+        user_agent: "Vitest",
+        disabled_at: null,
+        created_at: "2026-05-03T00:00:00.000Z",
+        updated_at: "2026-05-03T00:00:00.000Z",
+      },
+    ]);
+    disablePushSubscription.mockResolvedValue({ id: "sub-1" });
+    sendWebPushNotification.mockResolvedValue({ status: "sent" });
     registerPushSubscription.mockResolvedValue({
       id: "sub-1",
       user_id: "user-1",
@@ -132,6 +156,63 @@ describe("notification actions", () => {
     expect(result).toMatchObject({
       status: "error",
       message: "Notifications are not ready yet.",
+    });
+  });
+
+  it("sends a server test push to the authenticated user's saved subscription", async () => {
+    const { sendTestPushNotificationAction } = await import("@/lib/actions/notifications");
+
+    const result = await sendTestPushNotificationAction(
+      { status: "idle", message: null, preferences: null },
+      new FormData(),
+    );
+
+    expect(listActivePushSubscriptions).toHaveBeenCalledWith("user-1");
+    expect(sendWebPushNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user-1" }),
+      {
+        title: "Calm Wallet is ready",
+        body: "Notifications are working.",
+        url: "/",
+        notificationType: "test",
+        tag: "calm-wallet-test",
+      },
+    );
+    expect(result).toMatchObject({
+      status: "success",
+      message: "Test notification sent.",
+    });
+  });
+
+  it("handles missing saved subscriptions calmly for server test push", async () => {
+    listActivePushSubscriptions.mockResolvedValueOnce([]);
+    const { sendTestPushNotificationAction } = await import("@/lib/actions/notifications");
+
+    const result = await sendTestPushNotificationAction(
+      { status: "idle", message: null, preferences: null },
+      new FormData(),
+    );
+
+    expect(sendWebPushNotification).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      status: "error",
+      message: "Enable notifications first.",
+    });
+  });
+
+  it("disables expired subscriptions after server test push failure", async () => {
+    sendWebPushNotification.mockResolvedValueOnce({ status: "expired" });
+    const { sendTestPushNotificationAction } = await import("@/lib/actions/notifications");
+
+    const result = await sendTestPushNotificationAction(
+      { status: "idle", message: null, preferences: null },
+      new FormData(),
+    );
+
+    expect(disablePushSubscription).toHaveBeenCalledWith("user-1", "https://push.example.test/subscription");
+    expect(result).toMatchObject({
+      status: "error",
+      message: "Test notification could not be sent.",
     });
   });
 });

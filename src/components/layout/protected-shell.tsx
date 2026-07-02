@@ -19,6 +19,10 @@ type ProtectedShellProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  sendTestPushNotificationAction: (
+    state: NotificationPreferencesActionState,
+    formData: FormData,
+  ) => Promise<NotificationPreferencesActionState>;
 };
 
 export function ProtectedShell({
@@ -28,6 +32,7 @@ export function ProtectedShell({
   notificationPreferences,
   notificationPreferencesAction,
   registerPushSubscriptionAction,
+  sendTestPushNotificationAction,
 }: ProtectedShellProps) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:pt-6">
@@ -45,6 +50,7 @@ export function ProtectedShell({
             notificationPreferences={notificationPreferences}
             notificationPreferencesAction={notificationPreferencesAction}
             registerPushSubscriptionAction={registerPushSubscriptionAction}
+            sendTestPushNotificationAction={sendTestPushNotificationAction}
           />
           <SignOutButton action={onSignOut} />
         </div>

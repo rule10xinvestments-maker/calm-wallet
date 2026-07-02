@@ -59,6 +59,7 @@ function makeAdapter(overrides: Partial<NotificationServiceAdapter> = {}): Notif
       },
       error: null,
     })),
+    listActivePushSubscriptions: vi.fn(async () => ({ data: [], error: null })),
     disablePushSubscription: vi.fn(async (userId, endpoint, updates) => ({
       data: {
         id: "sub-1",
