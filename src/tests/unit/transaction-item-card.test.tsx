@@ -797,7 +797,7 @@ describe("transaction item card", () => {
 
     const detailsForm = screen.getByRole("button", { name: "Save changes" }).closest("form");
     expect(detailsForm).not.toHaveClass("pb-24");
-    expect(screen.getByLabelText("Date and recurring controls")).toHaveClass("grid-cols-[minmax(0,1fr)_7rem]");
+    expect(screen.getByLabelText("Date and recurring controls")).toHaveClass("grid-cols-[minmax(0,1fr)_6.75rem]");
     expect(screen.getByLabelText("Occurred date")).toBeInTheDocument();
     expect(screen.getByLabelText("Date and recurring controls").querySelectorAll(".lucide-repeat-2")).toHaveLength(1);
     expect(screen.getByLabelText("Recurring")).not.toBeChecked();

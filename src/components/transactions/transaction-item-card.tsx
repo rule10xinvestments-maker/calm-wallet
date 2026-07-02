@@ -1002,20 +1002,20 @@ export function TransactionItemCard({
                   name="merchant"
                 />
               </label>
-              <div aria-label="Date and recurring controls" className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2 max-[340px]:grid-cols-1">
-                <label className="grid gap-1">
+              <div aria-label="Date and recurring controls" className="grid grid-cols-[minmax(0,1fr)_6.75rem] gap-2 max-[340px]:grid-cols-1">
+                <label className="grid min-w-0 gap-1">
                   <span className="text-xs font-medium text-slate-600">Occurred date</span>
                   <input
-                    className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
+                    className="min-h-10 w-full min-w-0 rounded-2xl border border-slate-200 px-2 py-2 text-sm text-slate-800"
                     defaultValue={displayItem.occurredAt.slice(0, 10)}
                     name="occurredAt"
                     type="date"
                   />
                 </label>
-                <fieldset className="grid gap-1">
+                <fieldset className="grid min-w-0 gap-1">
                   <legend className="text-xs font-medium text-slate-600">Recurring</legend>
-                  <div className="flex min-h-10 min-w-0 items-center justify-between gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-2">
-                    <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-800">
+                  <div className="flex min-h-10 w-full min-w-0 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
+                    <span className="flex shrink-0 items-center text-sm font-semibold text-slate-800">
                       <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-sky-700" strokeWidth={2.2} />
                     </span>
                   {displayItem.isRecurring ? (
