@@ -935,16 +935,16 @@ function buildInsightsBarCategorySegments(args: {
 
 function buildInsightsSelectedMonthTrendDays(args: {
   transactions: Transaction[];
-  monthStart: Date;
+  periodStart: Date;
+  periodEnd: Date;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
 }) {
-  const monthEnd = shiftMonth(args.monthStart, 1);
   const days: InsightsMonthTrendDay[] = [];
   let cumulativeIncomeMinor = 0;
   let cumulativeExpenseMinor = 0;
 
-  for (let cursor = args.monthStart; cursor < monthEnd; cursor = shiftDay(cursor, 1)) {
+  for (let cursor = args.periodStart; cursor < args.periodEnd; cursor = shiftDay(cursor, 1)) {
     const dayStart = cursor;
     const dayEnd = shiftDay(dayStart, 1);
     const transactions = args.transactions.filter((transaction) => {
@@ -1939,8 +1939,9 @@ export function buildInsightsData(
     months: timeframeMonths,
   });
   const selectedMonthTrendDays = buildInsightsSelectedMonthTrendDays({
-    transactions: activeTransactions,
-    monthStart,
+    transactions: selectedPeriodTransactions,
+    periodStart: selectedTimeframe === "All" ? timeframeStartMonthDate : selectedTimeframe === "1M" ? monthStart : timeframeStartMonthDate,
+    periodEnd: selectedTimeframe === "All" ? timeframeEnd : selectedTimeframe === "1M" ? monthEnd : timeframeEnd,
     displayCurrency,
     rateLookup,
   });

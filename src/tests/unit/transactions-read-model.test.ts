@@ -1255,7 +1255,7 @@ describe("transactions read model", () => {
     expect(oneYear.timeframeBars.every((bar) => bar.granularity === "month")).toBe(true);
   });
 
-  it("builds selected-month daily income, spending, and net trend buckets independently of timeframe bars", () => {
+  it("builds selected-month daily income, spending, and net trend buckets for 1M", () => {
     const data = buildInsightsData(
       [
         makeTransaction({ id: "mar", amountMinor: 900, occurredAt: "2026-03-10T10:00:00.000Z" }),
@@ -1272,11 +1272,11 @@ describe("transactions read model", () => {
       [],
       null,
       "2026-04",
-      "6M",
+      "1M",
       "trend",
     );
 
-    expect(data.timeframeBars.every((bar) => bar.granularity === "month")).toBe(true);
+    expect(data.timeframeBars.every((bar) => bar.granularity === "day")).toBe(true);
     expect(data.selectedMonthTrendDays).toHaveLength(30);
     expect(data.selectedMonthTrendDays[1]).toMatchObject({
       key: "2026-04-02",
@@ -1303,6 +1303,69 @@ describe("transactions read model", () => {
       netMinor: 1800,
     });
     expect(data.selectedMonthTrendDays.some((day) => day.key === "2026-03-10")).toBe(false);
+  });
+
+  it("builds Trend daily points across the full selected 3M range", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "mar", amountMinor: 900, occurredAt: "2026-03-10T10:00:00.000Z" }),
+        makeTransaction({ id: "apr-expense", amountMinor: 1000, categoryId: "housing", occurredAt: "2026-04-10T10:00:00.000Z" }),
+        makeTransaction({
+          id: "may-income",
+          transactionType: "income",
+          amountMinor: 5000,
+          categoryId: "salary",
+          occurredAt: "2026-05-12T10:00:00.000Z",
+        }),
+        makeTransaction({ id: "jun-expense", amountMinor: 2000, categoryId: "travel", occurredAt: "2026-06-20T10:00:00.000Z" }),
+        makeTransaction({ id: "jul-expense", amountMinor: 7000, occurredAt: "2026-07-02T10:00:00.000Z" }),
+      ],
+      {
+        housing: "Housing",
+        salary: "Salary",
+        travel: "Travel",
+      },
+      "USD",
+      new Date("2026-07-21T00:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-06",
+      "3M",
+      "trend",
+    );
+
+    expect(data.timeframeStartMonth).toBe("2026-04");
+    expect(data.timeframeEndMonth).toBe("2026-06");
+    expect(data.selectedPeriodIncomeDisplayMinor).toBe(5000);
+    expect(data.selectedPeriodExpenseDisplayMinor).toBe(3000);
+    expect(data.selectedPeriodTransactionCount).toBe(3);
+    expect(data.selectedMonthTrendDays).toHaveLength(91);
+    expect(data.selectedMonthTrendDays[0]?.key).toBe("2026-04-01");
+    expect(data.selectedMonthTrendDays.at(-1)).toMatchObject({
+      key: "2026-06-30",
+      cumulativeIncomeMinor: 5000,
+      cumulativeExpenseMinor: 3000,
+      netMinor: 2000,
+    });
+    expect(data.selectedMonthTrendDays.find((day) => day.key === "2026-04-10")).toMatchObject({
+      expenseMinor: 1000,
+      cumulativeExpenseMinor: 1000,
+    });
+    expect(data.selectedMonthTrendDays.find((day) => day.key === "2026-05-12")).toMatchObject({
+      incomeMinor: 5000,
+      cumulativeIncomeMinor: 5000,
+      cumulativeExpenseMinor: 1000,
+    });
+    expect(data.selectedMonthTrendDays.find((day) => day.key === "2026-06-20")).toMatchObject({
+      expenseMinor: 2000,
+      cumulativeIncomeMinor: 5000,
+      cumulativeExpenseMinor: 3000,
+    });
+    expect(data.selectedMonthTrendDays.some((day) => day.key === "2026-03-10")).toBe(false);
+    expect(data.selectedMonthTrendDays.some((day) => day.key === "2026-07-02")).toBe(false);
+    expect(data.trendCategoryBreakdown.map((item) => item.label)).toEqual(["Salary", "Travel", "Housing"]);
   });
 
   it("builds Trend category breakdown from income, spending, and mixed category movement", () => {
