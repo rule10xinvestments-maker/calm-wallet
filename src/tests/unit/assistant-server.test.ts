@@ -1610,6 +1610,74 @@ describe("assistant server integration", () => {
     expect(result.message).toBe("Saved $10.00 to tracked items.");
   });
 
+  it("uses the user's own past reviewed entries before global vocabulary", async () => {
+    const services = makeTransactionServices();
+    vi.mocked(services.listTransactions).mockResolvedValueOnce([
+      makeTransaction({
+        id: "past-mlbb",
+        itemName: "MLBB",
+        merchant: null,
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        reviewState: "reviewed",
+        updatedAt: "2026-07-01T00:00:00.000Z",
+      }),
+    ]);
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "Mlbb 12",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+      categoryMemoryService: {
+        findCategoryMemoryMatch: vi.fn(async () => null),
+      },
+    });
+
+    expect(services.listTransactions).toHaveBeenCalledWith("user-1", {
+      includeDeleted: false,
+      limit: 500,
+    });
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        itemName: "Mlbb",
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      }),
+      { actorType: "ai" },
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toMatchObject({
+      reviewState: "needs_attention",
+    });
+    expect(result.message).toBe("Saved $12.00 to tracked items.");
+  });
+
+  it("does not learn Assistant categories from deleted past entries", async () => {
+    const services = makeTransactionServices();
+    vi.mocked(services.listTransactions).mockResolvedValueOnce([
+      makeTransaction({
+        id: "deleted-mlbb",
+        itemName: "MLBB",
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        reviewState: "reviewed",
+        deletedAt: "2026-07-01T00:00:00.000Z",
+      }),
+    ]);
+
+    await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "Mlbb 12",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+      categoryMemoryService: {
+        findCategoryMemoryMatch: vi.fn(async () => null),
+      },
+    });
+
+    const createdInput = vi.mocked(services.createTransaction).mock.calls[0]?.[1];
+    expect(createdInput).toEqual(expect.objectContaining({ itemName: "Mlbb", reviewState: "needs_attention" }));
+    expect(createdInput).not.toHaveProperty("categoryId");
+  });
+
   it("uses remembered categories for Manual saves when the current category is only suggested", async () => {
     const services = makeTransactionServices();
 
@@ -1674,6 +1742,77 @@ describe("assistant server integration", () => {
       "user-1",
       expect.objectContaining({
         categoryId: "99999999-9999-9999-9999-999999999999",
+      }),
+      { actorType: "ai" },
+    );
+  });
+
+  it("uses personal memory for Manual saves when category is only suggested", async () => {
+    const services = makeTransactionServices();
+    vi.mocked(services.listTransactions).mockResolvedValueOnce([
+      makeTransaction({
+        id: "past-mlbb",
+        itemName: "MLBB",
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        reviewState: "reviewed",
+      }),
+    ]);
+
+    await runAssistantCommand({
+      userId: "user-1",
+      input: {
+        toolName: "create_transaction",
+        transactionType: "expense",
+        amount: "12",
+        itemName: "Mlbb",
+        categoryId: "44444444-4444-4444-4444-444444444444",
+        categoryIdSource: "suggested",
+      },
+      transactionService: services,
+      categoryOptions: controlledCategories,
+      categoryMemoryService: {
+        findCategoryMemoryMatch: vi.fn(async () => null),
+      },
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        itemName: "Mlbb",
+        categoryId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        reviewState: "reviewed",
+        uncertaintyReason: undefined,
+      }),
+      { actorType: "ai" },
+    );
+  });
+
+  it("keeps stronger current phrases ahead of personal memory", async () => {
+    const services = makeTransactionServices();
+    vi.mocked(services.listTransactions).mockResolvedValueOnce([
+      makeTransaction({
+        id: "past-bolt",
+        itemName: "Bolt",
+        categoryId: "77777777-7777-7777-7777-777777777777",
+        reviewState: "reviewed",
+      }),
+    ]);
+
+    await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "Bolt Food 60",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+      categoryMemoryService: {
+        findCategoryMemoryMatch: vi.fn(async () => null),
+      },
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        itemName: "Bolt Food",
+        categoryId: "33333333-3333-3333-3333-333333333333",
       }),
       { actorType: "ai" },
     );

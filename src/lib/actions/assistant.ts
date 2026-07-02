@@ -90,6 +90,7 @@ export async function assistantAction(_prevState: AssistantActionState, formData
 
     const recurringEnabled = formData.get("recurringEnabled") === "on";
     const recurringService = recurringEnabled ? await createSupabaseRecurringService() : undefined;
+    const manualCategoryOptions = manualToolName === "create_transaction" ? await loadControlledCategoryOptions() : undefined;
 
     const assistantInput = {
       toolName: manualToolName,
@@ -138,6 +139,7 @@ export async function assistantAction(_prevState: AssistantActionState, formData
       transactionService,
       ...(recurringService ? { recurringService } : {}),
       ...(manualToolName === "create_transaction" ? { categoryMemoryService: await createSupabaseCategoryMemoryService() } : {}),
+      ...(manualCategoryOptions ? { categoryOptions: manualCategoryOptions } : {}),
       persistRuntimeLog: persistAssistantRuntimeLog,
     });
   } catch (error) {

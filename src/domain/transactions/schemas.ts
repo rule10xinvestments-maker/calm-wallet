@@ -102,5 +102,5 @@ export const listTransactionsSchema = z.object({
   occurredFrom: z.string().datetime("Occurred from must be a valid ISO datetime.").optional(),
   occurredTo: z.string().datetime("Occurred to must be a valid ISO datetime.").optional(),
   includeDeleted: z.boolean().optional(),
-  limit: z.number().int().min(1).max(100).optional(),
+  limit: z.number().int().min(1).max(1000).optional(),
 });

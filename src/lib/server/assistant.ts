@@ -13,6 +13,7 @@ import {
   type NaturalLanguageCorrectionTarget,
   type NaturalLanguageAssistantIntent,
 } from "@/domain/assistant/natural-language-parser";
+import { findPersonalCategoryMemoryMatch } from "@/domain/assistant/personal-category-memory";
 import type { AiActionLogInsert } from "@/domain/ai/runtime-log";
 import { executeAiTool } from "@/domain/ai/tool-executor";
 import type { AiToolExecutionResult, AiToolRequest } from "@/domain/ai/tool-types";
@@ -565,6 +566,7 @@ export async function runAssistantCommand(args: {
   transactionService: AssistantTransactionService;
   recurringService?: Pick<RecurringService, "createRecurringRule">;
   categoryMemoryService?: Pick<CategoryMemoryService, "findCategoryMemoryMatch">;
+  categoryOptions?: ControlledCategory[];
   persistRuntimeLog?: (payload: AiActionLogInsert) => Promise<void>;
 }) {
   let request: AiToolRequest = buildAssistantToolRequest(args.input);
@@ -573,24 +575,47 @@ export async function runAssistantCommand(args: {
 
   if (
     request.toolName === "create_transaction" &&
-    args.categoryMemoryService &&
     args.input.categoryIdSource !== "user"
   ) {
     const createRequest = request as AiToolRequest<"create_transaction">;
-    const memoryMatch = await args.categoryMemoryService.findCategoryMemoryMatch(args.userId, {
-      merchant: createRequest.input.merchant ?? undefined,
-      description: createRequest.input.itemName ?? createRequest.input.note ?? undefined,
-      transactionType: createRequest.input.transactionType,
-    });
+    const categoryMemoryMatch = args.categoryMemoryService
+      ? await args.categoryMemoryService.findCategoryMemoryMatch(args.userId, {
+          merchant: createRequest.input.merchant ?? undefined,
+          description: createRequest.input.itemName ?? createRequest.input.note ?? undefined,
+          transactionType: createRequest.input.transactionType,
+        })
+      : null;
+    const pastTransactions =
+      categoryMemoryMatch?.strength !== "strong" && args.categoryOptions?.length
+        ? await args.transactionService.listTransactions(args.userId, {
+            includeDeleted: false,
+            limit: 500,
+          })
+        : [];
+    const personalMemoryMatch =
+      categoryMemoryMatch?.strength === "strong" || !args.categoryOptions?.length
+        ? null
+        : findPersonalCategoryMemoryMatch({
+            input: {
+              merchant: createRequest.input.merchant,
+              itemName: createRequest.input.itemName,
+              note: createRequest.input.note,
+              transactionType: createRequest.input.transactionType,
+            },
+            transactions: pastTransactions,
+            categories: args.categoryOptions,
+          });
+    const categoryId = categoryMemoryMatch?.strength === "strong" ? categoryMemoryMatch.category.id : personalMemoryMatch?.category.id;
+    const keepReview = personalMemoryMatch?.reviewRecommendation === "needs_attention";
 
-    if (memoryMatch?.strength === "strong") {
+    if (categoryId) {
       request = {
         toolName: "create_transaction",
         input: {
           ...createRequest.input,
-          categoryId: memoryMatch.category.id,
-          reviewState: undefined,
-          uncertaintyReason: undefined,
+          categoryId,
+          reviewState: keepReview ? createRequest.input.reviewState ?? "needs_attention" : undefined,
+          uncertaintyReason: keepReview ? createRequest.input.uncertaintyReason ?? "Category needs review." : undefined,
         },
       } satisfies AiToolRequest<"create_transaction">;
     }
@@ -862,6 +887,7 @@ function mapNaturalLanguageIntentToAssistantInput(
 async function resolveCreateTransactionIntent(args: {
   userId: string;
   intent: NaturalLanguageCreateTransactionIntent;
+  transactionService: Pick<AssistantTransactionService, "listTransactions">;
   categoryOptions?: ControlledCategory[];
   categoryMemoryService?: Pick<CategoryMemoryService, "findCategoryMemoryMatch">;
 }) {
@@ -872,6 +898,22 @@ async function resolveCreateTransactionIntent(args: {
         transactionType: args.intent.transactionType,
       })
     : null;
+  const personalMemoryMatch =
+    memoryMatch?.strength === "strong" || !args.categoryOptions?.length
+      ? null
+      : findPersonalCategoryMemoryMatch({
+          input: {
+            merchant: args.intent.merchant,
+            itemName: args.intent.merchant,
+            note: args.intent.note,
+            transactionType: args.intent.transactionType,
+          },
+          transactions: await args.transactionService.listTransactions(args.userId, {
+            includeDeleted: false,
+            limit: 500,
+          }),
+          categories: args.categoryOptions,
+        });
   const categoryResolution =
     memoryMatch?.strength === "strong"
       ? {
@@ -882,6 +924,15 @@ async function resolveCreateTransactionIntent(args: {
           categoryLabel: memoryMatch.category.label,
           matchedAlias: "category memory",
         }
+      : personalMemoryMatch
+        ? {
+            confidence: "clear" as const,
+            reviewRecommendation: personalMemoryMatch.reviewRecommendation,
+            categoryId: personalMemoryMatch.category.id,
+            categorySlug: personalMemoryMatch.category.slug,
+            categoryLabel: personalMemoryMatch.category.label,
+            matchedAlias: `personal memory:${personalMemoryMatch.strength}`,
+          }
       : resolveControlledCategory({
           phrase: [args.intent.merchant, args.intent.note].filter(Boolean).join(" "),
           transactionType: args.intent.transactionType,
@@ -894,9 +945,9 @@ async function resolveCreateTransactionIntent(args: {
     ...(categoryResolution.confidence === "clear"
       ? categoryResolution.reviewRecommendation === "reviewed"
         ? {
-          reviewState: undefined,
-          uncertaintyReason: undefined,
-        }
+            reviewState: undefined,
+            uncertaintyReason: undefined,
+          }
         : {
             reviewState: args.intent.reviewState ?? "needs_attention",
             uncertaintyReason: args.intent.uncertaintyReason ?? "Category needs review.",
@@ -1126,6 +1177,7 @@ export async function runNaturalLanguageAssistantCommand(args: {
       intent,
       categoryOptions: args.categoryOptions,
       categoryMemoryService: args.categoryMemoryService,
+      transactionService: args.transactionService,
     });
   }
 
@@ -1137,6 +1189,7 @@ export async function runNaturalLanguageAssistantCommand(args: {
           intent: entry,
           categoryOptions: args.categoryOptions,
           categoryMemoryService: args.categoryMemoryService,
+          transactionService: args.transactionService,
         }),
       ),
     );
