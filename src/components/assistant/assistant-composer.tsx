@@ -196,9 +196,9 @@ const importActionPanelItems: Array<{
   { id: "receipt", label: "Receipt", Icon: Receipt },
   { id: "statement", label: "Statement", Icon: FileSpreadsheet },
   { id: "recent", label: "Recent", Icon: History },
-  { id: "manual", label: "Manual", Icon: Plus },
   { id: "limits", label: "Limits", Icon: CircleGauge },
   { id: "owed", label: "Owed", Icon: HandCoins },
+  { id: "manual", label: "Manual", Icon: Plus },
 ];
 
 const betaActionPanelItems: Array<{
@@ -207,9 +207,9 @@ const betaActionPanelItems: Array<{
   Icon: LucideIcon;
 }> = [
   { id: "recent", label: "Recent", Icon: History },
-  { id: "manual", label: "Manual", Icon: Plus },
   { id: "limits", label: "Limits", Icon: CircleGauge },
   { id: "owed", label: "Owed", Icon: HandCoins },
+  { id: "manual", label: "Manual", Icon: Plus },
 ];
 
 async function noopBudgetAction(state: BudgetActionState) {
@@ -882,7 +882,7 @@ export function AssistantComposer({
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-900">Manual</p>
-              <p className="text-xs text-slate-500">Add one item quickly when chat is too much.</p>
+              <p className="whitespace-nowrap text-xs text-slate-500">Add one item without chat.</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"

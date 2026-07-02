@@ -69,6 +69,9 @@ describe("assistant overview", () => {
     expect(screen.getByRole("button", { name: "Recent" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limits" })).toBeInTheDocument();
+    expect(
+      Array.from(screen.getByRole("button", { name: "Owed" }).closest(".grid")!.querySelectorAll("button")).map((button) => button.textContent),
+    ).toEqual(["Recent", "Limits", "Owed", "Manual"]);
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
@@ -78,6 +81,8 @@ describe("assistant overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Manual" }));
 
+    expect(screen.getByText("Add one item without chat.")).toBeInTheDocument();
+    expect(screen.queryByText("Add one item quickly when chat is too much.")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();

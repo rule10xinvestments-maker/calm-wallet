@@ -139,6 +139,9 @@ describe("assistant composer", () => {
     expect(screen.queryByRole("button", { name: "Money owed" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Owed" }).closest(".grid")).toHaveClass("grid-cols-4");
     expect(screen.getByRole("button", { name: "Owed" }).closest(".grid")).not.toHaveClass("grid-cols-2");
+    expect(
+      Array.from(screen.getByRole("button", { name: "Owed" }).closest(".grid")!.querySelectorAll("button")).map((button) => button.textContent),
+    ).toEqual(["Recent", "Limits", "Owed", "Manual"]);
     expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
     expect(screen.queryByText("Receipt import")).not.toBeInTheDocument();
     expect(screen.queryByText("Statement import")).not.toBeInTheDocument();
@@ -238,6 +241,8 @@ describe("assistant composer", () => {
   it("shows Manual as an add-only compact transaction fallback", () => {
     renderComposer();
     openManualEntry();
+    expect(screen.getByText("Add one item without chat.")).toBeInTheDocument();
+    expect(screen.queryByText("Add one item quickly when chat is too much.")).not.toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "Add manually" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit recent" })).not.toBeInTheDocument();
