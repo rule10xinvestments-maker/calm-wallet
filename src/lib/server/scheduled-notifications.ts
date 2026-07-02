@@ -6,6 +6,21 @@ import { isWebPushConfigured, sendWebPushNotification, type WebPushSendResult } 
 
 type ScheduledNotificationKind = "daily" | "monthly";
 type ClaimResult = "claimed" | "duplicate";
+type SchedulerDiagnostic =
+  | "admin_unconfigured"
+  | "admin_invalid_config"
+  | "database_unavailable"
+  | "database_unavailable:notification_preferences"
+  | "database_unavailable:profiles"
+  | "database_unavailable:push_subscriptions"
+  | "database_unavailable:notification_events"
+  | "schema_mismatch"
+  | "schema_mismatch:notification_preferences"
+  | "schema_mismatch:profiles"
+  | "schema_mismatch:push_subscriptions"
+  | "schema_mismatch:notification_events"
+  | "schema_mismatch:notification_events_dedupe"
+  | "web_push_unconfigured";
 type SupabaseQueryError = { code?: string; message?: string };
 type SupabaseQueryResult<T> = { data: T | null; error: SupabaseQueryError | null };
 type PreferenceRecord = {
@@ -57,13 +72,8 @@ export type ScheduledNotificationsAdapter = {
 
 export type ScheduledNotificationsSummary = {
   ok: boolean;
-  reason?:
-    | "admin_unconfigured"
-    | "admin_invalid_config"
-    | "database_unavailable"
-    | "schema_mismatch"
-    | "web_push_unconfigured";
-  diagnostics: string[];
+  reason?: SchedulerDiagnostic;
+  diagnostics: SchedulerDiagnostic[];
   now: string;
   serverTimezoneFallback: "UTC";
   daily: NotificationRunCounts;
@@ -170,12 +180,24 @@ function getErrorCode(error: unknown) {
     : "";
 }
 
+function getErrorDiagnostic(error: unknown): SchedulerDiagnostic | null {
+  return typeof error === "object" && error !== null && "diagnostic" in error
+    ? ((error as { diagnostic?: SchedulerDiagnostic }).diagnostic ?? null)
+    : null;
+}
+
 function classifyDatabaseError(error: unknown): "database_unavailable" | "schema_mismatch" {
   const code = getErrorCode(error);
   return SCHEMA_ERROR_CODES.has(code) ? "schema_mismatch" : "database_unavailable";
 }
 
-function logSchedulerDiagnostic(reason: ScheduledNotificationsSummary["reason"], detail?: string) {
+function getQueryDiagnostic(error: unknown, scope: Exclude<SchedulerDiagnostic, "admin_unconfigured" | "admin_invalid_config" | "database_unavailable" | "schema_mismatch" | "web_push_unconfigured">): SchedulerDiagnostic {
+  const classification = classifyDatabaseError(error);
+  const [, table] = scope.split(":");
+  return `${classification}:${table}` as SchedulerDiagnostic;
+}
+
+function logSchedulerDiagnostic(reason: SchedulerDiagnostic, detail?: string) {
   console.info("[notifications:cron]", {
     ok: false,
     reason,
@@ -312,13 +334,13 @@ export async function runScheduledNotifications(
   try {
     candidates = await adapter.listCandidates();
   } catch (error) {
-    const reason = classifyDatabaseError(error);
-    logSchedulerDiagnostic(reason, getErrorCode(error) || "candidate_load_failed");
+    const diagnostic = getErrorDiagnostic(error) ?? classifyDatabaseError(error);
+    logSchedulerDiagnostic(diagnostic, getErrorCode(error) || "candidate_load_failed");
     return {
       ...summary,
       ok: false,
-      reason,
-      diagnostics: [reason],
+      reason: diagnostic,
+      diagnostics: [diagnostic],
     };
   }
 
@@ -329,13 +351,13 @@ export async function runScheduledNotifications(
       monthly: await runKind("monthly", candidates, adapter, now),
     };
   } catch (error) {
-    const reason = classifyDatabaseError(error);
-    logSchedulerDiagnostic(reason, getErrorCode(error) || "delivery_run_failed");
+    const diagnostic = getErrorDiagnostic(error) ?? classifyDatabaseError(error);
+    logSchedulerDiagnostic(diagnostic, getErrorCode(error) || "delivery_run_failed");
     return {
       ...summary,
       ok: false,
-      reason,
-      diagnostics: [reason],
+      reason: diagnostic,
+      diagnostics: [diagnostic],
     };
   }
 }
@@ -357,7 +379,8 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
         .or("daily_reminder_enabled.eq.true,monthly_review_enabled.eq.true");
 
       if (preferencesError) {
-        throw preferencesError;
+        const diagnostic = getQueryDiagnostic(preferencesError, "schema_mismatch:notification_preferences");
+        throw { ...preferencesError, diagnostic };
       }
 
       const userIds = [...new Set((preferences ?? []).map((preference) => preference.user_id))];
@@ -372,8 +395,14 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
           supabase.from("push_subscriptions").select<PushSubscriptionRow[]>("*").in("user_id", userIds).is("disabled_at", null),
         ]);
 
-      if (profilesError || subscriptionsError) {
-        throw profilesError ?? subscriptionsError;
+      if (profilesError) {
+        const diagnostic = getQueryDiagnostic(profilesError, "schema_mismatch:profiles");
+        throw { ...profilesError, diagnostic };
+      }
+
+      if (subscriptionsError) {
+        const diagnostic = getQueryDiagnostic(subscriptionsError, "schema_mismatch:push_subscriptions");
+        throw { ...subscriptionsError, diagnostic };
       }
 
       const profileByUserId = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
@@ -410,7 +439,8 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
         return "duplicate";
       }
 
-      throw new Error("Unable to claim notification event.");
+      const diagnostic = getQueryDiagnostic(error, "schema_mismatch:notification_events_dedupe");
+      throw { ...error, diagnostic };
     },
 
     async markEvent(userId, notificationType, dedupeKey, status, errorCode = null) {
@@ -426,7 +456,8 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
         .eq("dedupe_key", dedupeKey);
 
       if (error) {
-        throw error;
+        const diagnostic = getQueryDiagnostic(error, "schema_mismatch:notification_events");
+        throw { ...error, diagnostic };
       }
     },
 
@@ -438,7 +469,8 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
         .eq("endpoint", endpoint);
 
       if (error) {
-        throw error;
+        const diagnostic = getQueryDiagnostic(error, "schema_mismatch:push_subscriptions");
+        throw { ...error, diagnostic };
       }
     },
   };

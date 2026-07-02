@@ -286,12 +286,12 @@ describe("scheduled notification runner", () => {
     });
   });
 
-  it("returns controlled diagnostics for schema mismatches while loading candidates", async () => {
+  it("identifies missing notification_preferences safely", async () => {
     const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
     const adapter: ScheduledNotificationsAdapter = {
       ...makeAdapter([]).adapter,
       listCandidates: vi.fn(async () => {
-        throw { code: "42P01" };
+        throw { code: "42P01", diagnostic: "schema_mismatch:notification_preferences" };
       }),
     };
 
@@ -299,10 +299,28 @@ describe("scheduled notification runner", () => {
 
     expect(summary).toMatchObject({
       ok: false,
-      reason: "schema_mismatch",
-      diagnostics: ["schema_mismatch"],
+      reason: "schema_mismatch:notification_preferences",
+      diagnostics: ["schema_mismatch:notification_preferences"],
     });
     expect(sendWebPushNotification).not.toHaveBeenCalled();
+  });
+
+  it("identifies missing push_subscriptions safely", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const adapter: ScheduledNotificationsAdapter = {
+      ...makeAdapter([]).adapter,
+      listCandidates: vi.fn(async () => {
+        throw { code: "42P01", diagnostic: "schema_mismatch:push_subscriptions" };
+      }),
+    };
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary).toMatchObject({
+      ok: false,
+      reason: "schema_mismatch:push_subscriptions",
+      diagnostics: ["schema_mismatch:push_subscriptions"],
+    });
   });
 
   it("returns controlled diagnostics for dedupe schema mismatches", async () => {
@@ -310,7 +328,7 @@ describe("scheduled notification runner", () => {
     const adapter: ScheduledNotificationsAdapter = {
       ...makeAdapter([makeCandidate({ monthlyReviewEnabled: false })]).adapter,
       claimEvent: vi.fn(async () => {
-        throw { code: "42703" };
+        throw { code: "42703", diagnostic: "schema_mismatch:notification_events_dedupe" };
       }),
     };
 
@@ -318,8 +336,26 @@ describe("scheduled notification runner", () => {
 
     expect(summary).toMatchObject({
       ok: false,
-      reason: "schema_mismatch",
-      diagnostics: ["schema_mismatch"],
+      reason: "schema_mismatch:notification_events_dedupe",
+      diagnostics: ["schema_mismatch:notification_events_dedupe"],
+    });
+  });
+
+  it("identifies missing notification_events safely", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const adapter: ScheduledNotificationsAdapter = {
+      ...makeAdapter([makeCandidate({ monthlyReviewEnabled: false })]).adapter,
+      markEvent: vi.fn(async () => {
+        throw { code: "42P01", diagnostic: "schema_mismatch:notification_events" };
+      }),
+    };
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary).toMatchObject({
+      ok: false,
+      reason: "schema_mismatch:notification_events",
+      diagnostics: ["schema_mismatch:notification_events"],
     });
   });
 });
@@ -367,8 +403,8 @@ describe("scheduled notification cron route", () => {
   it("returns controlled scheduler diagnostics with a 200 after auth succeeds", async () => {
     runSupabaseScheduledNotifications.mockResolvedValueOnce({
       ok: false,
-      reason: "schema_mismatch",
-      diagnostics: ["schema_mismatch"],
+      reason: "schema_mismatch:notification_preferences",
+      diagnostics: ["schema_mismatch:notification_preferences"],
       now: now.toISOString(),
       serverTimezoneFallback: "UTC",
       daily: { sent: 0 },
@@ -384,7 +420,7 @@ describe("scheduled notification cron route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toMatchObject({ ok: false, reason: "schema_mismatch" });
+    expect(body).toMatchObject({ ok: false, reason: "schema_mismatch:notification_preferences" });
   });
 
   it("does not expose raw backend errors", async () => {
