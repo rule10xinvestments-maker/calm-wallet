@@ -16,6 +16,8 @@ export type UserCategorySignalType = "merchant" | "phrase" | "import_description
 export type RecurringFrequency = "weekly" | "monthly" | "yearly";
 export type OwedNoteDirection = "owed_to_me" | "i_owe";
 export type OwedNoteStatus = "open" | "settled";
+export type NotificationEventType = "daily_reminder" | "monthly_report";
+export type NotificationEventStatus = "claimed" | "sent" | "failed" | "skipped";
 
 export type Database = {
   public: {
@@ -565,6 +567,41 @@ export type Database = {
           unusual_spending_enabled?: boolean;
           savings_opportunities_enabled?: boolean;
           created_at?: string;
+          updated_at?: string;
+        };
+      };
+      notification_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          notification_type: NotificationEventType;
+          dedupe_key: string;
+          status: NotificationEventStatus;
+          error_code: string | null;
+          created_at: string;
+          sent_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          notification_type: NotificationEventType;
+          dedupe_key: string;
+          status?: NotificationEventStatus;
+          error_code?: string | null;
+          created_at?: string;
+          sent_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          notification_type?: NotificationEventType;
+          dedupe_key?: string;
+          status?: NotificationEventStatus;
+          error_code?: string | null;
+          created_at?: string;
+          sent_at?: string | null;
           updated_at?: string;
         };
       };
