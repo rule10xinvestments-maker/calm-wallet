@@ -236,18 +236,18 @@ function LimitOptionButton({
   return (
     <button
       aria-expanded={expanded}
-      className={`grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+      className={`grid w-full grid-cols-[2rem_1fr_auto] items-center gap-2.5 rounded-2xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
         expanded ? "border-sky-200 bg-white shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
       }`}
       onClick={onClick}
       type="button"
     >
-      <span className={`flex size-9 items-center justify-center rounded-xl ${expanded ? "bg-sky-50 text-sky-700" : "bg-slate-50 text-slate-600"}`}>
+      <span className={`flex size-8 items-center justify-center rounded-xl ${expanded ? "bg-sky-50 text-sky-700" : "bg-slate-50 text-slate-600"}`}>
         <Icon aria-hidden="true" className="size-4" strokeWidth={2.2} />
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-slate-900">{title}</span>
-        <span className="block text-xs leading-5 text-slate-500">{helper}</span>
+        <span className="block whitespace-nowrap text-xs leading-5 text-slate-500">{helper}</span>
       </span>
       <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} strokeWidth={2.2} />
     </button>
@@ -1223,7 +1223,7 @@ export function AssistantComposer({
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-900">Limits</p>
-              <p className="text-xs text-slate-500">Set weekly or monthly spending limits.</p>
+              <p className="whitespace-nowrap text-xs text-slate-500">Set weekly or monthly limits.</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
@@ -1429,7 +1429,7 @@ export function AssistantComposer({
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-900">Money owed</p>
-              <p className="text-xs text-slate-500">Create and update money reminders.</p>
+              <p className="whitespace-nowrap text-xs text-slate-500">Create and update reminders.</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"

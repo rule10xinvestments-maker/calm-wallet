@@ -93,7 +93,8 @@ describe("assistant overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Limits" }));
 
-    expect(screen.getByText("Set weekly or monthly spending limits.")).toBeInTheDocument();
+    expect(screen.getByText("Set weekly or monthly limits.")).toBeInTheDocument();
+    expect(screen.queryByText("Set weekly or monthly spending limits.")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Create a limit/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Manage limits/ })).toBeInTheDocument();
     expect(screen.queryByText("Set a limit")).not.toBeInTheDocument();

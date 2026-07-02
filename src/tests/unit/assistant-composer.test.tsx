@@ -160,12 +160,17 @@ describe("assistant composer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Owed" }));
 
-    expect(screen.getByText("Create and update money reminders.")).toBeInTheDocument();
-    const moneyOwedPanel = screen.getByText("Create and update money reminders.").closest(".rounded-2xl") as HTMLElement;
+    expect(screen.getByText("Create and update reminders.")).toBeInTheDocument();
+    expect(screen.queryByText("Create and update money reminders.")).not.toBeInTheDocument();
+    const moneyOwedPanel = screen.getByText("Create and update reminders.").closest(".rounded-2xl") as HTMLElement;
     expect(within(moneyOwedPanel).getAllByText("Money owed")).toHaveLength(1);
     expect(screen.getByRole("button", { name: /Owed to me/ })).toBeInTheDocument();
+    expect(screen.getByText("Money others owe you.")).toBeInTheDocument();
+    expect(screen.queryByText("Money others should pay back.")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /I owe/ })).toBeInTheDocument();
+    expect(screen.getByText("Money you need to pay.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Create owed note/ })).toBeInTheDocument();
+    expect(screen.getByText("Add a money reminder.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Owed to me/ }));
     expect(screen.getByText("Mira")).toBeInTheDocument();
@@ -411,7 +416,8 @@ describe("assistant composer", () => {
     openLimitsPanel();
 
     expect(screen.getAllByText("Limits")).toHaveLength(2);
-    expect(screen.getByText("Set weekly or monthly spending limits.")).toBeInTheDocument();
+    expect(screen.getByText("Set weekly or monthly limits.")).toBeInTheDocument();
+    expect(screen.queryByText("Set weekly or monthly spending limits.")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Create a limit/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByText("Set a category limit.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Manage limits/ })).toHaveAttribute("aria-expanded", "false");

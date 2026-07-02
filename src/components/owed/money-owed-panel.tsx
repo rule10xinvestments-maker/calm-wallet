@@ -76,18 +76,18 @@ function OwedOptionButton({
   return (
     <button
       aria-expanded={expanded}
-      className={`grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+      className={`grid w-full grid-cols-[2rem_1fr_auto] items-center gap-2.5 rounded-2xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
         expanded ? "border-sky-200 bg-white shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
       }`}
       onClick={onClick}
       type="button"
     >
-      <span className={`flex size-9 items-center justify-center rounded-xl ${expanded ? "bg-sky-50 text-sky-700" : "bg-slate-50 text-slate-600"}`}>
+      <span className={`flex size-8 items-center justify-center rounded-xl ${expanded ? "bg-sky-50 text-sky-700" : "bg-slate-50 text-slate-600"}`}>
         {icon}
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-slate-900">{title}</span>
-        <span className="block text-xs leading-5 text-slate-500">{helper}</span>
+        <span className="block whitespace-nowrap text-xs leading-5 text-slate-500">{helper}</span>
       </span>
       <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} strokeWidth={2.2} />
     </button>
@@ -470,7 +470,7 @@ export function MoneyOwedPanel({
       <div className="space-y-2">
         <OwedOptionButton
           expanded={expandedSection === "owed_to_me"}
-          helper="Money others should pay back."
+          helper="Money others owe you."
           icon={<ArrowDownLeft aria-hidden="true" className="size-4" strokeWidth={2.2} />}
           onClick={() => toggleSection("owed_to_me")}
           title="Owed to me"
@@ -478,7 +478,7 @@ export function MoneyOwedPanel({
         {expandedSection === "owed_to_me" ? renderNoteRows("owed_to_me", owedToMeNotes) : null}
         <OwedOptionButton
           expanded={expandedSection === "i_owe"}
-          helper="Money I need to pay."
+          helper="Money you need to pay."
           icon={<ArrowUpRight aria-hidden="true" className="size-4" strokeWidth={2.2} />}
           onClick={() => toggleSection("i_owe")}
           title="I owe"
