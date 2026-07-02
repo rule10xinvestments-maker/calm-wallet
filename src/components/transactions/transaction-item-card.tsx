@@ -1002,7 +1002,7 @@ export function TransactionItemCard({
                   name="merchant"
                 />
               </label>
-              <div aria-label="Date and recurring controls" className="grid grid-cols-[minmax(0,1fr)_minmax(7.5rem,0.75fr)] gap-2 max-[340px]:grid-cols-1">
+              <div aria-label="Date and recurring controls" className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2 max-[340px]:grid-cols-1">
                 <label className="grid gap-1">
                   <span className="text-xs font-medium text-slate-600">Occurred date</span>
                   <input
@@ -1014,22 +1014,21 @@ export function TransactionItemCard({
                 </label>
                 <fieldset className="grid gap-1">
                   <legend className="text-xs font-medium text-slate-600">Recurring</legend>
-                  <div className="flex min-h-10 items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="flex min-h-10 min-w-0 items-center justify-between gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-2">
                     <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-800">
                       <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-sky-700" strokeWidth={2.2} />
-                      <span className="truncate">Recurring</span>
                     </span>
                   {displayItem.isRecurring ? (
-                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${selectedRecurringPaused ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                    <span className={`rounded-full px-1.5 py-1 text-[11px] font-semibold ${selectedRecurringPaused ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                       {selectedRecurringPaused ? "Paused" : "Active"}
                     </span>
                   ) : (
-                    <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                    <label className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600">
                       <span>{selectedRecurringEnabled ? "On" : "Off"}</span>
                       <input
                         aria-label="Recurring"
                         checked={selectedRecurringEnabled}
-                        className="size-5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                        className="size-5 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                         onChange={(event) => {
                           setSelectedRecurringEnabled(event.currentTarget.checked);
                           setSelectedRecurringManageIntent("update");
