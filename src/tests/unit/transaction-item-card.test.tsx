@@ -682,7 +682,10 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
 
-    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Category picker")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dining" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Travel" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
   });
 
   it("keeps mark tracked hidden for already reviewed rows", () => {
@@ -713,7 +716,7 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "cat-travel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Travel" }));
 
     await waitFor(() => expect(recategorizeAction).toHaveBeenCalledOnce());
     const [, formData] = recategorizeAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
@@ -723,7 +726,54 @@ describe("transaction item card", () => {
     expect(await screen.findByText("Category saved.")).toBeInTheDocument();
     expect(screen.getByText("Travel · May 5")).toBeInTheDocument();
     expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
+  });
 
+  it("keeps the Activity category grid type-aware for spend and income rows", () => {
+    const { rerender } = render(
+      <TransactionItemCard
+        categories={categories}
+        deleteAction={vi.fn(async () => initialState)}
+        initialState={initialState}
+        item={makeItem()}
+        recategorizeAction={vi.fn(async () => initialState)}
+        updateAction={vi.fn(async () => initialState)}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
+
+    expect(screen.getByRole("button", { name: "Dining" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Travel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gifts" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salary" })).not.toBeInTheDocument();
+
+    rerender(
+      <TransactionItemCard
+        categories={categories}
+        deleteAction={vi.fn(async () => initialState)}
+        initialState={initialState}
+        item={makeItem({
+          id: "income-1",
+          amountTone: "income",
+          amountDisplay: "+$34.00",
+          categoryId: "cat-salary",
+          categoryLabel: "Salary",
+          reviewLabel: "Reviewed",
+          reviewState: "reviewed",
+          uncertaintyReason: null,
+        })}
+        recategorizeAction={vi.fn(async () => initialState)}
+        updateAction={vi.fn(async () => initialState)}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Salary" }));
+
+    expect(screen.getByRole("button", { name: "Salary" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gifts" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Dining" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Travel" })).not.toBeInTheDocument();
   });
 
   it("opens the note editor from the compact note action", () => {
@@ -745,10 +795,10 @@ describe("transaction item card", () => {
 
     const categoryButton = screen.getByRole("button", { name: "Change category, currently Dining" });
     fireEvent.click(categoryButton);
-    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Category picker")).toBeInTheDocument();
     expect(categoryButton).toHaveClass("bg-sky-50");
     fireEvent.click(categoryButton);
-    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
 
     const noteButton = screen.getByRole("button", { name: "Add note" });
     fireEvent.click(noteButton);
@@ -771,10 +821,10 @@ describe("transaction item card", () => {
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
 
     fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
-    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Category picker")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add note" }));
-    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save note" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
@@ -783,7 +833,7 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
     expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Category picker")).toBeInTheDocument();
   });
 
   it("saves a note from the compact note panel without opening full details", async () => {

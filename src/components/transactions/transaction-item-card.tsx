@@ -14,6 +14,8 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
+import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
+import { buildCategoryPickerOptions } from "@/lib/category-picker-options";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
 import { getCategoryIconByName, getCategoryVisualsByName } from "@/lib/category-icons";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
@@ -230,6 +232,7 @@ export function TransactionItemCard({
     displayItem.categoryLabel.toLowerCase().includes("uncategorized") || displayItem.categoryLabel.toLowerCase().includes("needs");
   const actionCategoryIconNeedsAttention =
     selectedCategoryLabel.toLowerCase().includes("uncategorized") || selectedCategoryLabel.toLowerCase().includes("needs");
+  const categoryPickerOptions = buildCategoryPickerOptions(categories, displayItem.amountTone);
   const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
     ? CURRENCY_OPTIONS
     : ([displayItem.currency, ...CURRENCY_OPTIONS] as const);
@@ -430,7 +433,13 @@ export function TransactionItemCard({
 
   function handleRecategorizeSubmit(event: FormEvent<HTMLFormElement>) {
     const formData = new FormData(event.currentTarget);
-    prepareRecategorizedItem(String(formData.get("categoryId") ?? selectedCategoryId), true);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const submittedCategoryId =
+      submitter instanceof HTMLButtonElement && submitter.name === "categoryId"
+        ? submitter.value
+        : String(formData.get("categoryId") ?? selectedCategoryId);
+
+    prepareRecategorizedItem(submittedCategoryId, true);
   }
 
   function prepareDetailsSubmit(formData: FormData, options: { preventDefault: () => void; validateEndDate: boolean }) {
@@ -704,25 +713,12 @@ export function TransactionItemCard({
               </button>
             </div>
             {isCategoryPickerOpen ? (
-              <label className="grid gap-1">
-                <span className="sr-only">Category</span>
-                <select
-                  className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
-                  value={selectedCategoryId}
-                  name="categoryId"
-                  onChange={(event) => {
-                    handleCategoryChange(event.currentTarget.value);
-                    event.currentTarget.form?.requestSubmit();
-                  }}
-                >
-                  <option value="">Uncategorized</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <CategoryIconGridPicker
+                categories={categoryPickerOptions}
+                onSelect={(category) => handleCategoryChange(category.id)}
+                selectedCategoryId={selectedCategoryId}
+                submitOnSelect
+              />
             ) : (
               <input name="categoryId" type="hidden" value={selectedCategoryId} />
             )}

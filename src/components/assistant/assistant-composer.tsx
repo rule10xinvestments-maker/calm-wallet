@@ -18,10 +18,15 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
 import { Button } from "@/components/ui/button";
 import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
+import {
+  buildCategoryPickerOptions,
+  type CategoryPickerOption,
+} from "@/lib/category-picker-options";
 import { initialBudgetActionState, type BudgetActionState } from "@/lib/actions/budgets-state";
 import type { Budget } from "@/domain/budgets/types";
 import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
@@ -71,7 +76,7 @@ type UploadFlowState = {
 type ActionPanel = "receipt" | "statement" | "recent" | "manual" | "limits" | "owed";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
-type ManualCategoryOption = ControlledCategoryOption & { isSynthetic?: boolean };
+type ManualCategoryOption = CategoryPickerOption;
 type LimitSection = "create" | "manage" | null;
 
 const initialUploadFlowState: UploadFlowState = {
@@ -86,70 +91,13 @@ const safeReceiptImageMimeTypes = new Set(["image/jpeg", "image/png", "image/web
 const safeCsvMimeTypes = new Set(["text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"]);
 const manualCurrencyOptions = ["RON", "EUR", "USD", "GBP"] as const;
 type ManualCurrencyOption = (typeof manualCurrencyOptions)[number];
-const manualSpendCategoryLabels = [
-  "Housing",
-  "Groceries",
-  "Dining",
-  "Transport",
-  "Utilities",
-  "Health",
-  "Shopping",
-  "Entertainment",
-  "Travel",
-  "Education",
-  "Gifts",
-  "Transfers",
-  "Investments",
-  "Other",
-] as const;
-const manualIncomeCategoryLabels = [
-  "Salary",
-  "Self-employment",
-  "Refunds",
-  "Gifts",
-  "Sales",
-  "Investments",
-  "Rental income",
-  "Transfers",
-  "Side income",
-  "Other",
-] as const;
-
 function getSupportedManualCurrency(value: string): ManualCurrencyOption {
   const normalized = value.trim().toUpperCase();
   return manualCurrencyOptions.includes(normalized as ManualCurrencyOption) ? (normalized as ManualCurrencyOption) : "USD";
 }
 
-function normalizeManualCategoryKey(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[_/]+/g, " ")
-    .replace(/[\u2013\u2014]/g, "-")
-    .replace(/\s+/g, " ");
-}
-
-function syntheticManualCategoryId(label: string) {
-  return `manual-default-${normalizeManualCategoryKey(label).replace(/[^a-z0-9]+/g, "-")}`;
-}
-
 function buildManualCategoryOptions(categories: ControlledCategoryOption[], transactionType: "expense" | "income"): ManualCategoryOption[] {
-  const labels = transactionType === "income" ? manualIncomeCategoryLabels : manualSpendCategoryLabels;
-
-  return labels.map((label) => {
-    const normalizedLabel = normalizeManualCategoryKey(label);
-    const category = categories.find((option) => normalizeManualCategoryKey(option.label) === normalizedLabel || normalizeManualCategoryKey(option.slug) === normalizedLabel);
-
-    return (
-      category ?? {
-        id: syntheticManualCategoryId(label),
-        slug: normalizedLabel.replace(/[^a-z0-9]+/g, "_"),
-        label,
-        direction: transactionType,
-        isSynthetic: true,
-      }
-    );
-  });
+  return buildCategoryPickerOptions(categories, transactionType, { includeSynthetic: true });
 }
 
 function fileMatchesImportType(importType: "receipt_image" | "csv_import", file: File) {
@@ -1016,42 +964,15 @@ export function AssistantComposer({
               </div>
 
               {manualOptionalPanel === "category" ? (
-                <div aria-label="Category picker" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1">
-                  {manualCategoryOptions.map((category) => {
-                    const categoryVisuals = getCategoryVisualsByName(category.label);
-                    const CategoryIcon = categoryVisuals.icon;
-                    const isSelected = effectiveManualCategoryId === category.id;
-
-                    return (
-                      <button
-                        aria-pressed={isSelected}
-                        className={`flex min-h-10 items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs font-semibold transition ${
-                          isSelected ? "shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
-                        }`}
-                        key={category.id}
-                        onClick={() => {
-                          setManualCategoryId(category.id);
-                          setManualCategoryWasSelected(true);
-                          setManualOptionalPanel(null);
-                        }}
-                        style={{
-                          backgroundColor: isSelected ? categoryVisuals.primary : "#FFFFFF",
-                          borderColor: isSelected ? categoryVisuals.primary : "#E2E8F0",
-                          color: isSelected ? "#FFFFFF" : "#334155",
-                        }}
-                        type="button"
-                      >
-                        <CategoryIcon
-                          aria-hidden="true"
-                          className="size-4 shrink-0"
-                          strokeWidth={2.1}
-                          style={{ color: isSelected ? "#FFFFFF" : categoryVisuals.primary }}
-                        />
-                        <span className="truncate">{category.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <CategoryIconGridPicker
+                  categories={manualCategoryOptions}
+                  onSelect={(category) => {
+                    setManualCategoryId(category.id);
+                    setManualCategoryWasSelected(true);
+                    setManualOptionalPanel(null);
+                  }}
+                  selectedCategoryId={effectiveManualCategoryId}
+                />
               ) : null}
 
               <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
