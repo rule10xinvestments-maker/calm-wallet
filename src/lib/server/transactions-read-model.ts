@@ -1141,7 +1141,7 @@ function buildInsightsMonthPickerYears(args: {
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([year, yearMonths]) => ({
       year,
-      months: yearMonths.sort((a, b) => b.month.localeCompare(a.month)),
+      months: yearMonths.sort((a, b) => a.month.localeCompare(b.month)),
     }));
 }
 

@@ -1580,11 +1580,11 @@ describe("transactions read model", () => {
       {
         year: "2026",
         months: [
-          expect.objectContaining({ month: "2026-06", hasActivity: false, status: "none" }),
-          expect.objectContaining({ month: "2026-05", hasActivity: false, status: "none" }),
-          expect.objectContaining({ month: "2026-04", hasActivity: true, status: "spend-heavy" }),
-          expect.objectContaining({ month: "2026-03", hasActivity: false, status: "none" }),
           expect.objectContaining({ month: "2026-02", hasActivity: true, status: "net-positive" }),
+          expect.objectContaining({ month: "2026-03", hasActivity: false, status: "none" }),
+          expect.objectContaining({ month: "2026-04", hasActivity: true, status: "spend-heavy" }),
+          expect.objectContaining({ month: "2026-05", hasActivity: false, status: "none" }),
+          expect.objectContaining({ month: "2026-06", hasActivity: false, status: "none" }),
         ],
       },
     ]);
