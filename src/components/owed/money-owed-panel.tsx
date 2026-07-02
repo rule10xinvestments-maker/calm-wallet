@@ -1,14 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, CirclePlus } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Calendar, Check, ChevronDown, CirclePlus, FileText } from "lucide-react";
 import type { OwedNote, OwedNoteDirection } from "@/domain/owed-notes/types";
 import { initialOwedNoteActionState, type OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
 type OwedSection = "owed_to_me" | "i_owe" | "create" | null;
 type OwedEditor = { noteId: string; kind: "add" | "subtract" | "note" | "settle" } | null;
+type CreateOptionalSection = "note" | "dueDate" | null;
 
 type MoneyOwedPanelProps = {
   notes: OwedNote[];
@@ -110,7 +111,12 @@ export function MoneyOwedPanel({
   const [editor, setEditor] = useState<OwedEditor>(null);
   const [activityExpandedNoteId, setActivityExpandedNoteId] = useState<string | null>(null);
   const [createDirection, setCreateDirection] = useState<OwedNoteDirection>("owed_to_me");
+  const [createOptionalSection, setCreateOptionalSection] = useState<CreateOptionalSection>(null);
+  const [createNote, setCreateNote] = useState("");
+  const [createDueDate, setCreateDueDate] = useState("");
   const [createFormKey, setCreateFormKey] = useState(0);
+  const createNoteRef = useRef<HTMLTextAreaElement>(null);
+  const createDueDateRef = useRef<HTMLInputElement>(null);
   const [createState, createFormAction, isCreatePending] = useActionState(createAction, initialOwedNoteActionState);
   const [adjustState, adjustFormAction, isAdjustPending] = useActionState(adjustAmountAction, initialOwedNoteActionState);
   const [noteState, noteFormAction, isNotePending] = useActionState(updateNoteAction, initialOwedNoteActionState);
@@ -127,9 +133,22 @@ export function MoneyOwedPanel({
       setExpandedSection(createState.note.direction);
       setActivityExpandedNoteId(createState.note.id);
       setCreateDirection(createState.note.direction);
+      setCreateOptionalSection(null);
+      setCreateNote("");
+      setCreateDueDate("");
       setCreateFormKey((key) => key + 1);
     }
   }, [createState]);
+
+  useEffect(() => {
+    if (createOptionalSection === "note") {
+      createNoteRef.current?.focus();
+    }
+
+    if (createOptionalSection === "dueDate") {
+      createDueDateRef.current?.focus();
+    }
+  }, [createOptionalSection]);
 
   useEffect(() => {
     const nextNote = adjustState.note ?? noteState.note;
@@ -354,9 +373,14 @@ export function MoneyOwedPanel({
   }
 
   function renderCreateForm(className = "space-y-3 rounded-2xl bg-white p-3") {
+    const noteAdded = createNote.trim().length > 0;
+    const dueDateAdded = createDueDate.trim().length > 0;
+
     return (
       <form action={createFormAction} className={className} key={createFormKey}>
         <input name="direction" type="hidden" value={createDirection} />
+        <input name="note" type="hidden" value={createNote} />
+        <input name="dueDate" type="hidden" value={createDueDate} />
         <div className="grid grid-cols-2 gap-2">
           {(["owed_to_me", "i_owe"] as const).map((direction) => (
             <button
@@ -392,14 +416,62 @@ export function MoneyOwedPanel({
             </select>
           </label>
         </div>
-        <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">Note</span>
-          <textarea className="min-h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" name="note" placeholder="Optional" />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">Due date</span>
-          <input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" name="dueDate" type="date" />
-        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            aria-expanded={createOptionalSection === "note"}
+            className={`flex min-h-10 items-center justify-center gap-1.5 rounded-xl border px-2 text-sm font-semibold transition ${
+              createOptionalSection === "note"
+                ? "border-sky-200 bg-sky-50 text-sky-700"
+                : noteAdded
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+            onClick={() => setCreateOptionalSection((current) => (current === "note" ? null : "note"))}
+            type="button"
+          >
+            {noteAdded && createOptionalSection !== "note" ? <Check aria-hidden="true" className="size-3.5" /> : <FileText aria-hidden="true" className="size-3.5" />}
+            <span className="truncate">{noteAdded && createOptionalSection !== "note" ? "Note added" : "Note"}</span>
+          </button>
+          <button
+            aria-expanded={createOptionalSection === "dueDate"}
+            className={`flex min-h-10 items-center justify-center gap-1.5 rounded-xl border px-2 text-sm font-semibold transition ${
+              createOptionalSection === "dueDate"
+                ? "border-sky-200 bg-sky-50 text-sky-700"
+                : dueDateAdded
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+            onClick={() => setCreateOptionalSection((current) => (current === "dueDate" ? null : "dueDate"))}
+            type="button"
+          >
+            {dueDateAdded && createOptionalSection !== "dueDate" ? <Check aria-hidden="true" className="size-3.5" /> : <Calendar aria-hidden="true" className="size-3.5" />}
+            <span className="truncate">{dueDateAdded && createOptionalSection !== "dueDate" ? formatOwedDate(`${createDueDate}T00:00:00.000Z`) : "Due date"}</span>
+          </button>
+        </div>
+        {createOptionalSection === "note" ? (
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Note</span>
+            <textarea
+              className="min-h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              onChange={(event) => setCreateNote(event.target.value)}
+              placeholder="Optional"
+              ref={createNoteRef}
+              value={createNote}
+            />
+          </label>
+        ) : null}
+        {createOptionalSection === "dueDate" ? (
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-slate-600">Due date</span>
+            <input
+              className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              onChange={(event) => setCreateDueDate(event.target.value)}
+              ref={createDueDateRef}
+              type="date"
+              value={createDueDate}
+            />
+          </label>
+        ) : null}
         <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={isCreatePending} type="submit">
           <Check aria-hidden="true" className="size-4" />
           Save

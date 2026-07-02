@@ -182,9 +182,13 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: /Create owed note/ }));
     expect(screen.queryByText("Mira")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Person")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Note" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Due date" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
   });
 
-  it("creates an owed note from Assistant and shows it in the correct list", async () => {
+  it("creates an owed note from Assistant and preserves collapsed optional values", async () => {
     const createOwedNoteAction = vi.fn(async () => ({
       status: "success" as const,
       message: "Money reminder saved.",
@@ -215,9 +219,28 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: /Create owed note/ }));
     fireEvent.change(screen.getByLabelText("Person"), { target: { value: "Danel" } });
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "100" } });
+    expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Note" }));
+    expect(screen.getByLabelText("Note")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "Lunch payback" } });
+    fireEvent.click(screen.getByRole("button", { name: "Note" }));
+    expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Note added" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Due date" }));
+    expect(screen.getByLabelText("Due date")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-07-10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Due date" }));
+    expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Jul 10/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(createOwedNoteAction).toHaveBeenCalled());
+    const [, formData] = createOwedNoteAction.mock.calls[0] as unknown as [unknown, FormData];
+    expect(formData.get("note")).toBe("Lunch payback");
+    expect(formData.get("dueDate")).toBe("2026-07-10");
     expect(await screen.findByText("Money reminder saved.")).toBeInTheDocument();
     expect(await screen.findByText("Danel")).toBeInTheDocument();
     expect(screen.queryByLabelText("Person")).not.toBeInTheDocument();

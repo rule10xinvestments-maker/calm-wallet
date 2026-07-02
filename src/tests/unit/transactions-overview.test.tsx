@@ -309,6 +309,49 @@ describe("transactions overview", () => {
     expect(within(owedPanel).queryByText("Add a money reminder.")).not.toBeInTheDocument();
   });
 
+  it("uses compact optional owed-note controls in Activity and preserves collapsed values", async () => {
+    const createOwedNoteAction = vi.fn(async () => ({ status: "idle" as const, message: null, note: null }));
+
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        createOwedNoteAction={createOwedNoteAction}
+        items={[makeTransactionItem({ title: "Market transaction" })]}
+        owedNotes={[]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Owed" }));
+    const owedPanel = screen.getByText("Money owed").closest(".rounded-2xl") as HTMLElement;
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /Create owed note/ }));
+
+    expect(within(owedPanel).getByLabelText("Person")).toBeInTheDocument();
+    expect(within(owedPanel).getByLabelText("Amount")).toBeInTheDocument();
+    expect(within(owedPanel).getByLabelText("Currency")).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: "Note" })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: "Due date" })).toBeInTheDocument();
+    expect(within(owedPanel).queryByLabelText("Note")).not.toBeInTheDocument();
+    expect(within(owedPanel).queryByLabelText("Due date")).not.toBeInTheDocument();
+
+    fireEvent.change(within(owedPanel).getByLabelText("Person"), { target: { value: "Mira" } });
+    fireEvent.change(within(owedPanel).getByLabelText("Amount"), { target: { value: "25" } });
+    fireEvent.click(within(owedPanel).getByRole("button", { name: "Note" }));
+    fireEvent.change(within(owedPanel).getByLabelText("Note"), { target: { value: "Taxi split" } });
+    fireEvent.click(within(owedPanel).getByRole("button", { name: "Note" }));
+    fireEvent.click(within(owedPanel).getByRole("button", { name: "Due date" }));
+    fireEvent.change(within(owedPanel).getByLabelText("Due date"), { target: { value: "2026-07-15" } });
+    fireEvent.click(within(owedPanel).getByRole("button", { name: "Due date" }));
+    expect(within(owedPanel).getByRole("button", { name: /Jul 15/ })).toBeInTheDocument();
+    fireEvent.click(within(owedPanel).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(createOwedNoteAction).toHaveBeenCalled());
+    const [, formData] = createOwedNoteAction.mock.calls[0] as unknown as [unknown, FormData];
+    expect(formData.get("note")).toBe("Taxi split");
+    expect(formData.get("dueDate")).toBe("2026-07-15");
+  });
+
   it("filters recurring entries through the sixth top filter and hides month controls", () => {
     render(
       <TransactionsOverview
