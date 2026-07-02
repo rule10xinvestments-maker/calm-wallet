@@ -62,6 +62,54 @@ export const REQUIRED_SCHEMA: RequiredSchemaEntry[] = [
     column: "is_active",
     type: "column",
   },
+  {
+    table: "push_subscriptions",
+    type: "table",
+  },
+  {
+    table: "push_subscriptions",
+    column: "user_id",
+    type: "column",
+  },
+  {
+    table: "push_subscriptions",
+    column: "endpoint",
+    type: "column",
+  },
+  {
+    table: "push_subscriptions",
+    column: "p256dh",
+    type: "column",
+  },
+  {
+    table: "push_subscriptions",
+    column: "auth",
+    type: "column",
+  },
+  {
+    table: "push_subscriptions",
+    column: "disabled_at",
+    type: "column",
+  },
+  {
+    table: "notification_events",
+    type: "table",
+  },
+  {
+    table: "notification_events",
+    column: "notification_type",
+    type: "column",
+  },
+  {
+    table: "notification_events",
+    column: "dedupe_key",
+    type: "column",
+  },
+  {
+    table: "notification_events",
+    column: "sent_at",
+    type: "column",
+  },
 ];
 
 function normalizeSupabaseUrl(value: string) {

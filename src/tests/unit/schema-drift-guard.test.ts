@@ -20,13 +20,13 @@ function makeFetch(statuses: boolean[]) {
 
 describe("production schema drift guard", () => {
   it("passes when all required schema exists", async () => {
-    const fetchImpl = makeFetch([true, true, true, true, true, true]);
+    const fetchImpl = makeFetch(REQUIRED_SCHEMA.map(() => true));
 
     const result = await checkProductionSchema({ env, fetchImpl, required: true });
 
     expect(result.status).toBe("passed");
     expect(fetchImpl).toHaveBeenCalledTimes(REQUIRED_SCHEMA.length);
-    expect(result.message).toBe("Production schema check passed for 6 required objects.");
+    expect(result.message).toBe(`Production schema check passed for ${REQUIRED_SCHEMA.length} required objects.`);
   });
 
   it("reports a missing table with clear copy", async () => {
