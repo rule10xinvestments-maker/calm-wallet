@@ -649,6 +649,35 @@ describe("natural-language assistant parser", () => {
       amount: "1200",
       merchant: "Freelance income",
     });
+
+    expect(parseNaturalLanguageAssistantInput("salariu 3000")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "3000",
+      merchant: "Salary",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("refund 50")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "50",
+      merchant: "Refund",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("sold phone 500")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "500",
+      merchant: "Phone",
+      note: "sold phone",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("rent received 1200")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "1200",
+      merchant: "Rent received",
+    });
   });
 
   it("treats received-from phrasing as income needing review", () => {

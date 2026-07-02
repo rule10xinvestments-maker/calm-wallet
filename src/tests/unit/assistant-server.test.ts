@@ -147,6 +147,30 @@ const controlledCategories: ControlledCategory[] = [
     id: "12121212-1212-1212-1212-121212121212",
     slug: "investment_income",
     label: "Investments",
+    direction: "both",
+  },
+  {
+    id: "abababab-abab-abab-abab-abababababab",
+    slug: "refunds",
+    label: "Refunds",
+    direction: "income",
+  },
+  {
+    id: "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd",
+    slug: "transfers",
+    label: "Transfers",
+    direction: "both",
+  },
+  {
+    id: "efefefef-efef-efef-efef-efefefefefef",
+    slug: "sales",
+    label: "Sales",
+    direction: "income",
+  },
+  {
+    id: "34343434-3434-3434-3434-343434343434",
+    slug: "rental_income",
+    label: "Rental income",
     direction: "income",
   },
 ];
@@ -1365,7 +1389,7 @@ describe("assistant server integration", () => {
     expect(result.message).toContain("to tracked items");
   });
 
-  it("keeps unsigned crypto shorthand on the existing unclear expense path", async () => {
+  it("categorizes unsigned crypto shorthand as investment spending", async () => {
     const services = makeTransactionServices();
 
     const result = await runNaturalLanguageAssistantCommand({
@@ -1382,13 +1406,14 @@ describe("assistant server integration", () => {
         amountMinor: 7000,
         itemName: "crypto",
         merchant: null,
-        reviewState: "needs_attention",
-        uncertaintyReason: "Category needs review.",
+        categoryId: "12121212-1212-1212-1212-121212121212",
       }),
       { actorType: "ai" },
     );
-    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toHaveProperty("categoryId");
-    expect(result.message).toBe("Saved $70.00 as Needs Review.");
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toMatchObject({
+      reviewState: "needs_attention",
+    });
+    expect(result.message).toBe("Saved $70.00 to tracked items.");
   });
 
   it("lets dining context beat grocery beverage defaults at runtime", async () => {
@@ -1419,15 +1444,15 @@ describe("assistant server integration", () => {
     ["chirie 130", 13000, "USD", "chirie", "11111111-aaaa-aaaa-aaaa-111111111111"],
     ["130 chirie", 13000, "USD", "chirie", "11111111-aaaa-aaaa-aaaa-111111111111"],
     ["rent 130", 13000, "USD", "rent", "11111111-aaaa-aaaa-aaaa-111111111111"],
-    ["tigari 30", 3000, "USD", "tigari", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
-    ["30 lei tigari", 3000, "RON", "tigari", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
-    ["\u021big\u0103ri 30 lei", 3000, "RON", "\u021big\u0103ri", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
-    ["cigarettes 12 usd", 1200, "USD", "cigarettes", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
+    ["tigari 30", 3000, "USD", "tigari", "99999999-9999-9999-9999-999999999999"],
+    ["30 lei tigari", 3000, "RON", "tigari", "99999999-9999-9999-9999-999999999999"],
+    ["\u021big\u0103ri 30 lei", 3000, "RON", "\u021big\u0103ri", "99999999-9999-9999-9999-999999999999"],
+    ["cigarettes 12 usd", 1200, "USD", "cigarettes", "99999999-9999-9999-9999-999999999999"],
     ["trotineta electrica 2500", 250000, "USD", "trotineta electrica", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
     ["trotinet\u0103 electric\u0103 2500", 250000, "USD", "trotinet\u0103 electric\u0103", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
-    ["electric scooter 500 usd", 50000, "USD", "electric scooter", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
+    ["electric scooter 500 usd", 50000, "USD", "electric scooter", "99999999-9999-9999-9999-999999999999"],
     ["casca bicicleta 120 lei", 12000, "RON", "casca bicicleta", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
-    ["haine 200", 20000, "USD", "haine", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
+    ["haine 200", 20000, "USD", "haine", "99999999-9999-9999-9999-999999999999"],
     ["o paine 2 euro", 200, "EUR", "paine", "44444444-4444-4444-4444-444444444444"],
     ["paine 2 euro", 200, "EUR", "paine", "44444444-4444-4444-4444-444444444444"],
     ["2 euro paine", 200, "EUR", "paine", "44444444-4444-4444-4444-444444444444"],
@@ -1740,6 +1765,91 @@ describe("assistant server integration", () => {
     expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toHaveProperty("categoryId");
     expect(result.status).toBe("success");
     expect(result.message).toBe("Saved $19.00 as Needs Review.");
+  });
+
+  it.each([
+    ["Digi internet 80", 8000, "Digi internet", "22222222-bbbb-bbbb-bbbb-222222222222"],
+    ["factura enel 120", 12000, "factura enel", "22222222-bbbb-bbbb-bbbb-222222222222"],
+    ["gas bill 100", 10000, "gas bill", "22222222-bbbb-bbbb-bbbb-222222222222"],
+    ["BTCUSDT 100", 10000, "BTCUSDT", "12121212-1212-1212-1212-121212121212"],
+    ["ETH/USDT 200", 20000, "ETH/USDT", "12121212-1212-1212-1212-121212121212"],
+    ["SOL-USDC 150", 15000, "SOL-USDC", "12121212-1212-1212-1212-121212121212"],
+  ])("saves starter vocabulary quick-add examples as reviewed: %s", async (text, amountMinor, merchant, categoryId) => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text,
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor,
+        itemName: merchant,
+        merchant: null,
+        categoryId,
+      }),
+      { actorType: "ai" },
+    );
+    expect(vi.mocked(services.createTransaction).mock.calls[0]?.[1]).not.toMatchObject({
+      reviewState: "needs_attention",
+    });
+    expect(result.message).toContain("to tracked items");
+  });
+
+  it.each([
+    ["USDT 100", "12121212-1212-1212-1212-121212121212"],
+    ["transfer 100", "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd"],
+  ])("saves low-confidence starter hints with Needs Review: %s", async (text, categoryId) => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text,
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        categoryId,
+        reviewState: "needs_attention",
+        uncertaintyReason: "Category needs review.",
+      }),
+      { actorType: "ai" },
+    );
+    expect(result.message).toBe("Saved $100.00 as Needs Review.");
+  });
+
+  it.each([
+    ["refund 50", 5000, "Refund", "abababab-abab-abab-abab-abababababab"],
+    ["sold phone 500", 50000, "Phone", "efefefef-efef-efef-efef-efefefefefef"],
+    ["rent received 1200", 120000, "Rent received", "34343434-3434-3434-3434-343434343434"],
+  ])("saves starter income vocabulary through Assistant quick add: %s", async (text, amountMinor, merchant, categoryId) => {
+    const services = makeTransactionServices();
+
+    await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text,
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType: "income",
+        amountMinor,
+        itemName: merchant,
+        categoryId,
+      }),
+      { actorType: "ai" },
+    );
   });
 
   it("does not mutate data for unsupported natural-language text", async () => {

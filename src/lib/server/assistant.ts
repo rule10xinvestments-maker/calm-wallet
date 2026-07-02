@@ -811,6 +811,8 @@ function mapNaturalLanguageIntentToAssistantInput(
   if (intent.kind === "create_transaction") {
     const categoryResolution = "categoryResolution" in intent ? intent.categoryResolution : undefined;
     const clearCategoryId = categoryResolution?.confidence === "clear" ? categoryResolution.categoryId : undefined;
+    const shouldKeepCategoryReview =
+      categoryResolution?.confidence === "clear" && categoryResolution.reviewRecommendation === "needs_attention";
 
     return {
       toolName: "create_transaction",
@@ -820,8 +822,8 @@ function mapNaturalLanguageIntentToAssistantInput(
       itemName: intent.merchant,
       note: intent.note,
       categoryId: clearCategoryId,
-      reviewState: clearCategoryId ? undefined : intent.reviewState,
-      uncertaintyReason: clearCategoryId ? undefined : intent.uncertaintyReason,
+      reviewState: clearCategoryId && !shouldKeepCategoryReview ? undefined : intent.reviewState,
+      uncertaintyReason: clearCategoryId && !shouldKeepCategoryReview ? undefined : intent.uncertaintyReason,
     };
   }
 
@@ -890,10 +892,15 @@ async function resolveCreateTransactionIntent(args: {
     ...args.intent,
     categoryResolution,
     ...(categoryResolution.confidence === "clear"
-      ? {
+      ? categoryResolution.reviewRecommendation === "reviewed"
+        ? {
           reviewState: undefined,
           uncertaintyReason: undefined,
         }
+        : {
+            reviewState: args.intent.reviewState ?? "needs_attention",
+            uncertaintyReason: args.intent.uncertaintyReason ?? "Category needs review.",
+          }
       : {}),
   };
 }

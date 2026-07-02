@@ -566,7 +566,7 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
   const amountResult = extractAmount(input);
 
   if (!amountResult) {
-    if (/\b(?:spent|paid|bought|coffee|lunch|dinner|breakfast|groceries|salary|got paid|paycheck|income|freelance)\b/i.test(input)) {
+    if (/\b(?:spent|paid|bought|coffee|lunch|dinner|breakfast|groceries|salary|salariu|got paid|paycheck|income|freelance|refund|sold|rent received)\b/i.test(input)) {
       return {
         kind: "clarification_needed",
         reason: "missing_amount",
@@ -608,7 +608,7 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
     });
   }
 
-  const salaryMatch = lower.match(/^salary\b/);
+  const salaryMatch = lower.match(/^(?:salary|salariu)\b/);
   if (salaryMatch) {
     return buildCreateIntent({
       transactionType: "income",
@@ -634,6 +634,38 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
       amount,
       currency,
       merchant: "Freelance income",
+    });
+  }
+
+  if (/^(?:refund|rambursare|cashback|reimbursement|chargeback)\b/.test(lower)) {
+    const merchant = cleanMerchant(cleanTextWithoutAmount.replace(/^(?:refund|rambursare|cashback|reimbursement|chargeback)\b/i, ""));
+    return buildCreateIntent({
+      transactionType: "income",
+      amount,
+      currency,
+      merchant: merchant ? titleCaseShortLabel(merchant) : "Refund",
+    });
+  }
+
+  const rentReceivedMatch = cleanTextWithoutAmount.match(/^(?:rent received|chirie primita|rental income|property income)\b/i);
+  if (rentReceivedMatch) {
+    return buildCreateIntent({
+      transactionType: "income",
+      amount,
+      currency,
+      merchant: "Rent received",
+    });
+  }
+
+  const soldMatch = cleanTextWithoutAmount.match(/^(?:sold|sale|vandut|vanzare)\s+(.+)$/i);
+  if (soldMatch?.[1]) {
+    const merchant = cleanMerchant(soldMatch[1]);
+    return buildCreateIntent({
+      transactionType: "income",
+      amount,
+      currency,
+      merchant: merchant ? titleCaseShortLabel(merchant) : "Sale",
+      note: merchant ? `sold ${merchant}` : "sold",
     });
   }
 

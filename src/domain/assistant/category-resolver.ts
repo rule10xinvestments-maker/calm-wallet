@@ -1,3 +1,5 @@
+import { findCategoryVocabularyHint, type CategoryHintConfidence } from "@/lib/category-vocabulary";
+
 export type ControlledCategoryDirection = "expense" | "income" | "both";
 
 export type ControlledCategory = {
@@ -10,7 +12,8 @@ export type ControlledCategory = {
 export type CategoryResolutionResult =
   | {
       confidence: "clear";
-      reviewRecommendation: "reviewed";
+      hintConfidence?: CategoryHintConfidence;
+      reviewRecommendation: "reviewed" | "needs_attention";
       categoryId: string;
       categorySlug: string;
       categoryLabel: string;
@@ -18,6 +21,7 @@ export type CategoryResolutionResult =
     }
   | {
       confidence: "unknown";
+      hintConfidence?: null;
       reviewRecommendation: "needs_attention";
       categoryId: null;
       categorySlug: null;
@@ -530,6 +534,12 @@ function getAliasMatches() {
 }
 
 function resolveSlug(phrase: string) {
+  const vocabularyHint = findCategoryVocabularyHint(phrase);
+
+  if (vocabularyHint) {
+    return vocabularyHint;
+  }
+
   const normalized = normalizePhrase(phrase);
 
   if (!normalized) {
@@ -587,7 +597,8 @@ export function resolveControlledCategory(args: {
 
   return {
     confidence: "clear",
-    reviewRecommendation: "reviewed",
+    hintConfidence: "confidence" in resolved ? resolved.confidence : "high",
+    reviewRecommendation: "confidence" in resolved && resolved.confidence !== "high" ? "needs_attention" : "reviewed",
     categoryId: category.id,
     categorySlug: category.slug,
     categoryLabel: category.label,

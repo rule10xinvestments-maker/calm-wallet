@@ -1,0 +1,250 @@
+export type CategoryHintConfidence = "high" | "medium" | "low";
+
+export type CategoryVocabularyHint = {
+  slug: string;
+  matchedAlias: string;
+  confidence: CategoryHintConfidence;
+};
+
+type CategoryVocabularyEntry = {
+  slug: string;
+  confidence: CategoryHintConfidence;
+  aliases: string[];
+};
+
+const cryptoTickers = ["btc", "eth", "sol", "ada", "bnb", "xrp", "doge", "avax", "dot", "matic", "link", "ltc", "trx", "ton"];
+const utilityProviders = ["digi", "orange", "vodafone", "enel", "engie", "eon"];
+
+const categoryVocabulary: CategoryVocabularyEntry[] = [
+  {
+    slug: "housing",
+    confidence: "high",
+    aliases: ["rent", "chirie", "landlord", "apartment", "apartament", "mortgage", "ipoteca", "maintenance", "intretinere", "association", "asociatie", "home", "casa", "repairs", "reparatii"],
+  },
+  {
+    slug: "groceries",
+    confidence: "high",
+    aliases: ["groceries", "grocery", "supermarket", "market", "food shopping", "food shop", "food", "alimente", "mancare", "bread", "paine", "milk", "lapte", "eggs", "oua", "cheese", "branza", "meat", "carne", "vegetables", "legume", "fruit", "fructe", "cola", "mustard", "mustar", "bidoane apa", "apa plata", "apa minerala", "kaufland", "lidl", "carrefour", "profi", "mega image"],
+  },
+  {
+    slug: "groceries",
+    confidence: "medium",
+    aliases: ["water", "apa"],
+  },
+  {
+    slug: "dining",
+    confidence: "high",
+    aliases: ["restaurant", "cafe", "coffee", "cafea", "lunch", "dinner", "breakfast", "pizza", "burger", "shaorma", "kebab", "takeaway", "delivery", "glovo", "tazz", "bolt food", "food delivery", "meniul zilei"],
+  },
+  {
+    slug: "transport",
+    confidence: "high",
+    aliases: ["transport", "taxi", "uber", "bolt", "bus", "autobuz", "tram", "tramvai", "metro", "metrou", "train", "tren", "fuel", "benzina", "motorina", "gas station", "peco", "parking", "parcare", "toll", "rovinieta"],
+  },
+  {
+    slug: "transport",
+    confidence: "medium",
+    aliases: ["gas"],
+  },
+  {
+    slug: "utilities",
+    confidence: "high",
+    aliases: ["electricity", "electricitate", "curent", "power", "gas bill", "gaz", "gaze", "water bill", "factura apa", "internet", "phone bill", "mobile", "vodafone", "orange", "digi", "enel", "engie", "eon", "utility", "utilities", "utilitati", "utilități", "factura"],
+  },
+  {
+    slug: "health",
+    confidence: "high",
+    aliases: ["pharmacy", "farmacie", "medicine", "medicamente", "doctor", "medic", "dentist", "dental", "hospital", "spital", "clinic", "clinica", "therapy", "terapie", "glasses", "ochelari", "vitamins", "prescription"],
+  },
+  {
+    slug: "shopping",
+    confidence: "high",
+    aliases: ["shopping", "clothes", "haine", "shoes", "pantofi", "incaltaminte", "mall", "emag", "amazon", "altex", "dedeman", "ikea", "cosmetics", "tobacco", "tutun", "tigari", "cigarettes", "vape", "accessories", "electronics", "telefon", "electric scooter"],
+  },
+  {
+    slug: "entertainment",
+    confidence: "high",
+    aliases: ["movie", "cinema", "film", "netflix", "spotify", "youtube", "game", "games", "gaming", "concert", "event", "party", "club", "subscription", "abonament", "fun", "chatgpt", "openai"],
+  },
+  {
+    slug: "travel",
+    confidence: "high",
+    aliases: ["hotel", "booking", "airbnb", "flight", "zbor", "plane", "avion", "airport", "aeroport", "vacation", "holiday", "vacanta", "trip", "travel", "luggage", "passport", "taxi airport"],
+  },
+  {
+    slug: "education",
+    confidence: "high",
+    aliases: ["school", "scoala", "course", "curs", "book", "carte", "books", "manual", "university", "facultate", "tuition", "meditatii", "training", "exam", "examen", "udemy"],
+  },
+  {
+    slug: "gifts",
+    confidence: "medium",
+    aliases: ["gift", "cadou", "present", "donation", "donatie", "birthday", "zi de nastere", "flowers", "flori"],
+  },
+  {
+    slug: "transfers",
+    confidence: "low",
+    aliases: ["transfer", "revolut", "bank transfer", "sent", "trimis", "received", "primit", "iban", "topup", "top up", "withdraw", "withdrawal", "atm", "cash", "numerar"],
+  },
+  {
+    slug: "investment_income",
+    confidence: "high",
+    aliases: ["investment", "investitie", "investitii", "stocks", "shares", "stock", "etf", "crypto", "bitcoin", "btc", "ethereum", "eth", "solana", "sol", "binance", "coinbase", "trading", "staking", "broker", "dividend", "dividends", "dobanda"],
+  },
+  {
+    slug: "investment_income",
+    confidence: "medium",
+    aliases: ["usdt", "usdc"],
+  },
+  {
+    slug: "other",
+    confidence: "low",
+    aliases: ["misc", "diverse", "other", "unknown", "unclear"],
+  },
+  {
+    slug: "salary",
+    confidence: "high",
+    aliases: ["salary", "salariu", "wage", "wages", "paycheck", "payroll", "venit", "income", "paid salary", "bonus", "prima"],
+  },
+  {
+    slug: "self_employment",
+    confidence: "high",
+    aliases: ["freelance", "freelancer", "client", "invoice", "factura emisa", "contract", "consulting", "consultanta", "project payment", "gig"],
+  },
+  {
+    slug: "refunds",
+    confidence: "high",
+    aliases: ["refund", "rambursare", "return", "returned", "chargeback", "cashback", "reimbursement", "compensatie", "restituit"],
+  },
+  {
+    slug: "sales",
+    confidence: "high",
+    aliases: ["sold", "sale", "vanzare", "vandut", "marketplace", "olx", "ebay", "facebook marketplace"],
+  },
+  {
+    slug: "rental_income",
+    confidence: "high",
+    aliases: ["rent received", "chirie primita", "tenant", "chirias", "rental income", "property income"],
+  },
+  {
+    slug: "side_income",
+    confidence: "high",
+    aliases: ["side income", "side job", "tips", "bacsis", "extra work", "overtime", "part time", "part-time"],
+  },
+];
+
+const diningContextAliases = ["bar", "cafe", "cafenea", "cafea", "coffee", "dining", "pub", "restaurant", "terasa"];
+const groceryBeverageAliases = ["beer", "bere", "cola", "coca cola", "pepsi", "suc", "juice", "soda", "apa minerala", "apa plata", "bautura", "bauturi", "drinks", "beverage"];
+
+export function normalizeCategoryVocabularyPhrase(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[ÄƒÃ¢]/g, "a")
+    .replace(/[Ã„Æ’ÃƒÂ¢]/g, "a")
+    .replace(/Ã®/g, "i")
+    .replace(/ÃƒÂ®/g, "i")
+    .replace(/[È™ÅŸ]/g, "s")
+    .replace(/[Ãˆâ„¢Ã…Å¸]/g, "s")
+    .replace(/[È›Å£]/g, "t")
+    .replace(/[Ãˆâ€ºÃ…Â£]/g, "t")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s/_-]/g, " ")
+    .replace(/[_/-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function aliasPattern(alias: string) {
+  const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|\\s)${escaped}(\\s|$)`);
+}
+
+function phraseIncludesAlias(normalizedPhrase: string, alias: string) {
+  const normalizedAlias = normalizeCategoryVocabularyPhrase(alias);
+  return normalizedPhrase === normalizedAlias || aliasPattern(normalizedAlias).test(normalizedPhrase);
+}
+
+function getAliasMatches() {
+  return categoryVocabulary
+    .flatMap((entry) =>
+      entry.aliases.map((alias) => ({
+        slug: entry.slug,
+        alias: normalizeCategoryVocabularyPhrase(alias),
+        confidence: entry.confidence,
+      })),
+    )
+    .filter((match) => match.alias)
+    .sort((a, b) => b.alias.length - a.alias.length);
+}
+
+function findPatternHint(normalizedPhrase: string): CategoryVocabularyHint | null {
+  const cryptoPairPattern = new RegExp(`(^|\\s)(?:${cryptoTickers.join("|")})\\s*(?:usdt|usdc)(\\s|$)|(^|\\s)(?:usdt|usdc)\\s*(?:${cryptoTickers.join("|")})(\\s|$)`);
+
+  if (cryptoPairPattern.test(normalizedPhrase)) {
+    return { slug: "investment_income", matchedAlias: "crypto pair", confidence: "high" };
+  }
+
+  if (phraseIncludesAlias(normalizedPhrase, "factura") && utilityProviders.some((provider) => phraseIncludesAlias(normalizedPhrase, provider))) {
+    return { slug: "utilities", matchedAlias: "provider bill", confidence: "high" };
+  }
+
+  if (phraseIncludesAlias(normalizedPhrase, "food shopping") || phraseIncludesAlias(normalizedPhrase, "food shop")) {
+    return { slug: "groceries", matchedAlias: "food shopping", confidence: "high" };
+  }
+
+  if (phraseIncludesAlias(normalizedPhrase, "gas bill") || phraseIncludesAlias(normalizedPhrase, "factura apa")) {
+    return { slug: "utilities", matchedAlias: phraseIncludesAlias(normalizedPhrase, "gas bill") ? "gas bill" : "factura apa", confidence: "high" };
+  }
+
+  if (phraseIncludesAlias(normalizedPhrase, "bolt food")) {
+    return { slug: "dining", matchedAlias: "bolt food", confidence: "high" };
+  }
+
+  if (phraseIncludesAlias(normalizedPhrase, "fast food")) {
+    return { slug: "dining", matchedAlias: "fast food", confidence: "high" };
+  }
+
+  if (phraseIncludesAlias(normalizedPhrase, "comanda mancare")) {
+    return { slug: "dining", matchedAlias: "comanda mancare", confidence: "high" };
+  }
+
+  if (phraseIncludesAlias(normalizedPhrase, "electric scooter")) {
+    return { slug: "shopping", matchedAlias: "electric scooter", confidence: "high" };
+  }
+
+  return null;
+}
+
+export function findCategoryVocabularyHint(phrase: string | null | undefined): CategoryVocabularyHint | null {
+  const normalized = normalizeCategoryVocabularyPhrase(phrase ?? "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const patternHint = findPatternHint(normalized);
+
+  if (patternHint) {
+    return patternHint;
+  }
+
+  const diningContextMatch = diningContextAliases.find((alias) => phraseIncludesAlias(normalized, alias));
+  const beverageMatch = groceryBeverageAliases.find((alias) => phraseIncludesAlias(normalized, alias));
+
+  if (beverageMatch && diningContextMatch) {
+    return { slug: "dining", matchedAlias: beverageMatch, confidence: "high" };
+  }
+
+  for (const match of getAliasMatches()) {
+    if (normalized === match.alias || aliasPattern(match.alias).test(normalized)) {
+      return {
+        slug: match.slug,
+        matchedAlias: match.alias,
+        confidence: match.confidence,
+      };
+    }
+  }
+
+  return null;
+}

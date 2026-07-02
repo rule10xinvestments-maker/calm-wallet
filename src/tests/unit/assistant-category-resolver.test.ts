@@ -11,9 +11,18 @@ const categories: ControlledCategory[] = [
   { id: "cat-shopping", slug: "shopping", label: "Shopping", direction: "expense" },
   { id: "cat-personal", slug: "personal", label: "Personal", direction: "expense" },
   { id: "cat-entertainment", slug: "entertainment", label: "Entertainment", direction: "expense" },
+  { id: "cat-travel", slug: "travel", label: "Travel", direction: "expense" },
+  { id: "cat-education", slug: "education", label: "Education", direction: "expense" },
   { id: "cat-salary", slug: "salary", label: "Salary", direction: "income" },
   { id: "cat-self-employment", slug: "self_employment", label: "Self-employment", direction: "income" },
-  { id: "cat-investments", slug: "investment_income", label: "Investments", direction: "income" },
+  { id: "cat-investments", slug: "investment_income", label: "Investments", direction: "both" },
+  { id: "cat-refunds", slug: "refunds", label: "Refunds", direction: "income" },
+  { id: "cat-gifts", slug: "gifts", label: "Gifts", direction: "both" },
+  { id: "cat-transfers", slug: "transfers", label: "Transfers", direction: "both" },
+  { id: "cat-sales", slug: "sales", label: "Sales", direction: "income" },
+  { id: "cat-rental-income", slug: "rental_income", label: "Rental income", direction: "income" },
+  { id: "cat-side-income", slug: "side_income", label: "Side income", direction: "income" },
+  { id: "cat-other", slug: "other", label: "Other", direction: "both" },
 ];
 
 describe("controlled category resolver", () => {
@@ -43,8 +52,9 @@ describe("controlled category resolver", () => {
       "intretinere",
       "\u00eentre\u021binere",
     ]) {
+      const housingPhrase = ["intretinere", "\u00eentre\u021binere", "maintenance"].includes(phrase);
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
-        expect.objectContaining({ confidence: "clear", reviewRecommendation: "reviewed", categoryId: "cat-housing" }),
+        expect.objectContaining({ confidence: "clear", categoryId: housingPhrase ? "cat-housing" : "cat-utilities" }),
       );
     }
   });
@@ -170,7 +180,7 @@ describe("controlled category resolver", () => {
       "cora",
     ]) {
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
-        expect.objectContaining({ confidence: "clear", reviewRecommendation: "reviewed", categoryId: "cat-groceries" }),
+        expect.objectContaining({ confidence: "clear", categoryId: "cat-groceries" }),
       );
     }
   });
@@ -246,35 +256,23 @@ describe("controlled category resolver", () => {
       );
     }
 
-    for (const phrase of ["shopping", "electronics", "electronice", "phone", "telefon", "laptop", "charger", "incarcator", "\u00eenc\u0103rc\u0103tor", "headphones", "casti", "c\u0103\u0219ti", "furniture", "mobila", "mobil\u0103"]) {
+    for (const phrase of ["shopping", "electronics", "electronice", "phone", "telefon", "laptop", "charger", "incarcator", "\u00eenc\u0103rc\u0103tor", "headphones", "casti", "c\u0103\u0219ti", "furniture", "mobila", "mobil\u0103", "tigari", "\u021big\u0103ri", "tobacco", "emag", "clothes", "haine", "shoes", "incaltaminte", "cigarettes", "tutun", "vape", "accessories", "cosmetics", "electric scooter"]) {
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
         expect.objectContaining({ confidence: "clear", categoryId: "cat-shopping" }),
       );
     }
 
     for (const phrase of [
-      "clothes",
-      "haine",
       "tricou",
       "pantaloni",
-      "shoes",
-      "incaltaminte",
-      "\u00eenc\u0103l\u021b\u0103minte",
-      "tigari",
-      "\u021big\u0103ri",
       "tigara",
       "\u021bigar\u0103",
-      "cigarettes",
       "cigarette",
-      "tobacco",
-      "tutun",
-      "vape",
       "vapes",
       "trotineta",
       "trotinet\u0103",
       "trotineta electrica",
       "trotinet\u0103 electric\u0103",
-      "electric scooter",
       "scooter",
       "bicycle",
       "bike",
@@ -282,13 +280,11 @@ describe("controlled category resolver", () => {
       "helmet",
       "casca bicicleta",
       "casc\u0103 biciclet\u0103",
-      "accessories",
       "accesorii",
       "haircut",
       "barber",
       "frizerie",
       "tuns",
-      "cosmetics",
       "parfum",
       "deodorant",
       "bicicleta",
@@ -311,6 +307,61 @@ describe("controlled category resolver", () => {
     expect(resolveControlledCategory({ phrase: "gas station", transactionType: "expense", categories })).toEqual(
       expect.objectContaining({ confidence: "clear", categoryId: "cat-transport", matchedAlias: "gas station" }),
     );
+  });
+
+  it("maps starter vocabulary and pattern hints with confidence-aware review recommendations", () => {
+    for (const phrase of ["mustard 5", "mustar 5", "Carrefour 150", "Lidl 80"]) {
+      expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
+        expect.objectContaining({ confidence: "clear", reviewRecommendation: "reviewed", categoryId: "cat-groceries" }),
+      );
+    }
+
+    for (const phrase of ["Digi internet 80", "factura enel 120", "gas bill 100", "factura apa 70"]) {
+      expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
+        expect.objectContaining({ confidence: "clear", reviewRecommendation: "reviewed", categoryId: "cat-utilities" }),
+      );
+    }
+
+    for (const phrase of ["BTCUSDT 100", "ETH/USDT 200", "SOL-USDC 150", "ADA USDT"]) {
+      expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
+        expect.objectContaining({ confidence: "clear", reviewRecommendation: "reviewed", categoryId: "cat-investments" }),
+      );
+    }
+
+    expect(resolveControlledCategory({ phrase: "USDT 100", transactionType: "expense", categories })).toEqual(
+      expect.objectContaining({
+        confidence: "clear",
+        hintConfidence: "medium",
+        reviewRecommendation: "needs_attention",
+        categoryId: "cat-investments",
+      }),
+    );
+    expect(resolveControlledCategory({ phrase: "transfer 100", transactionType: "expense", categories })).toEqual(
+      expect.objectContaining({
+        confidence: "clear",
+        hintConfidence: "low",
+        reviewRecommendation: "needs_attention",
+        categoryId: "cat-transfers",
+      }),
+    );
+    expect(resolveControlledCategory({ phrase: "water 10", transactionType: "expense", categories })).toEqual(
+      expect.objectContaining({ confidence: "clear", categoryId: "cat-groceries" }),
+    );
+  });
+
+  it("maps starter income vocabulary type-aware", () => {
+    for (const [phrase, categoryId] of [
+      ["salary 3000", "cat-salary"],
+      ["salariu 3000", "cat-salary"],
+      ["refund 50", "cat-refunds"],
+      ["sold phone 500", "cat-sales"],
+      ["rent received 1200", "cat-rental-income"],
+      ["dividend 20", "cat-investments"],
+    ] as const) {
+      expect(resolveControlledCategory({ phrase, transactionType: "income", categories })).toEqual(
+        expect.objectContaining({ confidence: "clear", categoryId }),
+      );
+    }
   });
 
   it("falls back to unknown when the phrase is weak, unsupported, or direction-incompatible", () => {
