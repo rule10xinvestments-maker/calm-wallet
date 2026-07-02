@@ -789,6 +789,27 @@ describe("transaction item card", () => {
     expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
   });
 
+  it("keeps occurred date and collapsed recurring controls in one compact edit row", () => {
+    renderCard();
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+
+    const detailsForm = screen.getByRole("button", { name: "Save changes" }).closest("form");
+    expect(detailsForm).not.toHaveClass("pb-24");
+    expect(screen.getByLabelText("Date and recurring controls")).toHaveClass("grid-cols-[minmax(0,1fr)_minmax(7.5rem,0.75fr)]");
+    expect(screen.getByLabelText("Occurred date")).toBeInTheDocument();
+    expect(screen.getByLabelText("Recurring")).not.toBeChecked();
+    expect(screen.queryByRole("group", { name: "Recurring frequency" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Recurring"));
+
+    expect(screen.getByRole("group", { name: "Recurring frequency" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Start")).toBeInTheDocument();
+    expect(screen.getByLabelText("End")).toBeDisabled();
+    expect(screen.getByText("No end date")).toBeInTheDocument();
+  });
+
   it("toggles inline action panels from their action buttons", () => {
     renderCard();
 
