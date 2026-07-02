@@ -6,6 +6,7 @@ import { loadFxRatesForDisplay, type FxRate } from "@/lib/server/fx-rates";
 import type { Budget } from "@/domain/budgets/types";
 import type { ReviewState, Transaction } from "@/domain/transactions/types";
 import type { RecurringFrequency } from "@/lib/db/types";
+import { t } from "@/lib/i18n";
 
 export type TransactionsView = "all" | "expenses" | "income" | "needs-review";
 export type InsightsTimeframePreset = "1M" | "3M" | "6M" | "1Y" | "All";
@@ -407,20 +408,20 @@ function getTransactionDisplayTitle(transaction: Pick<Transaction, "itemName" | 
 export function getReviewStateMeta(reviewState: ReviewState) {
   if (isReviewStateNeedingReview(reviewState)) {
     return {
-      label: "Needs review",
+      label: t("common.needsReview"),
       tone: "attention" as const,
     };
   }
 
   if (reviewState === "pending_review") {
     return {
-      label: "Needs review",
+      label: t("common.needsReview"),
       tone: "attention" as const,
     };
   }
 
   return {
-    label: "Reviewed",
+    label: t("common.reviewed"),
     tone: "tracked" as const,
   };
 }
@@ -520,7 +521,7 @@ export function mapTransactionsToListItems(
       amountTone: transaction.transactionType,
       currency: transaction.currency || currencyFallback,
       reviewLabel: reviewMeta.label,
-      categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
+      categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : t("common.uncategorized"),
       itemName: transaction.itemName,
       merchant: transaction.merchant,
       note: transaction.note,
@@ -1665,7 +1666,7 @@ function buildLargestInsightsEntries(args: {
           month: "short",
           day: "numeric",
         }),
-        categoryLabel: transaction.categoryId ? args.categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
+        categoryLabel: transaction.categoryId ? args.categoryLabels[transaction.categoryId] || "Controlled category" : t("common.uncategorized"),
         currency: args.displayCurrency,
         isApproximate,
       };

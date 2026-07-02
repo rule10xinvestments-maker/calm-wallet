@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_NAV_ITEMS } from "@/lib/constants/navigation";
+import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
@@ -21,8 +22,9 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-white/70 bg-white/90 px-3 pb-6 pt-3 backdrop-blur"
     >
       <div className="grid grid-cols-3 gap-2">
-        {APP_NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+        {APP_NAV_ITEMS.map(({ href, icon: Icon, labelKey }) => {
           const isActive = activePathname === href;
+          const label = t(labelKey);
 
           return (
             <Link
