@@ -3,6 +3,8 @@ import { z } from "zod";
 export const updateNotificationPreferencesSchema = z.object({
   dailyReminderEnabled: z.boolean().optional(),
   monthlyReviewEnabled: z.boolean().optional(),
+  recurringNotificationsEnabled: z.boolean().optional(),
+  limitAlertsEnabled: z.boolean().optional(),
 });
 
 export const registerPushSubscriptionSchema = z.object({

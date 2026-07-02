@@ -32,6 +32,8 @@ export async function updateNotificationPreferencesAction(
     const preferences = await service.updateNotificationPreferences(user.id, {
       dailyReminderEnabled: checkboxValue(formData.get("dailyReminderEnabled")),
       monthlyReviewEnabled: checkboxValue(formData.get("monthlyReviewEnabled")),
+      recurringNotificationsEnabled: checkboxValue(formData.get("recurringNotificationsEnabled")),
+      limitAlertsEnabled: checkboxValue(formData.get("limitAlertsEnabled")),
     });
 
     revalidatePath("/assistant");
@@ -41,11 +43,11 @@ export async function updateNotificationPreferencesAction(
       message: "Notification preferences updated.",
       preferences,
     };
-  } catch (error) {
+  } catch {
     return {
       ...initialNotificationPreferencesActionState,
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to update notification preferences.",
+      message: "Notification settings could not be saved.",
     };
   }
 }
@@ -80,11 +82,11 @@ export async function registerPushSubscriptionAction(
       message: "Notification subscription saved.",
       preferences,
     };
-  } catch (error) {
+  } catch {
     return {
       ...initialNotificationPreferencesActionState,
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to save notification subscription.",
+      message: "Notifications are not ready yet.",
     };
   }
 }

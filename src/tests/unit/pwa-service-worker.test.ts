@@ -3,9 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const serviceWorkerSource = readFileSync(join(process.cwd(), "public", "sw.js"), "utf8");
-const safeCachePaths = Array.from(serviceWorkerSource.matchAll(/"([^"]+)"/g))
-  .map((match) => match[1])
-  .filter((value) => value?.startsWith("/favicon") || value?.startsWith("/manifest") || value?.startsWith("/icons/"));
+const safeCachePaths = Array.from(
+  new Set(
+    Array.from(serviceWorkerSource.matchAll(/"([^"]+)"/g))
+      .map((match) => match[1])
+      .filter((value) => value?.startsWith("/favicon") || value?.startsWith("/manifest") || value?.startsWith("/icons/")),
+  ),
+);
 
 describe("PWA service worker", () => {
   it("only caches safe static app assets without runtime bundles", () => {
@@ -48,5 +52,12 @@ describe("PWA service worker", () => {
     expect(serviceWorkerSource).toContain("url.pathname.startsWith(\"/assistant\")");
     expect(serviceWorkerSource).toContain("url.pathname.startsWith(\"/transactions\")");
     expect(serviceWorkerSource).toContain("url.pathname.startsWith(\"/insights\")");
+  });
+
+  it("handles push notifications and opens Calm Wallet when tapped", () => {
+    expect(serviceWorkerSource).toContain("self.addEventListener(\"push\"");
+    expect(serviceWorkerSource).toContain("showNotification(payload.title");
+    expect(serviceWorkerSource).toContain("self.addEventListener(\"notificationclick\"");
+    expect(serviceWorkerSource).toContain("self.clients.openWindow(targetUrl)");
   });
 });

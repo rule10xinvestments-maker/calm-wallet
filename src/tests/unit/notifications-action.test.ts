@@ -28,6 +28,8 @@ function makePreferences() {
     userId: "user-1",
     dailyReminderEnabled: true,
     monthlyReviewEnabled: false,
+    recurringNotificationsEnabled: true,
+    limitAlertsEnabled: true,
     overspendingEnabled: true,
     unusualSpendingEnabled: true,
     savingsOpportunitiesEnabled: true,
@@ -59,6 +61,8 @@ describe("notification actions", () => {
     const { updateNotificationPreferencesAction } = await import("@/lib/actions/notifications");
     const formData = new FormData();
     formData.set("dailyReminderEnabled", "on");
+    formData.set("recurringNotificationsEnabled", "on");
+    formData.set("limitAlertsEnabled", "on");
 
     const result = await updateNotificationPreferencesAction(
       { status: "idle", message: null, preferences: null },
@@ -68,6 +72,8 @@ describe("notification actions", () => {
     expect(updateNotificationPreferences).toHaveBeenCalledWith("user-1", {
       dailyReminderEnabled: true,
       monthlyReviewEnabled: false,
+      recurringNotificationsEnabled: true,
+      limitAlertsEnabled: true,
     });
     expect(revalidatePath).toHaveBeenCalledWith("/assistant");
     expect(result.status).toBe("success");
@@ -108,5 +114,24 @@ describe("notification actions", () => {
     });
     expect(getNotificationPreferences).toHaveBeenCalledWith("user-1");
     expect(result.status).toBe("success");
+  });
+
+  it("uses calm copy when subscription storage fails", async () => {
+    registerPushSubscription.mockRejectedValueOnce(new Error("raw database failure"));
+    const { registerPushSubscriptionAction } = await import("@/lib/actions/notifications");
+    const formData = new FormData();
+    formData.set("endpoint", "https://push.example.test/subscription");
+    formData.set("p256dh", "p256dh-key");
+    formData.set("auth", "auth-key");
+
+    const result = await registerPushSubscriptionAction(
+      { status: "idle", message: null, preferences: null },
+      formData,
+    );
+
+    expect(result).toMatchObject({
+      status: "error",
+      message: "Notifications are not ready yet.",
+    });
   });
 });

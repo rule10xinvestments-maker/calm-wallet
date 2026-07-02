@@ -8,6 +8,8 @@ const notificationPreferences = {
   userId: "user-1",
   dailyReminderEnabled: false,
   monthlyReviewEnabled: true,
+  recurringNotificationsEnabled: true,
+  limitAlertsEnabled: true,
   overspendingEnabled: true,
   unusualSpendingEnabled: true,
   savingsOpportunitiesEnabled: true,
@@ -16,6 +18,7 @@ const notificationPreferences = {
 };
 
 const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
+const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
 
 function setDisplayMode(standaloneMatches: boolean, fullscreenMatches = false) {
   Object.defineProperty(window, "matchMedia", {
@@ -49,6 +52,7 @@ function renderProtectedShell() {
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
         notificationPreferencesAction={updateNotificationPreferencesAction}
+        registerPushSubscriptionAction={registerPushSubscriptionAction}
         onSignOut={vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
@@ -95,15 +99,20 @@ describe("protected shell PWA install affordance", () => {
     expect(settingsPanel).toHaveClass("overflow-y-auto");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
-    expect(screen.getByText("Daily logging reminder")).toBeInTheDocument();
+    expect(screen.getByText("Daily reminder")).toBeInTheDocument();
+    expect(screen.getByText("Monthly report")).toBeInTheDocument();
+    expect(screen.getByText("Recurring entries")).toBeInTheDocument();
+    expect(screen.getByText("Limit alerts")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enable notifications" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Send test/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close settings overlay" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save notification preferences" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save notification settings" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(settingsButton).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("Daily logging reminder")).not.toBeInTheDocument();
+    expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
   });
 
   it("renders the protected header as a compact shared mobile headline", () => {

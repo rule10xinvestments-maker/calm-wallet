@@ -42,6 +42,8 @@ function mapPreferences(row: NotificationPreferencesRow): NotificationPreference
     userId: row.user_id,
     dailyReminderEnabled: row.daily_reminder_enabled,
     monthlyReviewEnabled: row.monthly_review_enabled,
+    recurringNotificationsEnabled: row.unusual_spending_enabled,
+    limitAlertsEnabled: row.overspending_enabled,
     overspendingEnabled: row.overspending_enabled,
     unusualSpendingEnabled: row.unusual_spending_enabled,
     savingsOpportunitiesEnabled: row.savings_opportunities_enabled,
@@ -155,6 +157,12 @@ export function createNotificationService(adapter: NotificationServiceAdapter) {
             : {}),
           ...(parsed.monthlyReviewEnabled !== undefined
             ? { monthly_review_enabled: parsed.monthlyReviewEnabled }
+            : {}),
+          ...(parsed.recurringNotificationsEnabled !== undefined
+            ? { unusual_spending_enabled: parsed.recurringNotificationsEnabled }
+            : {}),
+          ...(parsed.limitAlertsEnabled !== undefined
+            ? { overspending_enabled: parsed.limitAlertsEnabled }
             : {}),
         }),
         "Unable to update notification preferences.",

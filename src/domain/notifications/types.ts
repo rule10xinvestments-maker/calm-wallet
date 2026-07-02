@@ -10,6 +10,8 @@ export type NotificationPreferences = {
   userId: string;
   dailyReminderEnabled: boolean;
   monthlyReviewEnabled: boolean;
+  recurringNotificationsEnabled: boolean;
+  limitAlertsEnabled: boolean;
   overspendingEnabled: boolean;
   unusualSpendingEnabled: boolean;
   savingsOpportunitiesEnabled: boolean;
@@ -20,6 +22,8 @@ export type NotificationPreferences = {
 export type UpdateNotificationPreferencesInput = {
   dailyReminderEnabled?: boolean;
   monthlyReviewEnabled?: boolean;
+  recurringNotificationsEnabled?: boolean;
+  limitAlertsEnabled?: boolean;
 };
 
 export type RegisterPushSubscriptionInput = {

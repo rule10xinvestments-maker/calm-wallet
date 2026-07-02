@@ -14,6 +14,8 @@ export function getFallbackNotificationPreferences(userId: string): Notification
     userId,
     dailyReminderEnabled: false,
     monthlyReviewEnabled: false,
+    recurringNotificationsEnabled: false,
+    limitAlertsEnabled: false,
     overspendingEnabled: false,
     unusualSpendingEnabled: false,
     savingsOpportunitiesEnabled: false,

@@ -15,6 +15,10 @@ type ProtectedShellProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  registerPushSubscriptionAction: (
+    state: NotificationPreferencesActionState,
+    formData: FormData,
+  ) => Promise<NotificationPreferencesActionState>;
 };
 
 export function ProtectedShell({
@@ -23,6 +27,7 @@ export function ProtectedShell({
   onSignOut,
   notificationPreferences,
   notificationPreferencesAction,
+  registerPushSubscriptionAction,
 }: ProtectedShellProps) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:pt-6">
@@ -39,6 +44,7 @@ export function ProtectedShell({
           <HeaderSettingsButton
             notificationPreferences={notificationPreferences}
             notificationPreferencesAction={notificationPreferencesAction}
+            registerPushSubscriptionAction={registerPushSubscriptionAction}
           />
           <SignOutButton action={onSignOut} />
         </div>

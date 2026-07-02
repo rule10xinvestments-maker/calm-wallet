@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { notificationCopyTemplates, assertCalmNotificationCopy } from "@/domain/notifications/copy";
+import {
+  assertCalmNotificationCopy,
+  getDailyReminderCopy,
+  getLimitAlertCopy,
+  getMonthlyReportCopy,
+  getRecurringEntryAddedCopy,
+  notificationCopyTemplates,
+} from "@/domain/notifications/copy";
 import {
   createNotificationService,
   evaluateDailyReminderEligibility,
@@ -33,6 +40,8 @@ function makeAdapter(overrides: Partial<NotificationServiceAdapter> = {}): Notif
         user_id: userId,
         daily_reminder_enabled: Boolean(updates.daily_reminder_enabled),
         monthly_review_enabled: Boolean(updates.monthly_review_enabled),
+        overspending_enabled: Boolean(updates.overspending_enabled),
+        unusual_spending_enabled: Boolean(updates.unusual_spending_enabled),
       }),
       error: null,
     })),
@@ -91,15 +100,21 @@ describe("notification domain", () => {
     const result = await service.updateNotificationPreferences("user-1", {
       dailyReminderEnabled: true,
       monthlyReviewEnabled: false,
+      recurringNotificationsEnabled: false,
+      limitAlertsEnabled: true,
     });
 
     expect(adapter.getPreferences).toHaveBeenCalledWith("user-1");
     expect(adapter.updatePreferences).toHaveBeenCalledWith("user-1", {
       daily_reminder_enabled: true,
       monthly_review_enabled: false,
+      overspending_enabled: true,
+      unusual_spending_enabled: false,
     });
     expect(result.dailyReminderEnabled).toBe(true);
     expect(result.monthlyReviewEnabled).toBe(false);
+    expect(result.limitAlertsEnabled).toBe(true);
+    expect(result.recurringNotificationsEnabled).toBe(false);
   });
 
   it("registers and disables push subscriptions through user-owned rows", async () => {
@@ -190,10 +205,38 @@ describe("notification domain", () => {
   });
 
   it("keeps notification copy calm and non-judgmental", () => {
-    expect(() => assertCalmNotificationCopy(notificationCopyTemplates.dailyReminder)).not.toThrow();
-    expect(() => assertCalmNotificationCopy(notificationCopyTemplates.monthlyReview)).not.toThrow();
+    for (const copy of [
+      notificationCopyTemplates.test,
+      ...notificationCopyTemplates.dailyReminder,
+      ...notificationCopyTemplates.monthlyReport,
+      getRecurringEntryAddedCopy("Rent"),
+      getRecurringEntryAddedCopy(null),
+      getLimitAlertCopy("Housing", "seventy_percent"),
+      getLimitAlertCopy("Housing", "exceeded"),
+    ]) {
+      expect(() => assertCalmNotificationCopy(copy)).not.toThrow();
+    }
 
-    const copy = `${notificationCopyTemplates.dailyReminder.title} ${notificationCopyTemplates.dailyReminder.body} ${notificationCopyTemplates.monthlyReview.title} ${notificationCopyTemplates.monthlyReview.body}`;
+    const copy = `${notificationCopyTemplates.dailyReminder.map((item) => `${item.title} ${item.body}`).join(" ")} ${notificationCopyTemplates.monthlyReport.map((item) => `${item.title} ${item.body}`).join(" ")}`;
     expect(copy).not.toMatch(/urgent|hurry|warning|shame|failed|bad|must|now!/i);
+  });
+
+  it("rotates daily reminders and monthly reports deterministically", () => {
+    expect(getDailyReminderCopy(new Date("2026-01-01T12:00:00.000Z"))).toEqual(notificationCopyTemplates.dailyReminder[1]);
+    expect(getDailyReminderCopy(new Date("2026-01-02T12:00:00.000Z"))).toEqual(notificationCopyTemplates.dailyReminder[2]);
+    expect(getMonthlyReportCopy(new Date("2026-01-01T12:00:00.000Z"))).toEqual(notificationCopyTemplates.monthlyReport[0]);
+    expect(getMonthlyReportCopy(new Date("2026-02-01T12:00:00.000Z"))).toEqual(notificationCopyTemplates.monthlyReport[1]);
+  });
+
+  it("keeps recurring and limit notification bodies private", () => {
+    expect(getRecurringEntryAddedCopy("Rent")).toEqual({
+      title: "Recurring entry added",
+      body: "Your usual Rent transaction was automatically added to Activity.",
+    });
+    expect(getLimitAlertCopy("Housing", "exceeded")).toEqual({
+      title: "Limit passed",
+      body: "Housing is now over your planned limit.",
+    });
+    expect(getLimitAlertCopy("Housing", "seventy_percent").body).not.toMatch(/\d/);
   });
 });

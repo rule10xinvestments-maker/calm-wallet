@@ -98,3 +98,46 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "Calm Wallet",
+    body: "You have a Calm Wallet reminder.",
+    url: "/assistant",
+  };
+
+  if (event.data) {
+    try {
+      payload = { ...payload, ...event.data.json() };
+    } catch (error) {
+      logDevelopment("push payload parse failed", { errorName: error instanceof Error ? error.name : "UnknownError" });
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      data: { url: payload.url || "/assistant" },
+      icon: "/icons/calm-wallet-icon-192.png",
+      badge: "/icons/calm-wallet-icon-192.png",
+      tag: payload.tag || "calm-wallet-reminder",
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "/assistant", self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ includeUncontrolled: true, type: "window" }).then((clients) => {
+      const existingClient = clients.find((client) => client.url === targetUrl);
+
+      if (existingClient) {
+        return existingClient.focus();
+      }
+
+      return self.clients.openWindow(targetUrl);
+    }),
+  );
+});
