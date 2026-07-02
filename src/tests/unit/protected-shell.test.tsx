@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedShell } from "@/components/layout/protected-shell";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
 import { initialNotificationPreferencesActionState } from "@/lib/actions/notifications-state";
+import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 
 const notificationPreferences = {
   userId: "user-1",
@@ -20,6 +21,11 @@ const notificationPreferences = {
 const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const sendTestPushNotificationAction = vi.fn(async () => initialNotificationPreferencesActionState);
+const updateUserPreferencesAction = vi.fn(async (_state: UserPreferencesActionState, formData: FormData) => ({
+  status: "success" as const,
+  message: "Language saved.",
+  uiLocale: formData.get("uiLocale") as "en" | "ro" | "fr" | "es",
+}));
 
 function setDisplayMode(standaloneMatches: boolean, fullscreenMatches = false) {
   Object.defineProperty(window, "matchMedia", {
@@ -52,6 +58,8 @@ function renderProtectedShell() {
       <ProtectedShell
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
+        uiLocale={null}
+        userPreferencesAction={updateUserPreferencesAction}
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
@@ -65,6 +73,7 @@ function renderProtectedShell() {
 
 describe("protected shell PWA install affordance", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     setDisplayMode(false);
     setNavigatorValue("standalone", false);
     setNavigatorValue("userAgent", "Mozilla/5.0");
@@ -101,6 +110,13 @@ describe("protected shell PWA install affordance", () => {
     expect(settingsPanel).toHaveClass("overflow-y-auto");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
+    expect(screen.getAllByText("Language").length).toBeGreaterThan(0);
+    expect(screen.getByText("Choose the app language.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Language" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "English" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Română" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Français" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Español" })).toBeInTheDocument();
     expect(screen.getByText("Daily reminder")).toBeInTheDocument();
     expect(screen.getByText("Monthly report")).toBeInTheDocument();
     expect(screen.getByText("Recurring entries")).toBeInTheDocument();
@@ -115,6 +131,19 @@ describe("protected shell PWA install affordance", () => {
 
     expect(settingsButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
+  });
+
+  it("updates migrated labels when a language is selected", async () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "ro" } });
+
+    await waitFor(() => expect(updateUserPreferencesAction).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("link", { name: "Asistent" })).toBeInTheDocument());
+
+    expect(screen.getByRole("link", { name: "Activitate" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Perspective" })).toBeInTheDocument();
   });
 
   it("renders the protected header as a compact shared mobile headline", () => {

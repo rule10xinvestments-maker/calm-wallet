@@ -20,6 +20,17 @@ export function normalizeLocale(locale: string | null | undefined): SupportedLoc
   return supportedLocales.includes(normalized as SupportedLocale) ? (normalized as SupportedLocale) : defaultLocale;
 }
 
+export function resolveLocalePreference(args: {
+  savedLocale?: string | null;
+  browserLocale?: string | null;
+}): SupportedLocale {
+  if (args.savedLocale) {
+    return normalizeLocale(args.savedLocale);
+  }
+
+  return normalizeLocale(args.browserLocale);
+}
+
 function resolveKey(dictionary: Record<string, unknown>, key: TranslationKey) {
   return key.split(".").reduce<unknown>((current, segment) => {
     if (!current || typeof current !== "object" || !(segment in current)) {

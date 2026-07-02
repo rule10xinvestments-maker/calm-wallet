@@ -187,6 +187,22 @@ describe("transactions read model", () => {
     expect(items[0]?.reviewLabel).toBe("Reviewed");
   });
 
+  it("localizes shared labels without translating transaction titles", () => {
+    const items = mapTransactionsToListItems(
+      [makeTransaction({ itemName: "Chirie", reviewState: "needs_attention", uncertaintyReason: "Category needs review." })],
+      {},
+      "USD",
+      {},
+      new Set(),
+      new Map(),
+      "ro",
+    );
+
+    expect(items[0]?.title).toBe("Chirie");
+    expect(items[0]?.reviewLabel).toBe("Necesită verificare");
+    expect(items[0]?.categoryLabel).toBe("Necategorizat");
+  });
+
   it("keeps recurring status separate from the Activity date label", () => {
     const items = mapTransactionsToListItems(
       [

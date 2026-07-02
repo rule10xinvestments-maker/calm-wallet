@@ -26,6 +26,7 @@ export type Database = {
         Row: {
           id: string;
           locale: string;
+          ui_locale: string | null;
           timezone: string;
           default_currency: string;
           onboarding_state: OnboardingState;
@@ -36,6 +37,7 @@ export type Database = {
         Insert: {
           id: string;
           locale?: string;
+          ui_locale?: string | null;
           timezone?: string;
           default_currency?: string;
           onboarding_state?: OnboardingState;
@@ -46,6 +48,7 @@ export type Database = {
         Update: {
           id?: string;
           locale?: string;
+          ui_locale?: string | null;
           timezone?: string;
           default_currency?: string;
           onboarding_state?: OnboardingState;

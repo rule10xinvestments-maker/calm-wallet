@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeLocale, t } from "@/lib/i18n";
+import { normalizeLocale, resolveLocalePreference, t } from "@/lib/i18n";
 
 describe("i18n helper", () => {
   it("returns English translations by default", () => {
@@ -29,5 +29,23 @@ describe("i18n helper", () => {
     ["de-DE", "en"],
   ])("normalizes browser-like locale %s", (input, expected) => {
     expect(normalizeLocale(input)).toBe(expected);
+  });
+
+  it("resolves unsupported browser locale to English when no preference is saved", () => {
+    expect(resolveLocalePreference({ savedLocale: null, browserLocale: "de-DE" })).toBe("en");
+  });
+
+  it("resolves supported browser locales when no preference is saved", () => {
+    expect(resolveLocalePreference({ savedLocale: null, browserLocale: "ro-RO" })).toBe("ro");
+    expect(resolveLocalePreference({ savedLocale: null, browserLocale: "fr-FR" })).toBe("fr");
+    expect(resolveLocalePreference({ savedLocale: null, browserLocale: "es-ES" })).toBe("es");
+  });
+
+  it("lets saved preference override browser locale", () => {
+    expect(resolveLocalePreference({ savedLocale: "fr", browserLocale: "ro-RO" })).toBe("fr");
+  });
+
+  it("falls back to English for invalid saved locale", () => {
+    expect(resolveLocalePreference({ savedLocale: "not-real", browserLocale: "ro-RO" })).toBe("en");
   });
 });

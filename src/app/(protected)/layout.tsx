@@ -5,13 +5,16 @@ import {
   sendTestPushNotificationAction,
   updateNotificationPreferencesAction,
 } from "@/lib/actions/notifications";
+import { updateUserPreferencesAction } from "@/lib/actions/preferences";
 import { getAccountHint } from "@/lib/auth/account-hint";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { createSupabaseNotificationService } from "@/domain/notifications/service";
+import { createSupabaseUserPreferencesService } from "@/domain/preferences/service";
 import {
   getFallbackNotificationPreferences,
   logProtectedRouteLoadFailure,
 } from "@/lib/server/protected-route-fallbacks";
+import type { SupportedLocale } from "@/lib/i18n";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +33,20 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 
   const accountHint = getAccountHint(user);
   let notificationPreferences = getFallbackNotificationPreferences(user.id);
+  let uiLocale: SupportedLocale | null = null;
 
   try {
-    const notificationService = await createSupabaseNotificationService();
-    notificationPreferences = await notificationService.getNotificationPreferences(user.id);
+    const [notificationService, preferencesService] = await Promise.all([
+      createSupabaseNotificationService(),
+      createSupabaseUserPreferencesService(),
+    ]);
+    const [loadedNotificationPreferences, loadedUserPreferences] = await Promise.all([
+      notificationService.getNotificationPreferences(user.id),
+      preferencesService.getUserPreferences(user.id),
+    ]);
+
+    notificationPreferences = loadedNotificationPreferences;
+    uiLocale = loadedUserPreferences.uiLocale;
   } catch (error) {
     logProtectedRouteLoadFailure("assistant", error);
   }
@@ -42,6 +55,8 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     <ProtectedShell
       accountHint={accountHint}
       notificationPreferences={notificationPreferences}
+      uiLocale={uiLocale}
+      userPreferencesAction={updateUserPreferencesAction}
       notificationPreferencesAction={updateNotificationPreferencesAction}
       registerPushSubscriptionAction={registerPushSubscriptionAction}
       sendTestPushNotificationAction={sendTestPushNotificationAction}

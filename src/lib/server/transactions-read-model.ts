@@ -6,7 +6,7 @@ import { loadFxRatesForDisplay, type FxRate } from "@/lib/server/fx-rates";
 import type { Budget } from "@/domain/budgets/types";
 import type { ReviewState, Transaction } from "@/domain/transactions/types";
 import type { RecurringFrequency } from "@/lib/db/types";
-import { t } from "@/lib/i18n";
+import { t, type SupportedLocale } from "@/lib/i18n";
 
 export type TransactionsView = "all" | "expenses" | "income" | "needs-review";
 export type InsightsTimeframePreset = "1M" | "3M" | "6M" | "1Y" | "All";
@@ -405,23 +405,23 @@ function getTransactionDisplayTitle(transaction: Pick<Transaction, "itemName" | 
   return transaction.itemName || transaction.merchant || transaction.note || "Unnamed transaction";
 }
 
-export function getReviewStateMeta(reviewState: ReviewState) {
+export function getReviewStateMeta(reviewState: ReviewState, locale?: SupportedLocale | null) {
   if (isReviewStateNeedingReview(reviewState)) {
     return {
-      label: t("common.needsReview"),
+      label: t("common.needsReview", locale),
       tone: "attention" as const,
     };
   }
 
   if (reviewState === "pending_review") {
     return {
-      label: t("common.needsReview"),
+      label: t("common.needsReview", locale),
       tone: "attention" as const,
     };
   }
 
   return {
-    label: t("common.reviewed"),
+    label: t("common.reviewed", locale),
     tone: "tracked" as const,
   };
 }
@@ -504,9 +504,10 @@ export function mapTransactionsToListItems(
   recurringRules: Record<string, RecurringRuleSummary> = {},
   overLimitTransactionIds: ReadonlySet<string> = new Set(),
   limitStatuses: ReadonlyMap<string, TransactionLimitStatus> = new Map(),
+  locale?: SupportedLocale | null,
 ): TransactionListItem[] {
   return transactions.map((transaction) => {
-    const reviewMeta = getReviewStateMeta(transaction.reviewState);
+    const reviewMeta = getReviewStateMeta(transaction.reviewState, locale);
     const recurringRule = transaction.recurringRuleId ? recurringRules[transaction.recurringRuleId] : null;
 
     return {
@@ -521,7 +522,7 @@ export function mapTransactionsToListItems(
       amountTone: transaction.transactionType,
       currency: transaction.currency || currencyFallback,
       reviewLabel: reviewMeta.label,
-      categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : t("common.uncategorized"),
+      categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : t("common.uncategorized", locale),
       itemName: transaction.itemName,
       merchant: transaction.merchant,
       note: transaction.note,
@@ -2530,6 +2531,7 @@ export async function loadTransactionsPageData(args: {
   userId: string;
   view: TransactionsView;
   query?: string;
+  locale?: SupportedLocale | null;
 }) {
   const service = await createSupabaseTransactionService();
   const [transactions, categoryLabels, currency] = await Promise.all([
@@ -2583,8 +2585,8 @@ export async function loadTransactionsPageData(args: {
     displayCurrency: currency,
     availableDisplayCurrencies,
     fxRates,
-    items: mapTransactionsToListItems(filtered, categoryLabels, currency, recurringRules, overLimitTransactionIds, limitStatuses),
-    recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency, recurringRules),
+    items: mapTransactionsToListItems(filtered, categoryLabels, currency, recurringRules, overLimitTransactionIds, limitStatuses, args.locale),
+    recentlyDeletedItems: mapTransactionsToListItems(recentlyDeletedTransactions, categoryLabels, currency, recurringRules, new Set(), new Map(), args.locale),
     categories: await loadCategoryOptions(),
   };
 }

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 let pathname = "/assistant";
 
@@ -27,5 +28,22 @@ describe("bottom navigation", () => {
     fireEvent.click(activity);
 
     expect(activity).toHaveClass("bg-sky-50");
+  });
+
+  it("uses browser locale when no saved preference exists", async () => {
+    Object.defineProperty(window.navigator, "language", {
+      configurable: true,
+      value: "ro-RO",
+    });
+
+    render(
+      <LocaleProvider savedLocale={null}>
+        <BottomNav />
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByRole("link", { name: "Asistent" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Activitate" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Perspective" })).toBeInTheDocument();
   });
 });

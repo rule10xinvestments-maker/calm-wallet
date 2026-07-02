@@ -3,11 +3,17 @@
 import { useState } from "react";
 import { Settings } from "lucide-react";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
+import { LanguageSelector } from "@/components/settings/language-selector";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
+import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 
 type HeaderSettingsButtonProps = {
   notificationPreferences: NotificationPreferences;
+  userPreferencesAction: (
+    state: UserPreferencesActionState,
+    formData: FormData,
+  ) => Promise<UserPreferencesActionState>;
   notificationPreferencesAction: (
     state: NotificationPreferencesActionState,
     formData: FormData,
@@ -24,6 +30,7 @@ type HeaderSettingsButtonProps = {
 
 export function HeaderSettingsButton({
   notificationPreferences,
+  userPreferencesAction,
   notificationPreferencesAction,
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
@@ -66,6 +73,7 @@ export function HeaderSettingsButton({
                   Close
                 </button>
               </div>
+              <LanguageSelector action={userPreferencesAction} />
               <NotificationPreferencesCard
                 action={notificationPreferencesAction}
                 preferences={notificationPreferences}

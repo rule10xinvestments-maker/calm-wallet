@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_NAV_ITEMS } from "@/lib/constants/navigation";
+import { useLocale } from "@/components/i18n/locale-provider";
 import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { locale } = useLocale();
   const [optimisticPathname, setOptimisticPathname] = useState<string | null>(null);
   const activePathname = optimisticPathname ?? pathname;
 
@@ -24,7 +26,7 @@ export function BottomNav() {
       <div className="grid grid-cols-3 gap-2">
         {APP_NAV_ITEMS.map(({ href, icon: Icon, labelKey }) => {
           const isActive = activePathname === href;
-          const label = t(labelKey);
+          const label = t(labelKey, locale);
 
           return (
             <Link

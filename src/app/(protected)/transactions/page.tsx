@@ -18,7 +18,9 @@ import { initialTransactionMutationState } from "@/lib/actions/transactions-stat
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { generateDueRecurringTransactionsForUserSafely } from "@/domain/recurring/service";
 import { createSupabaseOwedNotesService } from "@/domain/owed-notes/service";
+import { createSupabaseUserPreferencesService } from "@/domain/preferences/service";
 import type { OwedNote } from "@/domain/owed-notes/types";
+import type { SupportedLocale } from "@/lib/i18n";
 import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { loadAuthenticatedStagedImportBundle } from "@/lib/server/imports-loader";
 import { loadStagedImportList } from "@/lib/server/imports-list";
@@ -101,13 +103,23 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   let stagedImportBundles: Awaited<ReturnType<typeof loadAuthenticatedStagedImportBundle>>[] = [];
   let stagedImportProgress: Awaited<ReturnType<typeof loadStagedImportReviewProgress>>[] = [];
   let owedNotes: OwedNote[] = [];
+  let uiLocale: SupportedLocale | null = null;
   const importsEnabled = areImportsEnabled();
 
   try {
     await generateDueRecurringTransactionsForUserSafely(user.id);
+    try {
+      const preferencesService = await createSupabaseUserPreferencesService();
+      uiLocale = (await preferencesService.getUserPreferences(user.id)).uiLocale;
+    } catch (error) {
+      logProtectedRouteLoadFailure("transactions", error);
+      uiLocale = null;
+    }
+
     data = await loadTransactionsPageData({
       userId: user.id,
       view: "all",
+      locale: uiLocale,
     });
 
     try {
