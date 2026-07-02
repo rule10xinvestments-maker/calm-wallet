@@ -1,11 +1,38 @@
 import { getDailyReminderCopy, getMonthlyReportCopy } from "@/domain/notifications/copy";
 import type { PushSubscriptionRow } from "@/domain/notifications/types";
 import type { NotificationEventStatus, NotificationEventType } from "@/lib/db/types";
-import { createSupabaseAdminClient } from "@/lib/server/supabase-admin";
+import { createSupabaseAdminClientResult } from "@/lib/server/supabase-admin";
 import { isWebPushConfigured, sendWebPushNotification, type WebPushSendResult } from "@/lib/server/web-push-sender";
 
 type ScheduledNotificationKind = "daily" | "monthly";
 type ClaimResult = "claimed" | "duplicate";
+type SupabaseQueryError = { code?: string; message?: string };
+type SupabaseQueryResult<T> = { data: T | null; error: SupabaseQueryError | null };
+type PreferenceRecord = {
+  user_id: string;
+  daily_reminder_enabled: boolean;
+  monthly_review_enabled: boolean;
+};
+type ProfileRecord = {
+  id: string;
+  timezone: string | null;
+};
+type SupabaseSelectQuery<T> = PromiseLike<SupabaseQueryResult<T>> & {
+  or(filter: string): PromiseLike<SupabaseQueryResult<T>>;
+  in(column: string, values: string[]): SupabaseSelectQuery<T>;
+  is(column: string, value: null): PromiseLike<SupabaseQueryResult<T>>;
+};
+type SupabaseUpdateQuery = PromiseLike<SupabaseQueryResult<unknown>> & {
+  eq(column: string, value: string): SupabaseUpdateQuery;
+};
+type SupabaseTableQuery = {
+  select<T>(columns: string): SupabaseSelectQuery<T>;
+  insert(row: Record<string, unknown>): PromiseLike<SupabaseQueryResult<unknown>>;
+  update(row: Record<string, unknown>): SupabaseUpdateQuery;
+};
+type SupabaseAdminQueryClient = {
+  from(table: string): SupabaseTableQuery;
+};
 
 export type ScheduledNotificationCandidate = {
   userId: string;
@@ -30,7 +57,13 @@ export type ScheduledNotificationsAdapter = {
 
 export type ScheduledNotificationsSummary = {
   ok: boolean;
-  reason?: "admin_unconfigured" | "web_push_unconfigured";
+  reason?:
+    | "admin_unconfigured"
+    | "admin_invalid_config"
+    | "database_unavailable"
+    | "schema_mismatch"
+    | "web_push_unconfigured";
+  diagnostics: string[];
   now: string;
   serverTimezoneFallback: "UTC";
   daily: NotificationRunCounts;
@@ -51,6 +84,7 @@ export type NotificationRunCounts = {
 };
 
 const UTC_FALLBACK_TIMEZONE = "UTC";
+const SCHEMA_ERROR_CODES = new Set(["42P01", "42703", "PGRST200", "PGRST201", "PGRST202", "PGRST204", "PGRST205"]);
 
 function emptyCounts(): NotificationRunCounts {
   return {
@@ -128,6 +162,25 @@ function isDuplicateError(error: unknown) {
     "code" in error &&
     (error as { code?: string }).code === "23505"
   );
+}
+
+function getErrorCode(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: string }).code ?? "")
+    : "";
+}
+
+function classifyDatabaseError(error: unknown): "database_unavailable" | "schema_mismatch" {
+  const code = getErrorCode(error);
+  return SCHEMA_ERROR_CODES.has(code) ? "schema_mismatch" : "database_unavailable";
+}
+
+function logSchedulerDiagnostic(reason: ScheduledNotificationsSummary["reason"], detail?: string) {
+  console.info("[notifications:cron]", {
+    ok: false,
+    reason,
+    detail,
+  });
 }
 
 async function sendToSubscriptions(
@@ -239,6 +292,7 @@ export async function runScheduledNotifications(
   const summary: ScheduledNotificationsSummary = {
     ok: true,
     now: now.toISOString(),
+    diagnostics: [],
     serverTimezoneFallback: UTC_FALLBACK_TIMEZONE,
     daily: emptyCounts(),
     monthly: emptyCounts(),
@@ -249,34 +303,61 @@ export async function runScheduledNotifications(
       ...summary,
       ok: false,
       reason: "web_push_unconfigured",
+      diagnostics: ["web_push_unconfigured"],
     };
   }
 
-  const candidates = await adapter.listCandidates();
+  let candidates: ScheduledNotificationCandidate[];
 
-  return {
-    ...summary,
-    daily: await runKind("daily", candidates, adapter, now),
-    monthly: await runKind("monthly", candidates, adapter, now),
-  };
+  try {
+    candidates = await adapter.listCandidates();
+  } catch (error) {
+    const reason = classifyDatabaseError(error);
+    logSchedulerDiagnostic(reason, getErrorCode(error) || "candidate_load_failed");
+    return {
+      ...summary,
+      ok: false,
+      reason,
+      diagnostics: [reason],
+    };
+  }
+
+  try {
+    return {
+      ...summary,
+      daily: await runKind("daily", candidates, adapter, now),
+      monthly: await runKind("monthly", candidates, adapter, now),
+    };
+  } catch (error) {
+    const reason = classifyDatabaseError(error);
+    logSchedulerDiagnostic(reason, getErrorCode(error) || "delivery_run_failed");
+    return {
+      ...summary,
+      ok: false,
+      reason,
+      diagnostics: [reason],
+    };
+  }
 }
 
 export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotificationsAdapter | null {
-  const supabase = createSupabaseAdminClient();
+  const result = createSupabaseAdminClientResult();
 
-  if (!supabase) {
+  if (!result.ok) {
     return null;
   }
+
+  const supabase = result.client as SupabaseAdminQueryClient;
 
   return {
     async listCandidates() {
       const { data: preferences, error: preferencesError } = await supabase
         .from("notification_preferences")
-        .select("user_id,daily_reminder_enabled,monthly_review_enabled")
+        .select<PreferenceRecord[]>("user_id,daily_reminder_enabled,monthly_review_enabled")
         .or("daily_reminder_enabled.eq.true,monthly_review_enabled.eq.true");
 
       if (preferencesError) {
-        throw new Error("Unable to load notification preferences.");
+        throw preferencesError;
       }
 
       const userIds = [...new Set((preferences ?? []).map((preference) => preference.user_id))];
@@ -287,12 +368,12 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
 
       const [{ data: profiles, error: profilesError }, { data: subscriptions, error: subscriptionsError }] =
         await Promise.all([
-          supabase.from("profiles").select("id,timezone").in("id", userIds),
-          supabase.from("push_subscriptions").select("*").in("user_id", userIds).is("disabled_at", null),
+          supabase.from("profiles").select<ProfileRecord[]>("id,timezone").in("id", userIds),
+          supabase.from("push_subscriptions").select<PushSubscriptionRow[]>("*").in("user_id", userIds).is("disabled_at", null),
         ]);
 
       if (profilesError || subscriptionsError) {
-        throw new Error("Unable to load notification delivery records.");
+        throw profilesError ?? subscriptionsError;
       }
 
       const profileByUserId = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
@@ -345,7 +426,7 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
         .eq("dedupe_key", dedupeKey);
 
       if (error) {
-        throw new Error("Unable to update notification event.");
+        throw error;
       }
     },
 
@@ -357,21 +438,38 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
         .eq("endpoint", endpoint);
 
       if (error) {
-        throw new Error("Unable to disable push subscription.");
+        throw error;
       }
     },
   };
 }
 
 export async function runSupabaseScheduledNotifications(options: { now?: Date } = {}) {
-  const adapter = createSupabaseScheduledNotificationsAdapter();
+  const adminClient = createSupabaseAdminClientResult();
   const now = options.now ?? new Date();
 
-  if (!adapter) {
+  if (!adminClient.ok) {
+    logSchedulerDiagnostic(adminClient.reason);
     return {
       ok: false,
-      reason: "admin_unconfigured" as const,
+      reason: adminClient.reason,
       now: now.toISOString(),
+      diagnostics: [adminClient.reason],
+      serverTimezoneFallback: UTC_FALLBACK_TIMEZONE,
+      daily: emptyCounts(),
+      monthly: emptyCounts(),
+    };
+  }
+
+  const adapter = createSupabaseScheduledNotificationsAdapter();
+
+  if (!adapter) {
+    logSchedulerDiagnostic("admin_invalid_config");
+    return {
+      ok: false,
+      reason: "admin_invalid_config" as const,
+      now: now.toISOString(),
+      diagnostics: ["admin_invalid_config"],
       serverTimezoneFallback: UTC_FALLBACK_TIMEZONE,
       daily: emptyCounts(),
       monthly: emptyCounts(),

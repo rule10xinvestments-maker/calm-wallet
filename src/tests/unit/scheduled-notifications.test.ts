@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PushSubscriptionRow } from "@/domain/notifications/types";
 import type { NotificationEventStatus, NotificationEventType } from "@/lib/db/types";
 import type { ScheduledNotificationCandidate, ScheduledNotificationsAdapter } from "@/lib/server/scheduled-notifications";
+import { createSupabaseAdminClientResult } from "@/lib/server/supabase-admin";
 
 const sendWebPushNotification = vi.fn();
 const isWebPushConfigured = vi.fn(() => true);
@@ -89,6 +90,7 @@ describe("scheduled notification runner", () => {
     runSupabaseScheduledNotifications.mockResolvedValue({
       ok: true,
       now: now.toISOString(),
+      diagnostics: [],
       serverTimezoneFallback: "UTC",
       daily: {},
       monthly: {},
@@ -142,6 +144,34 @@ describe("scheduled notification runner", () => {
       expect.any(Object),
       expect.objectContaining({ notificationType: "monthly_report" }),
     );
+  });
+
+  it("returns a 200-safe summary when no users are eligible", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter([]);
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary).toMatchObject({
+      ok: true,
+      diagnostics: [],
+      daily: { considered: 0, sent: 0 },
+      monthly: { considered: 0, sent: 0 },
+    });
+    expect(sendWebPushNotification).not.toHaveBeenCalled();
+  });
+
+  it("returns a 200-safe summary when enabled users have no subscriptions", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter([makeCandidate({ subscriptions: [], monthlyReviewEnabled: false })]);
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary).toMatchObject({
+      ok: true,
+      daily: { skippedNoSubscriptions: 1, sent: 0 },
+    });
+    expect(sendWebPushNotification).not.toHaveBeenCalled();
   });
 
   it("sends monthly reports only when enabled", async () => {
@@ -233,6 +263,65 @@ describe("scheduled notification runner", () => {
     expect(summary.daily.timezoneFallbacks).toBe(1);
     expect(summary.daily.sent).toBe(1);
   });
+
+  it("does not crash when optional notification data is absent", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter([
+      makeCandidate({
+        timezone: undefined,
+        subscriptions: [],
+        dailyReminderEnabled: true,
+        monthlyReviewEnabled: false,
+      }),
+    ]);
+
+    const summary = await runScheduledNotifications(adapter, { now: new Date("2026-05-01T20:05:00.000Z") });
+
+    expect(summary).toMatchObject({
+      ok: true,
+      daily: {
+        timezoneFallbacks: 1,
+        skippedNoSubscriptions: 1,
+      },
+    });
+  });
+
+  it("returns controlled diagnostics for schema mismatches while loading candidates", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const adapter: ScheduledNotificationsAdapter = {
+      ...makeAdapter([]).adapter,
+      listCandidates: vi.fn(async () => {
+        throw { code: "42P01" };
+      }),
+    };
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary).toMatchObject({
+      ok: false,
+      reason: "schema_mismatch",
+      diagnostics: ["schema_mismatch"],
+    });
+    expect(sendWebPushNotification).not.toHaveBeenCalled();
+  });
+
+  it("returns controlled diagnostics for dedupe schema mismatches", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const adapter: ScheduledNotificationsAdapter = {
+      ...makeAdapter([makeCandidate({ monthlyReviewEnabled: false })]).adapter,
+      claimEvent: vi.fn(async () => {
+        throw { code: "42703" };
+      }),
+    };
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary).toMatchObject({
+      ok: false,
+      reason: "schema_mismatch",
+      diagnostics: ["schema_mismatch"],
+    });
+  });
 });
 
 describe("scheduled notification cron route", () => {
@@ -242,6 +331,7 @@ describe("scheduled notification cron route", () => {
     runSupabaseScheduledNotifications.mockResolvedValue({
       ok: true,
       now: now.toISOString(),
+      diagnostics: [],
       serverTimezoneFallback: "UTC",
       daily: { sent: 1 },
       monthly: { sent: 0 },
@@ -274,6 +364,29 @@ describe("scheduled notification cron route", () => {
     expect(JSON.stringify(body)).not.toContain("user-1");
   });
 
+  it("returns controlled scheduler diagnostics with a 200 after auth succeeds", async () => {
+    runSupabaseScheduledNotifications.mockResolvedValueOnce({
+      ok: false,
+      reason: "schema_mismatch",
+      diagnostics: ["schema_mismatch"],
+      now: now.toISOString(),
+      serverTimezoneFallback: "UTC",
+      daily: { sent: 0 },
+      monthly: { sent: 0 },
+    });
+    const { GET } = await import("@/app/api/cron/notifications/route");
+
+    const response = await GET(
+      new NextRequest("https://calm-wallet.example/api/cron/notifications", {
+        headers: { authorization: "Bearer cron-secret" },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ ok: false, reason: "schema_mismatch" });
+  });
+
   it("does not expose raw backend errors", async () => {
     runSupabaseScheduledNotifications.mockRejectedValueOnce(new Error("raw backend failure"));
     const { GET } = await import("@/app/api/cron/notifications/route");
@@ -287,5 +400,29 @@ describe("scheduled notification cron route", () => {
 
     expect(response.status).toBe(500);
     expect(body).toEqual({ ok: false, error: "Scheduled notifications could not be processed." });
+  });
+});
+
+describe("scheduled notification admin client", () => {
+  const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const originalServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRoleKey;
+  });
+
+  it("handles missing service-role env safely", () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+
+    expect(createSupabaseAdminClientResult()).toEqual({ ok: false, reason: "admin_unconfigured" });
+  });
+
+  it("handles invalid Supabase URL env safely", () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "not a url";
+
+    expect(createSupabaseAdminClientResult()).toEqual({ ok: false, reason: "admin_invalid_config" });
   });
 });

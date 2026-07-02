@@ -24,7 +24,7 @@ async function handleCron(request: NextRequest) {
 
   try {
     const summary = await runSupabaseScheduledNotifications();
-    return NextResponse.json(summary, { status: summary.ok ? 200 : 503 });
+    return NextResponse.json(summary);
   } catch {
     return NextResponse.json({ ok: false, error: "Scheduled notifications could not be processed." }, { status: 500 });
   }
