@@ -1059,10 +1059,11 @@ export function TransactionItemCard({
                         </button>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-2">
                       <label className="grid gap-1">
                         <span className="text-xs font-medium text-slate-600">Start</span>
                         <input
+                          aria-label="Start"
                           className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
                           onChange={(event) => setSelectedRecurringStartDate(event.currentTarget.value)}
                           type="date"
@@ -1072,9 +1073,10 @@ export function TransactionItemCard({
                       <label className="grid gap-1">
                         <span className="text-xs font-medium text-slate-600">End</span>
                         <input
+                          aria-label="End"
                           className={`min-h-10 w-full rounded-xl border px-3 py-2 text-sm ${
                             selectedRecurringOpenEnded
-                              ? "border-slate-200 bg-slate-100 text-slate-400"
+                              ? "border-slate-200 bg-slate-100 text-slate-400 disabled:cursor-not-allowed"
                               : "border-slate-200 bg-white text-slate-800"
                           }`}
                           disabled={selectedRecurringOpenEnded}
@@ -1085,6 +1087,7 @@ export function TransactionItemCard({
                           type="date"
                           value={selectedRecurringEndDate}
                         />
+                        {selectedRecurringOpenEnded ? <span className="text-xs text-slate-500">No end date</span> : null}
                       </label>
                     </div>
                     <label className="flex min-h-11 items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-700">
@@ -1130,6 +1133,11 @@ export function TransactionItemCard({
                 ) : null}
               </fieldset>
               <input name="categoryId" type="hidden" value={selectedCategoryId} />
+              <input
+                name="uncertaintyReason"
+                type="hidden"
+                value={selectedReviewState === "reviewed" ? "" : uncertaintyNote || displayItem.uncertaintyReason || "Marked for review."}
+              />
               <fieldset className="grid gap-2">
                 <legend className="text-xs font-medium text-slate-600">Review state</legend>
                 <div className="grid grid-cols-2 gap-2">
@@ -1150,15 +1158,6 @@ export function TransactionItemCard({
                   ))}
                 </div>
               </fieldset>
-              <label className="grid gap-1">
-                <span className="text-xs font-medium text-slate-600">Uncertainty note</span>
-                <input
-                  className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
-                  onChange={(event) => setUncertaintyNote(event.currentTarget.value)}
-                  value={uncertaintyNote}
-                  name="uncertaintyReason"
-                />
-              </label>
               <div className="sticky bottom-20 z-10 -mx-3 mt-1 border-t border-slate-100 bg-white/95 px-3 pb-3 pt-3 backdrop-blur">
                 <PendingSubmitButton
                   className="min-h-11 w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"

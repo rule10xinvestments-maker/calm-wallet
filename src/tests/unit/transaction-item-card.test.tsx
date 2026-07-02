@@ -412,6 +412,7 @@ describe("transaction item card", () => {
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByLabelText("Repeat until I turn it off")).toBeChecked();
     expect(screen.getByLabelText("End")).toBeDisabled();
+    expect(screen.getByText("No end date")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
     fireEvent.change(screen.getByLabelText("Start"), { target: { value: "2026-06-27" } });
@@ -909,13 +910,13 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Currency")).toHaveValue("USD");
     expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Note")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Uncertainty note")).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "45.67" } });
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "EUR" } });
     fireEvent.change(screen.getByLabelText("Item name"), { target: { value: "ketchup" } });
     fireEvent.change(screen.getByLabelText("Merchant"), { target: { value: "Corner store" } });
     fireEvent.change(screen.getByLabelText("Occurred date"), { target: { value: "2026-05-27" } });
     fireEvent.click(screen.getByRole("radio", { name: "Reviewed" }));
-    fireEvent.change(screen.getByLabelText("Uncertainty note"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(updateAction).toHaveBeenCalledOnce());
@@ -1121,6 +1122,7 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
+    expect(screen.queryByLabelText("Uncertainty note")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: label }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -1130,6 +1132,7 @@ describe("transaction item card", () => {
     expect(formData.get("note")).toBe("");
     expect(formData.get("transactionType")).toBe("expense");
     expect(formData.get("reviewState")).toBe(value);
+    expect(formData.get("uncertaintyReason")).toBe(value === "reviewed" ? "" : "Category needs review.");
   });
 
   it("shows a saving state while detail changes are pending", async () => {
