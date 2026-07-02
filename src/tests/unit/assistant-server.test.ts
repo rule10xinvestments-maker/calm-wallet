@@ -1941,8 +1941,51 @@ describe("assistant server integration", () => {
   });
 
   it.each([
+    ["I paid rent 1200", "expense", 120000, "Rent", "11111111-aaaa-aaaa-aaaa-111111111111"],
+    ["am platit chirie 1200", "expense", 120000, "Chirie", "11111111-aaaa-aaaa-aaaa-111111111111"],
+    ["am plătit chirie 1200", "expense", 120000, "Chirie", "11111111-aaaa-aaaa-aaaa-111111111111"],
+    ["am cumparat paine 10", "expense", 1000, "Paine", "44444444-4444-4444-4444-444444444444"],
+    ["am cumpărat mustar 5", "expense", 500, "Mustar", "44444444-4444-4444-4444-444444444444"],
+    ["j'ai payé café 5", "expense", 500, "Café", "33333333-3333-3333-3333-333333333333"],
+    ["jai achete pain 4", "expense", 400, "Pain", "44444444-4444-4444-4444-444444444444"],
+    ["pagué renta 1200", "expense", 120000, "Renta", "11111111-aaaa-aaaa-aaaa-111111111111"],
+    ["compré pan 4", "expense", 400, "Pan", "44444444-4444-4444-4444-444444444444"],
+    ["I received salary 3000", "income", 300000, "Salary", "55555555-5555-5555-5555-555555555555"],
+    ["am primit salariu 3000", "income", 300000, "Salariu", "55555555-5555-5555-5555-555555555555"],
+    ["am încasat 500 client", "income", 50000, "Client", "66666666-6666-6666-6666-666666666666"],
+    ["mi-a intrat salariu 3000", "income", 300000, "Salariu", "55555555-5555-5555-5555-555555555555"],
+    ["j'ai reçu salaire 3000", "income", 300000, "Salaire", "55555555-5555-5555-5555-555555555555"],
+    ["recu remboursement 50", "income", 5000, "Remboursement", "abababab-abab-abab-abab-abababababab"],
+    ["recibí salario 3000", "income", 300000, "Salario", "55555555-5555-5555-5555-555555555555"],
+  ])("saves multilingual transaction intent with clean Activity title: %s", async (text, transactionType, amountMinor, itemName, categoryId) => {
+    const services = makeTransactionServices();
+
+    await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text,
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType,
+        amountMinor,
+        itemName,
+        merchant: null,
+        categoryId,
+      }),
+      { actorType: "ai" },
+    );
+    expect(itemName.toLowerCase()).not.toMatch(/^(?:i paid|i received|am platit|am primit|j'ai payé|j'ai reçu)/);
+  });
+
+  it.each([
     ["USDT 100", "12121212-1212-1212-1212-121212121212"],
     ["transfer 100", "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd"],
+    ["am trimis 100", "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd"],
+    ["am primit transfer 100", "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd"],
   ])("saves low-confidence starter hints with Needs Review: %s", async (text, categoryId) => {
     const services = makeTransactionServices();
 

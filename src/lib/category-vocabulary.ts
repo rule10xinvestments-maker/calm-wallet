@@ -19,12 +19,12 @@ const categoryVocabulary: CategoryVocabularyEntry[] = [
   {
     slug: "housing",
     confidence: "high",
-    aliases: ["rent", "chirie", "landlord", "apartment", "apartament", "mortgage", "ipoteca", "maintenance", "intretinere", "association", "asociatie", "home", "casa", "repairs", "reparatii"],
+    aliases: ["rent", "renta", "chirie", "landlord", "apartment", "apartament", "mortgage", "ipoteca", "maintenance", "intretinere", "association", "asociatie", "home", "casa", "repairs", "reparatii"],
   },
   {
     slug: "groceries",
     confidence: "high",
-    aliases: ["groceries", "grocery", "supermarket", "market", "food shopping", "food shop", "food", "alimente", "mancare", "bread", "paine", "milk", "lapte", "eggs", "oua", "cheese", "branza", "meat", "carne", "vegetables", "legume", "fruit", "fructe", "cola", "mustard", "mustar", "bidoane apa", "apa plata", "apa minerala", "kaufland", "lidl", "carrefour", "profi", "mega image"],
+    aliases: ["groceries", "grocery", "supermarket", "market", "food shopping", "food shop", "food", "alimente", "mancare", "bread", "paine", "pain", "pan", "milk", "lapte", "eggs", "oua", "cheese", "branza", "meat", "carne", "vegetables", "legume", "fruit", "fructe", "cola", "mustard", "mustar", "bidoane apa", "apa plata", "apa minerala", "kaufland", "lidl", "carrefour", "profi", "mega image"],
   },
   {
     slug: "groceries",
@@ -104,7 +104,7 @@ const categoryVocabulary: CategoryVocabularyEntry[] = [
   {
     slug: "salary",
     confidence: "high",
-    aliases: ["salary", "salariu", "wage", "wages", "paycheck", "payroll", "venit", "income", "paid salary", "bonus", "prima"],
+    aliases: ["salary", "salariu", "salaire", "salario", "wage", "wages", "paycheck", "payroll", "venit", "income", "paid salary", "bonus", "prima"],
   },
   {
     slug: "self_employment",
@@ -114,7 +114,7 @@ const categoryVocabulary: CategoryVocabularyEntry[] = [
   {
     slug: "refunds",
     confidence: "high",
-    aliases: ["refund", "rambursare", "return", "returned", "chargeback", "cashback", "reimbursement", "compensatie", "restituit"],
+    aliases: ["refund", "rambursare", "remboursement", "return", "returned", "chargeback", "cashback", "reimbursement", "compensatie", "restituit"],
   },
   {
     slug: "sales",

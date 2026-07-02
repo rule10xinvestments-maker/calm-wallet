@@ -1,3 +1,9 @@
+import {
+  cleanTransactionIntentTitle,
+  containsTransactionIntentPhrase,
+  findTransactionIntentHint,
+} from "@/lib/transaction-intent-vocabulary";
+
 export type NaturalLanguageCreateTransactionIntent = {
   kind: "create_transaction";
   transactionType: "expense" | "income";
@@ -566,7 +572,10 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
   const amountResult = extractAmount(input);
 
   if (!amountResult) {
-    if (/\b(?:spent|paid|bought|coffee|lunch|dinner|breakfast|groceries|salary|salariu|got paid|paycheck|income|freelance|refund|sold|rent received)\b/i.test(input)) {
+    if (
+      containsTransactionIntentPhrase(input) ||
+      /\b(?:spent|paid|bought|coffee|lunch|dinner|breakfast|groceries|salary|salariu|got paid|paycheck|income|freelance|refund|sold|rent received)\b/i.test(input)
+    ) {
       return {
         kind: "clarification_needed",
         reason: "missing_amount",
@@ -595,6 +604,35 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
       currency,
       merchant: merchant ?? (amountResult.transactionType === "income" ? "Income" : "Expense"),
       markCategoryForReview: amountResult.transactionType === "expense" && Boolean(merchant),
+    });
+  }
+
+  const intentHint = findTransactionIntentHint(cleanTextWithoutAmount);
+  if (intentHint) {
+    const cleanedTitle = cleanTransactionIntentTitle(cleanTextWithoutAmount, intentHint);
+
+    if (intentHint.kind === "income") {
+      const merchant =
+        cleanedTitle ??
+        (/^got\s+paid\b/i.test(cleanTextWithoutAmount) ? "Paycheck" : undefined) ??
+        (/salary|salariu|salaire|salario/i.test(cleanTextWithoutAmount) ? "Salary" : undefined) ??
+        "Income";
+
+      return buildCreateIntent({
+        transactionType: "income",
+        amount,
+        currency,
+        merchant: titleCaseShortLabel(merchant),
+        markCategoryForReview: /\b(?:from|de la)\b/i.test(cleanTextWithoutAmount),
+      });
+    }
+
+    return buildCreateIntent({
+      transactionType: "expense",
+      amount,
+      currency,
+      merchant: cleanedTitle ? titleCaseShortLabel(cleanedTitle) : "Transfer",
+      markCategoryForReview: true,
     });
   }
 

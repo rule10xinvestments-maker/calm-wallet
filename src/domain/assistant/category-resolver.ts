@@ -39,6 +39,7 @@ const categoryAliasGroups: CategoryAliasGroup[] = [
     slug: "housing",
     aliases: [
       "rent",
+      "renta",
       "apartment",
       "mortgage",
       "housing",
@@ -81,6 +82,8 @@ const categoryAliasGroups: CategoryAliasGroup[] = [
       "bottled water",
       "milk",
       "bread",
+      "pain",
+      "pan",
       "eggs",
       "cheese",
       "yogurt",
@@ -410,6 +413,8 @@ const categoryAliasGroups: CategoryAliasGroup[] = [
     aliases: [
       "income",
       "salary",
+      "salaire",
+      "salario",
       "wage",
       "paid",
       "paycheck",
@@ -451,7 +456,7 @@ const categoryAliasGroups: CategoryAliasGroup[] = [
   },
   {
     slug: "refunds",
-    aliases: ["refund", "reimbursement", "rambursare", "returnare"],
+    aliases: ["refund", "reimbursement", "remboursement", "rambursare", "returnare"],
   },
   {
     slug: "gifts",

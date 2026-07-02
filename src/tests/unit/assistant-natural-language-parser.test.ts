@@ -613,7 +613,7 @@ describe("natural-language assistant parser", () => {
       kind: "create_transaction",
       transactionType: "expense",
       amount: "32",
-      merchant: "groceries",
+      merchant: "Groceries",
       reviewState: "needs_attention",
       uncertaintyReason: "Category needs review.",
     });
@@ -622,7 +622,25 @@ describe("natural-language assistant parser", () => {
       kind: "create_transaction",
       transactionType: "expense",
       amount: "12.50",
-      merchant: "lunch",
+      merchant: "Lunch",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("I paid rent 1200")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "1200",
+      merchant: "Rent",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("paid coffee 12")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "12",
+      merchant: "Coffee",
       reviewState: "needs_attention",
       uncertaintyReason: "Category needs review.",
     });
@@ -641,6 +659,20 @@ describe("natural-language assistant parser", () => {
       transactionType: "income",
       amount: "3000",
       merchant: "Paycheck",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("I received salary 3000")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "3000",
+      merchant: "Salary",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("got paid 3000 salary")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "3000",
+      merchant: "Salary",
     });
 
     expect(parseNaturalLanguageAssistantInput("freelance income 1200")).toEqual({
@@ -677,6 +709,128 @@ describe("natural-language assistant parser", () => {
       transactionType: "income",
       amount: "1200",
       merchant: "Rent received",
+    });
+  });
+
+  it("parses Romanian spend and income phrasing with clean titles", () => {
+    expect(parseNaturalLanguageAssistantInput("am platit chirie 1200")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "1200",
+      merchant: "Chirie",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am plătit chirie 1200")).toMatchObject({
+      transactionType: "expense",
+      amount: "1200",
+      merchant: "Chirie",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am cumparat paine 10")).toMatchObject({
+      transactionType: "expense",
+      amount: "10",
+      merchant: "Paine",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am cumpărat mustar 5")).toMatchObject({
+      transactionType: "expense",
+      amount: "5",
+      merchant: "Mustar",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am primit salariu 3000")).toEqual({
+      kind: "create_transaction",
+      transactionType: "income",
+      amount: "3000",
+      merchant: "Salariu",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am încasat 500 client")).toMatchObject({
+      transactionType: "income",
+      amount: "500",
+      merchant: "Client",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("mi-a intrat salariu 3000")).toMatchObject({
+      transactionType: "income",
+      amount: "3000",
+      merchant: "Salariu",
+    });
+  });
+
+  it("parses French and Spanish transaction phrasing with clean titles", () => {
+    expect(parseNaturalLanguageAssistantInput("j'ai payé café 5")).toMatchObject({
+      transactionType: "expense",
+      amount: "5",
+      merchant: "Café",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("jai achete pain 4")).toMatchObject({
+      transactionType: "expense",
+      amount: "4",
+      merchant: "Pain",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("j'ai reçu salaire 3000")).toMatchObject({
+      transactionType: "income",
+      amount: "3000",
+      merchant: "Salaire",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("recu remboursement 50")).toMatchObject({
+      transactionType: "income",
+      amount: "50",
+      merchant: "Remboursement",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("pagué renta 1200")).toMatchObject({
+      transactionType: "expense",
+      amount: "1200",
+      merchant: "Renta",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("compré pan 4")).toMatchObject({
+      transactionType: "expense",
+      amount: "4",
+      merchant: "Pan",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("recibí salario 3000")).toMatchObject({
+      transactionType: "income",
+      amount: "3000",
+      merchant: "Salario",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("me pagaron 500")).toMatchObject({
+      transactionType: "income",
+      amount: "500",
+      merchant: "Income",
+    });
+  });
+
+  it("keeps transfer-only wording reviewable", () => {
+    expect(parseNaturalLanguageAssistantInput("transfer 100")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "100",
+      merchant: "Transfer",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am trimis 100")).toMatchObject({
+      transactionType: "expense",
+      amount: "100",
+      merchant: "Transfer",
+      reviewState: "needs_attention",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am primit transfer 100")).toMatchObject({
+      transactionType: "income",
+      amount: "100",
+      merchant: "Transfer",
     });
   });
 
