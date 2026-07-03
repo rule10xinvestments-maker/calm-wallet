@@ -491,6 +491,8 @@
     "enableNotifications": "Enable notifications",
     "enabledShort": "Enabled",
     "disabled": "Disabled",
+    "calmHelper": "Light reminders are optional, calm, and user-controlled.",
+    "disabledHelper": "Notifications are disabled.",
     "sendTest": "Send test",
     "working": "Notifications are working.",
     "dailyReminder": "Daily reminder",

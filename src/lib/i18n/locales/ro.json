@@ -491,6 +491,8 @@
     "enableNotifications": "Activează notificările",
     "enabledShort": "Activat",
     "disabled": "Dezactivat",
+    "calmHelper": "Reminder-ele ușoare sunt opționale, calme și controlate de tine.",
+    "disabledHelper": "Notificările sunt dezactivate.",
     "sendTest": "Trimite test",
     "working": "Notificările funcționează.",
     "dailyReminder": "Reminder zilnic",

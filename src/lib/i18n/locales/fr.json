@@ -491,6 +491,8 @@
     "enableNotifications": "Activer les notifications",
     "enabledShort": "Activé",
     "disabled": "Désactivé",
+    "calmHelper": "Les rappels légers sont optionnels, calmes et contrôlés par vous.",
+    "disabledHelper": "Les notifications sont désactivées.",
     "sendTest": "Envoyer un test",
     "working": "Les notifications fonctionnent.",
     "dailyReminder": "Rappel quotidien",

@@ -134,6 +134,7 @@ describe("protected shell PWA install affordance", () => {
     expect(languageButton).toHaveAttribute("aria-expanded", "false");
     expect(notificationsButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("App language")).not.toBeInTheDocument();
+    expect(screen.queryByText("Light reminders are optional, calm, and user-controlled.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
     expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Send test/i })).not.toBeInTheDocument();
@@ -148,6 +149,9 @@ describe("protected shell PWA install affordance", () => {
 
     fireEvent.click(notificationsButton);
 
+    expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
+    expect(screen.getByText("Notifications are enabled.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enabled" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Daily reminder")).toBeInTheDocument();
     expect(screen.getByText("Monthly report")).toBeInTheDocument();
     expect(screen.getByText("Recurring entries")).toBeInTheDocument();
@@ -176,6 +180,17 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByRole("link", { name: "Activitate" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Perspective" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Notificări/ }));
+    expect(screen.getByText("Reminder-ele ușoare sunt opționale, calme și controlate de tine.")).toBeInTheDocument();
+    expect(screen.getByText("Notificările sunt activate.")).toBeInTheDocument();
+    const enabledButton = screen.getByRole("button", { name: "Activat" });
+    expect(enabledButton).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(enabledButton);
+
+    expect(screen.getByRole("button", { name: "Dezactivat" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Notificările sunt dezactivate.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reminder zilnic")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Notificări Dezactivat/ })).toBeInTheDocument();
     expect(screen.getByText("Reminder zilnic")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Activează notificările" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvează setările notificărilor" })).toBeInTheDocument();

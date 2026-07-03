@@ -491,6 +491,8 @@
     "enableNotifications": "Activar notificaciones",
     "enabledShort": "Activado",
     "disabled": "Desactivado",
+    "calmHelper": "Los recordatorios suaves son opcionales, tranquilos y controlados por ti.",
+    "disabledHelper": "Las notificaciones están desactivadas.",
     "sendTest": "Enviar prueba",
     "working": "Las notificaciones funcionan.",
     "dailyReminder": "Recordatorio diario",

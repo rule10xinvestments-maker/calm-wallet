@@ -39,6 +39,10 @@ describe("i18n helper", () => {
     expect(t("assistant.imports.chooseFileFirst", "ro")).toBe("Alege mai întâi o imagine de bon sau un fișier CSV.");
     expect(t("imports.noCandidatesYet", "fr")).toBe("Aucun candidat pour le moment.");
     expect(t("notifications.saveSettings", "es")).toBe("Guardar ajustes de notificaciones");
+    expect(t("notifications.disabledHelper", "en")).toBe("Notifications are disabled.");
+    expect(t("notifications.disabledHelper", "ro")).toBe("Notificările sunt dezactivate.");
+    expect(t("notifications.disabledHelper", "fr")).toBe("Les notifications sont désactivées.");
+    expect(t("notifications.disabledHelper", "es")).toBe("Las notificaciones están desactivadas.");
   });
 
   it.each([

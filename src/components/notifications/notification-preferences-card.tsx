@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell, BellOff, ChevronDown } from "lucide-react";
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/components/i18n/locale-provider";
@@ -53,19 +53,31 @@ async function getReadyServiceWorkerRegistration() {
 }
 
 function ToggleCard({
+  checked,
   description,
-  defaultChecked,
+  disabled,
   name,
+  onCheckedChange,
   title,
 }: {
+  checked: boolean;
   description: string;
-  defaultChecked: boolean;
+  disabled: boolean;
   name: string;
+  onCheckedChange: (checked: boolean) => void;
   title: string;
 }) {
   return (
-    <label className="flex items-start gap-3 rounded-2xl bg-slate-50 px-3 py-2.5">
-      <input className="mt-1" defaultChecked={defaultChecked} name={name} type="checkbox" />
+    <label className={`flex items-start gap-3 rounded-2xl px-3 py-2.5 transition ${disabled ? "bg-slate-50/60 opacity-60" : "bg-slate-50"}`}>
+      <input
+        aria-label={title}
+        checked={checked}
+        className="mt-1"
+        disabled={disabled}
+        name={name}
+        onChange={(event) => onCheckedChange(event.target.checked)}
+        type="checkbox"
+      />
       <span className="min-w-0">
         <span className="block text-sm font-medium text-slate-900">{title}</span>
         <span className="block text-xs leading-4 text-slate-500">{description}</span>
@@ -85,6 +97,7 @@ export function NotificationPreferencesCard({
     preferences,
   });
   const current = state.preferences ?? preferences;
+  const [localPreferences, setLocalPreferences] = useState(current);
   const [browserStatus, setBrowserStatus] = useState<BrowserNotificationStatus>(() => getBrowserNotificationStatus());
   const [browserMessage, setBrowserMessage] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -92,8 +105,17 @@ export function NotificationPreferencesCard({
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const canUseNotifications = browserStatus !== "unsupported";
   const scheduledPushReady = Boolean(vapidPublicKey);
+  const notificationsEnabled =
+    localPreferences.dailyReminderEnabled ||
+    localPreferences.monthlyReviewEnabled ||
+    localPreferences.recurringNotificationsEnabled ||
+    localPreferences.limitAlertsEnabled;
 
-  const enableCopy = useMemo(() => {
+  useEffect(() => {
+    setLocalPreferences(current);
+  }, [current]);
+
+  const permissionCopy = useMemo(() => {
     if (browserStatus === "unsupported") {
       return t("notifications.unsupported", locale);
     }
@@ -109,7 +131,33 @@ export function NotificationPreferencesCard({
     return t("notifications.permissionNeeded", locale);
   }, [browserStatus, locale, scheduledPushReady]);
 
-  const notificationStatusLabel = browserStatus === "granted" ? t("notifications.enabledShort", locale) : t("notifications.disabled", locale);
+  const notificationStatusLabel = notificationsEnabled ? t("notifications.enabledShort", locale) : t("notifications.disabled", locale);
+  const notificationStateCopy = notificationsEnabled ? t("notifications.enabled", locale) : t("notifications.disabledHelper", locale);
+
+  function updateLocalPreference(name: keyof Pick<NotificationPreferences, "dailyReminderEnabled" | "monthlyReviewEnabled" | "recurringNotificationsEnabled" | "limitAlertsEnabled">, checked: boolean) {
+    setLocalPreferences((value) => ({
+      ...value,
+      [name]: checked,
+    }));
+  }
+
+  function toggleNotificationsEnabled() {
+    setLocalPreferences((value) => {
+      const isEnabled =
+        value.dailyReminderEnabled ||
+        value.monthlyReviewEnabled ||
+        value.recurringNotificationsEnabled ||
+        value.limitAlertsEnabled;
+
+      return {
+        ...value,
+        dailyReminderEnabled: !isEnabled,
+        monthlyReviewEnabled: !isEnabled,
+        recurringNotificationsEnabled: !isEnabled,
+        limitAlertsEnabled: !isEnabled,
+      };
+    });
+  }
 
   async function registerSubscriptionIfPossible() {
     if (!vapidPublicKey) {
@@ -183,7 +231,7 @@ export function NotificationPreferencesCard({
         type="button"
       >
         <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700">
-          {browserStatus === "denied" || browserStatus === "unsupported" ? (
+          {!notificationsEnabled || browserStatus === "denied" || browserStatus === "unsupported" ? (
             <BellOff aria-hidden="true" className="size-4" />
           ) : (
             <Bell aria-hidden="true" className="size-4" />
@@ -200,18 +248,36 @@ export function NotificationPreferencesCard({
         <div className="space-y-3 border-t border-slate-100 px-3 pb-3 pt-2">
           <div className="rounded-2xl bg-slate-50 px-3 py-3">
             <div className="space-y-2">
-              <div>
-                <p className="text-sm font-medium text-slate-900">{t("notifications.settings", locale)}</p>
-                <p className="text-xs leading-4 text-slate-500">{enableCopy}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{t("notifications.settings", locale)}</p>
+                  <p className="mt-1 text-xs leading-4 text-slate-500">{notificationStateCopy}</p>
+                </div>
+                <button
+                  aria-pressed={notificationsEnabled}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    notificationsEnabled ? "bg-sky-600 text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                  }`}
+                  onClick={toggleNotificationsEnabled}
+                  type="button"
+                >
+                  {notificationStatusLabel}
+                </button>
               </div>
-              <Button
-                className="h-9 px-3 text-xs"
-                disabled={!canUseNotifications || browserStatus === "denied" || isBrowserPending}
-                onClick={handleEnableNotifications}
-                type="button"
-              >
-                {browserStatus === "granted" ? t("notifications.enabledShort", locale) : t("notifications.enableNotifications", locale)}
-              </Button>
+              <p className="text-xs leading-4 text-slate-500">{t("notifications.calmHelper", locale)}</p>
+              {browserStatus !== "granted" ? (
+                <div className="space-y-2">
+                  <p className="text-xs leading-4 text-slate-500">{permissionCopy}</p>
+                  <Button
+                    className="h-9 px-3 text-xs"
+                    disabled={!canUseNotifications || browserStatus === "denied" || isBrowserPending}
+                    onClick={handleEnableNotifications}
+                    type="button"
+                  >
+                    {t("notifications.enableNotifications", locale)}
+                  </Button>
+                </div>
+              ) : null}
               {browserMessage ? <p className="text-xs leading-4 text-sky-700">{browserMessage}</p> : null}
             </div>
           </div>
@@ -221,27 +287,35 @@ export function NotificationPreferencesCard({
               <p className={`text-sm ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{state.message}</p>
             ) : null}
             <ToggleCard
-              defaultChecked={current.dailyReminderEnabled}
+              checked={localPreferences.dailyReminderEnabled}
               description={t("notifications.dailyReminderHelper", locale)}
+              disabled={!notificationsEnabled}
               name="dailyReminderEnabled"
+              onCheckedChange={(checked) => updateLocalPreference("dailyReminderEnabled", checked)}
               title={t("notifications.dailyReminder", locale)}
             />
             <ToggleCard
-              defaultChecked={current.monthlyReviewEnabled}
+              checked={localPreferences.monthlyReviewEnabled}
               description={t("notifications.monthlyReportHelper", locale)}
+              disabled={!notificationsEnabled}
               name="monthlyReviewEnabled"
+              onCheckedChange={(checked) => updateLocalPreference("monthlyReviewEnabled", checked)}
               title={t("notifications.monthlyReport", locale)}
             />
             <ToggleCard
-              defaultChecked={current.recurringNotificationsEnabled}
+              checked={localPreferences.recurringNotificationsEnabled}
               description={t("notifications.recurringEntriesHelper", locale)}
+              disabled={!notificationsEnabled}
               name="recurringNotificationsEnabled"
+              onCheckedChange={(checked) => updateLocalPreference("recurringNotificationsEnabled", checked)}
               title={t("notifications.recurringEntries", locale)}
             />
             <ToggleCard
-              defaultChecked={current.limitAlertsEnabled}
+              checked={localPreferences.limitAlertsEnabled}
               description={t("notifications.limitAlertsHelper", locale)}
+              disabled={!notificationsEnabled}
               name="limitAlertsEnabled"
+              onCheckedChange={(checked) => updateLocalPreference("limitAlertsEnabled", checked)}
               title={t("notifications.limitAlerts", locale)}
             />
             <Button disabled={isPending} type="submit">
