@@ -1,9 +1,9 @@
 import { t, type SupportedLocale } from "@/lib/i18n";
 
 export type CategoryLabelInput = {
-  id?: string | null;
-  slug?: string | null;
-  label?: string | null;
+  id?: unknown;
+  slug?: unknown;
+  label?: unknown;
 };
 
 const categoryKeyByNormalizedValue: Record<string, string> = {
@@ -48,8 +48,12 @@ const categoryKeyByNormalizedValue: Record<string, string> = {
   "needs-category": "needsCategory",
 };
 
-function normalizeCategoryLabelSource(value: string) {
-  return value
+function stringFromUnknown(value: unknown) {
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+function normalizeCategoryLabelSource(value: unknown) {
+  return stringFromUnknown(value)
     .trim()
     .toLowerCase()
     .replace(/^manual-default-/, "")
@@ -60,26 +64,31 @@ function normalizeCategoryLabelSource(value: string) {
     .replace(/\s+/g, " ");
 }
 
-export function getCategoryLabelKey(categoryIdOrName: string | null | undefined) {
-  if (!categoryIdOrName) {
+export function getCategoryLabelKey(categoryIdOrName: unknown) {
+  const normalized = normalizeCategoryLabelSource(categoryIdOrName);
+
+  if (!normalized) {
     return null;
   }
 
-  const normalized = normalizeCategoryLabelSource(categoryIdOrName);
   const compact = normalized.replace(/\s+/g, "_");
   const key = categoryKeyByNormalizedValue[normalized] ?? categoryKeyByNormalizedValue[compact];
 
   return key ? `categories.${key}` : null;
 }
 
-export function getCategoryLabel(categoryIdOrName: string | null | undefined, locale?: SupportedLocale | string | null, fallback?: string | null) {
+export function getCategoryLabel(categoryIdOrName: unknown, locale?: SupportedLocale | string | null, fallback?: unknown) {
   const key = getCategoryLabelKey(categoryIdOrName);
 
   if (!key) {
-    return fallback ?? categoryIdOrName ?? "";
+    return stringFromUnknown(fallback) || stringFromUnknown(categoryIdOrName);
   }
 
   return t(key, locale);
+}
+
+function isCategoryLabelInput(value: unknown): value is CategoryLabelInput {
+  return Boolean(value) && typeof value === "object";
 }
 
 export function getCategoryDisplayLabel(category: CategoryLabelInput | null | undefined, locale?: SupportedLocale | string | null) {
@@ -87,5 +96,13 @@ export function getCategoryDisplayLabel(category: CategoryLabelInput | null | un
     return getCategoryLabel("uncategorized", locale);
   }
 
-  return getCategoryLabel(category.slug ?? category.label ?? category.id ?? null, locale, category.label ?? category.slug ?? category.id ?? "");
+  if (!isCategoryLabelInput(category)) {
+    return getCategoryLabel(category, locale);
+  }
+
+  return getCategoryLabel(
+    stringFromUnknown(category.slug) || stringFromUnknown(category.label) || stringFromUnknown(category.id),
+    locale,
+    stringFromUnknown(category.label) || stringFromUnknown(category.slug) || stringFromUnknown(category.id),
+  );
 }

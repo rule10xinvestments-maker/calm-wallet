@@ -20,27 +20,28 @@ export function LocaleProvider({
   savedLocale,
 }: {
   children: React.ReactNode;
-  savedLocale: SupportedLocale | null;
+  savedLocale: SupportedLocale | string | null;
 }) {
   const [browserLocale, setBrowserLocale] = useState<string | null>(null);
-  const [optimisticLocale, setOptimisticLocale] = useState<SupportedLocale | null>(savedLocale);
+  const normalizedSavedLocale = savedLocale ? normalizeLocale(savedLocale) : null;
+  const [optimisticLocale, setOptimisticLocale] = useState<SupportedLocale | null>(normalizedSavedLocale);
 
   useEffect(() => {
     setBrowserLocale(navigator.language);
   }, []);
 
   useEffect(() => {
-    setOptimisticLocale(savedLocale);
-  }, [savedLocale]);
+    setOptimisticLocale(normalizedSavedLocale);
+  }, [normalizedSavedLocale]);
 
-  const locale = optimisticLocale ?? resolveLocalePreference({ savedLocale, browserLocale });
+  const locale = normalizeLocale(optimisticLocale ?? resolveLocalePreference({ savedLocale: normalizedSavedLocale, browserLocale }));
   const value = useMemo(
     () => ({
       locale,
-      savedLocale,
-      setLocale: setOptimisticLocale,
+      savedLocale: normalizedSavedLocale,
+      setLocale: (nextLocale: SupportedLocale) => setOptimisticLocale(normalizeLocale(nextLocale)),
     }),
-    [locale, savedLocale],
+    [locale, normalizedSavedLocale],
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

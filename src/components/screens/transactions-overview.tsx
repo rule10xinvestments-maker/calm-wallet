@@ -91,7 +91,8 @@ function filterTransactions(items: TransactionListItem[], query: string) {
 }
 
 function transactionNeedsReview(item: TransactionListItem) {
-  const normalizedCategoryLabel = item.categoryLabel.trim().toLowerCase();
+  const normalizedCategoryLabel =
+    typeof item.categoryLabel === "string" || typeof item.categoryLabel === "number" ? String(item.categoryLabel).trim().toLowerCase() : "";
   return (
     item.reviewState !== "reviewed" ||
     Boolean(item.uncertaintyReason) ||
@@ -692,7 +693,10 @@ function CandidateReviewEntry({
   const [reviewActionState, setReviewActionState] = useState(initialReviewActionState);
   const [isPending, setIsPending] = useState(false);
   const defaultCategoryId =
-    candidate.categoryId ?? categories.find((category) => category.label.toLowerCase() === "groceries")?.id ?? "";
+    candidate.categoryId ??
+    categories.find((category) => (typeof category.label === "string" || typeof category.label === "number" ? String(category.label).toLowerCase() : "") === "groceries")
+      ?.id ??
+    "";
   const defaultTitle =
     candidate.description && candidate.description !== "No description provided"
       ? candidate.description

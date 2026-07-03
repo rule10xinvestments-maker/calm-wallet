@@ -57,7 +57,7 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
             id="uiLocale"
             name="uiLocale"
             onChange={(event) => {
-              setLocale(event.target.value as SupportedLocale);
+              setLocale(getBrowserResolvedLocale(event.target.value));
               event.currentTarget.form?.requestSubmit();
             }}
             value={locale}

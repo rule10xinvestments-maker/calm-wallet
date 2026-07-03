@@ -36,8 +36,8 @@ export const incomeCategoryLabels = [
   "Other",
 ] as const;
 
-export function normalizeCategoryPickerKey(value: string) {
-  return value
+export function normalizeCategoryPickerKey(value: unknown) {
+  return (typeof value === "string" || typeof value === "number" ? String(value) : "")
     .trim()
     .toLowerCase()
     .replace(/[_/]+/g, " ")

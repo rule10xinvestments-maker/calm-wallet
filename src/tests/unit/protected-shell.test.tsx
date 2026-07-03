@@ -71,6 +71,25 @@ function renderProtectedShell() {
   );
 }
 
+function renderProtectedShellWithLocale(uiLocale: string | null) {
+  return render(
+    <PwaInstallProvider>
+      <ProtectedShell
+        accountHint="paul@example.com"
+        notificationPreferences={notificationPreferences}
+        uiLocale={uiLocale as never}
+        userPreferencesAction={updateUserPreferencesAction}
+        notificationPreferencesAction={updateNotificationPreferencesAction}
+        registerPushSubscriptionAction={registerPushSubscriptionAction}
+        sendTestPushNotificationAction={sendTestPushNotificationAction}
+        onSignOut={vi.fn(async () => undefined)}
+      >
+        <div>Assistant content</div>
+      </ProtectedShell>
+    </PwaInstallProvider>,
+  );
+}
+
 describe("protected shell PWA install affordance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -147,6 +166,16 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByText("Reminder zilnic")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Activează notificările" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvează setările notificărilor" })).toBeInTheDocument();
+  });
+
+  it("loads safely with saved Romanian locale and invalid saved locale values", () => {
+    const romanianView = renderProtectedShellWithLocale("ro");
+    expect(screen.getByRole("link", { name: "Asistent" })).toBeInTheDocument();
+    romanianView.unmount();
+
+    const fallbackView = renderProtectedShellWithLocale("not-real");
+    expect(screen.getByRole("link", { name: "Assistant" })).toBeInTheDocument();
+    fallbackView.unmount();
   });
 
   it("renders the protected header as a compact shared mobile headline", () => {

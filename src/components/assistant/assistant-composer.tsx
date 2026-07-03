@@ -207,7 +207,7 @@ function LimitOptionButton({
 
 function findCategoryByLabel(categories: ControlledCategoryOption[], labels: string[], transactionType: "expense" | "income") {
   return categories.find((category) => {
-    const normalized = category.label.toLowerCase();
+    const normalized = typeof category.label === "string" || typeof category.label === "number" ? String(category.label).toLowerCase() : "";
     const directionMatches = !category.direction || category.direction === transactionType || category.direction === "both";
 
     return directionMatches && labels.some((label) => normalized.includes(label));

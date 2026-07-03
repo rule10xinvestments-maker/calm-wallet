@@ -91,6 +91,25 @@ describe("transaction item card", () => {
     expect(screen.getByRole("button", { name: "Editează detalii" })).toBeInTheDocument();
   });
 
+  it("keeps Romanian Activity rows render-safe when category data is missing or unexpected", () => {
+    expect(() =>
+      render(
+        <LocaleProvider savedLocale="ro">
+          <TransactionItemCard
+            categories={[{ id: "cat-groceries", label: null as never, direction: "expense" }]}
+            deleteAction={vi.fn(async () => initialState)}
+            initialState={initialState}
+            item={makeItem({ categoryLabel: null as never, categoryId: "cat-groceries" })}
+            recategorizeAction={vi.fn(async () => initialState)}
+            updateAction={vi.fn(async () => initialState)}
+          />
+        </LocaleProvider>,
+      ),
+    ).not.toThrow();
+
+    expect(screen.getByText("Necategorizat · May 5")).toBeInTheDocument();
+  });
+
   it("renders a compact collapsed transaction row with a category icon by default", () => {
     renderCard();
 

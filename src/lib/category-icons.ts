@@ -30,8 +30,8 @@ export type CategoryVisuals = {
   border: string;
 };
 
-function normalizeCategoryName(value: string) {
-  return value
+function normalizeCategoryName(value: unknown) {
+  return (typeof value === "string" || typeof value === "number" ? String(value) : "")
     .trim()
     .toLowerCase()
     .replace(/[_/]+/g, " ")
@@ -73,10 +73,10 @@ export const CATEGORY_VISUALS_BY_NAME: Record<string, CategoryVisuals> = {
   "needs-category": { icon: CircleHelp, primary: "#0EA5E9", bg: "#E0F2FE", border: "#7DD3FC" },
 };
 
-export function getCategoryVisualsByName(labelOrSlug: string): CategoryVisuals {
+export function getCategoryVisualsByName(labelOrSlug: unknown): CategoryVisuals {
   return CATEGORY_VISUALS_BY_NAME[normalizeCategoryName(labelOrSlug)] ?? FALLBACK_CATEGORY_VISUALS;
 }
 
-export function getCategoryIconByName(labelOrSlug: string): LucideIcon {
+export function getCategoryIconByName(labelOrSlug: unknown): LucideIcon {
   return getCategoryVisualsByName(labelOrSlug).icon;
 }

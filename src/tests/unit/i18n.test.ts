@@ -22,6 +22,19 @@ describe("i18n helper", () => {
     expect(t("common.notARealKey", "ro")).toBe("common.notARealKey");
   });
 
+  it("falls back safely for malformed runtime inputs", () => {
+    expect(normalizeLocale({ locale: "ro" })).toBe("en");
+    expect(t("common.save", { locale: "ro" })).toBe("Save");
+    expect(t(null as never, "ro")).toBe("");
+  });
+
+  it("interpolates safely and keeps missing params readable", () => {
+    expect(t("insights.bars.amountsShowCategoryOnly", "en", { bucket: "Day", category: "Groceries" })).toBe(
+      "Day amounts show Groceries only",
+    );
+    expect(t("insights.bars.amountsShowCategoryOnly", "ro", { bucket: "Zi" })).toContain("{category}");
+  });
+
   it("returns audited import and notification labels in supported locales", () => {
     expect(t("assistant.imports.chooseFileFirst", "ro")).toBe("Alege mai întâi o imagine de bon sau un fișier CSV.");
     expect(t("imports.noCandidatesYet", "fr")).toBe("Aucun candidat pour le moment.");

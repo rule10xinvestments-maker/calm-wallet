@@ -110,7 +110,7 @@ function getRecurringDetailsText(item: TransactionListItem, locale: string) {
 }
 
 function getRowMetadata(item: TransactionListItem, recurringMode: boolean, locale: string) {
-  const categoryLabel = getCategoryLabel(item.categoryLabel, locale);
+  const categoryLabel = getCategoryLabel(item.categoryLabel, locale) || getCategoryLabel("uncategorized", locale);
   if (recurringMode && item.isRecurring) {
     return `${categoryLabel} · ${getRecurringFrequencyLabel(item.recurringFrequency, locale)} · ${
       item.recurringPausedAt ? t("activity.recurring.paused", locale) : t("activity.recurring.active", locale)
@@ -147,7 +147,7 @@ function PendingSubmitButton({
 }
 
 function getCategoryIcon(item: TransactionListItem): LucideIcon {
-  const label = getCategoryLabelKey(item.categoryLabel) ?? item.categoryLabel.toLowerCase();
+  const label = getCategoryLabelKey(item.categoryLabel) ?? (getCategoryLabel(item.categoryLabel, "en") || "uncategorized").toLowerCase();
 
   if (label.includes("uncategorized") || label.includes("needs")) {
     return CircleHelp;
@@ -229,15 +229,17 @@ export function TransactionItemCard({
   const displayItem = optimisticItem ?? item;
   const selectedCategory = selectedCategoryId ? categories.find((category) => category.id === selectedCategoryId) : null;
   const selectedCategoryLabel = selectedCategory?.label ?? (selectedCategoryId ? displayItem.categoryLabel : "Uncategorized");
-  const selectedCategoryDisplayLabel = selectedCategory ? getCategoryDisplayLabel(selectedCategory, locale) : getCategoryLabel(selectedCategoryLabel, locale);
+  const selectedCategoryDisplayLabel = selectedCategory
+    ? getCategoryDisplayLabel(selectedCategory, locale)
+    : getCategoryLabel(selectedCategoryLabel, locale) || getCategoryLabel("uncategorized", locale);
   const categoryIconItem = { ...displayItem, categoryLabel: selectedCategoryLabel };
   const CategoryIcon = getCategoryIcon(displayItem);
   const ActionCategoryIcon = getCategoryIcon(categoryIconItem);
   const categoryVisuals = getCategoryVisualsByName(displayItem.categoryLabel);
   const actionCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
   const needsReview = displayItem.reviewLabel !== "Reviewed";
-  const categoryAttentionKey = getCategoryLabelKey(displayItem.categoryLabel) ?? displayItem.categoryLabel.toLowerCase();
-  const actionCategoryAttentionKey = getCategoryLabelKey(selectedCategoryLabel) ?? selectedCategoryLabel.toLowerCase();
+  const categoryAttentionKey = getCategoryLabelKey(displayItem.categoryLabel) ?? (getCategoryLabel(displayItem.categoryLabel, "en") || "uncategorized").toLowerCase();
+  const actionCategoryAttentionKey = getCategoryLabelKey(selectedCategoryLabel) ?? (getCategoryLabel(selectedCategoryLabel, "en") || "uncategorized").toLowerCase();
   const categoryIconNeedsAttention =
     categoryAttentionKey.includes("uncategorized") || categoryAttentionKey.includes("needs");
   const actionCategoryIconNeedsAttention =
@@ -601,7 +603,7 @@ export function TransactionItemCard({
         type="button"
       >
         <span
-          aria-label={`${getCategoryLabel(displayItem.categoryLabel, locale)} ${t("common.category", locale).toLowerCase()} icon`}
+          aria-label={`${getCategoryLabel(displayItem.categoryLabel, locale) || getCategoryLabel("uncategorized", locale)} ${t("common.category", locale).toLowerCase()} icon`}
           className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl border ${
             categoryIconNeedsAttention ? "text-amber-700" : "text-sky-700"
           }`}

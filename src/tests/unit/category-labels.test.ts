@@ -28,4 +28,20 @@ describe("category label i18n", () => {
     expect(getCategoryLabel("Custom savings bucket", "ro")).toBe("Custom savings bucket");
     expect(getCategoryLabel(null, "ro")).toBe("");
   });
+
+  it("never throws for missing or malformed runtime category values", () => {
+    expect(() => getCategoryLabel(undefined, "ro")).not.toThrow();
+    expect(() => getCategoryLabel({ label: "Groceries" } as never, "ro")).not.toThrow();
+    expect(getCategoryLabel(undefined, "ro")).toBe("");
+    expect(getCategoryLabel("", "ro")).toBe("");
+    expect(getCategoryLabel(123 as never, "ro")).toBe("123");
+    expect(getCategoryLabel({ unexpected: "Groceries" } as never, "ro", "Fallback")).toBe("Fallback");
+    expect(getCategoryLabel("groceries", { locale: "ro" } as never)).toBe("Groceries");
+  });
+
+  it("uses safe display fallbacks for nullable category objects", () => {
+    expect(getCategoryDisplayLabel(null, "ro")).toBe("Necategorizat");
+    expect(getCategoryDisplayLabel({ id: null, slug: null, label: null }, "ro")).toBe("");
+    expect(getCategoryDisplayLabel({ id: "cat-groceries", slug: "groceries", label: null }, "ro")).toBe("Alimente");
+  });
 });
