@@ -459,7 +459,8 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: /Create a limit/ })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: /Manage limits/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByText("Set a limit")).toBeInTheDocument();
-    expect(screen.getByLabelText("Category")).toHaveValue("category-housing");
+    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Category: Housing" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByLabelText("Currency")).toHaveValue("RON");
     expect(screen.getByRole("button", { name: "weekly" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("Repeat every week")).toBeChecked();
@@ -528,6 +529,8 @@ describe("assistant composer", () => {
 
     openLimitsPanel();
     fireEvent.click(screen.getByRole("button", { name: /Create a limit/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Category: Housing" }));
+    fireEvent.click(within(screen.getByLabelText("Category picker")).getByRole("button", { name: "Groceries" }));
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "280" } });
     fireEvent.click(screen.getByRole("button", { name: "monthly" }));
     fireEvent.click(screen.getByRole("button", { name: "Save limit" }));
@@ -535,11 +538,35 @@ describe("assistant composer", () => {
     await waitFor(() => expect(upsertLimitAction).toHaveBeenCalled());
     const [, formData] = upsertLimitAction.mock.calls[0] as [unknown, FormData];
 
-    expect(formData.get("categoryId")).toBe("category-housing");
+    expect(formData.get("categoryId")).toBe("category-groceries");
     expect(formData.get("amount")).toBe("280");
     expect(formData.get("currency")).toBe("RON");
     expect(formData.get("period")).toBe("monthly");
     expect(formData.get("repeats")).toBe("on");
+  });
+
+  it("uses the shared icon grid for Limits category selection without income-only categories", () => {
+    renderComposer(undefined, [], undefined, manualCategoryOptions);
+
+    openLimitsPanel();
+    fireEvent.click(screen.getByRole("button", { name: /Create a limit/ }));
+
+    expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Category: Housing" }));
+
+    const picker = screen.getByLabelText("Category picker");
+    expect(within(picker).getByRole("button", { name: "Housing" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(picker).getByRole("button", { name: "Groceries" })).toBeInTheDocument();
+    expect(within(picker).getByRole("button", { name: "Investments" })).toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: "Salary" })).not.toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: "Self-employment" })).not.toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: "Rental income" })).not.toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: "Side income" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Groceries" }));
+
+    expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Category: Groceries" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("keeps Assistant Limits close behavior compact", () => {

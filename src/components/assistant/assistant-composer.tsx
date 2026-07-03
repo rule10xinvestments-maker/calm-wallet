@@ -295,6 +295,7 @@ export function AssistantComposer({
   const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
   const [confirmRemoveLimitId, setConfirmRemoveLimitId] = useState<string | null>(null);
   const [expandedLimitSection, setExpandedLimitSection] = useState<LimitSection>(null);
+  const [isLimitCategoryPickerOpen, setIsLimitCategoryPickerOpen] = useState(false);
   const [selectedImportType, setSelectedImportType] = useState<"receipt_image" | "csv_import">("receipt_image");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
@@ -317,6 +318,10 @@ export function AssistantComposer({
   const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
   const SelectedCategoryIcon = selectedCategoryVisuals.icon;
   const submittedManualCategoryId = selectedCategory?.isSynthetic ? "" : effectiveManualCategoryId;
+  const selectedLimitCategory = limitCategoryOptions.find((category) => category.id === limitCategoryId) ?? limitCategoryOptions[0] ?? null;
+  const selectedLimitCategoryLabel = selectedLimitCategory?.label ?? t("common.category", locale);
+  const selectedLimitCategoryVisuals = getCategoryVisualsByName(selectedLimitCategoryLabel);
+  const SelectedLimitCategoryIcon = selectedLimitCategoryVisuals.icon;
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
   const isRecentOpen = openPanel === "recent";
@@ -330,6 +335,7 @@ export function AssistantComposer({
     setLimitPeriod("weekly");
     setLimitRepeats(true);
     setConfirmRemoveLimitId(null);
+    setIsLimitCategoryPickerOpen(false);
   }, [supportedDefaultCurrency]);
 
   useEffect(() => {
@@ -430,11 +436,13 @@ export function AssistantComposer({
     setLimitPeriod(limit.period);
     setLimitRepeats(limit.repeats);
     setConfirmRemoveLimitId(null);
+    setIsLimitCategoryPickerOpen(false);
     setExpandedLimitSection("create");
   }
 
   function toggleLimitSection(section: Exclude<LimitSection, null>) {
     setExpandedLimitSection((currentSection) => (currentSection === section ? null : section));
+    setIsLimitCategoryPickerOpen(false);
   }
 
   function formatLimitAmount(limit: Budget) {
@@ -1177,23 +1185,31 @@ export function AssistantComposer({
             <input name="budgetId" type="hidden" value={editingLimitId ?? ""} />
             <input name="monthStart" type="hidden" value={getCurrentMonthStartKey()} />
             <input name="repeats" type="hidden" value={limitRepeats ? "on" : "off"} />
+            <input name="categoryId" type="hidden" value={limitCategoryId} />
             <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-              <label className="block space-y-1">
+              <div className="space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("common.category", locale)}</span>
-                <select
-                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                  name="categoryId"
-                  onChange={(event) => setLimitCategoryId(event.target.value)}
-                  required
-                  value={limitCategoryId}
+                <button
+                  aria-expanded={isLimitCategoryPickerOpen}
+                  aria-label={`${t("common.category", locale)}: ${selectedLimitCategoryLabel}`}
+                  className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
+                    isLimitCategoryPickerOpen ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-white"
+                  }`}
+                  onClick={() => setIsLimitCategoryPickerOpen((isOpen) => !isOpen)}
+                  type="button"
                 >
-                  {limitCategoryOptions.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <SelectedLimitCategoryIcon
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                      strokeWidth={2.1}
+                      style={{ color: selectedLimitCategoryVisuals.primary }}
+                    />
+                    <span className="truncate">{selectedLimitCategoryLabel}</span>
+                  </span>
+                  <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isLimitCategoryPickerOpen ? "rotate-180" : ""}`} />
+                </button>
+              </div>
               <label className="block space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
                 <input
@@ -1210,6 +1226,16 @@ export function AssistantComposer({
                 />
               </label>
             </div>
+            {isLimitCategoryPickerOpen ? (
+              <CategoryIconGridPicker
+                categories={limitCategoryOptions}
+                onSelect={(category) => {
+                  setLimitCategoryId(category.id);
+                  setIsLimitCategoryPickerOpen(false);
+                }}
+                selectedCategoryId={limitCategoryId}
+              />
+            ) : null}
             <div className="grid grid-cols-[5.5rem_1fr] gap-2">
               <label className="block space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
