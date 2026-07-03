@@ -102,9 +102,74 @@ const categoryVocabulary: CategoryVocabularyEntry[] = [
     aliases: ["misc", "diverse", "other", "unknown", "unclear"],
   },
   {
+    slug: "housing",
+    confidence: "high",
+    aliases: ["proprietar", "proprietaire", "propietario", "maison", "logement", "bail", "alquiler", "propietario", "apartamento", "hipoteca", "mantenimiento", "reparacion", "vivienda", "contrato", "loyer", "appartement", "hypotheque", "entretien", "reparation", "locuinta"],
+  },
+  {
+    slug: "groceries",
+    confidence: "high",
+    aliases: ["comestibles", "supermarche", "supermercado", "marche", "mercado", "nourriture", "comida", "courses", "oeufs", "huevos", "fromage", "queso", "viande", "legumes", "verduras", "frutas", "moutarde", "mostaza", "riz", "arroz", "pates", "huile", "aceite", "sucre", "azucar"],
+  },
+  {
+    slug: "dining",
+    confidence: "high",
+    aliases: ["restaurante", "cafeteria", "dejeuner", "diner", "petit dejeuner", "almuerzo", "desayuno", "hamburguesa", "livraison", "entrega", "domicilio", "repas", "plat", "plato", "mancare livrata"],
+  },
+  {
+    slug: "transport",
+    confidence: "high",
+    aliases: ["transporte", "autobus", "tranvia", "essence", "combustible", "gasolina", "gasolinera", "station service", "estacionamiento", "aparcamiento", "peage", "peaje", "billet", "billete"],
+  },
+  {
+    slug: "utilities",
+    confidence: "high",
+    aliases: ["electricite", "electricidad", "courant", "luz", "facture gaz", "factura gas", "facture eau", "factura agua", "telephone", "telefono", "movil", "services publics", "servicios", "facture", "heating", "incalzire", "chauffage", "calefaccion"],
+  },
+  {
+    slug: "health",
+    confidence: "high",
+    aliases: ["pharmacie", "farmacia", "medicament", "medicamento", "medecin", "medico", "docteur", "dentiste", "dentista", "hopital", "clinique", "therapie", "terapia", "lunettes", "gafas", "lentes", "vitamines", "vitaminas", "ordonnance", "receta", "medical", "traitement", "tratamiento"],
+  },
+  {
+    slug: "shopping",
+    confidence: "high",
+    aliases: ["achats", "compras", "vetements", "ropa", "chaussures", "zapatos", "centre commercial", "centro comercial", "cosmetiques", "cosmeticos", "tabac", "tabaco", "cigarrillos", "accessoires", "accesorios", "electronique", "electronica", "meubles", "muebles", "appliance", "electrocasnice", "tienda"],
+  },
+  {
+    slug: "entertainment",
+    confidence: "high",
+    aliases: ["pelicula", "cine", "joc", "jeu", "jeux", "juego", "juegos", "evenement", "evento", "fete", "fiesta", "abonnement", "suscripcion", "distractie", "divertissement", "entretenimiento"],
+  },
+  {
+    slug: "travel",
+    confidence: "high",
+    aliases: ["vol", "vuelo", "aeropuerto", "concediu", "vacances", "vacaciones", "calatorie", "voyage", "viaje", "bagaj", "bagage", "equipaje", "pasaport", "passeport", "pasaporte", "visa"],
+  },
+  {
+    slug: "education",
+    confidence: "high",
+    aliases: ["ecole", "escuela", "cours", "curso", "livre", "libro", "carti", "livres", "libros", "universitate", "universite", "universidad", "taxa studii", "frais scolarite", "matricula", "formation", "formacion", "lesson", "lectie", "lecon", "leccion", "study", "studiu", "etude", "estudio", "class", "clasa", "classe"],
+  },
+  {
+    slug: "gifts",
+    confidence: "medium",
+    aliases: ["dar", "cadeau", "regalo", "presente", "don", "donacion", "anniversaire", "cumpleanos", "fleurs", "flores", "charity", "caritate", "charite", "caridad"],
+  },
+  {
+    slug: "transfers",
+    confidence: "low",
+    aliases: ["transfer bancar", "virement", "transfert", "transferencia", "envoye", "enviado", "recu", "recibido", "recharge", "recarga", "deposit", "depunere", "depot", "deposito", "retras", "retragere", "retrait", "retiro", "bancomat", "distributeur", "cajero", "especes", "efectivo"],
+  },
+  {
     slug: "salary",
     confidence: "high",
     aliases: ["salary", "salariu", "salaire", "salario", "wage", "wages", "paycheck", "payroll", "venit", "income", "paid salary", "bonus", "prima"],
+  },
+  {
+    slug: "salary",
+    confidence: "high",
+    aliases: ["leafa", "plata salariu", "paie", "remuneration", "revenu", "prime", "sueldo", "nomina", "ingreso", "paga"],
   },
   {
     slug: "self_employment",
@@ -112,9 +177,19 @@ const categoryVocabulary: CategoryVocabularyEntry[] = [
     aliases: ["freelance", "freelancer", "client", "invoice", "factura emisa", "contract", "consulting", "consultanta", "project payment", "gig"],
   },
   {
+    slug: "self_employment",
+    confidence: "high",
+    aliases: ["independant", "autonomo", "cliente", "facture", "factura", "conseil", "consultoria", "contrat", "contrato", "proiect", "plata proiect", "projet", "proyecto", "mission", "encargo"],
+  },
+  {
     slug: "refunds",
     confidence: "high",
     aliases: ["refund", "rambursare", "remboursement", "return", "returned", "chargeback", "cashback", "reimbursement", "compensatie", "restituit"],
+  },
+  {
+    slug: "refunds",
+    confidence: "high",
+    aliases: ["reembolso", "retur", "retour", "devolucion", "compensare", "compensation", "compensacion", "despagubire", "indemnisation", "restitue", "devuelto"],
   },
   {
     slug: "sales",
@@ -122,14 +197,34 @@ const categoryVocabulary: CategoryVocabularyEntry[] = [
     aliases: ["sold", "sale", "vanzare", "vandut", "marketplace", "olx", "ebay", "facebook marketplace"],
   },
   {
+    slug: "sales",
+    confidence: "high",
+    aliases: ["vendu", "vente", "vendido", "venta", "leboncoin", "wallapop"],
+  },
+  {
     slug: "rental_income",
     confidence: "high",
     aliases: ["rent received", "chirie primita", "tenant", "chirias", "rental income", "property income"],
   },
   {
+    slug: "rental_income",
+    confidence: "high",
+    aliases: ["venit chirie", "loyer recu", "revenu locatif", "locataire", "alquiler recibido", "renta recibida", "ingreso alquiler", "inquilino"],
+  },
+  {
     slug: "side_income",
     confidence: "high",
     aliases: ["side income", "side job", "tips", "bacsis", "extra work", "overtime", "part time", "part-time"],
+  },
+  {
+    slug: "side_income",
+    confidence: "high",
+    aliases: ["venit extra", "job secundar", "ore suplimentare", "munca extra", "revenu complementaire", "petit boulot", "pourboire", "heures supplementaires", "temps partiel", "ingreso extra", "trabajo extra", "propina", "horas extra", "medio tiempo", "trabajo secundario"],
+  },
+  {
+    slug: "other_income",
+    confidence: "low",
+    aliases: ["other income", "unknown income", "misc income", "venit divers", "venit necunoscut", "alt venit", "autre revenu", "revenu inconnu", "revenu divers", "otro ingreso", "ingreso desconocido", "ingreso varios"],
   },
 ];
 
@@ -185,6 +280,18 @@ function findPatternHint(normalizedPhrase: string): CategoryVocabularyHint | nul
     return { slug: "investment_income", matchedAlias: "crypto pair", confidence: "high" };
   }
 
+  for (const salesPhrase of ["sold", "vandut", "vendu", "vendido"]) {
+    if (phraseIncludesAlias(normalizedPhrase, salesPhrase)) {
+      return { slug: "sales", matchedAlias: salesPhrase, confidence: "high" };
+    }
+  }
+
+  for (const dividendPhrase of ["dividend", "dividends", "dividende", "dividendes", "dividendo", "dividendos"]) {
+    if (phraseIncludesAlias(normalizedPhrase, dividendPhrase)) {
+      return { slug: "investment_income", matchedAlias: dividendPhrase, confidence: "high" };
+    }
+  }
+
   if (phraseIncludesAlias(normalizedPhrase, "factura") && utilityProviders.some((provider) => phraseIncludesAlias(normalizedPhrase, provider))) {
     return { slug: "utilities", matchedAlias: "provider bill", confidence: "high" };
   }
@@ -193,8 +300,10 @@ function findPatternHint(normalizedPhrase: string): CategoryVocabularyHint | nul
     return { slug: "groceries", matchedAlias: "food shopping", confidence: "high" };
   }
 
-  if (phraseIncludesAlias(normalizedPhrase, "gas bill") || phraseIncludesAlias(normalizedPhrase, "factura apa")) {
-    return { slug: "utilities", matchedAlias: phraseIncludesAlias(normalizedPhrase, "gas bill") ? "gas bill" : "factura apa", confidence: "high" };
+  for (const billPhrase of ["gas bill", "factura gaz", "factura gaze", "facture gaz", "factura gas", "water bill", "factura apa", "facture eau", "factura agua"]) {
+    if (phraseIncludesAlias(normalizedPhrase, billPhrase)) {
+      return { slug: "utilities", matchedAlias: billPhrase, confidence: "high" };
+    }
   }
 
   if (phraseIncludesAlias(normalizedPhrase, "bolt food")) {

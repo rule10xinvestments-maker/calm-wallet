@@ -26,6 +26,21 @@ const categories: ControlledCategory[] = [
 ];
 
 describe("controlled category resolver", () => {
+  function expectCategory(
+    phrase: string,
+    transactionType: "expense" | "income",
+    categoryId: string,
+    extra: Record<string, unknown> = {},
+  ) {
+    expect(resolveControlledCategory({ phrase, transactionType, categories })).toEqual(
+      expect.objectContaining({
+        confidence: "clear",
+        categoryId,
+        ...extra,
+      }),
+    );
+  }
+
   it("maps rent and household bills to seeded controlled categories", () => {
     for (const phrase of ["rent", "chirie", "apartment", "apartament", "mortgage", "ipoteca", "ipotec\u0103"]) {
       expect(resolveControlledCategory({ phrase, transactionType: "expense", categories })).toEqual(
@@ -362,6 +377,107 @@ describe("controlled category resolver", () => {
         expect.objectContaining({ confidence: "clear", categoryId }),
       );
     }
+  });
+
+  it("maps multilingual grocery vocabulary and grocery merchants", () => {
+    for (const phrase of ["mustard 5", "mustar 5", "moutarde 5", "mostaza 5", "paine 10", "pain 4", "pan 4", "Carrefour 150"]) {
+      expectCategory(phrase, "expense", "cat-groceries");
+    }
+  });
+
+  it("maps multilingual dining vocabulary and keeps Bolt Food stronger than Bolt", () => {
+    for (const phrase of ["coffee 12", "cafea 12", "café 5", "cafe 5", "restaurante 40", "Tazz 45", "Bolt Food 60"]) {
+      expectCategory(phrase, "expense", "cat-dining");
+    }
+  });
+
+  it("maps multilingual transport vocabulary", () => {
+    for (const phrase of ["benzina 200", "essence 50", "gasolina 50", "parking 10", "parcare 10", "peaje 7"]) {
+      expectCategory(phrase, "expense", "cat-transport");
+    }
+  });
+
+  it("maps multilingual utilities vocabulary and bill context", () => {
+    for (const phrase of ["Digi internet 80", "factura enel 120", "factura apa 70", "facture eau 30", "factura agua 30", "gas bill 100"]) {
+      expectCategory(phrase, "expense", "cat-utilities", { reviewRecommendation: "reviewed" });
+    }
+  });
+
+  it("maps multilingual health and shopping vocabulary", () => {
+    for (const phrase of ["farmacie 35", "pharmacie 35", "farmacia 35", "doctor 200", "dentiste 100", "dentista 100"]) {
+      expectCategory(phrase, "expense", "cat-health");
+    }
+
+    for (const phrase of ["tigari 30", "tobacco 25", "tabac 25", "tabaco 25", "emag 300"]) {
+      expectCategory(phrase, "expense", "cat-shopping");
+    }
+  });
+
+  it("maps multilingual housing, entertainment, travel, and education vocabulary", () => {
+    for (const phrase of ["chirie 1200", "loyer 1200", "alquiler 1200", "renta 1200", "intretinere 300"]) {
+      expectCategory(phrase, "expense", "cat-housing");
+    }
+
+    for (const phrase of ["netflix 10", "jocuri 20", "cinema 30", "pelicula 12"]) {
+      expectCategory(phrase, "expense", "cat-entertainment");
+    }
+
+    for (const phrase of ["hotel 300", "aeroport 50", "aéroport 50", "aeropuerto 50", "vacanta 500", "vacances 500", "vacaciones 500"]) {
+      expectCategory(phrase, "expense", "cat-travel");
+    }
+
+    for (const phrase of ["course 50", "curs 50", "cours 50", "curso 50", "book 20", "carte 20", "livre 20", "libro 20"]) {
+      expectCategory(phrase, "expense", "cat-education");
+    }
+  });
+
+  it("maps multilingual income category vocabulary", () => {
+    for (const phrase of ["salary 3000", "salariu 3000", "salaire 3000", "salario 3000"]) {
+      expectCategory(phrase, "income", "cat-salary");
+    }
+
+    for (const phrase of ["refund 50", "rambursare 50", "remboursement 50", "reembolso 50"]) {
+      expectCategory(phrase, "income", "cat-refunds");
+    }
+
+    for (const phrase of ["sold phone 500", "vandut telefon 500", "vendu téléphone 500", "vendido telefono 500"]) {
+      expectCategory(phrase, "income", "cat-sales");
+    }
+
+    for (const phrase of ["rent received 1200", "chirie primita 1200", "loyer recu 1200", "alquiler recibido 1200"]) {
+      expectCategory(phrase, "income", "cat-rental-income");
+    }
+  });
+
+  it("keeps investment patterns and ambiguous words confidence-aware", () => {
+    for (const phrase of ["BTCUSDT 100", "ETH/USDT 200", "SOL-USDC 150"]) {
+      expectCategory(phrase, "expense", "cat-investments", { reviewRecommendation: "reviewed" });
+    }
+
+    for (const phrase of ["dividend 20", "dividende 20", "dividendo 20"]) {
+      expectCategory(phrase, "income", "cat-investments", { reviewRecommendation: "reviewed" });
+    }
+
+    expectCategory("USDT 100", "expense", "cat-investments", {
+      hintConfidence: "medium",
+      reviewRecommendation: "needs_attention",
+    });
+    expectCategory("water 10", "expense", "cat-groceries", {
+      hintConfidence: "medium",
+      reviewRecommendation: "needs_attention",
+    });
+    expectCategory("transfer 100", "expense", "cat-transfers", {
+      hintConfidence: "low",
+      reviewRecommendation: "needs_attention",
+    });
+    expectCategory("cash 100", "expense", "cat-transfers", {
+      hintConfidence: "low",
+      reviewRecommendation: "needs_attention",
+    });
+
+    const gas = resolveControlledCategory({ phrase: "gas 100", transactionType: "expense", categories });
+    expect(gas).toEqual(expect.objectContaining({ hintConfidence: "medium", reviewRecommendation: "needs_attention" }));
+    expect(gas).not.toEqual(expect.objectContaining({ hintConfidence: "high" }));
   });
 
   it("falls back to unknown when the phrase is weak, unsupported, or direction-incompatible", () => {
