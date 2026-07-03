@@ -464,7 +464,10 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: /Manage limits/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByText("Set a limit")).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Category: Housing" })).toHaveAttribute("aria-expanded", "false");
+    const closedCategoryButton = screen.getByRole("button", { name: "Category: Housing" });
+    expect(closedCategoryButton).toHaveAttribute("aria-expanded", "false");
+    expect(closedCategoryButton).toHaveTextContent("");
+    expect(closedCategoryButton.querySelector(".lucide-house")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toHaveValue("RON");
     expect(screen.getByRole("button", { name: "weekly" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("Repeat every week")).toBeChecked();
@@ -556,7 +559,10 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: /Create a limit/ }));
 
     expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Category: Housing" }));
+    const closedCategoryButton = screen.getByRole("button", { name: "Category: Housing" });
+    expect(closedCategoryButton).toHaveTextContent("");
+    expect(closedCategoryButton.querySelector(".lucide-house")).toBeInTheDocument();
+    fireEvent.click(closedCategoryButton);
 
     const picker = screen.getByLabelText("Category picker");
     expect(within(picker).getByRole("button", { name: "Housing" })).toHaveAttribute("aria-pressed", "true");
@@ -570,7 +576,10 @@ describe("assistant composer", () => {
     fireEvent.click(within(picker).getByRole("button", { name: "Groceries" }));
 
     expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Category: Groceries" })).toHaveAttribute("aria-expanded", "false");
+    const groceriesCategoryButton = screen.getByRole("button", { name: "Category: Groceries" });
+    expect(groceriesCategoryButton).toHaveAttribute("aria-expanded", "false");
+    expect(groceriesCategoryButton).toHaveTextContent("");
+    expect(groceriesCategoryButton.querySelector(".lucide-shopping-basket")).toBeInTheDocument();
   });
 
   it("keeps the Limits create form to two primary rows and opens the category grid below row two", () => {

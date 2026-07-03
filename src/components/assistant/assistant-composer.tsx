@@ -1230,14 +1230,13 @@ export function AssistantComposer({
                   onClick={() => setIsLimitCategoryPickerOpen((isOpen) => !isOpen)}
                   type="button"
                 >
-                  <span className="flex min-w-0 items-center gap-2">
+                  <span className="flex min-w-0 items-center">
                     <SelectedLimitCategoryIcon
                       aria-hidden="true"
                       className="size-4 shrink-0"
                       strokeWidth={2.1}
                       style={{ color: selectedLimitCategoryVisuals.primary }}
                     />
-                    <span className="truncate">{selectedLimitCategoryLabel}</span>
                   </span>
                   <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isLimitCategoryPickerOpen ? "rotate-180" : ""}`} />
                 </button>
