@@ -7,8 +7,10 @@ import {
   getMonthStatusClass,
   InsightsOverview,
 } from "@/components/screens/insights-overview";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
+import type { SupportedLocale } from "@/lib/i18n";
 
 function dispatchPointerEvent(
   element: Element,
@@ -332,14 +334,24 @@ function withClientViews(data: InsightsData, views: InsightsData[]) {
 
 const noopBudgetAction = async () => initialBudgetActionState;
 
-function renderInsights(data: InsightsData, options: { loadError?: boolean } = {}) {
-  return render(
+function renderInsights(data: InsightsData, options: { loadError?: boolean; locale?: SupportedLocale } = {}) {
+  const view = (
     <InsightsOverview
       data={data}
       deleteBudgetAction={noopBudgetAction}
       loadError={options.loadError}
       upsertBudgetAction={noopBudgetAction}
-    />,
+    />
+  );
+
+  return render(
+    options.locale ? (
+      <LocaleProvider savedLocale={options.locale}>
+        {view}
+      </LocaleProvider>
+    ) : (
+      view
+    ),
   );
 }
 
@@ -406,6 +418,20 @@ describe("insights overview", () => {
     expect(within(snapshot).getByText("3 tracked transactions")).toBeInTheDocument();
     expect(within(snapshot).queryByText("Contains converted currency")).not.toBeInTheDocument();
     expect(screen.queryByText(/Available balance/i)).not.toBeInTheDocument();
+  });
+
+  it("renders migrated Insights copy from the selected locale without translating transaction titles", () => {
+    renderInsights(makeInsightsData(), { locale: "ro" });
+
+    expect(screen.getByText("Claritate lunară")).toBeInTheDocument();
+    expect(screen.getByText("Doar bani urmăriți. Nu este un extras bancar.")).toBeInTheDocument();
+    expect(screen.getByText("Instantaneu lunar")).toBeInTheDocument();
+    expect(screen.getByText("Vizualizare urmărită")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bare" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cheltuieli" })).toBeInTheDocument();
+    expect(screen.getByText("Cele mai mari cheltuieli luna aceasta")).toBeInTheDocument();
+    expect(screen.getByText("Limite pe categorii")).toBeInTheDocument();
+    expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
   it("shows converted currency disclosure collapsed by default and expands grouped details", () => {

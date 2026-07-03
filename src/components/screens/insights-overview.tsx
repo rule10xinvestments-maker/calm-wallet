@@ -14,8 +14,10 @@ import {
 } from "lucide-react";
 import { ScreenHeader } from "@/components/shared/screen-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocale } from "@/components/i18n/locale-provider";
 import type { BudgetActionState } from "@/lib/actions/budgets-state";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
+import { t } from "@/lib/i18n";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -154,13 +156,15 @@ function InsightsQueryButton({
 }
 
 function CurrencySwitcher({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
+  const { locale } = useLocale();
+
   if (data.availableDisplayCurrencies.length <= 1) {
     return null;
   }
 
   return (
-    <div aria-label="Display currency" className="flex flex-wrap items-center gap-1 text-xs">
-      <span className="sr-only">View totals as:</span>
+    <div aria-label={t("insights.controls.displayCurrency", locale)} className="flex flex-wrap items-center gap-1 text-xs">
+      <span className="sr-only">{t("insights.controls.viewTotalsAs", locale)}</span>
       {data.availableDisplayCurrencies.map((currency) => {
         const active = currency === data.displayCurrency;
 
@@ -260,23 +264,25 @@ function MonthPickerSheet({
   onClose: () => void;
   onSelect: (updates: InsightsSelectionUpdate) => void;
 }) {
+  const { locale } = useLocale();
+
   return (
     <div
       aria-modal="true"
       className="fixed inset-0 z-[80] flex items-end bg-slate-950/30 px-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-4 sm:items-center sm:justify-center sm:p-4"
       role="dialog"
     >
-      <button aria-label="Close month picker" className="absolute inset-0 h-full w-full cursor-default" onClick={onClose} type="button" />
+      <button aria-label={t("insights.monthPicker.close", locale)} className="absolute inset-0 h-full w-full cursor-default" onClick={onClose} type="button" />
       <div className="relative flex max-h-[80dvh] w-full max-w-[26rem] flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="shrink-0 flex items-start justify-between gap-3 border-b border-slate-100 p-4">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Choose month</p>
+            <p className="text-sm font-semibold text-slate-900">{t("insights.monthPicker.chooseMonth", locale)}</p>
             <p className="text-xs leading-5 text-slate-500">
-              Tracked activity markers use {data.displayCurrency} month totals.
+              {t("insights.monthPicker.markersUse", locale).replace("{currency}", data.displayCurrency)}
             </p>
           </div>
           <button
-            aria-label="Close month picker"
+            aria-label={t("insights.monthPicker.close", locale)}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             onClick={onClose}
             type="button"
@@ -311,7 +317,7 @@ function MonthPickerSheet({
                         <span className={`h-2 w-2 rounded-full ${getMonthStatusDotClass(month)}`} />
                       </span>
                       <span className="mt-1 block text-[11px] font-normal opacity-75">
-                        {month.hasActivity ? "Tracked" : "No activity"}
+                        {month.hasActivity ? t("insights.monthPicker.tracked", locale) : t("insights.monthPicker.noActivity", locale)}
                       </span>
                     </InsightsQueryButton>
                   );
@@ -327,6 +333,7 @@ function MonthPickerSheet({
 
 function InsightsControlBar({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const { locale } = useLocale();
   const canGoNext = data.selectedMonth < data.currentMonth;
 
   return (
@@ -343,7 +350,7 @@ function InsightsControlBar({ data, onSelect }: { data: InsightsData; onSelect: 
           </InsightsQueryButton>
           <button
             aria-expanded={isPickerOpen}
-            aria-label={`Choose month, current ${data.monthLabel}`}
+            aria-label={`${t("insights.monthPicker.chooseMonth", locale)}, ${t("insights.monthPicker.current", locale)} ${data.monthLabel}`}
             className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-center hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             onClick={() => setIsPickerOpen(true)}
             type="button"
@@ -369,7 +376,7 @@ function InsightsControlBar({ data, onSelect }: { data: InsightsData; onSelect: 
           <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700">{data.displayCurrency}</span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <div aria-label="Timeframe" className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          <div aria-label={t("insights.controls.timeframe", locale)} className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
             {data.timeframePresets.map((timeframe) => {
               const active = timeframe === data.selectedTimeframe;
 
@@ -397,10 +404,11 @@ function InsightsControlBar({ data, onSelect }: { data: InsightsData; onSelect: 
 }
 
 function ChartModeControls({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
+  const { locale } = useLocale();
   const modes: Array<{ mode: ChartMode; label: string }> = [
-    { mode: "mix", label: "Mix" },
-    { mode: "trend", label: "Trend" },
-    { mode: "bars", label: "Bars" },
+    { mode: "mix", label: t("insights.mix.title", locale) },
+    { mode: "trend", label: t("insights.trend.title", locale) },
+    { mode: "bars", label: t("insights.bars.title", locale) },
   ];
 
   return (
@@ -438,11 +446,12 @@ function SpendingSegmentControls({
   buttonLabelPrefix?: string;
 }) {
   const isVertical = orientation === "vertical";
+  const { locale } = useLocale();
 
   return (
     <div className={`inline-flex w-fit rounded-lg border border-slate-200 bg-slate-50 p-1 ${isVertical ? "flex-col" : ""}`}>
       {(["expenses", "income"] as const).map((nextSegment) => {
-        const label = nextSegment === "expenses" ? "Expenses" : "Income";
+        const label = nextSegment === "expenses" ? t("insights.expenses", locale) : t("insights.income", locale);
 
         return (
           <button
@@ -570,6 +579,7 @@ function TimeframeTrendChart({
   selectedDay: TrendPointSelection;
   onSelectedDayChange: (day: TrendPointSelection) => void;
 }) {
+  const { locale } = useLocale();
   const days = data.selectedMonthTrendDays;
   const hasIncome = days.some((day) => day.cumulativeIncomeMinor > 0);
   const hasSpending = days.some((day) => day.cumulativeExpenseMinor > 0);
@@ -582,7 +592,7 @@ function TimeframeTrendChart({
   if (!hasIncome && !hasSpending) {
     return (
       <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
-        No transactions tracked for this month yet.
+        {t("insights.trend.noTransactionsThisMonth", locale)}
       </p>
     );
   }
@@ -603,7 +613,11 @@ function TimeframeTrendChart({
   const selectedX = effectiveSelectedDayIndex === null ? 50 : xForIndex(effectiveSelectedDayIndex);
   const tooltipLeft = Math.min(74, Math.max(6, selectedX));
   const tooltipTranslate = selectedX > 74 ? "-100%" : selectedX < 26 ? "0" : "-50%";
-  const note = !hasIncome ? "No income tracked this month yet." : !hasSpending ? "No spending tracked this month yet." : null;
+  const note = !hasIncome
+    ? t("insights.trend.noIncomeThisMonth", locale)
+    : !hasSpending
+      ? t("insights.trend.noSpendingThisMonth", locale)
+      : null;
   const netTone = selectedDay?.netMinor && selectedDay.netMinor < 0 ? "text-rose-600" : "text-emerald-700";
 
   const updateSelectedDayFromClientX = (clientX: number) => {
@@ -624,10 +638,10 @@ function TimeframeTrendChart({
     <div aria-label="Selected month income and spending trend" className="relative space-y-3" ref={chartRootRef} role="img">
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
         <span className="font-semibold text-emerald-700">
-          Income {lastTrendDay ? `${getApproxPrefix(data, lastTrendDay.cumulativeIncomeMinor)}${lastTrendDay.cumulativeIncomeDisplay}` : ""}
+          {t("insights.income", locale)} {lastTrendDay ? `${getApproxPrefix(data, lastTrendDay.cumulativeIncomeMinor)}${lastTrendDay.cumulativeIncomeDisplay}` : ""}
         </span>
         <span className="font-semibold text-rose-700">
-          Spending {lastTrendDay ? `${getApproxPrefix(data, lastTrendDay.cumulativeExpenseMinor)}${lastTrendDay.cumulativeExpenseDisplay}` : ""}
+          {t("insights.spending", locale)} {lastTrendDay ? `${getApproxPrefix(data, lastTrendDay.cumulativeExpenseMinor)}${lastTrendDay.cumulativeExpenseDisplay}` : ""}
         </span>
       </div>
       {note ? <p className="text-xs leading-5 text-slate-500">{note}</p> : null}
@@ -637,9 +651,9 @@ function TimeframeTrendChart({
           style={{ left: `${tooltipLeft}%`, transform: `translateX(${tooltipTranslate})` }}
         >
           <p className="font-semibold text-slate-900">{formatSpendingDayLabel(selectedDay)}</p>
-          <p className="text-emerald-700">Income: {getApproxPrefix(data, selectedDay.cumulativeIncomeMinor)}{selectedDay.cumulativeIncomeDisplay}</p>
-          <p className="text-rose-700">Spending: {getApproxPrefix(data, selectedDay.cumulativeExpenseMinor)}{selectedDay.cumulativeExpenseDisplay}</p>
-          <p className={netTone}>Net: {formatTrendNetDisplay(data, selectedDay.netMinor)}</p>
+          <p className="text-emerald-700">{t("insights.income", locale)}: {getApproxPrefix(data, selectedDay.cumulativeIncomeMinor)}{selectedDay.cumulativeIncomeDisplay}</p>
+          <p className="text-rose-700">{t("insights.spending", locale)}: {getApproxPrefix(data, selectedDay.cumulativeExpenseMinor)}{selectedDay.cumulativeExpenseDisplay}</p>
+          <p className={netTone}>{t("insights.net", locale)}: {formatTrendNetDisplay(data, selectedDay.netMinor)}</p>
         </div>
       ) : null}
       <div className="relative">
@@ -849,36 +863,38 @@ function getLimitToneClasses(status: "on-track" | "near" | "over") {
   return "border-sky-200 bg-sky-50 text-sky-700";
 }
 
-function getLimitStatusLabel(status: "on-track" | "near" | "over") {
+function getLimitStatusLabel(status: "on-track" | "near" | "over", locale: string) {
   if (status === "over") {
-    return "Over limit";
+    return t("insights.bars.overLimit", locale);
   }
 
   if (status === "near") {
-    return "Near limit";
+    return t("insights.bars.nearLimit", locale);
   }
 
-  return "On track";
+  return t("insights.bars.onTrack", locale);
 }
 
-function getCategoryBubbleActionLabel(label: string, isSelected: boolean) {
-  return `${isSelected ? "Clear" : "Select"} ${label} focus`;
+function getCategoryBubbleActionLabel(label: string, isSelected: boolean, locale: string) {
+  return isSelected
+    ? t("insights.bars.clearCategoryFocusAria", locale).replace("{category}", label)
+    : t("insights.bars.selectCategoryFocusAria", locale).replace("{category}", label);
 }
 
-function getRecurringFrequencyLabel(frequency: BarsRecurringItem["frequency"]) {
+function getRecurringFrequencyLabel(frequency: BarsRecurringItem["frequency"], locale: string) {
   if (frequency === "weekly") {
-    return "Weekly";
+    return t("assistant.limits.weekly", locale);
   }
 
   if (frequency === "yearly") {
-    return "Yearly";
+    return t("activity.recurring.yearly", locale);
   }
 
   if (frequency === "monthly") {
-    return "Monthly";
+    return t("assistant.limits.monthly", locale);
   }
 
-  return "Repeats";
+  return t("insights.bars.repeats", locale);
 }
 
 function BarsCategoryBubble({
@@ -894,6 +910,7 @@ function BarsCategoryBubble({
   onSelect: () => void;
   setRef: (node: HTMLButtonElement | null) => void;
 }) {
+  const { locale } = useLocale();
   const visuals = getCategoryVisualsByName(item.label);
   const CategoryIcon = visuals.icon;
   const limit = item.signal?.limit;
@@ -901,7 +918,7 @@ function BarsCategoryBubble({
 
   return (
     <button
-      aria-label={getCategoryBubbleActionLabel(item.label, isSelected)}
+      aria-label={getCategoryBubbleActionLabel(item.label, isSelected, locale)}
       aria-pressed={isSelected}
       className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
         isSelected ? "border-2 shadow-sm ring-2 ring-sky-500 ring-offset-2 scale-105" : "border"
@@ -940,9 +957,10 @@ function BarsCategoryFocusPanel({
   onInspect,
 }: {
   category: BarsCategoryItem;
-  bucketLabel: "Day" | "Week" | "Month";
+  bucketLabel: string;
   onInspect: (kind: "limit" | "recurring") => void;
 }) {
+  const { locale } = useLocale();
   const limit = category.signal?.limit;
   const recurring = category.signal?.recurring?.activeCount ? category.signal.recurring : undefined;
   const visuals = getCategoryVisualsByName(category.label);
@@ -956,9 +974,11 @@ function BarsCategoryFocusPanel({
             {category.label}
           </p>
           <p className="text-xs leading-5 text-slate-500">
-            {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? bucketNoun : `${bucketNoun}s`} this period
+            {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? bucketNoun : `${bucketNoun}s`} {t("insights.thisPeriod", locale)}
           </p>
-          <p className="text-[11px] leading-4 text-slate-400">{bucketLabel} amounts show {category.label} only</p>
+          <p className="text-[11px] leading-4 text-slate-400">
+            {t("insights.bars.amountsShowCategoryOnly", locale).replace("{bucket}", bucketLabel).replace("{category}", category.label)}
+          </p>
         </div>
       </div>
       {limit || recurring ? (
@@ -967,10 +987,10 @@ function BarsCategoryFocusPanel({
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
               <CircleGauge aria-hidden="true" className="h-4 w-4 text-sky-700" />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-800">Limit</p>
+                <p className="text-xs font-semibold text-slate-800">{t("insights.bars.limit", locale)}</p>
                 <p className="truncate text-xs text-slate-500">
-                  {limit.spentDisplay} of {limit.amountDisplay} used ·{" "}
-                  {limit.remainingMinor < 0 ? `${limit.remainingDisplay} over` : `${limit.remainingDisplay} left`}
+                  {limit.spentDisplay} {t("insights.limits.of", locale)} {limit.amountDisplay} {t("insights.bars.used", locale).toLowerCase()} ·{" "}
+                  {limit.remainingMinor < 0 ? `${limit.remainingDisplay} ${t("insights.bars.over", locale)}` : `${limit.remainingDisplay} ${t("activity.limit.left", locale)}`}
                 </p>
               </div>
               <button
@@ -987,9 +1007,12 @@ function BarsCategoryFocusPanel({
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
               <Repeat2 aria-hidden="true" className="h-4 w-4 text-slate-600" />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-800">Recurring</p>
+                <p className="text-xs font-semibold text-slate-800">{t("insights.bars.recurring", locale)}</p>
                 <p className="truncate text-xs text-slate-500">
-                  {recurring.activeCount} active recurring {recurring.activeCount === 1 ? "item" : "items"} · monthly total ≈ {recurring.monthlyTotalDisplay}
+                  {t("insights.bars.activeRecurringCount", locale)
+                    .replace("{count}", String(recurring.activeCount))
+                    .replace("{item}", t(recurring.activeCount === 1 ? "insights.bars.item" : "insights.bars.items", locale))} ·{" "}
+                  {t("insights.bars.monthlyTotal", locale)} ≈ {recurring.monthlyTotalDisplay}
                 </p>
               </div>
               <button
@@ -1009,6 +1032,8 @@ function BarsCategoryFocusPanel({
 }
 
 function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet; onClose: () => void }) {
+  const { locale } = useLocale();
+
   if (!detail) {
     return null;
   }
@@ -1040,10 +1065,10 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
         <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-slate-900">{detail.category.label}</p>
-            <p className="text-xs text-slate-500">{detail.kind === "limit" ? "Limit details" : "Recurring details"}</p>
+            <p className="text-xs text-slate-500">{detail.kind === "limit" ? t("insights.bars.limitDetails", locale) : t("insights.bars.recurringDetails", locale)}</p>
           </div>
           <button
-            aria-label="Close details"
+            aria-label={t("insights.bars.closeDetails", locale)}
             className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             onClick={onClose}
             type="button"
@@ -1054,12 +1079,12 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
         <div className="min-h-0 overflow-y-auto pr-1">
           {detail.kind === "limit" && limit ? (
           <div className="space-y-2 text-sm">
-            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Period</span><span className="font-medium text-slate-800">{limit.period === "weekly" ? "Weekly" : "Monthly"}</span></div>
-            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Limit amount</span><span className="font-medium text-slate-800">{limit.amountDisplay}</span></div>
-            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Used</span><span className="font-medium text-slate-800">{limit.spentDisplay}</span></div>
-            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Remaining</span><span className="font-medium text-slate-800">{limit.remainingMinor < 0 ? `${limit.remainingDisplay} over` : `${limit.remainingDisplay} left`}</span></div>
-            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Percent used</span><span className="font-medium text-slate-800">{limit.percentUsed}%</span></div>
-            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">Status</span><span className="font-medium text-slate-800">{getLimitStatusLabel(limit.status)}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">{t("assistant.limits.period", locale)}</span><span className="font-medium text-slate-800">{limit.period === "weekly" ? t("assistant.limits.weekly", locale) : t("assistant.limits.monthly", locale)}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">{t("insights.bars.limitAmount", locale)}</span><span className="font-medium text-slate-800">{limit.amountDisplay}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">{t("insights.bars.used", locale)}</span><span className="font-medium text-slate-800">{limit.spentDisplay}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">{t("insights.bars.remaining", locale)}</span><span className="font-medium text-slate-800">{limit.remainingMinor < 0 ? `${limit.remainingDisplay} ${t("insights.bars.over", locale)}` : `${limit.remainingDisplay} ${t("activity.limit.left", locale)}`}</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">{t("insights.bars.percentUsed", locale)}</span><span className="font-medium text-slate-800">{limit.percentUsed}%</span></div>
+            <div className="grid grid-cols-[1fr_auto] gap-3"><span className="text-slate-500">{t("insights.bars.status", locale)}</span><span className="font-medium text-slate-800">{getLimitStatusLabel(limit.status, locale)}</span></div>
           </div>
         ) : null}
         {detail.kind === "recurring" && recurring ? (
@@ -1069,7 +1094,7 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
                   <p className="text-xs text-slate-500">
-                    {item.tone} · {getRecurringFrequencyLabel(item.frequency)} · {item.nextDateLabel ?? "Date not set"} · {item.status}
+                    {item.tone} · {getRecurringFrequencyLabel(item.frequency, locale)} · {item.nextDateLabel ?? t("insights.bars.dateNotSet", locale)} · {item.status}
                   </p>
                 </div>
                 <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
@@ -1124,6 +1149,7 @@ function TimeframeBarsChart({
   data: InsightsData;
   barsSegment: SpendingMixSegment;
 }) {
+  const { locale } = useLocale();
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const [detailSheet, setDetailSheet] = useState<BarsDetailSheet>(null);
@@ -1131,8 +1157,10 @@ function TimeframeBarsChart({
   const isIncome = barsSegment === "income";
   const max = Math.max(...data.timeframeBars.map((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor)), 1);
   const granularity = data.timeframeBars[0]?.granularity ?? "month";
-  const bucketLabel = granularity === "week" ? "Week" : granularity === "month" ? "Month" : "Day";
-  const bucketLabelPlural = granularity === "week" ? "weeks" : granularity === "month" ? "months" : "days";
+  const bucketLabel =
+    granularity === "week" ? t("insights.bars.week", locale) : granularity === "month" ? t("insights.bars.month", locale) : t("insights.bars.day", locale);
+  const bucketLabelPlural =
+    granularity === "week" ? t("insights.bars.weeks", locale) : granularity === "month" ? t("insights.bars.months", locale) : t("insights.bars.days", locale);
   const categoryItems = isIncome ? data.incomeCategoryBreakdown : data.categoryBreakdown;
   const categorySignals = isIncome
     ? data.categorySignalsByType?.income ?? {}
@@ -1140,7 +1168,7 @@ function TimeframeBarsChart({
   const categoryColorMap = new Map(categoryItems.map((item) => [item.key, getCategoryChartColor(item)]));
   const activeBars = data.timeframeBars.filter((bar) => (isIncome ? bar.incomeAmountMinor : bar.amountMinor) > 0);
   const getSegmentColor = (key: string, label: string) => categoryColorMap.get(key) ?? getCategoryChartColor({ label });
-  const context = isIncome ? "income" : "spending";
+  const context = isIncome ? t("insights.incomeLower", locale) : t("insights.spendingLower", locale);
 
   useEffect(() => {
     setSelectedDayKey(null);
@@ -1192,7 +1220,7 @@ function TimeframeBarsChart({
   const selectedDayCategoryKeys = new Set((selectedDay ? (isIncome ? selectedDay.incomeSegments : selectedDay.segments) : []).map((segment) => segment.key));
 
   const legend = activeCategoryItems.length ? (
-    <div aria-label={`${isIncome ? "Income" : "Expenses"} category bubbles`} className="flex scroll-px-3 gap-2 overflow-x-auto px-1 pb-2 pt-1">
+    <div aria-label={`${isIncome ? t("insights.income", locale) : t("insights.expenses", locale)} ${t("insights.bars.categoryBubbles", locale)}`} className="flex scroll-px-3 gap-2 overflow-x-auto px-1 pb-2 pt-1">
       {activeCategoryItems.map((item) => (
         <BarsCategoryBubble
           isDimmed={Boolean(
@@ -1224,9 +1252,15 @@ function TimeframeBarsChart({
 
       return (
         <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by ${granularity}`} role="img">
-          <p className="text-xs leading-5 text-slate-500">Showing {bucketLabelPlural} with tracked {isIncome ? "income" : "spending"}.</p>
+          <p className="text-xs leading-5 text-slate-500">
+            {t("insights.bars.showingBucketsWithTracked", locale)
+              .replace("{buckets}", bucketLabelPlural)
+              .replace("{context}", context)}
+          </p>
           <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
-            {isIncome ? `No income tracked for this ${emptyPeriodLabel} yet.` : `No spending tracked for this ${emptyPeriodLabel} yet.`}
+            {isIncome
+              ? t("insights.bars.noIncomeForPeriod", locale).replace("{period}", emptyPeriodLabel)
+              : t("insights.bars.noSpendingForPeriod", locale).replace("{period}", emptyPeriodLabel)}
           </p>
         </div>
       );
@@ -1234,7 +1268,11 @@ function TimeframeBarsChart({
 
     return (
       <div className="space-y-3" aria-label={`Tracked ${isIncome ? "income" : "spending"} by ${granularity}`} role="img">
-        <p className="text-xs leading-5 text-slate-500">Showing {bucketLabelPlural} with tracked {isIncome ? "income" : "spending"}.</p>
+        <p className="text-xs leading-5 text-slate-500">
+          {t("insights.bars.showingBucketsWithTracked", locale)
+            .replace("{buckets}", bucketLabelPlural)
+            .replace("{context}", context)}
+        </p>
         {legend}
         {selectedCategory ? (
           <BarsCategoryFocusPanel
@@ -1317,7 +1355,9 @@ function TimeframeBarsChart({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs leading-5 text-slate-500">Showing months with tracked {isIncome ? "income" : "spending"}.</p>
+      <p className="text-xs leading-5 text-slate-500">
+        {t("insights.bars.showingMonthsWithTracked", locale).replace("{context}", context)}
+      </p>
       {legend}
       {selectedCategory ? (
         <BarsCategoryFocusPanel
@@ -1392,8 +1432,9 @@ function BarsDayBreakdownPanel({
   totalDisplay: string;
   totalMinor: number;
 }) {
+  const { locale } = useLocale();
   const label = getBarsBucketRangeLabel(bar);
-  const context = isIncome ? "income" : "spending";
+  const context = isIncome ? t("insights.incomeLower", locale) : t("insights.spendingLower", locale);
   const orderedSegments =
     selectedCategoryKey && segments.some((segment) => segment.key === selectedCategoryKey)
       ? [
@@ -1406,7 +1447,7 @@ function BarsDayBreakdownPanel({
     <div className="rounded-lg border border-slate-100 bg-white px-3 py-2 shadow-sm" aria-label={`${label} ${context} category breakdown`}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="whitespace-nowrap text-xs font-semibold text-slate-800">{label}</p>
-        <p className="min-w-0 truncate text-right text-xs font-medium text-slate-500">Total {totalDisplay}</p>
+        <p className="min-w-0 truncate text-right text-xs font-medium text-slate-500">{t("insights.bars.total", locale)} {totalDisplay}</p>
       </div>
       <div className="space-y-1.5">
         {orderedSegments.map((segment) => {
@@ -1435,6 +1476,7 @@ function BarsDayBreakdownPanel({
 }
 
 function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: SpendingMixSegment }) {
+  const { locale } = useLocale();
   const spendingMixItems = segment === "income" ? data.incomeCategoryBreakdown : data.categoryBreakdown;
   const chart = buildSpendingMixChartItems(spendingMixItems);
   const defaultSelectedKey =
@@ -1468,7 +1510,9 @@ function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: Spe
     <div className="space-y-4">
       <SpendingMixSummaryChart chart={chart} onSelect={setSelectedKey} selectedKey={effectiveSelectedKey} segment={segment} />
       <div className="space-y-3">
-        <p className="text-sm font-semibold text-slate-900">{mixBreakdownExpanded ? "Category breakdown" : "Selected category"}</p>
+        <p className="text-sm font-semibold text-slate-900">
+          {mixBreakdownExpanded ? t("insights.mix.categoryBreakdown", locale) : t("insights.mix.selectedCategory", locale)}
+        </p>
         <SpendingMixRows
           displayCurrency={data.displayCurrency}
           items={spendingMixItems}
@@ -1483,7 +1527,7 @@ function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: Spe
             onClick={() => setMixBreakdownExpanded((current) => !current)}
             type="button"
           >
-            {mixBreakdownExpanded ? "Show selected only" : "Show all categories"}
+            {mixBreakdownExpanded ? t("insights.mix.showSelectedOnly", locale) : t("insights.mix.showAllCategories", locale)}
           </button>
         ) : null}
       </div>
@@ -1504,6 +1548,7 @@ function TimeframeCategoryBreakdown({
   emptyMessage?: string;
   expandable?: boolean;
 }) {
+  const { locale } = useLocale();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const total = items.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
   const isIncome = segment === "income";
@@ -1518,16 +1563,14 @@ function TimeframeCategoryBreakdown({
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
         const chartColor = getCategoryChartColor(item);
         const isExpanded = expandedKey === item.key;
-        const countLabel = `${percent}% of ${isIncome ? "income" : "spending"} - ${item.transactionCount} ${
-          item.transactionCount === 1 ? "transaction" : "transactions"
-        }`;
+        const countLabel = `${percent}% ${t("insights.of", locale)} ${isIncome ? t("insights.incomeLower", locale) : t("insights.spendingLower", locale)} - ${formatTransactionCountLabel(item.transactionCount, locale)}`;
 
         if (expandable) {
           return (
             <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
               <button
                 aria-expanded={isExpanded}
-                aria-label={`${isExpanded ? "Hide" : "Show"} ${item.label} entries`}
+                aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${item.label} ${t("insights.entries", locale)}`}
                 className={`grid w-full gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                   showIcons ? "grid-cols-[2rem_1fr]" : "grid-cols-1"
                 }`}
@@ -1561,7 +1604,7 @@ function TimeframeCategoryBreakdown({
                   className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
                   href="/transactions?view=needs-review"
                 >
-                  Review
+                  {t("common.review", locale)}
                 </Link>
               ) : null}
               {isExpanded ? (
@@ -1597,7 +1640,7 @@ function TimeframeCategoryBreakdown({
                       className="rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
                       href="/transactions?view=needs-review"
                     >
-                      Review
+                      {t("common.review", locale)}
                     </Link>
                   ) : null}
                 </div>
@@ -1612,8 +1655,8 @@ function TimeframeCategoryBreakdown({
   );
 }
 
-function formatTransactionCountLabel(count: number) {
-  return `${count} ${count === 1 ? "transaction" : "transactions"}`;
+function formatTransactionCountLabel(count: number, locale: string) {
+  return `${count} ${t(count === 1 ? "transactions.transaction" : "transactions.transactions", locale).toLowerCase()}`;
 }
 
 function formatTrendNetAmountDisplay(item: TrendCategoryItem) {
@@ -1751,10 +1794,11 @@ function TrendCategoryEntryList({
   entries: TrendCategoryItem["recentEntries"];
   tone: "income" | "expense";
 }) {
+  const { locale } = useLocale();
   const amountClass = tone === "income" ? "text-emerald-700" : "text-rose-700";
 
   if (!entries.length) {
-    return <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">Details could not load.</p>;
+    return <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">{t("insights.detailsCouldNotLoad", locale)}</p>;
   }
 
   return (
@@ -1774,7 +1818,7 @@ function TrendCategoryEntryList({
                 {entry.isRecurring ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">
                     <Repeat2 aria-hidden="true" className="h-3 w-3" />
-                    Recurring
+                    {t("insights.bars.recurring", locale)}
                   </span>
                 ) : null}
               </div>
@@ -1799,6 +1843,7 @@ function TrendCategoryExplorer({
   onClearSelectedDay: () => void;
   selectedDay: TrendPointSelection;
 }) {
+  const { locale } = useLocale();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
 
@@ -1811,7 +1856,7 @@ function TrendCategoryExplorer({
   }, [selectedKey, sortedItems]);
 
   if (!items.length) {
-    return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">No tracked money movement in this period.</p>;
+    return <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">{t("insights.trend.noMoneyMovement", locale)}</p>;
   }
 
   const visibleLimit = 12;
@@ -1859,11 +1904,11 @@ function TrendCategoryExplorer({
             onClick={onClearSelectedDay}
             type="button"
           >
-            Through {selectedDayLabel} <X aria-hidden="true" className="h-3 w-3" />
+            {t("insights.trend.through", locale)} {selectedDayLabel} <X aria-hidden="true" className="h-3 w-3" />
           </button>
         ) : null}
         <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
-          {selectedDayLabel ? `No entries yet by ${selectedDayLabel}.` : "No tracked money movement in this period."}
+          {selectedDayLabel ? t("insights.trend.noEntriesBy", locale).replace("{date}", selectedDayLabel) : t("insights.trend.noMoneyMovement", locale)}
         </p>
       </div>
     );
@@ -1877,7 +1922,7 @@ function TrendCategoryExplorer({
           onClick={onClearSelectedDay}
           type="button"
         >
-          Through {selectedDayLabel} <X aria-hidden="true" className="h-3 w-3" />
+          {t("insights.trend.through", locale)} {selectedDayLabel} <X aria-hidden="true" className="h-3 w-3" />
         </button>
       ) : null}
       <div className="grid justify-center gap-1 [grid-template-columns:repeat(auto-fit,minmax(2.375rem,2.625rem))]">
@@ -1887,7 +1932,7 @@ function TrendCategoryExplorer({
 
           return (
             <button
-              aria-label={`${isSelected ? "Hide" : "Show"} ${item.label} details`}
+              aria-label={`${isSelected ? t("insights.hide", locale) : t("insights.show", locale)} ${item.label} ${t("insights.details", locale)}`}
               aria-pressed={isSelected}
               className={`flex h-10 w-10 items-center justify-center rounded-full p-0.5 transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                 isSelected ? "bg-slate-100 opacity-100 ring-2 ring-slate-300 scale-105" : hasMovement ? "opacity-100 hover:bg-slate-50" : "opacity-35 hover:opacity-65"
@@ -1908,7 +1953,7 @@ function TrendCategoryExplorer({
           onClick={() => setShowAllCategories((current) => !current)}
           type="button"
         >
-          {showAllCategories ? "Show fewer" : "Show all"}
+          {showAllCategories ? t("insights.showFewer", locale) : t("insights.showAll", locale)}
         </button>
       ) : null}
       {selectedItem ? (
@@ -1916,42 +1961,42 @@ function TrendCategoryExplorer({
           <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">{selectedItem.label}</p>
-              <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount)}</p>
-              {selectedDayLabel ? <p className="text-xs text-slate-500">Through {selectedDayLabel}</p> : null}
+              <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount, locale)}</p>
+              {selectedDayLabel ? <p className="text-xs text-slate-500">{t("insights.trend.through", locale)} {selectedDayLabel}</p> : null}
             </div>
             <p className={`whitespace-nowrap text-sm font-semibold ${selectedAmountClass}`}>{selectedHasMovement ? selectedAmountDisplay : formatMoney(0, displayCurrency)}</p>
           </div>
           {selectedHasMovement ? <div className="mb-3 grid gap-2 text-xs text-slate-600">
             {selectedIncomeMinor > 0 ? (
               <div className="grid grid-cols-[1fr_auto] gap-3">
-                <span>Income</span>
+                <span>{t("insights.income", locale)}</span>
                 <span className="font-medium text-emerald-700">{selectedItem.incomeDisplay ?? formatMoney(selectedIncomeMinor, displayCurrency)}</span>
               </div>
             ) : null}
             {selectedExpenseMinor > 0 ? (
               <div className="grid grid-cols-[1fr_auto] gap-3">
-                <span>Spending</span>
+                <span>{t("insights.spending", locale)}</span>
                 <span className="font-medium text-rose-700">{selectedItem.expenseDisplay ?? formatMoney(selectedExpenseMinor, displayCurrency)}</span>
               </div>
             ) : null}
           </div> : null}
           {!selectedHasMovement && selectedDayLabel ? (
-            <p className="rounded-lg bg-white px-3 py-2 text-xs text-slate-500">No entries yet by {selectedDayLabel}.</p>
+            <p className="rounded-lg bg-white px-3 py-2 text-xs text-slate-500">{t("insights.trend.noEntriesBy", locale).replace("{date}", selectedDayLabel)}</p>
           ) : selectedIsMixed ? (
             <div className="space-y-3">
               {selectedIncomeEntries.length ? (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-slate-700">Income</p>
+                  <p className="text-xs font-semibold text-slate-700">{t("insights.income", locale)}</p>
                   <TrendCategoryEntryList entries={selectedIncomeEntries} tone="income" />
                 </div>
               ) : null}
               {selectedExpenseEntries.length ? (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-slate-700">Spending</p>
+                  <p className="text-xs font-semibold text-slate-700">{t("insights.spending", locale)}</p>
                   <TrendCategoryEntryList entries={selectedExpenseEntries} tone="expense" />
                 </div>
               ) : null}
-              {!selectedIncomeEntries.length && !selectedExpenseEntries.length ? <p className="text-xs text-slate-500">Details could not load.</p> : null}
+              {!selectedIncomeEntries.length && !selectedExpenseEntries.length ? <p className="text-xs text-slate-500">{t("insights.detailsCouldNotLoad", locale)}</p> : null}
             </div>
           ) : (
             <TrendCategoryEntryList
@@ -1977,25 +2022,26 @@ function getMonthlySnapshotConversionDetails(data: InsightsData) {
     income,
     spending,
     hasConvertedEntries: income.length > 0 || spending.length > 0,
-    missingRateNote: hasMissingRates ? "Some currencies need a rate before they can be included." : null,
+    hasMissingRates,
   };
 }
 
 function getSnapshotHero(data: InsightsData) {
   if (data.selectedTimeframe === "All") {
     return {
-      label: "Tracked balance",
+      labelKey: "insights.trackedBalance",
       amountMinor: data.trackedBalanceDisplayMinor,
     };
   }
 
   return {
-    label: data.selectedTimeframe === "1M" ? "Monthly net" : "Period net",
+    labelKey: data.selectedTimeframe === "1M" ? "insights.monthlyNet" : "insights.periodNet",
     amountMinor: data.selectedPeriodIncomeDisplayMinor - data.selectedPeriodExpenseDisplayMinor,
   };
 }
 
 function MonthlySnapshotCard({ data }: { data: InsightsData }) {
+  const { locale } = useLocale();
   const [isConversionDetailsOpen, setIsConversionDetailsOpen] = useState(false);
   const conversionDetails = getMonthlySnapshotConversionDetails(data);
   const hero = getSnapshotHero(data);
@@ -2005,7 +2051,7 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-lg">Monthly snapshot</CardTitle>
+            <CardTitle className="text-lg">{t("insights.snapshot.title", locale)}</CardTitle>
             <CardDescription>{data.monthLabel}</CardDescription>
           </div>
           <span className="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">{data.displayCurrency}</span>
@@ -2013,7 +2059,7 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
         <div className="space-y-1">
-          <p className="text-xs font-medium text-slate-500">{hero.label}</p>
+          <p className="text-xs font-medium text-slate-500">{t(hero.labelKey, locale)}</p>
           <p className="whitespace-nowrap text-2xl font-semibold text-slate-900">
             {getApproxPrefix(data, hero.amountMinor)}
             {formatMoney(hero.amountMinor, data.displayCurrency)}
@@ -2021,14 +2067,14 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-emerald-50 px-3 py-2">
-            <p className="text-[11px] font-medium text-emerald-700">Income</p>
+            <p className="text-[11px] font-medium text-emerald-700">{t("insights.income", locale)}</p>
             <p className="whitespace-nowrap text-sm font-semibold text-emerald-800">
               {getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}
               {formatMoney(data.selectedPeriodIncomeDisplayMinor, data.displayCurrency)}
             </p>
           </div>
           <div className="rounded-lg bg-rose-50 px-3 py-2">
-            <p className="text-[11px] font-medium text-rose-700">Spending</p>
+            <p className="text-[11px] font-medium text-rose-700">{t("insights.spending", locale)}</p>
             <p className="whitespace-nowrap text-sm font-semibold text-rose-800">
               {getApproxPrefix(data, data.selectedPeriodExpenseDisplayMinor)}
               {formatMoney(data.selectedPeriodExpenseDisplayMinor, data.displayCurrency)}
@@ -2037,7 +2083,9 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
         </div>
         <div className="text-xs leading-5 text-slate-500">
           <p>
-            {data.selectedPeriodTransactionCount} tracked {data.selectedPeriodTransactionCount === 1 ? "transaction" : "transactions"}
+            {t("insights.snapshot.trackedTransactionCount", locale)
+              .replace("{count}", String(data.selectedPeriodTransactionCount))
+              .replace("{entry}", t(data.selectedPeriodTransactionCount === 1 ? "transactions.transaction" : "transactions.transactions", locale).toLowerCase())}
           </p>
           {conversionDetails.hasConvertedEntries ? (
             <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/70">
@@ -2047,15 +2095,15 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
                 onClick={() => setIsConversionDetailsOpen((current) => !current)}
                 type="button"
               >
-                <span>Contains converted currency</span>
+                <span>{t("insights.converted.contains", locale)}</span>
                 <Info aria-hidden="true" className="size-3.5 shrink-0 text-slate-400" strokeWidth={2.2} />
               </button>
               {isConversionDetailsOpen ? (
                 <div className="border-t border-slate-200 px-3 pb-3 pt-2 text-xs leading-5 text-slate-600">
-                  <p className="font-semibold text-slate-800">Converted currency included</p>
+                  <p className="font-semibold text-slate-800">{t("insights.converted.included", locale)}</p>
                   {conversionDetails.income.length ? (
                     <div className="mt-2">
-                      <p className="font-medium text-slate-700">Income</p>
+                      <p className="font-medium text-slate-700">{t("insights.income", locale)}</p>
                       <div className="mt-1 grid gap-1">
                         {conversionDetails.income.map((breakdown) => (
                           <p key={`income-${breakdown.currency}`}>{formatOriginalCurrencyAmount(breakdown.incomeMinor, breakdown.currency)}</p>
@@ -2065,7 +2113,7 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
                   ) : null}
                   {conversionDetails.spending.length ? (
                     <div className="mt-2">
-                      <p className="font-medium text-slate-700">Spending</p>
+                      <p className="font-medium text-slate-700">{t("insights.spending", locale)}</p>
                       <div className="mt-1 grid gap-1">
                         {conversionDetails.spending.map((breakdown) => (
                           <p key={`spending-${breakdown.currency}`}>{formatOriginalCurrencyAmount(breakdown.expenseMinor, breakdown.currency)}</p>
@@ -2073,12 +2121,12 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
                       </div>
                     </div>
                   ) : null}
-                  <p className="mt-2 text-slate-500">Shown in {data.displayCurrency} for this view. Original entries stay unchanged.</p>
+                  <p className="mt-2 text-slate-500">{t("insights.converted.shownInCurrency", locale).replace("{currency}", data.displayCurrency)}</p>
                 </div>
               ) : null}
             </div>
           ) : null}
-          {conversionDetails.missingRateNote ? <p className="mt-2">{conversionDetails.missingRateNote}</p> : null}
+          {conversionDetails.hasMissingRates ? <p className="mt-2">{t("insights.converted.missingRateNote", locale)}</p> : null}
         </div>
       </CardContent>
     </Card>
@@ -2086,6 +2134,7 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
 }
 
 function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
+  const { locale } = useLocale();
   const [mixSegment, setMixSegment] = useState<SpendingMixSegment>("expenses");
   const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
   const [selectedTrendDay, setSelectedTrendDay] = useState<TrendPointSelection>(null);
@@ -2094,22 +2143,22 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   const breakdownItems = isBarsIncome ? buildBarsIncomeCategoryBreakdown(data) : data.timeframeCategoryBreakdown;
   const trendBreakdownItems = data.trendCategoryBreakdown ?? [];
   const breakdownSegment = isBarsIncome ? "income" : "expenses";
-  const breakdownEmptyMessage = isBarsIncome ? "No income tracked for this month yet." : "No tracked spending in this timeframe yet.";
+  const breakdownEmptyMessage = isBarsIncome ? t("insights.trend.noIncomeThisMonth", locale) : t("insights.bars.noTrackedSpendingTimeframe", locale);
   const isTrend = data.selectedChartMode === "trend";
   const periodContextLabel = data.selectedTimeframe === "1M" ? data.monthLabel : data.timeframeLabel;
   const primaryValueLine =
     activeSegment === "income"
-      ? `Income ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
+      ? `${t("insights.income", locale)} ${getApproxPrefix(data, data.selectedPeriodIncomeDisplayMinor)}${formatMoney(
           data.selectedPeriodIncomeDisplayMinor,
           data.displayCurrency,
         )}`
-      : `Spending ${getApproxPrefix(data, data.selectedPeriodExpenseDisplayMinor)}${formatMoney(
+      : `${t("insights.spending", locale)} ${getApproxPrefix(data, data.selectedPeriodExpenseDisplayMinor)}${formatMoney(
           data.selectedPeriodExpenseDisplayMinor,
           data.displayCurrency,
         )}`;
   const contextLine = isTrend
-    ? `${periodContextLabel} · Income and spending trend`
-    : `${periodContextLabel} · ${data.displayCurrency} tracked ${activeSegment}`;
+    ? `${periodContextLabel} · ${t("insights.trend.incomeAndSpendingTrend", locale)}`
+    : `${periodContextLabel} · ${data.displayCurrency} ${t("insights.tracked", locale)} ${activeSegment === "income" ? t("insights.incomeLower", locale) : t("insights.expensesLower", locale)}`;
 
   useEffect(() => {
     setSelectedTrendDay(null);
@@ -2120,7 +2169,7 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
       <CardHeader className="p-4 pb-1">
         <div className="flex items-start justify-between gap-3" data-testid="tracked-view-header-row">
           <div className="space-y-1">
-            <CardTitle className="text-lg">Tracked view</CardTitle>
+            <CardTitle className="text-lg">{t("insights.trackedView", locale)}</CardTitle>
             <ChartModeControls data={data} onSelect={onSelect} />
           </div>
           {isTrend ? null : (
@@ -2144,7 +2193,9 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
         {data.selectedChartMode === "mix" ? <TimeframeMixChart data={data} segment={mixSegment} /> : null}
         {data.selectedChartMode === "mix" ? null : (
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-slate-900">{isTrend ? "Categories on this trend" : "Category breakdown"}</p>
+            <p className="text-sm font-semibold text-slate-900">
+              {isTrend ? t("insights.trend.categoriesOnTrend", locale) : t("insights.mix.categoryBreakdown", locale)}
+            </p>
             {isTrend ? (
               <TrendCategoryExplorer
                 displayCurrency={data.displayCurrency}
@@ -2608,6 +2659,7 @@ function SpendingMixRows({
   segment: SpendingMixSegment;
   visibleItems?: InsightsData["categoryBreakdown"];
 }) {
+  const { locale } = useLocale();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const total = items.reduce((sum, item) => sum + Math.max(item.amountMinor, 0), 0);
   const renderedItems = visibleItems ?? items;
@@ -2616,8 +2668,8 @@ function SpendingMixRows({
     return (
       <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-500">
         {segment === "income"
-          ? "No income entries for this month yet. When income is tracked, it will show up here."
-          : "No monthly spending categories yet."}
+          ? t("insights.mix.noIncomeThisMonth", locale)
+          : t("insights.mix.noMonthlySpending", locale)}
       </p>
     );
   }
@@ -2635,7 +2687,7 @@ function SpendingMixRows({
           <div key={item.key} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
             <button
               aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? "Hide" : "Show"} ${item.label} entries`}
+              aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${item.label} ${t("insights.entries", locale)}`}
               aria-pressed={isSelected}
               className={`grid w-full grid-cols-[2rem_1fr] gap-3 rounded-lg px-1 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                 isSelected ? "bg-slate-50 ring-1 ring-slate-200" : ""
@@ -2658,7 +2710,7 @@ function SpendingMixRows({
                 </span>
                 <span className="grid grid-cols-[1fr_auto] gap-3">
                   <span className="text-xs text-slate-500">
-                    {item.transactionCount} {item.transactionCount === 1 ? "entry" : "entries"}
+                    {item.transactionCount} {t(item.transactionCount === 1 ? "insights.entry" : "insights.entries", locale)}
                   </span>
                   <span className="text-xs font-medium text-slate-500">{percent}%</span>
                 </span>
@@ -2680,7 +2732,7 @@ function SpendingMixRows({
                 className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
                 href="/transactions?view=needs-review"
               >
-                Review
+                {t("common.review", locale)}
               </Link>
             ) : null}
             <div className="ml-11 min-w-0 space-y-2">
@@ -2728,30 +2780,31 @@ function getLimitStatusColor(percentUsed: number) {
 }
 
 function LargestEntriesCard({ data }: { data: InsightsData }) {
+  const { locale } = useLocale();
   const [segment, setSegment] = useState<SpendingMixSegment>("expenses");
   const isIncome = segment === "income";
   const items = isIncome ? data.largestRecentIncome : data.largestRecentExpenses;
   const totalMinor = isIncome ? data.selectedPeriodIncomeDisplayMinor : data.selectedPeriodExpenseDisplayMinor;
-  const periodLabel = data.selectedTimeframe === "1M" ? data.monthLabel : "this period";
+  const periodLabel = data.selectedTimeframe === "1M" ? data.monthLabel : t("insights.thisPeriod", locale);
   const title =
     data.selectedTimeframe === "1M"
       ? isIncome
-        ? "Largest income this month"
-        : "Largest expenses this month"
+        ? t("insights.largest.incomeThisMonth", locale)
+        : t("insights.largest.expensesThisMonth", locale)
       : isIncome
-        ? "Largest income this period"
-        : "Largest expenses this period";
+        ? t("insights.largest.incomeThisPeriod", locale)
+        : t("insights.largest.expensesThisPeriod", locale);
   const helper =
     data.selectedTimeframe === "1M"
-      ? `Biggest ${isIncome ? "money-in" : "spending"} entries from ${periodLabel}.`
-      : `Biggest ${isIncome ? "money-in" : "spending"} entries from this period.`;
-  const shareContext = data.selectedTimeframe === "1M" ? "monthly" : "period";
+      ? t(isIncome ? "insights.largest.moneyInFromPeriod" : "insights.largest.spendingFromPeriod", locale).replace("{period}", periodLabel)
+      : t(isIncome ? "insights.largest.moneyInFromThisPeriod" : "insights.largest.spendingFromThisPeriod", locale);
+  const shareContext = data.selectedTimeframe === "1M" ? t("insights.monthly", locale) : t("insights.period", locale);
 
   return (
     <Card className="rounded-lg" data-testid="largest-entries-card">
       <CardHeader className="space-y-2 p-4 pb-2">
         <CardTitle className="text-lg leading-snug">{title}</CardTitle>
-        <SpendingSegmentControls buttonLabelPrefix="Largest entries" orientation="horizontal" segment={segment} onSegmentChange={setSegment} />
+        <SpendingSegmentControls buttonLabelPrefix={t("insights.largest.title", locale)} orientation="horizontal" segment={segment} onSegmentChange={setSegment} />
         <CardDescription>{helper}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
@@ -2771,7 +2824,7 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
                   </p>
                   {percent !== null ? (
                     <p className="text-xs text-slate-500">
-                      {percent}% of {shareContext} {isIncome ? "income" : "spending"}
+                      {percent}% {t("insights.of", locale)} {shareContext} {isIncome ? t("insights.incomeLower", locale) : t("insights.spendingLower", locale)}
                     </p>
                   ) : null}
                 </div>
@@ -2780,7 +2833,7 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
             );
           })
         ) : (
-          <p className="text-sm leading-6 text-slate-500">{isIncome ? "No income entries in this period." : "No spending entries in this period."}</p>
+          <p className="text-sm leading-6 text-slate-500">{isIncome ? t("insights.largest.noIncomeEntries", locale) : t("insights.largest.noSpendingEntries", locale)}</p>
         )}
       </CardContent>
     </Card>
@@ -2788,6 +2841,7 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
 }
 
 export function InsightsOverview({ data, loadError = false }: InsightsOverviewProps) {
+  const { locale } = useLocale();
   const [activeData, setActiveData] = useState<InsightsData>(data);
   const hasTrackedData = activeData.trackedTransactionCount > 0;
   const hasCurrentMonthData = activeData.currentMonthTransactionCount > 0;
@@ -2817,16 +2871,16 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
   return (
     <section className="space-y-5">
       <ScreenHeader
-        eyebrow="Insights"
-        title="Monthly clarity"
-        description="Tracked money only. Not a bank statement."
+        eyebrow={t("insights.title", locale)}
+        title={t("insights.heroTitle", locale)}
+        description={t("insights.trackedMoneyOnly", locale)}
       />
       <InsightsControlBar data={activeData} onSelect={selectInsightsView} />
       {loadError ? (
         <Card className="rounded-lg">
           <CardHeader>
-            <CardTitle>Latest data could not load</CardTitle>
-            <CardDescription>Try again from the bottom navigation. No financial details were changed.</CardDescription>
+            <CardTitle>{t("insights.loadError.title", locale)}</CardTitle>
+            <CardDescription>{t("insights.loadError.helper", locale)}</CardDescription>
           </CardHeader>
         </Card>
       ) : null}
@@ -2834,9 +2888,9 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
       {!hasTrackedData ? (
         <Card className="rounded-lg">
           <CardHeader>
-            <CardTitle>Nothing tracked yet</CardTitle>
+            <CardTitle>{t("insights.empty.title", locale)}</CardTitle>
             <CardDescription>
-              Add a transaction or review an imported receipt, and this page will start showing month-level signals.
+              {t("insights.empty.helper", locale)}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -2847,14 +2901,14 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
 
       {activeData.hasMissingRates ? (
         <p className="text-xs leading-5 text-slate-500">
-          Some currencies need a rate before they can be included in converted totals.
+          {t("insights.converted.missingConvertedTotalsRate", locale)}
         </p>
       ) : null}
 
       {hasTrackedData && !hasCurrentMonthData ? (
         <div className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-600">
           <p>
-            You have tracked history, but no transactions in {activeData.monthLabel} yet.
+            {t("insights.empty.noTransactionsInMonth", locale).replace("{month}", activeData.monthLabel)}
           </p>
           {activeData.isSelectedMonthCurrent && activeData.hasHistoricalActivity && activeData.latestActivityMonth ? (
             <InsightsQueryButton
@@ -2862,7 +2916,7 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
               href={buildInsightsHref(activeData, { month: activeData.latestActivityMonth })}
               onSelect={() => selectInsightsView({ month: activeData.latestActivityMonth ?? undefined })}
             >
-              View latest month with activity
+              {t("insights.empty.viewLatestMonth", locale)}
             </InsightsQueryButton>
           ) : null}
         </div>
@@ -2872,8 +2926,8 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
 
       <Card className="rounded-lg">
         <CardHeader>
-          <CardTitle className="text-lg">Category limits</CardTitle>
-          <CardDescription>See how your planned limits are going.</CardDescription>
+          <CardTitle className="text-lg">{t("insights.limits.title", locale)}</CardTitle>
+          <CardDescription>{t("insights.limits.helper", locale)}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {activeData.budgetProgress.length ? (
@@ -2883,12 +2937,12 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
                   <div>
                     <p className="font-medium text-slate-900">{item.categoryLabel}</p>
                     <p className="text-xs text-slate-500">
-                      {item.period === "weekly" ? "Weekly" : "Monthly"} · {item.spentDisplay} of {item.amountDisplay} used
+                      {item.period === "weekly" ? t("assistant.limits.weekly", locale) : t("assistant.limits.monthly", locale)} · {item.spentDisplay} {t("insights.limits.of", locale)} {item.amountDisplay} {t("insights.bars.used", locale).toLowerCase()}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${item.isOverBudget ? "text-rose-700" : "text-slate-800"}`}>
-                      {item.isOverBudget ? `${item.remainingDisplay} over` : `${item.remainingDisplay} left`}
+                      {item.isOverBudget ? `${item.remainingDisplay} ${t("insights.bars.over", locale)}` : `${item.remainingDisplay} ${t("activity.limit.left", locale)}`}
                     </p>
                   </div>
                 </div>
@@ -2898,11 +2952,11 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
                     style={{ width: `${Math.min(item.percentUsed, 100)}%` }}
                   />
                 </div>
-                <p className="text-xs text-slate-500">{item.percentUsed}% used</p>
+                <p className="text-xs text-slate-500">{item.percentUsed}% {t("insights.bars.used", locale).toLowerCase()}</p>
               </div>
             ))
           ) : (
-            <p className="text-sm leading-6 text-slate-500">Set a category limit from Assistant to track progress here.</p>
+            <p className="text-sm leading-6 text-slate-500">{t("insights.limits.empty", locale)}</p>
           )}
         </CardContent>
       </Card>
