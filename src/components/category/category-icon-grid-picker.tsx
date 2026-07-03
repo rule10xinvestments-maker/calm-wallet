@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { CategoryPickerOption } from "@/lib/category-picker-options";
 import { useLocale } from "@/components/i18n/locale-provider";
@@ -12,14 +13,26 @@ type CategoryIconGridPickerProps = {
   submitOnSelect?: boolean;
 };
 
-export function CategoryIconGridPicker({ categories, selectedCategoryId, onSelect, submitOnSelect = false }: CategoryIconGridPickerProps) {
+export const CategoryIconGridPicker = memo(function CategoryIconGridPicker({
+  categories,
+  selectedCategoryId,
+  onSelect,
+  submitOnSelect = false,
+}: CategoryIconGridPickerProps) {
   const { locale } = useLocale();
+  const categoryItems = useMemo(
+    () =>
+      categories.map((category) => ({
+        category,
+        displayLabel: getCategoryDisplayLabel(category, locale),
+        visuals: getCategoryVisualsByName(category.slug ?? category.label),
+      })),
+    [categories, locale],
+  );
 
   return (
     <div aria-label="Category picker" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1">
-      {categories.map((category) => {
-        const displayLabel = getCategoryDisplayLabel(category, locale);
-        const categoryVisuals = getCategoryVisualsByName(category.slug ?? category.label);
+      {categoryItems.map(({ category, displayLabel, visuals: categoryVisuals }) => {
         const CategoryIcon = categoryVisuals.icon;
         const isSelected = selectedCategoryId === category.id;
 
@@ -52,4 +65,4 @@ export function CategoryIconGridPicker({ categories, selectedCategoryId, onSelec
       })}
     </div>
   );
-}
+});

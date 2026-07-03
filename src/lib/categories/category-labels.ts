@@ -48,12 +48,27 @@ const categoryKeyByNormalizedValue: Record<string, string> = {
   "needs-category": "needsCategory",
 };
 
+const normalizedCategoryCache = new Map<string, string>();
+const categoryLabelKeyCache = new Map<string, string | null>();
+const categoryTranslationCache = new Map<string, string>();
+
 function stringFromUnknown(value: unknown) {
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
 function normalizeCategoryLabelSource(value: unknown) {
-  return stringFromUnknown(value)
+  const source = stringFromUnknown(value);
+
+  if (!source) {
+    return "";
+  }
+
+  const cached = normalizedCategoryCache.get(source);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const normalized = source
     .trim()
     .toLowerCase()
     .replace(/^manual-default-/, "")
@@ -62,19 +77,31 @@ function normalizeCategoryLabelSource(value: unknown) {
     .replace(/[_/]+/g, " ")
     .replace(/[\u2013\u2014-]+/g, " ")
     .replace(/\s+/g, " ");
+
+  normalizedCategoryCache.set(source, normalized);
+  return normalized;
 }
 
 export function getCategoryLabelKey(categoryIdOrName: unknown) {
+  const source = stringFromUnknown(categoryIdOrName);
+  const cached = categoryLabelKeyCache.get(source);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const normalized = normalizeCategoryLabelSource(categoryIdOrName);
 
   if (!normalized) {
+    categoryLabelKeyCache.set(source, null);
     return null;
   }
 
   const compact = normalized.replace(/\s+/g, "_");
   const key = categoryKeyByNormalizedValue[normalized] ?? categoryKeyByNormalizedValue[compact];
 
-  return key ? `categories.${key}` : null;
+  const labelKey = key ? `categories.${key}` : null;
+  categoryLabelKeyCache.set(source, labelKey);
+  return labelKey;
 }
 
 export function getCategoryLabel(categoryIdOrName: unknown, locale?: SupportedLocale | string | null, fallback?: unknown) {
@@ -84,7 +111,15 @@ export function getCategoryLabel(categoryIdOrName: unknown, locale?: SupportedLo
     return stringFromUnknown(fallback) || stringFromUnknown(categoryIdOrName);
   }
 
-  return t(key, locale);
+  const cacheKey = `${locale ?? ""}|${key}`;
+  const cached = categoryTranslationCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const label = t(key, locale);
+  categoryTranslationCache.set(cacheKey, label);
+  return label;
 }
 
 function isCategoryLabelInput(value: unknown): value is CategoryLabelInput {

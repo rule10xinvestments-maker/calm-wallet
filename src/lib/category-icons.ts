@@ -73,8 +73,18 @@ export const CATEGORY_VISUALS_BY_NAME: Record<string, CategoryVisuals> = {
   "needs-category": { icon: CircleHelp, primary: "#0EA5E9", bg: "#E0F2FE", border: "#7DD3FC" },
 };
 
+const categoryVisualsCache = new Map<string, CategoryVisuals>();
+
 export function getCategoryVisualsByName(labelOrSlug: unknown): CategoryVisuals {
-  return CATEGORY_VISUALS_BY_NAME[normalizeCategoryName(labelOrSlug)] ?? FALLBACK_CATEGORY_VISUALS;
+  const normalized = normalizeCategoryName(labelOrSlug);
+  const cached = categoryVisualsCache.get(normalized);
+  if (cached) {
+    return cached;
+  }
+
+  const visuals = CATEGORY_VISUALS_BY_NAME[normalized] ?? FALLBACK_CATEGORY_VISUALS;
+  categoryVisualsCache.set(normalized, visuals);
+  return visuals;
 }
 
 export function getCategoryIconByName(labelOrSlug: unknown): LucideIcon {

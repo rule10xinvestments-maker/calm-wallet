@@ -55,15 +55,30 @@ export function buildCategoryPickerOptions(
   options: { includeSynthetic?: boolean } = {},
 ): CategoryPickerOption[] {
   const labels = transactionType === "income" ? incomeCategoryLabels : spendCategoryLabels;
+  const categoriesByKey = new Map<string, TransactionCategoryOption | ControlledCategoryOption>();
+
+  categories.forEach((option) => {
+    const directionMatches = !option.direction || option.direction === transactionType || option.direction === "both";
+    if (!directionMatches) {
+      return;
+    }
+
+    const slug = "slug" in option ? option.slug : "";
+    const labelKey = normalizeCategoryPickerKey(option.label);
+    const slugKey = normalizeCategoryPickerKey(slug);
+
+    if (labelKey && !categoriesByKey.has(labelKey)) {
+      categoriesByKey.set(labelKey, option);
+    }
+
+    if (slugKey && !categoriesByKey.has(slugKey)) {
+      categoriesByKey.set(slugKey, option);
+    }
+  });
 
   return labels.flatMap((label) => {
     const normalizedLabel = normalizeCategoryPickerKey(label);
-    const category = categories.find((option) => {
-      const directionMatches = !option.direction || option.direction === transactionType || option.direction === "both";
-      const slug = "slug" in option ? option.slug : "";
-
-      return directionMatches && (normalizeCategoryPickerKey(option.label) === normalizedLabel || normalizeCategoryPickerKey(slug) === normalizedLabel);
-    });
+    const category = categoriesByKey.get(normalizedLabel);
 
     if (category) {
       return [category];

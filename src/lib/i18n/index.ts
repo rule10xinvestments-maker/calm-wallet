@@ -9,11 +9,28 @@ export type TranslationKey = string;
 export type TranslationParams = Record<string, string | number | boolean | null | undefined>;
 
 const defaultLocale: SupportedLocale = "en";
-const dictionaries: Record<SupportedLocale, Record<string, unknown>> = {
-  en,
-  ro,
-  fr,
-  es,
+function flattenDictionary(dictionary: Record<string, unknown>, prefix = "", output: Record<string, string> = {}) {
+  Object.entries(dictionary).forEach(([key, value]) => {
+    const nextKey = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof value === "string") {
+      output[nextKey] = value;
+      return;
+    }
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      flattenDictionary(value as Record<string, unknown>, nextKey, output);
+    }
+  });
+
+  return output;
+}
+
+const flatDictionaries: Record<SupportedLocale, Record<string, string>> = {
+  en: flattenDictionary(en),
+  ro: flattenDictionary(ro),
+  fr: flattenDictionary(fr),
+  es: flattenDictionary(es),
 };
 
 export function normalizeLocale(locale: unknown): SupportedLocale {
@@ -36,18 +53,12 @@ export function resolveLocalePreference(args: {
   return normalizeLocale(args.browserLocale);
 }
 
-function resolveKey(dictionary: Record<string, unknown>, key: unknown) {
+function resolveKey(dictionary: Record<string, string>, key: unknown) {
   if (typeof key !== "string" || key.length === 0) {
     return undefined;
   }
 
-  return key.split(".").reduce<unknown>((current, segment) => {
-    if (!current || typeof current !== "object" || !(segment in current)) {
-      return undefined;
-    }
-
-    return (current as Record<string, unknown>)[segment];
-  }, dictionary);
+  return dictionary[key];
 }
 
 function interpolate(template: string, params?: TranslationParams) {
@@ -63,13 +74,13 @@ function interpolate(template: string, params?: TranslationParams) {
 
 export function t(key: TranslationKey, locale: unknown = defaultLocale, params?: TranslationParams) {
   const resolvedLocale = normalizeLocale(locale);
-  const localized = resolveKey(dictionaries[resolvedLocale], key);
+  const localized = resolveKey(flatDictionaries[resolvedLocale], key);
 
   if (typeof localized === "string") {
     return interpolate(localized, params);
   }
 
-  const fallback = resolveKey(dictionaries.en, key);
+  const fallback = resolveKey(flatDictionaries.en, key);
   const fallbackText = typeof fallback === "string" ? fallback : typeof key === "string" ? key : "";
   return interpolate(fallbackText, params);
 }

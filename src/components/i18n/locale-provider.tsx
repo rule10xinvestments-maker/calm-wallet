@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { normalizeLocale, resolveLocalePreference, type SupportedLocale } from "@/lib/i18n";
 
 type LocaleContextValue = {
@@ -25,6 +25,7 @@ export function LocaleProvider({
   const [browserLocale, setBrowserLocale] = useState<string | null>(null);
   const normalizedSavedLocale = savedLocale ? normalizeLocale(savedLocale) : null;
   const [optimisticLocale, setOptimisticLocale] = useState<SupportedLocale | null>(normalizedSavedLocale);
+  const setLocale = useCallback((nextLocale: SupportedLocale) => setOptimisticLocale(normalizeLocale(nextLocale)), []);
 
   useEffect(() => {
     setBrowserLocale(navigator.language);
@@ -39,9 +40,9 @@ export function LocaleProvider({
     () => ({
       locale,
       savedLocale: normalizedSavedLocale,
-      setLocale: (nextLocale: SupportedLocale) => setOptimisticLocale(normalizeLocale(nextLocale)),
+      setLocale,
     }),
-    [locale, normalizedSavedLocale],
+    [locale, normalizedSavedLocale, setLocale],
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

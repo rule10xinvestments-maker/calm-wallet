@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
 import {
   AlertCircle,
@@ -227,7 +227,10 @@ export function TransactionItemCard({
   const [updateState, updateFormAction] = useActionState(updateAction, initialState);
   const [deleteState, deleteFormAction] = useActionState(deleteAction, initialState);
   const displayItem = optimisticItem ?? item;
-  const selectedCategory = selectedCategoryId ? categories.find((category) => category.id === selectedCategoryId) : null;
+  const selectedCategory = useMemo(
+    () => (selectedCategoryId ? categories.find((category) => category.id === selectedCategoryId) : null),
+    [categories, selectedCategoryId],
+  );
   const selectedCategoryLabel = selectedCategory?.label ?? (selectedCategoryId ? displayItem.categoryLabel : "Uncategorized");
   const selectedCategoryDisplayLabel = selectedCategory
     ? getCategoryDisplayLabel(selectedCategory, locale)
@@ -244,7 +247,7 @@ export function TransactionItemCard({
     categoryAttentionKey.includes("uncategorized") || categoryAttentionKey.includes("needs");
   const actionCategoryIconNeedsAttention =
     actionCategoryAttentionKey.includes("uncategorized") || actionCategoryAttentionKey.includes("needs");
-  const categoryPickerOptions = buildCategoryPickerOptions(categories, displayItem.amountTone);
+  const categoryPickerOptions = useMemo(() => buildCategoryPickerOptions(categories, displayItem.amountTone), [categories, displayItem.amountTone]);
   const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
     ? CURRENCY_OPTIONS
     : ([displayItem.currency, ...CURRENCY_OPTIONS] as const);

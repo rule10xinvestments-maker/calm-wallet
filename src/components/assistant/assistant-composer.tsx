@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useState, type FormEvent } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   CalendarDays,
   ChevronDown,
@@ -302,25 +302,41 @@ export function AssistantComposer({
   const [uploadState, setUploadState] = useState<UploadFlowState>(initialUploadFlowState);
   const [openPanel, setOpenPanel] = useState<ActionPanel | null>(null);
   const visibleRecentItems = state.recentItems.length ? state.recentItems : recentItems;
-  const manualCategoryOptions = buildManualCategoryOptions(categoryOptions, manualTransactionType);
-  const limitCategoryOptions = buildManualCategoryOptions(categoryOptions, "expense").filter((category) => !category.isSynthetic);
-  const guessedManualCategoryId = guessManualCategoryId({
-    categories: categoryOptions,
-    merchant: manualMerchant,
-    note: manualNote,
-    transactionType: manualTransactionType,
-  });
+  const manualCategoryOptions = useMemo(
+    () => buildManualCategoryOptions(categoryOptions, manualTransactionType),
+    [categoryOptions, manualTransactionType],
+  );
+  const limitCategoryOptions = useMemo(
+    () => buildManualCategoryOptions(categoryOptions, "expense").filter((category) => !category.isSynthetic),
+    [categoryOptions],
+  );
+  const guessedManualCategoryId = useMemo(
+    () =>
+      guessManualCategoryId({
+        categories: categoryOptions,
+        merchant: manualMerchant,
+        note: manualNote,
+        transactionType: manualTransactionType,
+      }),
+    [categoryOptions, manualMerchant, manualNote, manualTransactionType],
+  );
   const effectiveManualCategoryId = manualCategoryWasSelected ? manualCategoryId : guessedManualCategoryId;
-  const selectedCategory: ManualCategoryOption | null =
-    manualCategoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
-    categoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
-    null;
+  const selectedCategory: ManualCategoryOption | null = useMemo(
+    () =>
+      manualCategoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
+      categoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
+      null,
+    [categoryOptions, effectiveManualCategoryId, manualCategoryOptions],
+  );
   const selectedCategoryLabel = selectedCategory?.label ?? "Other";
   const selectedCategoryDisplayLabel = selectedCategory ? getCategoryDisplayLabel(selectedCategory, locale) : t("common.other", locale);
   const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategory?.slug ?? selectedCategoryLabel);
   const SelectedCategoryIcon = selectedCategoryVisuals.icon;
   const submittedManualCategoryId = selectedCategory?.isSynthetic ? "" : effectiveManualCategoryId;
-  const selectedLimitCategory = limitCategoryOptions.find((category) => category.id === limitCategoryId) ?? limitCategoryOptions[0] ?? null;
+  const selectedLimitCategory = useMemo(
+    () => limitCategoryOptions.find((category) => category.id === limitCategoryId) ?? limitCategoryOptions[0] ?? null,
+    [limitCategoryId, limitCategoryOptions],
+  );
   const selectedLimitCategoryDisplayLabel = selectedLimitCategory ? getCategoryDisplayLabel(selectedLimitCategory, locale) : t("common.category", locale);
   const selectedLimitCategoryVisuals = getCategoryVisualsByName(selectedLimitCategory?.slug ?? selectedLimitCategory?.label ?? selectedLimitCategoryDisplayLabel);
   const SelectedLimitCategoryIcon = selectedLimitCategoryVisuals.icon;
