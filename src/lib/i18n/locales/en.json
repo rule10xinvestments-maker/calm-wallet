@@ -560,5 +560,30 @@
     "noCandidatesYet": "No candidates yet.",
     "noPendingItems": "No pending items to review.",
     "couldNotPrepare": "The import could not be prepared for review."
+  },
+  "categories": {
+    "housing": "Housing",
+    "groceries": "Groceries",
+    "dining": "Dining",
+    "transport": "Transport",
+    "utilities": "Utilities",
+    "health": "Health",
+    "shopping": "Shopping",
+    "personal": "Personal",
+    "entertainment": "Entertainment",
+    "travel": "Travel",
+    "education": "Education",
+    "salary": "Salary",
+    "selfEmployment": "Self-employment",
+    "refunds": "Refunds",
+    "gifts": "Gifts",
+    "transfers": "Transfers",
+    "investments": "Investments",
+    "sales": "Sales",
+    "rentalIncome": "Rental income",
+    "sideIncome": "Side income",
+    "other": "Other",
+    "uncategorized": "Uncategorized",
+    "needsCategory": "Needs category"
   }
 }

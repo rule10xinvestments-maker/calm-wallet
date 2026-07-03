@@ -560,5 +560,30 @@
     "totalPlaceholder": "Total",
     "receiptEntry": "Entrada de recibo",
     "noCandidatesYet": "Aún no hay candidatos."
+  },
+  "categories": {
+    "housing": "Vivienda",
+    "groceries": "Supermercado",
+    "dining": "Comidas fuera",
+    "transport": "Transporte",
+    "utilities": "Servicios",
+    "health": "Salud",
+    "shopping": "Compras",
+    "personal": "Personal",
+    "entertainment": "Entretenimiento",
+    "travel": "Viajes",
+    "education": "Educaci\u00f3n",
+    "salary": "Salario",
+    "selfEmployment": "Trabajo independiente",
+    "refunds": "Reembolsos",
+    "gifts": "Regalos",
+    "transfers": "Transferencias",
+    "investments": "Inversiones",
+    "sales": "Ventas",
+    "rentalIncome": "Ingresos por alquiler",
+    "sideIncome": "Ingresos extra",
+    "other": "Otro",
+    "uncategorized": "Sin categor\u00eda",
+    "needsCategory": "Necesita categor\u00eda"
   }
 }

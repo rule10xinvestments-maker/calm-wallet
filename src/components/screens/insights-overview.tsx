@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useLocale } from "@/components/i18n/locale-provider";
 import type { BudgetActionState } from "@/lib/actions/budgets-state";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
+import { getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import { t } from "@/lib/i18n";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
@@ -771,8 +772,10 @@ function CategoryShareIcon({
   segment: SpendingMixSegment;
   className?: string;
 }) {
+  const { locale } = useLocale();
   const visuals = getCategoryVisualsByName(label);
   const CategoryIcon = visuals.icon;
+  const displayLabel = getCategoryLabel(label, locale);
   const clampedPercentage = clampCategorySharePercentage(percentage);
   const ringPercentage = clampedPercentage > 0 && clampedPercentage < 4 ? 4 : clampedPercentage;
   const context = segment === "income" ? "income" : "spending";
@@ -783,7 +786,7 @@ function CategoryShareIcon({
 
   return (
     <span
-      aria-label={`${label} represents ${clampedPercentage}% of ${context}`}
+      aria-label={`${displayLabel} represents ${clampedPercentage}% of ${context}`}
       className={`relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${className}`}
       role="img"
       style={{ background: ringBackground, borderColor: visuals.border, color: visuals.primary }}
@@ -799,6 +802,7 @@ function CategoryShareIcon({
 }
 
 function TrendCategoryMixIcon({ item }: { item: TrendCategoryItem }) {
+  const { locale } = useLocale();
   const visuals = getCategoryVisualsByName(item.label);
   const CategoryIcon = visuals.icon;
   const incomeMinor = Math.max(item.incomeMinor ?? 0, 0);
@@ -816,7 +820,7 @@ function TrendCategoryMixIcon({ item }: { item: TrendCategoryItem }) {
 
   return (
     <span
-      aria-label={`${item.label} income and spending mix`}
+      aria-label={`${getCategoryLabel(item.label, locale)} income and spending mix`}
       className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white transition-[background,opacity,transform] duration-200"
       role="img"
       style={{ background: ringBackground }}
@@ -876,9 +880,11 @@ function getLimitStatusLabel(status: "on-track" | "near" | "over", locale: strin
 }
 
 function getCategoryBubbleActionLabel(label: string, isSelected: boolean, locale: string) {
+  const displayLabel = getCategoryLabel(label, locale);
+
   return isSelected
-    ? t("insights.bars.clearCategoryFocusAria", locale).replace("{category}", label)
-    : t("insights.bars.selectCategoryFocusAria", locale).replace("{category}", label);
+    ? t("insights.bars.clearCategoryFocusAria", locale).replace("{category}", displayLabel)
+    : t("insights.bars.selectCategoryFocusAria", locale).replace("{category}", displayLabel);
 }
 
 function getRecurringFrequencyLabel(frequency: BarsRecurringItem["frequency"], locale: string) {
@@ -964,6 +970,7 @@ function BarsCategoryFocusPanel({
   const limit = category.signal?.limit;
   const recurring = category.signal?.recurring?.activeCount ? category.signal.recurring : undefined;
   const visuals = getCategoryVisualsByName(category.label);
+  const categoryDisplayLabel = getCategoryLabel(category.label, locale);
   const bucketNoun = bucketLabel.toLowerCase();
 
   return (
@@ -971,13 +978,13 @@ function BarsCategoryFocusPanel({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-slate-900" style={{ color: visuals.primary }}>
-            {category.label}
+            {categoryDisplayLabel}
           </p>
           <p className="text-xs leading-5 text-slate-500">
             {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? bucketNoun : `${bucketNoun}s`} {t("insights.thisPeriod", locale)}
           </p>
           <p className="text-[11px] leading-4 text-slate-400">
-            {t("insights.bars.amountsShowCategoryOnly", locale).replace("{bucket}", bucketLabel).replace("{category}", category.label)}
+            {t("insights.bars.amountsShowCategoryOnly", locale).replace("{bucket}", bucketLabel).replace("{category}", categoryDisplayLabel)}
           </p>
         </div>
       </div>
@@ -994,7 +1001,7 @@ function BarsCategoryFocusPanel({
                 </p>
               </div>
               <button
-                aria-label={`Inspect ${category.label} limit details`}
+                aria-label={`Inspect ${categoryDisplayLabel} limit details`}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 onClick={() => onInspect("limit")}
                 type="button"
@@ -1016,7 +1023,7 @@ function BarsCategoryFocusPanel({
                 </p>
               </div>
               <button
-                aria-label={`Inspect ${category.label} recurring details`}
+                aria-label={`Inspect ${categoryDisplayLabel} recurring details`}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 onClick={() => onInspect("recurring")}
                 type="button"
@@ -1040,6 +1047,7 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
 
   const limit = detail.category.signal?.limit;
   const recurring = detail.category.signal?.recurring?.activeCount ? detail.category.signal.recurring : undefined;
+  const categoryDisplayLabel = getCategoryLabel(detail.category.label, locale);
 
   if (detail.kind === "limit" && !limit) {
     return null;
@@ -1056,7 +1064,7 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
       style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
     >
       <div
-        aria-label={`${detail.category.label} ${detail.kind} details`}
+        aria-label={`${categoryDisplayLabel} ${detail.kind} details`}
         aria-modal="true"
         className="flex w-full max-w-md flex-col rounded-2xl bg-white p-4 shadow-xl"
         role="dialog"
@@ -1064,7 +1072,7 @@ function BarsReadOnlyDetailSheet({ detail, onClose }: { detail: BarsDetailSheet;
       >
         <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-slate-900">{detail.category.label}</p>
+            <p className="text-sm font-semibold text-slate-900">{categoryDisplayLabel}</p>
             <p className="text-xs text-slate-500">{detail.kind === "limit" ? t("insights.bars.limitDetails", locale) : t("insights.bars.recurringDetails", locale)}</p>
           </div>
           <button
@@ -1317,7 +1325,7 @@ function TimeframeBarsChart({
                     >
                       {segments.map((segment, index) => (
                         <span
-                          aria-label={`${label} ${segment.label} ${context} ${segment.amountDisplay}`}
+                          aria-label={`${label} ${getCategoryLabel(segment.label, locale)} ${context} ${segment.amountDisplay}`}
                           className={`h-full transition-opacity ${
                             index > 0 ? "border-l border-white/80" : ""
                           } ${selectedCategoryKey && containsSelectedCategory && segment.key !== selectedCategoryKey ? "opacity-35" : "opacity-100"}`}
@@ -1390,7 +1398,7 @@ function TimeframeBarsChart({
                   {segments.length ? (
                     segments.map((segment) => (
                       <span
-                        aria-label={`${bar.label} ${segment.label} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
+                        aria-label={`${bar.label} ${getCategoryLabel(segment.label, locale)} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
                         className={`h-full transition-opacity ${
                           selectedCategoryKey && containsSelectedCategory && segment.key !== selectedCategoryKey ? "opacity-35" : "opacity-100"
                         }`}
@@ -1454,6 +1462,7 @@ function BarsDayBreakdownPanel({
           const visuals = getCategoryVisualsByName(segment.label);
           const SegmentIcon = visuals.icon;
           const percentage = totalMinor > 0 ? Math.round((Math.max(segment.amountMinor, 0) / totalMinor) * 100) : 0;
+          const displayLabel = getCategoryLabel(segment.label, locale);
 
           return (
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_2.5rem] items-center gap-2 text-xs" key={segment.key}>
@@ -1464,7 +1473,7 @@ function BarsDayBreakdownPanel({
               >
                 <SegmentIcon aria-hidden="true" className="h-3.5 w-3.5" />
               </span>
-              <span className="min-w-0 truncate font-medium text-slate-700">{segment.label}</span>
+              <span className="min-w-0 truncate font-medium text-slate-700">{displayLabel}</span>
               <span className="whitespace-nowrap font-semibold text-slate-800">{segment.amountDisplay}</span>
               <span className="text-right font-medium text-slate-500">{percentage}%</span>
             </div>
@@ -1563,6 +1572,7 @@ function TimeframeCategoryBreakdown({
         const percent = total > 0 ? Math.round((Math.max(item.amountMinor, 0) / total) * 100) : 0;
         const chartColor = getCategoryChartColor(item);
         const isExpanded = expandedKey === item.key;
+        const displayLabel = getCategoryLabel(item.label, locale);
         const countLabel = `${percent}% ${t("insights.of", locale)} ${isIncome ? t("insights.incomeLower", locale) : t("insights.spendingLower", locale)} - ${formatTransactionCountLabel(item.transactionCount, locale)}`;
 
         if (expandable) {
@@ -1570,7 +1580,7 @@ function TimeframeCategoryBreakdown({
             <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
               <button
                 aria-expanded={isExpanded}
-                aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${item.label} ${t("insights.entries", locale)}`}
+                aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${displayLabel} ${t("insights.entries", locale)}`}
                 className={`grid w-full gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                   showIcons ? "grid-cols-[2rem_1fr]" : "grid-cols-1"
                 }`}
@@ -1581,14 +1591,14 @@ function TimeframeCategoryBreakdown({
                 <span className="min-w-0 space-y-2">
                   <span className="grid grid-cols-[1fr_auto] gap-3">
                     <span className="min-w-0">
-                      <span className="truncate text-sm font-medium text-slate-900">{item.label}</span>
+                      <span className="truncate text-sm font-medium text-slate-900">{displayLabel}</span>
                       <span className="block text-xs text-slate-500">{countLabel}</span>
                     </span>
                     <span className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</span>
                   </span>
                   <span className="block h-2 overflow-hidden rounded-full bg-slate-100">
                     <span
-                      aria-label={`${item.label} ${isIncome ? "income" : "spending"} share ${percent}%`}
+                      aria-label={`${displayLabel} ${isIncome ? "income" : "spending"} share ${percent}%`}
                       aria-valuemax={100}
                       aria-valuemin={0}
                       aria-valuenow={percent}
@@ -1599,7 +1609,7 @@ function TimeframeCategoryBreakdown({
                   </span>
                 </span>
               </button>
-              {showIcons && !isIncome && item.label.toLowerCase() === "needs category" ? (
+              {showIcons && !isIncome && getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
                 <Link
                   className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
                   href="/transactions?view=needs-review"
@@ -1634,8 +1644,8 @@ function TimeframeCategoryBreakdown({
               ) : null}
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-medium text-slate-900">{item.label}</p>
-                  {showIcons && !isIncome && item.label.toLowerCase() === "needs category" ? (
+                  <p className="truncate text-sm font-medium text-slate-900">{displayLabel}</p>
+                  {showIcons && !isIncome && getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
                     <Link
                       className="rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
                       href="/transactions?view=needs-review"
@@ -1929,17 +1939,18 @@ function TrendCategoryExplorer({
         {gridItems.map((item) => {
           const isSelected = selectedKey === item.key;
           const hasMovement = (item.movementMinor ?? 0) > 0;
+          const displayLabel = getCategoryLabel(item.label, locale);
 
           return (
             <button
-              aria-label={`${isSelected ? t("insights.hide", locale) : t("insights.show", locale)} ${item.label} ${t("insights.details", locale)}`}
+              aria-label={`${isSelected ? t("insights.hide", locale) : t("insights.show", locale)} ${displayLabel} ${t("insights.details", locale)}`}
               aria-pressed={isSelected}
               className={`flex h-10 w-10 items-center justify-center rounded-full p-0.5 transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                 isSelected ? "bg-slate-100 opacity-100 ring-2 ring-slate-300 scale-105" : hasMovement ? "opacity-100 hover:bg-slate-50" : "opacity-35 hover:opacity-65"
               }`}
               key={item.key}
               onClick={() => setSelectedKey(isSelected ? null : item.key)}
-              title={item.label}
+              title={displayLabel}
               type="button"
             >
               <TrendCategoryMixIcon item={item} />
@@ -1960,7 +1971,7 @@ function TrendCategoryExplorer({
         <div className="rounded-lg bg-slate-50 px-3 py-3">
           <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">{selectedItem.label}</p>
+              <p className="truncate text-sm font-semibold text-slate-900">{getCategoryLabel(selectedItem.label, locale)}</p>
               <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount, locale)}</p>
               {selectedDayLabel ? <p className="text-xs text-slate-500">{t("insights.trend.through", locale)} {selectedDayLabel}</p> : null}
             </div>
@@ -2366,6 +2377,7 @@ function SpendingMixSummaryChart({
   const selectedArrowPoint = selectedAngle === null ? null : getDonutPoint(selectedAngle, donutArrowRadius);
   const SelectedIcon = selectedItem ? getCategoryVisualsByName(selectedItem.label).icon : null;
   const context = segment === "income" ? "income" : "spending";
+  const { locale } = useLocale();
 
   function selectNearestSegmentFromPointer(clientX: number, clientY: number) {
     const svg = svgRef.current;
@@ -2444,7 +2456,7 @@ function SpendingMixSummaryChart({
           <circle cx={donutCenter.x} cy={donutCenter.y} fill="none" r={donutRadius} stroke="#e2e8f0" strokeWidth="16" />
           {donutSegments.length === 1 ? (
             <circle
-              aria-label={`${donutSegments[0]!.label}, ${donutSegments[0]!.amountDisplay}, ${donutSegments[0]!.percent} percent of ${context}`}
+              aria-label={`${getCategoryLabel(donutSegments[0]!.label, locale)}, ${donutSegments[0]!.amountDisplay}, ${donutSegments[0]!.percent} percent of ${context}`}
               className="cursor-pointer focus:outline-none"
               cx={donutCenter.x}
               cy={donutCenter.y}
@@ -2467,7 +2479,7 @@ function SpendingMixSummaryChart({
             donutSegments.map((item) => (
               <path
                 key={item.key}
-                aria-label={`${item.label}, ${item.amountDisplay}, ${item.percent} percent of ${context}`}
+                aria-label={`${getCategoryLabel(item.label, locale)}, ${item.amountDisplay}, ${item.percent} percent of ${context}`}
                 className="cursor-pointer focus:outline-none"
                 d={item.arcPath}
                 fill="none"
@@ -2495,7 +2507,7 @@ function SpendingMixSummaryChart({
               aria-valuemax={donutSegments.length}
               aria-valuemin={1}
               aria-valuenow={selectedSegmentIndex + 1}
-              aria-valuetext={`${selectedItem.label}, ${selectedItem.amountDisplay}, ${selectedItem.percent} percent of ${context}`}
+              aria-valuetext={`${getCategoryLabel(selectedItem.label, locale)}, ${selectedItem.amountDisplay}, ${selectedItem.percent} percent of ${context}`}
               aria-label={`Selected ${context} category`}
               className="pointer-events-none focus:outline-none"
               d={`M ${selectedArrowPoint.x} ${formatSvgNumber(selectedArrowPoint.y - 5)} L ${formatSvgNumber(selectedArrowPoint.x + 4.5)} ${formatSvgNumber(
@@ -2535,7 +2547,7 @@ function SpendingMixSummaryChart({
         {selectedItem ? (
           <div className="pointer-events-none absolute left-1/2 top-1/2 flex w-[5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center text-center">
             {SelectedIcon ? <SelectedIcon aria-hidden="true" className="mb-0.5 h-3.5 w-3.5 shrink-0" style={{ color: selectedItem.color }} /> : null}
-            <p className="w-full truncate text-[10px] font-semibold leading-3 text-slate-900">{selectedItem.label}</p>
+            <p className="w-full truncate text-[10px] font-semibold leading-3 text-slate-900">{getCategoryLabel(selectedItem.label, locale)}</p>
             <p className="mt-0.5 w-full truncate text-[9px] font-semibold leading-3 text-slate-700">{selectedItem.amountDisplay}</p>
             <p className="text-[9px] font-medium leading-3 text-slate-500">{selectedItem.percent}%</p>
           </div>
@@ -2682,12 +2694,13 @@ function SpendingMixRows({
         const isSelected = selectedKey === item.key;
         const chartColor = getCategoryChartColor(item);
         const groupedEntries = isExpanded ? buildGroupedMixEntries(item.recentEntries, displayCurrency) : [];
+        const displayLabel = getCategoryLabel(item.label, locale);
 
         return (
           <div key={item.key} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
             <button
               aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${item.label} ${t("insights.entries", locale)}`}
+              aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${displayLabel} ${t("insights.entries", locale)}`}
               aria-pressed={isSelected}
               className={`grid w-full grid-cols-[2rem_1fr] gap-3 rounded-lg px-1 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                 isSelected ? "bg-slate-50 ring-1 ring-slate-200" : ""
@@ -2703,7 +2716,7 @@ function SpendingMixRows({
                 <span className="grid grid-cols-[1fr_auto] gap-3">
                   <span className="min-w-0">
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-slate-900">{item.label}</span>
+                      <span className="font-medium text-slate-900">{displayLabel}</span>
                     </span>
                   </span>
                   <span className="whitespace-nowrap text-right text-sm font-semibold text-slate-800">{item.amountDisplay}</span>
@@ -2716,7 +2729,7 @@ function SpendingMixRows({
                 </span>
                 <span className="block h-2 overflow-hidden rounded-full bg-slate-100">
                   <span
-                    aria-label={`${item.label} ${segment === "income" ? "income" : "spending"} share ${percent}%`}
+                    aria-label={`${displayLabel} ${segment === "income" ? "income" : "spending"} share ${percent}%`}
                     aria-valuemax={100}
                     aria-valuemin={0}
                     aria-valuenow={percent}
@@ -2727,7 +2740,7 @@ function SpendingMixRows({
                 </span>
               </span>
             </button>
-            {item.label.toLowerCase() === "needs category" ? (
+            {getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
               <Link
                 className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
                 href="/transactions?view=needs-review"
@@ -2813,6 +2826,7 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
             const visuals = getCategoryVisualsByName(item.categoryLabel);
             const CategoryIcon = visuals.icon;
             const percent = totalMinor > 0 ? Math.round((item.amountMinor / totalMinor) * 100) : null;
+            const categoryDisplayLabel = getCategoryLabel(item.categoryLabel, locale);
 
             return (
               <div key={item.id} className="grid grid-cols-[1.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
@@ -2820,7 +2834,7 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
                   <p className="text-xs text-slate-500">
-                    {item.categoryLabel}{" \u00b7 "}{item.occurredLabel}
+                    {categoryDisplayLabel}{" \u00b7 "}{item.occurredLabel}
                   </p>
                   {percent !== null ? (
                     <p className="text-xs text-slate-500">
@@ -2935,7 +2949,7 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
               <div key={item.budgetId} className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-900">{item.categoryLabel}</p>
+                    <p className="font-medium text-slate-900">{getCategoryLabel(item.categoryLabel, locale)}</p>
                     <p className="text-xs text-slate-500">
                       {item.period === "weekly" ? t("assistant.limits.weekly", locale) : t("assistant.limits.monthly", locale)} · {item.spentDisplay} {t("insights.limits.of", locale)} {item.amountDisplay} {t("insights.bars.used", locale).toLowerCase()}
                     </p>

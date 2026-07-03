@@ -19,6 +19,7 @@ import { useLocale } from "@/components/i18n/locale-provider";
 import { buildCategoryPickerOptions } from "@/lib/category-picker-options";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
 import { getCategoryIconByName, getCategoryVisualsByName } from "@/lib/category-icons";
+import { getCategoryDisplayLabel, getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
 import { t } from "@/lib/i18n";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
@@ -109,13 +110,14 @@ function getRecurringDetailsText(item: TransactionListItem, locale: string) {
 }
 
 function getRowMetadata(item: TransactionListItem, recurringMode: boolean, locale: string) {
+  const categoryLabel = getCategoryLabel(item.categoryLabel, locale);
   if (recurringMode && item.isRecurring) {
-    return `${item.categoryLabel} · ${getRecurringFrequencyLabel(item.recurringFrequency, locale)} · ${
+    return `${categoryLabel} · ${getRecurringFrequencyLabel(item.recurringFrequency, locale)} · ${
       item.recurringPausedAt ? t("activity.recurring.paused", locale) : t("activity.recurring.active", locale)
     }`;
   }
 
-  return `${item.categoryLabel} · ${item.subtitle}`;
+  return `${categoryLabel} · ${item.subtitle}`;
 }
 
 function ActionMessage({ state }: { state: TransactionMutationState }) {
@@ -145,7 +147,7 @@ function PendingSubmitButton({
 }
 
 function getCategoryIcon(item: TransactionListItem): LucideIcon {
-  const label = item.categoryLabel.toLowerCase();
+  const label = getCategoryLabelKey(item.categoryLabel) ?? item.categoryLabel.toLowerCase();
 
   if (label.includes("uncategorized") || label.includes("needs")) {
     return CircleHelp;
@@ -227,16 +229,19 @@ export function TransactionItemCard({
   const displayItem = optimisticItem ?? item;
   const selectedCategory = selectedCategoryId ? categories.find((category) => category.id === selectedCategoryId) : null;
   const selectedCategoryLabel = selectedCategory?.label ?? (selectedCategoryId ? displayItem.categoryLabel : "Uncategorized");
+  const selectedCategoryDisplayLabel = selectedCategory ? getCategoryDisplayLabel(selectedCategory, locale) : getCategoryLabel(selectedCategoryLabel, locale);
   const categoryIconItem = { ...displayItem, categoryLabel: selectedCategoryLabel };
   const CategoryIcon = getCategoryIcon(displayItem);
   const ActionCategoryIcon = getCategoryIcon(categoryIconItem);
   const categoryVisuals = getCategoryVisualsByName(displayItem.categoryLabel);
   const actionCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
   const needsReview = displayItem.reviewLabel !== "Reviewed";
+  const categoryAttentionKey = getCategoryLabelKey(displayItem.categoryLabel) ?? displayItem.categoryLabel.toLowerCase();
+  const actionCategoryAttentionKey = getCategoryLabelKey(selectedCategoryLabel) ?? selectedCategoryLabel.toLowerCase();
   const categoryIconNeedsAttention =
-    displayItem.categoryLabel.toLowerCase().includes("uncategorized") || displayItem.categoryLabel.toLowerCase().includes("needs");
+    categoryAttentionKey.includes("uncategorized") || categoryAttentionKey.includes("needs");
   const actionCategoryIconNeedsAttention =
-    selectedCategoryLabel.toLowerCase().includes("uncategorized") || selectedCategoryLabel.toLowerCase().includes("needs");
+    actionCategoryAttentionKey.includes("uncategorized") || actionCategoryAttentionKey.includes("needs");
   const categoryPickerOptions = buildCategoryPickerOptions(categories, displayItem.amountTone);
   const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
     ? CURRENCY_OPTIONS
@@ -596,7 +601,7 @@ export function TransactionItemCard({
         type="button"
       >
         <span
-          aria-label={`${displayItem.categoryLabel} category icon`}
+          aria-label={`${getCategoryLabel(displayItem.categoryLabel, locale)} ${t("common.category", locale).toLowerCase()} icon`}
           className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl border ${
             categoryIconNeedsAttention ? "text-amber-700" : "text-sky-700"
           }`}
@@ -657,7 +662,7 @@ export function TransactionItemCard({
             <div aria-label="Transaction actions" className="grid grid-cols-4 gap-2" role="group">
               <button
                 aria-expanded={isCategoryPickerOpen}
-                aria-label={`${t("activity.actions.changeCategoryCurrently", locale)} ${selectedCategoryLabel}`}
+                aria-label={`${t("activity.actions.changeCategoryCurrently", locale)} ${selectedCategoryDisplayLabel}`}
                 className={`relative flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
                   isCategoryPickerOpen && actionCategoryIconNeedsAttention
                     ? "border-amber-300 bg-amber-50 text-amber-800"

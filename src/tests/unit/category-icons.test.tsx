@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { getCategoryIconByName, getCategoryVisualsByName } from "@/lib/category-icons";
 
 const expectedIcons = [
@@ -89,5 +91,24 @@ describe("category icon mapping", () => {
     expect(visuals.primary).toBe("#64748B");
     expect(visuals.bg).toBe("#F1F5F9");
     expect(visuals.border).toBe("#CBD5E1");
+  });
+
+  it("renders shared category picker labels in the selected locale", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <CategoryIconGridPicker
+          categories={[
+            { id: "category-housing", slug: "housing", label: "Housing", direction: "expense" },
+            { id: "category-groceries", slug: "groceries", label: "Groceries", direction: "expense" },
+          ]}
+          selectedCategoryId="category-housing"
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Locuință" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Alimente" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Housing" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Groceries" })).not.toBeInTheDocument();
   });
 });

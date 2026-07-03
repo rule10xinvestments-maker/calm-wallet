@@ -2,6 +2,8 @@
 
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import type { CategoryPickerOption } from "@/lib/category-picker-options";
+import { useLocale } from "@/components/i18n/locale-provider";
+import { getCategoryDisplayLabel } from "@/lib/categories/category-labels";
 
 type CategoryIconGridPickerProps = {
   categories: CategoryPickerOption[];
@@ -11,10 +13,13 @@ type CategoryIconGridPickerProps = {
 };
 
 export function CategoryIconGridPicker({ categories, selectedCategoryId, onSelect, submitOnSelect = false }: CategoryIconGridPickerProps) {
+  const { locale } = useLocale();
+
   return (
     <div aria-label="Category picker" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1">
       {categories.map((category) => {
-        const categoryVisuals = getCategoryVisualsByName(category.label);
+        const displayLabel = getCategoryDisplayLabel(category, locale);
+        const categoryVisuals = getCategoryVisualsByName(category.slug ?? category.label);
         const CategoryIcon = categoryVisuals.icon;
         const isSelected = selectedCategoryId === category.id;
 
@@ -41,7 +46,7 @@ export function CategoryIconGridPicker({ categories, selectedCategoryId, onSelec
               strokeWidth={2.1}
               style={{ color: isSelected ? "#FFFFFF" : categoryVisuals.primary }}
             />
-            <span className="truncate">{category.label}</span>
+            <span className="truncate">{displayLabel}</span>
           </button>
         );
       })}

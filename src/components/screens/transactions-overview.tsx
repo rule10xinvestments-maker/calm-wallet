@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, HandCoins, List, MinusCircle, PlusCircle, Repeat2, Search, Trash2 } from "lucide-react";
@@ -21,6 +21,7 @@ import type { TransactionMutationState } from "@/lib/server/transaction-mutation
 import type { OwedNote } from "@/domain/owed-notes/types";
 import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 import { t } from "@/lib/i18n";
+import { getCategoryDisplayLabel, getCategoryLabel } from "@/lib/categories/category-labels";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
@@ -802,7 +803,7 @@ function CandidateReviewEntry({
                   .filter((category) => category.direction === "expense" || category.direction === "both")
                   .map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.label}
+                      {getCategoryDisplayLabel(category, locale)}
                     </option>
                   ))}
               </select>
@@ -1086,7 +1087,7 @@ function RecentlyDeletedEntry({
         <div className="min-w-0">
           <p className="break-words text-sm font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
           <p className="text-xs leading-5 text-slate-500">
-            {item.categoryLabel} · {item.subtitle}
+            {getCategoryLabel(item.categoryLabel, locale)} · {item.subtitle}
           </p>
         </div>
         <p className={`shrink-0 text-sm font-semibold ${item.amountTone === "income" ? "text-emerald-700" : "text-rose-700"}`}>

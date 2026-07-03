@@ -431,6 +431,8 @@ describe("insights overview", () => {
     expect(screen.getByRole("button", { name: "Cheltuieli" })).toBeInTheDocument();
     expect(screen.getByText("Cele mai mari cheltuieli luna aceasta")).toBeInTheDocument();
     expect(screen.getByText("Limite pe categorii")).toBeInTheDocument();
+    expect(screen.getAllByText("Alimente").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 

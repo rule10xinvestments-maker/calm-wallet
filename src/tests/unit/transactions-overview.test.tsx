@@ -1919,8 +1919,62 @@ describe("transactions overview", () => {
     expect(screen.getByText("Vezi detalii")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Acceptă candidat" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Respinge candidat" })).toBeInTheDocument();
-    expect(screen.getByText("Lunch receipt")).toBeInTheDocument();
+    expect(screen.getAllByText("Lunch receipt").length).toBeGreaterThan(0);
     expect(screen.getByText("Corner Cafe")).toBeInTheDocument();
+  });
+
+  it("localizes staged import category options without changing category ids", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <TransactionsOverview
+          {...makeOverviewProps()}
+          categories={[{ id: "cat-groceries", label: "Groceries", direction: "expense" }]}
+          currentView="needs-review"
+          items={[]}
+          stagedImportDetails={{
+            "record-1": {
+              reviewProgress: {
+                totalCandidateCount: 1,
+                acceptedCount: 0,
+                rejectedCount: 0,
+                pendingCount: 1,
+              },
+              candidateCount: 1,
+              reviewSummary: "1 pending_review",
+              acceptanceSummary: "1 pending",
+              candidatePreviews: [
+                {
+                  id: "candidate-1",
+                  importRecordId: "record-1",
+                  importType: "receipt_image",
+                  originalFilename: "receipt.jpg",
+                  amountDisplay: "RON 35.24",
+                  amountMinor: 3524,
+                  currency: "RON",
+                  occurredAt: "2026-06-15T10:00:00.000Z",
+                  dateLabel: "Jun 15",
+                  description: "Lunch receipt",
+                  merchantGuess: "Corner Cafe",
+                  categoryId: "cat-groceries",
+                  reviewState: "pending_review",
+                  acceptanceState: "pending",
+                  canAccept: true,
+                },
+              ],
+            },
+          }}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Lunch receipt/ }));
+
+    const categorySelect = screen.getByLabelText("Categorie") as HTMLSelectElement;
+    expect(categorySelect).toHaveValue("cat-groceries");
+    expect(within(categorySelect).getByRole("option", { name: "Alimente" })).toHaveValue("cat-groceries");
+    expect(within(categorySelect).queryByRole("option", { name: "Groceries" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Lunch receipt").length).toBeGreaterThan(0);
+    expect(screen.getByDisplayValue("Corner Cafe")).toBeInTheDocument();
   });
 
   it("shows incomplete receipt candidates in Review without treating them as normal transactions", () => {

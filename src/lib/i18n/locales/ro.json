@@ -560,5 +560,30 @@
     "totalPlaceholder": "Total",
     "receiptEntry": "Intrare bon",
     "noCandidatesYet": "Nu există candidați încă."
+  },
+  "categories": {
+    "housing": "Locuin\u021b\u0103",
+    "groceries": "Alimente",
+    "dining": "Mese \u00een ora\u0219",
+    "transport": "Transport",
+    "utilities": "Utilit\u0103\u021bi",
+    "health": "S\u0103n\u0103tate",
+    "shopping": "Cump\u0103r\u0103turi",
+    "personal": "Personal",
+    "entertainment": "Divertisment",
+    "travel": "C\u0103l\u0103torii",
+    "education": "Educa\u021bie",
+    "salary": "Salariu",
+    "selfEmployment": "Venit independent",
+    "refunds": "Ramburs\u0103ri",
+    "gifts": "Cadouri",
+    "transfers": "Transferuri",
+    "investments": "Investi\u021bii",
+    "sales": "V\u00e2nz\u0103ri",
+    "rentalIncome": "Venit din chirii",
+    "sideIncome": "Venit suplimentar",
+    "other": "Altele",
+    "uncategorized": "Necategorizat",
+    "needsCategory": "Necesit\u0103 categorie"
   }
 }

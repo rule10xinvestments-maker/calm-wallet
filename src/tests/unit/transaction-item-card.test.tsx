@@ -85,7 +85,8 @@ describe("transaction item card", () => {
 
     expect(screen.getByText("Chirie")).toBeInTheDocument();
     expect(screen.getByText("Notă: nota mea")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Schimbă categoria, acum Dining" })).toBeInTheDocument();
+    expect(screen.getByText("Mese în oraș · May 5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schimbă categoria, acum Mese în oraș" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Editează nota" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Editează detalii" })).toBeInTheDocument();
   });

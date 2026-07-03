@@ -560,5 +560,30 @@
     "totalPlaceholder": "Total",
     "receiptEntry": "Entrée de reçu",
     "noCandidatesYet": "Aucun candidat pour le moment."
+  },
+  "categories": {
+    "housing": "Logement",
+    "groceries": "Courses",
+    "dining": "Restaurants",
+    "transport": "Transport",
+    "utilities": "Services",
+    "health": "Sant\u00e9",
+    "shopping": "Achats",
+    "personal": "Personnel",
+    "entertainment": "Loisirs",
+    "travel": "Voyages",
+    "education": "\u00c9ducation",
+    "salary": "Salaire",
+    "selfEmployment": "Ind\u00e9pendant",
+    "refunds": "Remboursements",
+    "gifts": "Cadeaux",
+    "transfers": "Transferts",
+    "investments": "Investissements",
+    "sales": "Ventes",
+    "rentalIncome": "Revenus locatifs",
+    "sideIncome": "Revenu compl\u00e9mentaire",
+    "other": "Autre",
+    "uncategorized": "Non cat\u00e9goris\u00e9",
+    "needsCategory": "Cat\u00e9gorie requise"
   }
 }

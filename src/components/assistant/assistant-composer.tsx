@@ -22,6 +22,7 @@ import { CategoryIconGridPicker } from "@/components/category/category-icon-grid
 import { Button } from "@/components/ui/button";
 import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
+import { getCategoryDisplayLabel } from "@/lib/categories/category-labels";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import {
   buildCategoryPickerOptions,
@@ -314,13 +315,14 @@ export function AssistantComposer({
     manualCategoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
     categoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
     null;
-  const selectedCategoryLabel = selectedCategory?.label ?? t("common.other", locale);
-  const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
+  const selectedCategoryLabel = selectedCategory?.label ?? "Other";
+  const selectedCategoryDisplayLabel = selectedCategory ? getCategoryDisplayLabel(selectedCategory, locale) : t("common.other", locale);
+  const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategory?.slug ?? selectedCategoryLabel);
   const SelectedCategoryIcon = selectedCategoryVisuals.icon;
   const submittedManualCategoryId = selectedCategory?.isSynthetic ? "" : effectiveManualCategoryId;
   const selectedLimitCategory = limitCategoryOptions.find((category) => category.id === limitCategoryId) ?? limitCategoryOptions[0] ?? null;
-  const selectedLimitCategoryLabel = selectedLimitCategory?.label ?? t("common.category", locale);
-  const selectedLimitCategoryVisuals = getCategoryVisualsByName(selectedLimitCategoryLabel);
+  const selectedLimitCategoryDisplayLabel = selectedLimitCategory ? getCategoryDisplayLabel(selectedLimitCategory, locale) : t("common.category", locale);
+  const selectedLimitCategoryVisuals = getCategoryVisualsByName(selectedLimitCategory?.slug ?? selectedLimitCategory?.label ?? selectedLimitCategoryDisplayLabel);
   const SelectedLimitCategoryIcon = selectedLimitCategoryVisuals.icon;
   const isReceiptPanelOpen = openPanel === "receipt";
   const isStatementPanelOpen = openPanel === "statement";
@@ -425,7 +427,9 @@ export function AssistantComposer({
   }
 
   function getLimitCategoryLabel(categoryId: string) {
-    return categoryOptions.find((category) => category.id === categoryId)?.label ?? t("common.category", locale);
+    const category = categoryOptions.find((option) => option.id === categoryId);
+
+    return category ? getCategoryDisplayLabel(category, locale) : t("common.category", locale);
   }
 
   function editLimit(limit: Budget) {
@@ -968,7 +972,7 @@ export function AssistantComposer({
                 </div>
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
-                  aria-label={`${t("common.category", locale)}: ${selectedCategoryLabel}`}
+                  aria-label={`${t("common.category", locale)}: ${selectedCategoryDisplayLabel}`}
                   className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border bg-white px-1.5 py-1.5 text-center text-xs font-semibold text-slate-700 transition ${
                     manualOptionalPanel === "category" ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-slate-50"
                   }`}
@@ -978,7 +982,7 @@ export function AssistantComposer({
                   <SelectedCategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} style={{ color: selectedCategoryVisuals.primary }} />
                   <span>{t("common.category", locale)}</span>
                   <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight text-slate-600">
-                    {selectedCategoryLabel}
+                    {selectedCategoryDisplayLabel}
                   </span>
                 </button>
               </div>
@@ -1227,7 +1231,7 @@ export function AssistantComposer({
                 <span className="text-xs font-medium text-slate-600">{t("common.category", locale)}</span>
                 <button
                   aria-expanded={isLimitCategoryPickerOpen}
-                  aria-label={`${t("common.category", locale)}: ${selectedLimitCategoryLabel}`}
+                  aria-label={`${t("common.category", locale)}: ${selectedLimitCategoryDisplayLabel}`}
                   className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
                     isLimitCategoryPickerOpen ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-white"
                   }`}
@@ -1316,8 +1320,9 @@ export function AssistantComposer({
             <p className="text-sm font-medium text-slate-700">{t("assistant.limits.yourLimits", locale)}</p>
             {categoryLimits.length ? (
               categoryLimits.map((limit) => {
+                const category = categoryOptions.find((option) => option.id === limit.categoryId);
                 const categoryLabel = getLimitCategoryLabel(limit.categoryId);
-                const visuals = getCategoryVisualsByName(categoryLabel);
+                const visuals = getCategoryVisualsByName(category?.slug ?? category?.label ?? categoryLabel);
                 const LimitIcon = visuals.icon;
                 const isConfirmingRemove = confirmRemoveLimitId === limit.id;
 

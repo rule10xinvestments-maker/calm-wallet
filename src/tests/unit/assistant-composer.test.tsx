@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import type { Budget } from "@/domain/budgets/types";
+import { initialBudgetActionState } from "@/lib/actions/budgets-state";
 import type { OwedNote } from "@/domain/owed-notes/types";
 import type { AssistantActionState } from "@/lib/server/assistant";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
@@ -44,6 +45,31 @@ function renderComposer(
       importsEnabled={importsEnabled}
       recentItems={recentItems}
     />,
+  );
+}
+
+function renderComposerWithLocale(
+  locale: "en" | "ro" | "fr" | "es",
+  initialState: AssistantActionState = {
+    status: "idle",
+    message: null,
+    reviewState: null,
+    latestTransaction: null,
+    recentItems: [],
+  },
+  recentItems: AssistantActionState["recentItems"] = [],
+  action: AssistantActionHandler = async () => initialState,
+  categoryOptions: ControlledCategoryOption[] = [],
+) {
+  return render(
+    <LocaleProvider savedLocale={locale}>
+      <AssistantComposer
+        action={action}
+        categoryOptions={categoryOptions}
+        initialState={initialState}
+        recentItems={recentItems}
+      />
+    </LocaleProvider>,
   );
 }
 
@@ -570,7 +596,7 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save limit" }));
 
     await waitFor(() => expect(upsertLimitAction).toHaveBeenCalled());
-    const [, formData] = upsertLimitAction.mock.calls[0] as [unknown, FormData];
+    const [, formData] = upsertLimitAction.mock.calls[0] as unknown as [unknown, FormData];
 
     expect(formData.get("categoryId")).toBe("category-groceries");
     expect(formData.get("amount")).toBe("280");
@@ -607,6 +633,56 @@ describe("assistant composer", () => {
     expect(groceriesCategoryButton).toHaveAttribute("aria-expanded", "false");
     expect(groceriesCategoryButton).toHaveTextContent("");
     expect(groceriesCategoryButton.querySelector(".lucide-shopping-basket")).toBeInTheDocument();
+  });
+
+  it("localizes Limits category labels while preserving saved category ids", async () => {
+    const upsertLimitAction = vi.fn(async () => ({
+      ...initialBudgetActionState,
+      status: "success" as const,
+      message: "Saved.",
+    }));
+
+    render(
+      <LocaleProvider savedLocale="ro">
+        <AssistantComposer
+          action={async () => ({
+            status: "idle",
+            message: null,
+            reviewState: null,
+            latestTransaction: null,
+            recentItems: [],
+          })}
+          categoryOptions={manualCategoryOptions}
+          initialState={{
+            status: "idle",
+            message: null,
+            reviewState: null,
+            latestTransaction: null,
+            recentItems: [],
+          }}
+          upsertLimitAction={upsertLimitAction}
+          recentItems={[]}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Limite" }));
+    fireEvent.click(screen.getByRole("button", { name: /Creează o limită/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Categorie: Locuință" }));
+
+    const picker = screen.getByLabelText("Category picker");
+    expect(within(picker).getByRole("button", { name: "Locuință" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(picker).getByRole("button", { name: "Alimente" })).toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: "Salariu" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Alimente" }));
+    expect(screen.getByRole("button", { name: "Categorie: Alimente" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Sumă"), { target: { value: "280" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvează limita" }));
+
+    await waitFor(() => expect(upsertLimitAction).toHaveBeenCalled());
+    const [, formData] = upsertLimitAction.mock.calls[0] as unknown as [unknown, FormData];
+    expect(formData.get("categoryId")).toBe("category-groceries");
   });
 
   it("keeps the Limits create form to two primary rows and opens the category grid below row two", () => {
@@ -818,6 +894,37 @@ describe("assistant composer", () => {
     }
   });
 
+  it("localizes Manual category labels while submitting canonical category values", async () => {
+    const action = vi.fn(async () => ({
+      status: "idle" as const,
+      message: null,
+      reviewState: null,
+      latestTransaction: null,
+      recentItems: [],
+    }));
+    renderComposerWithLocale("ro", undefined, [], action, manualCategoryOptions);
+
+    fireEvent.click(screen.getByRole("button", { name: "Manual" }));
+    expect(screen.getByRole("button", { name: "Categorie: Altele" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Categorie: Altele" }));
+    const picker = screen.getByLabelText("Category picker");
+    expect(within(picker).getByRole("button", { name: "Alimente" })).toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: "Groceries" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Alimente" }));
+    expect(screen.getByRole("button", { name: "Categorie: Alimente" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Nume"), { target: { value: "Pâine" } });
+    fireEvent.change(screen.getByLabelText("Sumă"), { target: { value: "42" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvează elementul" }));
+
+    await waitFor(() => expect(action).toHaveBeenCalled());
+    const [, formData] = action.mock.calls[0] as unknown as [unknown, FormData];
+    expect(formData.get("categoryId")).toBe("category-groceries");
+    expect(formData.get("categoryLabel")).toBe("Groceries");
+  });
+
   it("keeps Manual category picker buttons calm while leaving the selected category obvious", () => {
     renderComposer(undefined, [], undefined, manualCategoryOptions);
 
@@ -1015,6 +1122,7 @@ describe("assistant composer", () => {
     expect(action.mock.calls[0]![1].get("toolName")).toBe("create_transaction");
     expect(action.mock.calls[0]![1].get("transactionType")).toBe("expense");
 
+    await waitFor(() => expect(screen.getByLabelText("Amount")).toHaveValue(""));
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "44.00" } });
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
