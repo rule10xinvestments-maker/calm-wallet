@@ -164,6 +164,121 @@
     "restored": "Restauré.",
     "somethingWentWrong": "Une erreur est survenue."
   },
+  "activity": {
+    "title": "Mouvements récents",
+    "helper": "Touchez une entrée pour modifier, ajouter une note ou vérifier les détails.",
+    "searchPlaceholder": "Rechercher des entrées",
+    "searchAria": "Rechercher des transactions",
+    "summary": "Résumé",
+    "owed": "À recevoir/payer",
+    "filters": {
+      "allLabel": "Toutes les transactions",
+      "recurring": "Récurrents",
+      "recurringLabel": "Transactions récurrentes"
+    },
+    "actions": {
+      "category": "Catégorie",
+      "changeCategoryCurrently": "Changer la catégorie, actuellement",
+      "edit": "Modifier les détails",
+      "delete": "Supprimer la transaction",
+      "deleteForever": "Supprimer définitivement"
+    },
+    "empty": {
+      "helper": "Aucune entrée pour le moment",
+      "period": "Aucune entrée enregistrée sur cette période.",
+      "loadError": "Les transactions ne peuvent pas être affichées pour le moment."
+    },
+    "noMatches": {
+      "helper": "Aucune entrée correspondante"
+    },
+    "context": {
+      "recoverableEntry": "entrée récupérable affichée",
+      "recoverableEntries": "entrées récupérables affichées",
+      "recurringItem": "élément récurrent affiché",
+      "recurringItems": "éléments récurrents affichés",
+      "reviewEntry": "entrée à vérifier affichée",
+      "reviewEntries": "entrées à vérifier affichées",
+      "entryShown": "entrée affichée",
+      "entriesShown": "entrées affichées"
+    },
+    "time": {
+      "previousYear": "Année précédente",
+      "nextYear": "Année suivante",
+      "select": "Sélectionner",
+      "useCustomRange": "Utiliser une période personnalisée",
+      "customRange": "Période personnalisée",
+      "from": "Du",
+      "to": "Au"
+    },
+    "summaryLabels": {
+      "net": "Net",
+      "converted": "Converti pour l’affichage. Les originaux restent inchangés.",
+      "mixedCurrencies": "Les devises mixtes sont affichées séparément."
+    },
+    "deleted": {
+      "title": "Supprimés récemment",
+      "helper": "Touchez une entrée pour la restaurer ou la supprimer définitivement.",
+      "retention": "Les entrées supprimées restent ici pendant 30 jours.",
+      "empty": "Aucune entrée supprimée",
+      "noMatches": "Aucune entrée supprimée ne correspond à cette recherche.",
+      "deleteQuestion": "Supprimer la transaction ?",
+      "moveToBin": "Mettre dans la corbeille",
+      "moveToBinHelper": "Déplacer cette entrée vers la corbeille ?",
+      "deleteForeverQuestion": "Supprimer définitivement ?",
+      "cannotBeUndone": "Cette action est irréversible."
+    },
+    "recurring": {
+      "title": "Éléments récurrents",
+      "helper": "Vérifiez les paiements et revenus répétitifs.",
+      "unboundedHelper": "Le mode récurrent n’est pas limité au mois sélectionné.",
+      "emptyTitle": "Aucune entrée récurrente",
+      "emptyHelper": "Les transactions répétitives apparaissent ici.",
+      "active": "Actif",
+      "paused": "En pause",
+      "on": "Activé",
+      "off": "Désactivé",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre",
+      "stop": "Arrêter",
+      "stopQuestion": "Arrêter la récurrence ?",
+      "stopHelper": "Cet élément enregistré restera dans Activité.",
+      "stopFuture": "Arrêter les répétitions futures",
+      "details": "Détails récurrents",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "starts": "Début",
+      "ends": "Fin",
+      "untilOff": "Jusqu’à désactivation",
+      "start": "Début",
+      "end": "Fin",
+      "noEndDate": "Aucune date de fin",
+      "repeatUntilOff": "Répéter jusqu’à désactivation",
+      "pauseRecurring": "Mettre en pause",
+      "resumeRecurring": "Reprendre la récurrence",
+      "stopRecurring": "Arrêter la récurrence",
+      "frequency": "Fréquence récurrente",
+      "endDateRequired": "Choisissez une date de fin ou répétez jusqu’à désactivation."
+    },
+    "note": {
+      "add": "Ajouter une note",
+      "edit": "Modifier la note",
+      "save": "Enregistrer la note",
+      "saveError": "La note n’a pas pu être enregistrée. Réessayez."
+    },
+    "details": {
+      "type": "Type de transaction",
+      "itemName": "Nom de l’élément",
+      "occurredDate": "Date",
+      "reviewState": "État de vérification",
+      "saveChanges": "Enregistrer les modifications"
+    },
+    "limit": {
+      "over": "Limite dépassée",
+      "label": "Limite",
+      "left": "restant"
+    }
+  },
   "owed": {
     "owed": "Dû",
     "owedToMe": "On me doit",

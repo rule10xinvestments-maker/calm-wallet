@@ -1,6 +1,7 @@
 ﻿import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
 
@@ -66,6 +67,29 @@ function renderCard(args: {
 }
 
 describe("transaction item card", () => {
+  it("localizes Activity row actions without translating transaction content", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <TransactionItemCard
+          categories={categories}
+          deleteAction={vi.fn(async () => initialState)}
+          initialState={initialState}
+          item={makeItem({ title: "Chirie", itemName: "Chirie", note: "nota mea" })}
+          recategorizeAction={vi.fn(async () => initialState)}
+          updateAction={vi.fn(async () => initialState)}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Chirie/i }));
+
+    expect(screen.getByText("Chirie")).toBeInTheDocument();
+    expect(screen.getByText("Notă: nota mea")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schimbă categoria, acum Dining" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Editează nota" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Editează detalii" })).toBeInTheDocument();
+  });
+
   it("renders a compact collapsed transaction row with a category icon by default", () => {
     renderCard();
 

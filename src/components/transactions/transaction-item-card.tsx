@@ -15,10 +15,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
+import { useLocale } from "@/components/i18n/locale-provider";
 import { buildCategoryPickerOptions } from "@/lib/category-picker-options";
 import type { TransactionCategoryOption, TransactionListItem } from "@/lib/server/transactions-read-model";
 import { getCategoryIconByName, getCategoryVisualsByName } from "@/lib/category-icons";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
+import { t } from "@/lib/i18n";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
@@ -84,30 +86,32 @@ function formatReadableDate(dateKey: string | null | undefined) {
   });
 }
 
-function getRecurringFrequencyLabel(frequency: TransactionListItem["recurringFrequency"]) {
+function getRecurringFrequencyLabel(frequency: TransactionListItem["recurringFrequency"], locale = "en") {
   if (frequency === "weekly") {
-    return "Weekly";
+    return t("activity.recurring.weekly", locale);
   }
 
   if (frequency === "yearly") {
-    return "Yearly";
+    return t("activity.recurring.yearly", locale);
   }
 
-  return "Monthly";
+  return t("activity.recurring.monthly", locale);
 }
 
-function getRecurringDetailsText(item: TransactionListItem) {
-  const frequencyLabel = getRecurringFrequencyLabel(item.recurringFrequency);
+function getRecurringDetailsText(item: TransactionListItem, locale: string) {
+  const frequencyLabel = getRecurringFrequencyLabel(item.recurringFrequency, locale);
   const startLabel = formatReadableDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10));
-  const endLabel = item.recurringEndDate ? `Ends ${formatReadableDate(item.recurringEndDate)}` : "Until turned off";
+  const endLabel = item.recurringEndDate
+    ? `${t("activity.recurring.ends", locale)} ${formatReadableDate(item.recurringEndDate)}`
+    : t("activity.recurring.untilOff", locale);
 
   return `${frequencyLabel} · Starts ${startLabel} · ${endLabel}`;
 }
 
-function getRowMetadata(item: TransactionListItem, recurringMode: boolean) {
+function getRowMetadata(item: TransactionListItem, recurringMode: boolean, locale: string) {
   if (recurringMode && item.isRecurring) {
-    return `${item.categoryLabel} · ${getRecurringFrequencyLabel(item.recurringFrequency)} · ${
-      item.recurringPausedAt ? "Paused" : "Active"
+    return `${item.categoryLabel} · ${getRecurringFrequencyLabel(item.recurringFrequency, locale)} · ${
+      item.recurringPausedAt ? t("activity.recurring.paused", locale) : t("activity.recurring.active", locale)
     }`;
   }
 
@@ -180,6 +184,7 @@ export function TransactionItemCard({
   onDeleted,
   recurringMode = false,
 }: TransactionItemCardProps) {
+  const { locale } = useLocale();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
@@ -479,7 +484,7 @@ export function TransactionItemCard({
     const recurringManageIntentValue = String(formData.get("recurringManageIntent") ?? "update");
     if (options.validateEndDate && recurringEnabled && recurringManageIntentValue !== "stop" && !selectedRecurringOpenEnded && !recurringEndDateValue) {
       options.preventDefault();
-      setDetailsValidationMessage("Choose an end date or repeat until turned off.");
+      setDetailsValidationMessage(t("activity.recurring.endDateRequired", locale));
       return;
     }
     setDetailsValidationMessage(null);
@@ -605,33 +610,33 @@ export function TransactionItemCard({
         </span>
         <span className="min-w-0 space-y-0.5">
           <span className="block break-words text-sm font-medium leading-5 text-slate-900">{formatTransactionTitleForDisplay(displayItem.title)}</span>
-          <span className="block text-xs leading-5 text-slate-500">{getRowMetadata(displayItem, recurringMode)}</span>
+          <span className="block text-xs leading-5 text-slate-500">{getRowMetadata(displayItem, recurringMode, locale)}</span>
           {!recurringMode && displayItem.isRecurring ? (
             <span className="flex items-center gap-1.5 text-xs leading-5 text-slate-500">
               <Repeat2 aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={2.1} />
-              <span>Recurring</span>
+              <span>{t("activity.filters.recurring", locale)}</span>
             </span>
           ) : null}
           {isOverLimit ? (
             <span className="flex items-center gap-1.5 text-xs font-medium leading-5 text-amber-700">
               <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={2.1} />
-              <span>Over limit</span>
+              <span>{t("activity.limit.over", locale)}</span>
             </span>
           ) : null}
           {remainingLimitDisplay ? (
             <span className="flex items-center gap-1.5 text-xs leading-5 text-slate-500">
               <CircleGauge aria-hidden="true" className="size-3.5 shrink-0 text-sky-700" strokeWidth={2.1} />
-              <span>Limit: {remainingLimitDisplay} left</span>
+              <span>{t("activity.limit.label", locale)}: {remainingLimitDisplay} {t("activity.limit.left", locale)}</span>
             </span>
           ) : null}
           {displayItem.note ? (
-            <span className="block truncate text-xs leading-5 text-slate-500" title={`Note: ${displayItem.note}`}>
-              Note: {displayItem.note}
+            <span className="block truncate text-xs leading-5 text-slate-500" title={`${t("common.note", locale)}: ${displayItem.note}`}>
+              {t("common.note", locale)}: {displayItem.note}
             </span>
           ) : null}
           {displayItem.merchant && displayItem.merchant !== displayItem.title ? (
-            <span className="block truncate text-xs leading-5 text-slate-500" title={`Merchant: ${displayItem.merchant}`}>
-              Merchant: {displayItem.merchant}
+            <span className="block truncate text-xs leading-5 text-slate-500" title={`${t("common.merchant", locale)}: ${displayItem.merchant}`}>
+              {t("common.merchant", locale)}: {displayItem.merchant}
             </span>
           ) : null}
         </span>
@@ -640,7 +645,7 @@ export function TransactionItemCard({
             {displayItem.amountDisplay}
           </span>
           {needsReview ? (
-            <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700">Review</span>
+            <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700">{t("common.review", locale)}</span>
           ) : null}
         </span>
       </button>
@@ -652,7 +657,7 @@ export function TransactionItemCard({
             <div aria-label="Transaction actions" className="grid grid-cols-4 gap-2" role="group">
               <button
                 aria-expanded={isCategoryPickerOpen}
-                aria-label={`Change category, currently ${selectedCategoryLabel}`}
+                aria-label={`${t("activity.actions.changeCategoryCurrently", locale)} ${selectedCategoryLabel}`}
                 className={`relative flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
                   isCategoryPickerOpen && actionCategoryIconNeedsAttention
                     ? "border-amber-300 bg-amber-50 text-amber-800"
@@ -678,7 +683,7 @@ export function TransactionItemCard({
                 <ChevronDown aria-hidden="true" className="absolute bottom-1 right-1 text-slate-400" size={12} strokeWidth={2.4} />
               </button>
               <button
-                aria-label={displayItem.note ? "Edit note" : "Add note"}
+                aria-label={displayItem.note ? t("activity.note.edit", locale) : t("activity.note.add", locale)}
                 className={`flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
                   isNotePanelOpen
                     ? "border-sky-300 bg-sky-50 text-sky-800"
@@ -692,7 +697,7 @@ export function TransactionItemCard({
                 <StickyNote aria-hidden="true" size={18} strokeWidth={2.1} />
               </button>
               <button
-                aria-label="Edit details"
+                aria-label={t("activity.actions.edit", locale)}
                 className={`flex min-h-11 items-center justify-center rounded-2xl border bg-white shadow-sm transition ${
                   isEditingDetails
                     ? "border-sky-300 bg-sky-50 text-sky-800"
@@ -704,7 +709,7 @@ export function TransactionItemCard({
                 <SlidersHorizontal aria-hidden="true" size={18} strokeWidth={2.1} />
               </button>
               <button
-                aria-label="Delete transaction"
+                aria-label={t("activity.actions.delete", locale)}
                 className="flex min-h-11 items-center justify-center rounded-2xl border border-rose-200 bg-white text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
                 onClick={() => setIsDeleteConfirmOpen(true)}
                 type="button"
@@ -733,10 +738,10 @@ export function TransactionItemCard({
             >
               <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
                 <h2 className="text-base font-semibold text-slate-950" id={`delete-title-${item.id}`}>
-                  Remove from Activity?
+                  {t("activity.deleted.deleteQuestion", locale)}
                 </h2>
                 <p className="mt-2 text-sm leading-5 text-slate-600">
-                  It will stay in Bin for 30 days, then it can no longer be restored.
+                  {t("activity.deleted.moveToBinHelper", locale)}
                 </p>
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
@@ -744,12 +749,12 @@ export function TransactionItemCard({
                     onClick={() => setIsDeleteConfirmOpen(false)}
                     type="button"
                   >
-                    Cancel
+                    {t("common.cancel", locale)}
                   </button>
                   <form action={deleteFormAction}>
                     <input name="transactionId" type="hidden" value={item.id} />
                     <button className="min-h-11 w-full rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white" type="submit">
-                      Move to Bin
+                      {t("activity.deleted.moveToBin", locale)}
                     </button>
                   </form>
                 </div>
@@ -766,16 +771,16 @@ export function TransactionItemCard({
             >
               <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
                 <h2 className="text-base font-semibold text-slate-950" id={`stop-recurring-title-${item.id}`}>
-                  Stop recurring?
+                  {t("activity.recurring.stopQuestion", locale)}
                 </h2>
-                <p className="mt-2 text-sm leading-5 text-slate-600">This saved item will stay in Activity.</p>
+                <p className="mt-2 text-sm leading-5 text-slate-600">{t("activity.recurring.stopHelper", locale)}</p>
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
                     onClick={() => setIsStopRecurringConfirmOpen(false)}
                     type="button"
                   >
-                    Cancel
+                    {t("common.cancel", locale)}
                   </button>
                   <button
                     className="min-h-11 rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
@@ -791,7 +796,7 @@ export function TransactionItemCard({
                     }}
                     type="button"
                   >
-                    Stop future repeats
+                    {t("activity.recurring.stopFuture", locale)}
                   </button>
                 </div>
               </div>
@@ -813,9 +818,9 @@ export function TransactionItemCard({
             <div className="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-slate-700">
               <p className="flex items-center gap-2 font-semibold text-sky-800">
                 <Repeat2 aria-hidden="true" className="size-4" strokeWidth={2.2} />
-                Recurring
+                {t("activity.filters.recurring", locale)}
               </p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">{getRecurringDetailsText(displayItem)}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{getRecurringDetailsText(displayItem, locale)}</p>
               {recurringMode && !isEditingDetails ? (
                 <form
                   action={updateFormAction}
@@ -853,14 +858,14 @@ export function TransactionItemCard({
                     }}
                     type="button"
                   >
-                    {displayItem.recurringPausedAt ? "Resume" : "Pause"}
+                    {displayItem.recurringPausedAt ? t("activity.recurring.resume", locale) : t("activity.recurring.pause", locale)}
                   </button>
                   <button
                     className="min-h-9 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
                     onClick={() => setIsStopRecurringConfirmOpen(true)}
                     type="button"
                   >
-                    Stop
+                    {t("activity.recurring.stop", locale)}
                   </button>
                 </form>
               ) : null}
@@ -884,7 +889,7 @@ export function TransactionItemCard({
               <input name="reviewState" type="hidden" value={getEditableReviewState(displayItem.reviewState)} />
               <input name="uncertaintyReason" type="hidden" value={displayItem.uncertaintyReason ?? ""} />
               <label className="grid gap-1">
-                <span className="text-xs font-medium text-slate-600">Note</span>
+                <span className="text-xs font-medium text-slate-600">{t("common.note", locale)}</span>
                 <textarea
                   className="min-h-20 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
                   defaultValue={displayItem.note ?? ""}
@@ -898,17 +903,17 @@ export function TransactionItemCard({
                   onClick={() => setIsNotePanelOpen(false)}
                   type="button"
                 >
-                  Cancel
+                  {t("common.cancel", locale)}
                 </button>
                 <PendingSubmitButton
                   className="min-h-10 rounded-2xl bg-sky-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-                  pendingLabel="Saving..."
+                  pendingLabel={t("common.saving", locale)}
                 >
-                  Save note
+                  {t("activity.note.save", locale)}
                 </PendingSubmitButton>
               </div>
               {submittedUpdateIntent === "note" && updateState.status === "error" ? (
-                <p className="text-xs text-rose-600">Couldn&apos;t save the note. Please try again.</p>
+                <p className="text-xs text-rose-600">{t("activity.note.saveError", locale)}</p>
               ) : null}
             </form>
           ) : null}
@@ -929,7 +934,7 @@ export function TransactionItemCard({
               <input name="recurringEndDate" type="hidden" value={selectedRecurringOpenEnded ? "" : selectedRecurringEndDate} />
               <input name="recurringManageIntent" type="hidden" value={selectedRecurringManageIntent} />
               <fieldset className="grid gap-2">
-                <legend className="text-xs font-medium text-slate-600">Transaction type</legend>
+                <legend className="text-xs font-medium text-slate-600">{t("activity.details.type", locale)}</legend>
                 <div className="grid grid-cols-2 gap-2">
                   {TRANSACTION_TYPE_OPTIONS.map((option) => (
                     <label key={option.value} className="block">
@@ -953,7 +958,7 @@ export function TransactionItemCard({
                         value={option.value}
                       />
                       <span className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm font-medium text-slate-700 transition peer-checked:border-sky-300 peer-checked:bg-sky-50 peer-checked:text-sky-800">
-                        {option.label}
+                        {option.value === "income" ? t("common.income", locale) : t("transactions.expense", locale)}
                       </span>
                     </label>
                   ))}
@@ -961,7 +966,7 @@ export function TransactionItemCard({
               </fieldset>
               <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
                 <label className="grid gap-1">
-                  <span className="text-xs font-medium text-slate-600">Amount</span>
+                  <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
                   <input
                     className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
                     defaultValue={formatAmountInput(displayItem.amountMinor)}
@@ -972,7 +977,7 @@ export function TransactionItemCard({
                   />
                 </label>
                 <label className="grid gap-1">
-                  <span className="text-xs font-medium text-slate-600">Currency</span>
+                  <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
                   <select
                     className="min-h-10 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
                     defaultValue={displayItem.currency}
@@ -987,7 +992,7 @@ export function TransactionItemCard({
                 </label>
               </div>
               <label className="grid gap-1">
-                <span className="text-xs font-medium text-slate-600">Item name</span>
+                <span className="text-xs font-medium text-slate-600">{t("activity.details.itemName", locale)}</span>
                 <input
                   className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
                   defaultValue={displayItem.itemName ?? displayItem.title}
@@ -995,7 +1000,7 @@ export function TransactionItemCard({
                 />
               </label>
               <label className="grid gap-1">
-                <span className="text-xs font-medium text-slate-600">Merchant</span>
+                <span className="text-xs font-medium text-slate-600">{t("common.merchant", locale)}</span>
                 <input
                   className="min-h-10 rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-800"
                   defaultValue={displayItem.merchant ?? ""}
@@ -1004,7 +1009,7 @@ export function TransactionItemCard({
               </label>
               <div aria-label="Date and recurring controls" className="grid grid-cols-[minmax(0,1fr)_6.75rem] gap-2 max-[340px]:grid-cols-1">
                 <label className="grid min-w-0 gap-1">
-                  <span className="text-xs font-medium text-slate-600">Occurred date</span>
+                  <span className="text-xs font-medium text-slate-600">{t("activity.details.occurredDate", locale)}</span>
                   <input
                     className="min-h-10 w-full min-w-0 rounded-2xl border border-slate-200 px-2 py-2 text-sm text-slate-800"
                     defaultValue={displayItem.occurredAt.slice(0, 10)}
@@ -1013,20 +1018,20 @@ export function TransactionItemCard({
                   />
                 </label>
                 <fieldset className="grid min-w-0 gap-1">
-                  <legend className="text-xs font-medium text-slate-600">Recurring</legend>
+                  <legend className="text-xs font-medium text-slate-600">{t("activity.filters.recurring", locale)}</legend>
                   <div className="flex min-h-10 w-full min-w-0 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
                     <span className="flex shrink-0 items-center text-sm font-semibold text-slate-800">
                       <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-sky-700" strokeWidth={2.2} />
                     </span>
                   {displayItem.isRecurring ? (
                     <span className={`rounded-full px-1.5 py-1 text-[11px] font-semibold ${selectedRecurringPaused ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                      {selectedRecurringPaused ? "Paused" : "Active"}
+                      {selectedRecurringPaused ? t("activity.recurring.paused", locale) : t("activity.recurring.active", locale)}
                     </span>
                   ) : (
                     <label className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <span>{selectedRecurringEnabled ? "On" : "Off"}</span>
+                      <span>{selectedRecurringEnabled ? t("activity.recurring.on", locale) : t("activity.recurring.off", locale)}</span>
                       <input
-                        aria-label="Recurring"
+                        aria-label={t("activity.filters.recurring", locale)}
                         checked={selectedRecurringEnabled}
                         className="size-5 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                         onChange={(event) => {
@@ -1048,11 +1053,11 @@ export function TransactionItemCard({
                   {displayItem.isRecurring ? (
                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                       <Repeat2 aria-hidden="true" className="size-4 text-sky-700" strokeWidth={2.2} />
-                      Recurring details
+                      {t("activity.recurring.details", locale)}
                     </div>
                   ) : null}
                   <div className="grid gap-2">
-                    <div aria-label="Recurring frequency" className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1" role="group">
+                    <div aria-label={t("activity.recurring.frequency", locale)} className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1" role="group">
                       {RECURRING_FREQUENCY_OPTIONS.map((option) => (
                         <button
                           aria-pressed={selectedRecurringFrequency === option.value}
@@ -1065,13 +1070,13 @@ export function TransactionItemCard({
                           onClick={() => setSelectedRecurringFrequency(option.value)}
                           type="button"
                         >
-                          {option.label}
+                          {t(`activity.recurring.${option.value}`, locale)}
                         </button>
                       ))}
                     </div>
                     <div className="grid gap-2">
                       <label className="grid gap-1">
-                        <span className="text-xs font-medium text-slate-600">Start</span>
+                        <span className="text-xs font-medium text-slate-600">{t("activity.recurring.start", locale)}</span>
                         <input
                           aria-label="Start"
                           className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
@@ -1081,7 +1086,7 @@ export function TransactionItemCard({
                         />
                       </label>
                       <label className="grid gap-1">
-                        <span className="text-xs font-medium text-slate-600">End</span>
+                        <span className="text-xs font-medium text-slate-600">{t("activity.recurring.end", locale)}</span>
                         <input
                           aria-label="End"
                           className={`min-h-10 w-full rounded-xl border px-3 py-2 text-sm ${
@@ -1097,7 +1102,7 @@ export function TransactionItemCard({
                           type="date"
                           value={selectedRecurringEndDate}
                         />
-                        {selectedRecurringOpenEnded ? <span className="text-xs text-slate-500">No end date</span> : null}
+                        {selectedRecurringOpenEnded ? <span className="text-xs text-slate-500">{t("activity.recurring.noEndDate", locale)}</span> : null}
                       </label>
                     </div>
                     <label className="flex min-h-11 items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-700">
@@ -1114,7 +1119,7 @@ export function TransactionItemCard({
                         }}
                         type="checkbox"
                       />
-                      <span>Repeat until I turn it off</span>
+                      <span>{t("activity.recurring.repeatUntilOff", locale)}</span>
                     </label>
                     {detailsValidationMessage ? <p className="text-xs font-medium text-rose-600">{detailsValidationMessage}</p> : null}
                     {displayItem.isRecurring ? (
@@ -1128,14 +1133,14 @@ export function TransactionItemCard({
                           }}
                           type="button"
                         >
-                          {selectedRecurringPaused ? "Resume recurring" : "Pause recurring"}
+                          {selectedRecurringPaused ? t("activity.recurring.resumeRecurring", locale) : t("activity.recurring.pauseRecurring", locale)}
                         </button>
                         <button
                           className="min-h-9 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
                           onClick={() => setIsStopRecurringConfirmOpen(true)}
                           type="button"
                         >
-                          Stop recurring
+                          {t("activity.recurring.stopRecurring", locale)}
                         </button>
                       </div>
                     ) : null}
@@ -1149,7 +1154,7 @@ export function TransactionItemCard({
                 value={selectedReviewState === "reviewed" ? "" : uncertaintyNote || displayItem.uncertaintyReason || "Marked for review."}
               />
               <fieldset className="grid gap-2">
-                <legend className="text-xs font-medium text-slate-600">Review state</legend>
+                <legend className="text-xs font-medium text-slate-600">{t("activity.details.reviewState", locale)}</legend>
                 <div className="grid grid-cols-2 gap-2">
                   {REVIEW_STATE_OPTIONS.map((option) => (
                     <label key={option.value} className="block">
@@ -1162,7 +1167,7 @@ export function TransactionItemCard({
                         value={option.value}
                       />
                       <span className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm font-medium text-slate-700 transition peer-checked:border-sky-300 peer-checked:bg-sky-50 peer-checked:text-sky-800">
-                        {option.label}
+                        {option.value === "reviewed" ? t("common.reviewed", locale) : t("common.needsReview", locale)}
                       </span>
                     </label>
                   ))}
@@ -1171,9 +1176,9 @@ export function TransactionItemCard({
               <div className="sticky bottom-20 z-10 -mx-3 mt-1 border-t border-slate-100 bg-white/95 px-3 pb-3 pt-3 backdrop-blur">
                 <PendingSubmitButton
                   className="min-h-11 w-full rounded-2xl bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                  pendingLabel="Saving..."
+                  pendingLabel={t("common.saving", locale)}
                 >
-                  Save changes
+                  {t("activity.details.saveChanges", locale)}
                 </PendingSubmitButton>
               </div>
               <ActionMessage

@@ -1,11 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TransactionsOverview } from "@/components/screens/transactions-overview";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { initialImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
 import type { ImportCandidateReviewDecisionActionState } from "@/lib/actions/imports-state";
 import type { TransactionListItem } from "@/lib/server/transactions-read-model";
 import type { StagedImportListItem } from "@/lib/server/imports-list";
 import type { OwedNote } from "@/domain/owed-notes/types";
+import type { SupportedLocale } from "@/lib/i18n";
 
 vi.mock("@/components/transactions/transaction-item-card", () => ({
   TransactionItemCard: ({ item, recurringMode }: { item: TransactionListItem; recurringMode?: boolean }) => (
@@ -200,7 +202,57 @@ function makeOwedNote(overrides: Partial<OwedNote> = {}): OwedNote {
   };
 }
 
+function renderOverviewWithLocale(locale: SupportedLocale) {
+  return render(
+    <LocaleProvider savedLocale={locale}>
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "Chirie", note: "nota personala" })]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />
+    </LocaleProvider>,
+  );
+}
+
 describe("transactions overview", () => {
+  it("renders Activity overview copy in English by default", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[makeTransactionItem({ title: "Chirie", note: "nota personala" })]}
+        stagedImports={[]}
+        stagedImportDetails={{}}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Recent money movement" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
+    expect(screen.getByText("Spend")).toBeInTheDocument();
+    expect(screen.getByText("Recurring")).toBeInTheDocument();
+    expect(screen.getByText("Chirie")).toBeInTheDocument();
+  });
+
+  it("renders Activity overview copy in Romanian, French, and Spanish without translating transaction titles", () => {
+    const translatedTitles = [
+      ["ro", "Mișcări recente de bani", "Caută intrări", "Cheltuieli", "Recurente"],
+      ["fr", "Mouvements récents", "Rechercher des entrées", "Dépenses", "Récurrents"],
+      ["es", "Movimientos recientes de dinero", "Buscar entradas", "Gastos", "Recurrentes"],
+    ] as const;
+
+    translatedTitles.forEach(([locale, title, searchPlaceholder, spendLabel, recurringLabel]) => {
+      const view = renderOverviewWithLocale(locale);
+
+      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(searchPlaceholder)).toBeInTheDocument();
+      expect(screen.getByText(spendLabel)).toBeInTheDocument();
+      expect(screen.getByText(recurringLabel)).toBeInTheDocument();
+      expect(screen.getByText("Chirie")).toBeInTheDocument();
+
+      view.unmount();
+    });
+  });
+
   it("renders compact Activity filters and icon search controls", () => {
     render(
       <TransactionsOverview

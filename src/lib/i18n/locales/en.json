@@ -164,6 +164,121 @@
     "restored": "Restored.",
     "somethingWentWrong": "Something went wrong."
   },
+  "activity": {
+    "title": "Recent money movement",
+    "helper": "Tap an entry to edit, add a note, or review details.",
+    "searchPlaceholder": "Search entries",
+    "searchAria": "Search transactions",
+    "summary": "Summary",
+    "owed": "Owed",
+    "filters": {
+      "allLabel": "All transactions",
+      "recurring": "Recurring",
+      "recurringLabel": "Recurring transactions"
+    },
+    "actions": {
+      "category": "Category",
+      "changeCategoryCurrently": "Change category, currently",
+      "edit": "Edit details",
+      "delete": "Delete transaction",
+      "deleteForever": "Delete forever"
+    },
+    "empty": {
+      "helper": "No transactions found for this signed-in account.",
+      "period": "No saved entries in this period.",
+      "loadError": "Transactions could not be shown right now."
+    },
+    "noMatches": {
+      "helper": "No tracked transactions match that search."
+    },
+    "context": {
+      "recoverableEntry": "recoverable entry shown",
+      "recoverableEntries": "recoverable entries shown",
+      "recurringItem": "recurring item shown",
+      "recurringItems": "recurring items shown",
+      "reviewEntry": "review entry shown",
+      "reviewEntries": "review entries shown",
+      "entryShown": "entries shown",
+      "entriesShown": "entries shown"
+    },
+    "time": {
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "select": "Select",
+      "useCustomRange": "Use custom range",
+      "customRange": "Custom range",
+      "from": "From",
+      "to": "To"
+    },
+    "summaryLabels": {
+      "net": "Net",
+      "converted": "Converted for display. Originals stay unchanged.",
+      "mixedCurrencies": "Mixed currencies shown separately."
+    },
+    "deleted": {
+      "title": "Recently deleted",
+      "helper": "Tap an entry to restore or delete forever.",
+      "retention": "Recoverable for 30 days.",
+      "empty": "No deleted entries",
+      "noMatches": "No deleted entries match that search.",
+      "deleteQuestion": "Remove from Activity?",
+      "moveToBin": "Move to Bin",
+      "moveToBinHelper": "It will stay in Bin for 30 days, then it can no longer be restored.",
+      "deleteForeverQuestion": "Delete forever?",
+      "cannotBeUndone": "This entry will be permanently removed."
+    },
+    "recurring": {
+      "title": "Recurring items",
+      "helper": "Review repeating payments and income.",
+      "unboundedHelper": "Recurring mode is not limited to the selected month.",
+      "emptyTitle": "No recurring items yet.",
+      "emptyHelper": "Recurring payments and income you save will show here.",
+      "active": "Active",
+      "paused": "Paused",
+      "on": "On",
+      "off": "Off",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "stopQuestion": "Stop recurring?",
+      "stopHelper": "This saved item will stay in Activity.",
+      "stopFuture": "Stop future repeats",
+      "details": "Recurring details",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "starts": "Starts",
+      "ends": "Ends",
+      "untilOff": "Until turned off",
+      "start": "Start",
+      "end": "End",
+      "noEndDate": "No end date",
+      "repeatUntilOff": "Repeat until I turn it off",
+      "pauseRecurring": "Pause recurring",
+      "resumeRecurring": "Resume recurring",
+      "stopRecurring": "Stop recurring",
+      "frequency": "Recurring frequency",
+      "endDateRequired": "Choose an end date or repeat until turned off."
+    },
+    "note": {
+      "add": "Add note",
+      "edit": "Edit note",
+      "save": "Save note",
+      "saveError": "Couldn't save the note. Please try again."
+    },
+    "details": {
+      "type": "Transaction type",
+      "itemName": "Item name",
+      "occurredDate": "Occurred date",
+      "reviewState": "Review state",
+      "saveChanges": "Save changes"
+    },
+    "limit": {
+      "over": "Over limit",
+      "label": "Limit",
+      "left": "left"
+    }
+  },
   "owed": {
     "owed": "Owed",
     "owedToMe": "Owed to me",

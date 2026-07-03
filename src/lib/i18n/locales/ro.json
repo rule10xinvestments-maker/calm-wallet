@@ -164,6 +164,121 @@
     "restored": "Restaurat.",
     "somethingWentWrong": "Ceva nu a mers bine."
   },
+  "activity": {
+    "title": "Mișcări recente de bani",
+    "helper": "Atinge o intrare pentru editare, notă sau verificare.",
+    "searchPlaceholder": "Caută intrări",
+    "searchAria": "Caută tranzacții",
+    "summary": "Rezumat",
+    "owed": "De primit/plătit",
+    "filters": {
+      "allLabel": "Toate tranzacțiile",
+      "recurring": "Recurente",
+      "recurringLabel": "Tranzacții recurente"
+    },
+    "actions": {
+      "category": "Categorie",
+      "changeCategoryCurrently": "Schimbă categoria, acum",
+      "edit": "Editează detalii",
+      "delete": "Șterge tranzacția",
+      "deleteForever": "Șterge definitiv"
+    },
+    "empty": {
+      "helper": "Nu există intrări încă",
+      "period": "Nu există intrări salvate în această perioadă.",
+      "loadError": "Tranzacțiile nu pot fi afișate acum."
+    },
+    "noMatches": {
+      "helper": "Nu există intrări potrivite"
+    },
+    "context": {
+      "recoverableEntry": "intrare recuperabilă afișată",
+      "recoverableEntries": "intrări recuperabile afișate",
+      "recurringItem": "element recurent afișat",
+      "recurringItems": "elemente recurente afișate",
+      "reviewEntry": "intrare de verificat afișată",
+      "reviewEntries": "intrări de verificat afișate",
+      "entryShown": "intrare afișată",
+      "entriesShown": "intrări afișate"
+    },
+    "time": {
+      "previousYear": "Anul anterior",
+      "nextYear": "Anul următor",
+      "select": "Selectează",
+      "useCustomRange": "Folosește interval personalizat",
+      "customRange": "Interval personalizat",
+      "from": "De la",
+      "to": "Până la"
+    },
+    "summaryLabels": {
+      "net": "Net",
+      "converted": "Convertit pentru afișare. Originalele rămân neschimbate.",
+      "mixedCurrencies": "Monedele mixte sunt afișate separat."
+    },
+    "deleted": {
+      "title": "Șterse recent",
+      "helper": "Atinge o intrare pentru restaurare sau ștergere definitivă.",
+      "retention": "Intrările șterse rămân aici 30 de zile.",
+      "empty": "Nu există intrări șterse",
+      "noMatches": "Nu există intrări șterse potrivite.",
+      "deleteQuestion": "Ștergi tranzacția?",
+      "moveToBin": "Mută în Bin",
+      "moveToBinHelper": "Muți această intrare în Bin?",
+      "deleteForeverQuestion": "Ștergi definitiv?",
+      "cannotBeUndone": "Această acțiune nu poate fi anulată."
+    },
+    "recurring": {
+      "title": "Elemente recurente",
+      "helper": "Verifică plățile și veniturile repetitive.",
+      "unboundedHelper": "Modul recurent nu este limitat la luna selectată.",
+      "emptyTitle": "Nu există intrări recurente",
+      "emptyHelper": "Tranzacțiile repetitive apar aici.",
+      "active": "Activ",
+      "paused": "Pauzat",
+      "on": "Pornit",
+      "off": "Oprit",
+      "pause": "Pauză",
+      "resume": "Reia",
+      "stop": "Oprește",
+      "stopQuestion": "Oprești recurența?",
+      "stopHelper": "Acest element salvat va rămâne în Activitate.",
+      "stopFuture": "Oprește repetările viitoare",
+      "details": "Detalii recurente",
+      "weekly": "Săptămânal",
+      "monthly": "Lunar",
+      "yearly": "Anual",
+      "starts": "Începe",
+      "ends": "Se termină",
+      "untilOff": "Până este oprit",
+      "start": "Început",
+      "end": "Sfârșit",
+      "noEndDate": "Fără dată de sfârșit",
+      "repeatUntilOff": "Repetă până opresc",
+      "pauseRecurring": "Pauzează recurența",
+      "resumeRecurring": "Reia recurența",
+      "stopRecurring": "Oprește recurența",
+      "frequency": "Frecvență recurentă",
+      "endDateRequired": "Alege o dată de sfârșit sau repetă până este oprit."
+    },
+    "note": {
+      "add": "Adaugă notă",
+      "edit": "Editează nota",
+      "save": "Salvează nota",
+      "saveError": "Nota nu a putut fi salvată. Încearcă din nou."
+    },
+    "details": {
+      "type": "Tip tranzacție",
+      "itemName": "Nume element",
+      "occurredDate": "Data",
+      "reviewState": "Stare verificare",
+      "saveChanges": "Salvează modificările"
+    },
+    "limit": {
+      "over": "Peste limită",
+      "label": "Limită",
+      "left": "rămas"
+    }
+  },
   "owed": {
     "owed": "Datorat",
     "owedToMe": "Mi se datorează",

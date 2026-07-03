@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { TransactionItemCard } from "@/components/transactions/transaction-item-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocale } from "@/components/i18n/locale-provider";
 import type {
   ImportCandidateReviewDecisionActionState,
 } from "@/lib/actions/imports-state";
@@ -19,6 +20,7 @@ import type {
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
 import type { OwedNote } from "@/domain/owed-notes/types";
 import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
+import { t } from "@/lib/i18n";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
@@ -34,31 +36,31 @@ type ActivitySummaryMode = "all" | "spend" | "income" | "context";
 
 type ActivityFilterTab = {
   value: ActivityFilterView;
-  label: string;
-  accessibilityLabel: string;
+  labelKey: string;
+  accessibilityLabelKey: string;
   Icon: LucideIcon;
   tone?: "attention";
 };
 
 const tabs: ActivityFilterTab[] = [
-  { value: "all", label: "All", accessibilityLabel: "All transactions", Icon: List },
-  { value: "expenses", label: "Spend", accessibilityLabel: "Expenses", Icon: MinusCircle },
-  { value: "income", label: "Income", accessibilityLabel: "Income", Icon: PlusCircle },
-  { value: "needs-review", label: "Review", accessibilityLabel: "Needs review", Icon: AlertCircle, tone: "attention" },
+  { value: "all", labelKey: "common.all", accessibilityLabelKey: "activity.filters.allLabel", Icon: List },
+  { value: "expenses", labelKey: "common.spend", accessibilityLabelKey: "transactions.expenses", Icon: MinusCircle },
+  { value: "income", labelKey: "common.income", accessibilityLabelKey: "common.income", Icon: PlusCircle },
+  { value: "needs-review", labelKey: "common.review", accessibilityLabelKey: "common.needsReview", Icon: AlertCircle, tone: "attention" },
 ];
 
 const ENABLE_RECURRING_TOP_FILTER = true;
 const recurringTab: ActivityFilterTab = {
   value: "recurring",
-  label: "Recurring",
-  accessibilityLabel: "Recurring transactions",
+  labelKey: "activity.filters.recurring",
+  accessibilityLabelKey: "activity.filters.recurringLabel",
   Icon: Repeat2,
 };
 
 const deletedTab: ActivityFilterTab = {
   value: "deleted" as const,
-  label: "Bin",
-  accessibilityLabel: "Recently deleted",
+  labelKey: "common.bin",
+  accessibilityLabelKey: "activity.deleted.title",
   Icon: Trash2,
 };
 
@@ -1041,6 +1043,7 @@ function RecentlyDeletedEntry({
   onRestore,
   onPermanentDelete,
 }: RecentlyDeletedEntryProps) {
+  const { locale } = useLocale();
   const [isDeleteForeverConfirmOpen, setIsDeleteForeverConfirmOpen] = useState(false);
   const [restoreState, restoreFormAction] = useActionState(restoreAction, initialActionState);
   const [deleteForeverState, deleteForeverFormAction] = useActionState(permanentlyDeleteAction, initialActionState);
@@ -1088,7 +1091,7 @@ function RecentlyDeletedEntry({
           <form action={restoreFormAction}>
             <input name="transactionId" type="hidden" value={item.id} />
             <button className="min-h-10 w-full rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white" type="submit">
-              Restore
+              {t("common.restore", locale)}
             </button>
           </form>
           <button
@@ -1096,7 +1099,7 @@ function RecentlyDeletedEntry({
             onClick={() => setIsDeleteForeverConfirmOpen(true)}
             type="button"
           >
-            Delete forever
+            {t("activity.actions.deleteForever", locale)}
           </button>
         </div>
       ) : null}
@@ -1109,21 +1112,21 @@ function RecentlyDeletedEntry({
         >
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
             <h2 className="text-base font-semibold text-slate-950" id={`delete-forever-title-${item.id}`}>
-              Delete forever?
+              {t("activity.deleted.deleteForeverQuestion", locale)}
             </h2>
-            <p className="mt-2 text-sm leading-5 text-slate-600">This entry will be permanently removed.</p>
+            <p className="mt-2 text-sm leading-5 text-slate-600">{t("activity.deleted.cannotBeUndone", locale)}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
                 className="min-h-11 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
                 onClick={() => setIsDeleteForeverConfirmOpen(false)}
                 type="button"
               >
-                Cancel
+                {t("common.cancel", locale)}
               </button>
               <form action={deleteForeverFormAction}>
                 <input name="transactionId" type="hidden" value={item.id} />
                 <button className="min-h-11 w-full rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white" type="submit">
-                  Delete forever
+                  {t("activity.actions.deleteForever", locale)}
                 </button>
               </form>
             </div>
@@ -1165,6 +1168,7 @@ export function TransactionsOverview({
   updateOwedNoteNoteAction = noopOwedNoteAction,
   settleOwedNoteAction = noopOwedNoteAction,
 }: TransactionsOverviewProps) {
+  const { locale } = useLocale();
   const currentDate = useMemo(() => new Date(), []);
   const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
@@ -1257,12 +1261,16 @@ export function TransactionsOverview({
   const isDeletedView = activeView === "deleted";
   const isRecurringView = activeView === "recurring";
   const visibleTabs = [...tabs, ...(ENABLE_RECURRING_TOP_FILTER ? [recurringTab] : []), deletedTab];
-  const cardTitle = isDeletedView ? "Recently deleted" : isRecurringView ? "Recurring items" : "Recent money movement";
-  const cardSubtitle = isDeletedView
-    ? "Tap an entry to restore or delete forever."
+  const cardTitle = isDeletedView
+    ? t("activity.deleted.title", locale)
     : isRecurringView
-      ? "Review repeating payments and income."
-    : "Tap an entry to edit, add a note, or review details.";
+      ? t("activity.recurring.title", locale)
+      : t("activity.title", locale);
+  const cardSubtitle = isDeletedView
+    ? t("activity.deleted.helper", locale)
+    : isRecurringView
+      ? t("activity.recurring.helper", locale)
+    : t("activity.helper", locale);
   const normalizedDisplayCurrencies = Array.from(
     new Set((availableDisplayCurrencies.length ? availableDisplayCurrencies : [displayCurrency]).map(normalizeCurrency)),
   );
@@ -1270,10 +1278,10 @@ export function TransactionsOverview({
     activeView === "deleted" ? filteredDeletedItems.length : filteredActiveItems.length + filteredPendingCandidates.length;
   const contextEntryLabel =
     activeView === "deleted"
-      ? `${contextEntryCount} recoverable ${contextEntryCount === 1 ? "entry" : "entries"} shown`
+      ? `${contextEntryCount} ${t(contextEntryCount === 1 ? "activity.context.recoverableEntry" : "activity.context.recoverableEntries", locale)}`
       : activeView === "recurring"
-        ? `${contextEntryCount} recurring ${contextEntryCount === 1 ? "item" : "items"} shown`
-      : `${contextEntryCount} review ${contextEntryCount === 1 ? "entry" : "entries"} shown`;
+        ? `${contextEntryCount} ${t(contextEntryCount === 1 ? "activity.context.recurringItem" : "activity.context.recurringItems", locale)}`
+      : `${contextEntryCount} ${t(contextEntryCount === 1 ? "activity.context.reviewEntry" : "activity.context.reviewEntries", locale)}`;
 
   useEffect(() => {
     if (!shouldShowSummaryControl) {
@@ -1356,12 +1364,12 @@ export function TransactionsOverview({
 
   return (
     <section className="space-y-4">
-      <p className="text-sm font-medium text-sky-700">Transactions</p>
+      <p className="text-sm font-medium text-sky-700">{t("transactions.transactions", locale)}</p>
       {loadError ? (
         <Card>
           <CardHeader>
-            <CardTitle>Latest data could not load</CardTitle>
-            <CardDescription>Try again from the bottom navigation. No financial details were changed.</CardDescription>
+            <CardTitle>{t("assistant.loadError.title", locale)}</CardTitle>
+            <CardDescription>{t("assistant.loadError.helper", locale)}</CardDescription>
           </CardHeader>
         </Card>
       ) : null}
@@ -1373,10 +1381,12 @@ export function TransactionsOverview({
           const isActive = activeView === tab.value;
           const isAttention = tab.tone === "attention";
           const Icon = tab.Icon;
+          const label = t(tab.labelKey, locale);
+          const accessibilityLabel = t(tab.accessibilityLabelKey, locale);
 
           return (
             <button
-              aria-label={tab.accessibilityLabel}
+              aria-label={accessibilityLabel}
               key={tab.value}
               className={`flex min-h-10 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 font-medium leading-none transition ${
                 isActive
@@ -1386,11 +1396,11 @@ export function TransactionsOverview({
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               } ${visibleTabs.length >= 6 ? "text-[10px]" : "text-[11px]"}`}
               onClick={() => setActiveView(tab.value)}
-              title={tab.accessibilityLabel}
+              title={accessibilityLabel}
               type="button"
             >
               <Icon aria-hidden="true" size={visibleTabs.length >= 6 ? 14 : 15} strokeWidth={2.2} />
-              <span className="truncate">{tab.label}</span>
+              <span className="truncate">{label}</span>
             </button>
           );
         })}
@@ -1408,7 +1418,7 @@ export function TransactionsOverview({
               <div className="px-1 text-xs font-medium text-slate-500">
                 <p>{contextEntryLabel}</p>
                 <p className="mt-0.5">
-                  {isDeletedView ? "Recoverable for 30 days." : "Recurring mode is not limited to the selected month."}
+                  {isDeletedView ? t("activity.deleted.retention", locale) : t("activity.recurring.unboundedHelper", locale)}
                 </p>
               </div>
             ) : (
@@ -1448,7 +1458,7 @@ export function TransactionsOverview({
                       type="button"
                     >
                       <List aria-hidden="true" className={isSummaryOpen ? "text-sky-700" : "text-slate-500"} size={16} strokeWidth={2.2} />
-                      <span className="w-full whitespace-nowrap">Summary</span>
+                      <span className="w-full whitespace-nowrap">{t("activity.summary", locale)}</span>
                     </button>
                   ) : null}
                   {shouldShowSummaryControl ? (
@@ -1463,7 +1473,7 @@ export function TransactionsOverview({
                       type="button"
                     >
                       <HandCoins aria-hidden="true" className={isOwedOpen ? "text-sky-700" : "text-slate-500"} size={16} strokeWidth={2.2} />
-                      <span className="w-full whitespace-nowrap">Owed</span>
+                      <span className="w-full whitespace-nowrap">{t("activity.owed", locale)}</span>
                     </button>
                   ) : null}
                 </div>
@@ -1471,7 +1481,7 @@ export function TransactionsOverview({
                   <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
                     <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-2 py-1.5">
                       <button
-                        aria-label="Previous year"
+                        aria-label={t("activity.time.previousYear", locale)}
                         className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                         onClick={() => setVisiblePickerYear((year) => year - 1)}
                         type="button"
@@ -1480,7 +1490,7 @@ export function TransactionsOverview({
                       </button>
                       <p className="text-sm font-semibold text-slate-900">{visiblePickerYear}</p>
                       <button
-                        aria-label="Next year"
+                        aria-label={t("activity.time.nextYear", locale)}
                         className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                         onClick={() => setVisiblePickerYear((year) => year + 1)}
                         type="button"
@@ -1507,7 +1517,7 @@ export function TransactionsOverview({
 
                         return (
                           <button
-                            aria-label={`Select ${month.fullLabel}`}
+                            aria-label={`${t("activity.time.select", locale)} ${month.fullLabel}`}
                             className={`relative min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
                               isSelected
                                 ? `bg-sky-600 text-white shadow-sm ring-1 ring-sky-700 ${isCurrent ? "outline outline-2 outline-offset-1 outline-sky-200" : ""}`
@@ -1534,7 +1544,7 @@ export function TransactionsOverview({
                       })}
                     </div>
                     <button
-                      aria-label="Use custom range"
+                      aria-label={t("activity.time.useCustomRange", locale)}
                       aria-expanded={activePeriod === "custom" && isCustomRangeEditorOpen}
                       className={`min-h-9 w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
                         activePeriod === "custom" ? "bg-sky-600 text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
@@ -1545,12 +1555,12 @@ export function TransactionsOverview({
                       }}
                       type="button"
                     >
-                      Custom range
+                      {t("activity.time.customRange", locale)}
                     </button>
                     {activePeriod === "custom" && isCustomRangeEditorOpen ? (
                       <div className="grid grid-cols-2 gap-2">
                         <label className="space-y-1 text-xs font-medium text-slate-600">
-                          From
+                          {t("activity.time.from", locale)}
                           <input
                             className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                             onChange={(event) => setCustomFrom(event.target.value)}
@@ -1559,7 +1569,7 @@ export function TransactionsOverview({
                           />
                         </label>
                         <label className="space-y-1 text-xs font-medium text-slate-600">
-                          To
+                          {t("activity.time.to", locale)}
                           <input
                             className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                             onChange={(event) => setCustomTo(event.target.value)}
@@ -1594,7 +1604,9 @@ export function TransactionsOverview({
                   })}
                 </div>
                 <div className="rounded-xl bg-white px-3 py-2">
-                  <p className="text-xs font-medium text-slate-500">{filteredActiveItems.length} entries shown</p>
+                  <p className="text-xs font-medium text-slate-500">
+                    {filteredActiveItems.length} {t(filteredActiveItems.length === 1 ? "activity.context.entryShown" : "activity.context.entriesShown", locale)}
+                  </p>
                   {activitySummary.length ? (
                     <div className="mt-2 grid gap-2 text-sm font-semibold">
                       {activitySummary.map((summary) => {
@@ -1606,19 +1618,19 @@ export function TransactionsOverview({
                           <div className="grid gap-1" key={summary.currency}>
                             {(summaryMode === "all" || summaryMode === "spend") ? (
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-slate-500">Spend</span>
+                                <span className="text-slate-500">{t("common.spend", locale)}</span>
                                 <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted)}</span>
                               </div>
                             ) : null}
                             {(summaryMode === "all" || summaryMode === "income") ? (
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-slate-500">Income</span>
+                                <span className="text-slate-500">{t("common.income", locale)}</span>
                                 <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted)}</span>
                               </div>
                             ) : null}
                             {summaryMode === "all" ? (
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-slate-500">Net</span>
+                                <span className="text-slate-500">{t("activity.summaryLabels.net", locale)}</span>
                                 <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted)}</span>
                               </div>
                             ) : null}
@@ -1626,14 +1638,14 @@ export function TransactionsOverview({
                         );
                       })}
                       {summaryResult.hasConverted ? (
-                        <p className="text-xs font-normal text-slate-500">Converted for display. Originals stay unchanged.</p>
+                        <p className="text-xs font-normal text-slate-500">{t("activity.summaryLabels.converted", locale)}</p>
                       ) : null}
                       {summaryResult.usedFallback || hasMixedCurrencies ? (
-                        <p className="text-xs font-normal text-slate-500">Mixed currencies shown separately.</p>
+                        <p className="text-xs font-normal text-slate-500">{t("activity.summaryLabels.mixedCurrencies", locale)}</p>
                       ) : null}
                     </div>
                   ) : (
-                    <p className="mt-1 text-sm text-slate-500">No saved entries in this period.</p>
+                    <p className="mt-1 text-sm text-slate-500">{t("activity.empty.period", locale)}</p>
                   )}
                 </div>
               </div>
@@ -1645,7 +1657,7 @@ export function TransactionsOverview({
                 defaultCurrency={activeDisplayCurrency}
                 notes={owedNotes}
                 settleAction={settleOwedNoteAction}
-                title="Money owed"
+                title={t("assistant.owed.title", locale)}
                 updateNoteAction={updateOwedNoteNoteAction}
                 variant="activity"
               />
@@ -1656,7 +1668,7 @@ export function TransactionsOverview({
           </div>
           <form
             action="/transactions"
-            aria-label="Search transactions"
+            aria-label={t("activity.searchAria", locale)}
             className="relative"
             onSubmit={(event) => {
               event.preventDefault();
@@ -1667,11 +1679,11 @@ export function TransactionsOverview({
               className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-11 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
               name="q"
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search entries"
+              placeholder={t("activity.searchPlaceholder", locale)}
               value={searchQuery}
             />
             <button
-              aria-label="Search entries"
+              aria-label={t("activity.searchPlaceholder", locale)}
               className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               type="submit"
             >
@@ -1724,20 +1736,20 @@ export function TransactionsOverview({
             <div className="rounded-2xl bg-slate-50 px-4 py-5 text-sm text-slate-500 sm:py-6">
               {isDeletedView
                 ? hasSearchQuery
-                  ? "No deleted entries match that search."
-                  : "No recently deleted entries."
+                  ? t("activity.deleted.noMatches", locale)
+                  : t("activity.deleted.empty", locale)
                 : isRecurringView && !hasSearchQuery
                   ? (
                     <span className="block">
-                      <span className="block font-medium text-slate-700">No recurring items yet.</span>
-                      <span className="mt-1 block">Recurring payments and income you save will show here.</span>
+                      <span className="block font-medium text-slate-700">{t("activity.recurring.emptyTitle", locale)}</span>
+                      <span className="mt-1 block">{t("activity.recurring.emptyHelper", locale)}</span>
                     </span>
                   )
                 : hasSearchQuery
-                  ? "No tracked transactions match that search."
+                  ? t("activity.noMatches.helper", locale)
                   : loadError
-                    ? "Transactions could not be shown right now."
-                    : "No transactions found for this signed-in account."}
+                    ? t("activity.empty.loadError", locale)
+                    : t("activity.empty.helper", locale)}
             </div>
           )}
         </CardContent>

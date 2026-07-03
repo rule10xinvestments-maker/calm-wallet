@@ -164,6 +164,121 @@
     "restored": "Restaurado.",
     "somethingWentWrong": "Algo salió mal."
   },
+  "activity": {
+    "title": "Movimientos recientes de dinero",
+    "helper": "Toca una entrada para editar, añadir una nota o revisar detalles.",
+    "searchPlaceholder": "Buscar entradas",
+    "searchAria": "Buscar transacciones",
+    "summary": "Resumen",
+    "owed": "Por cobrar/pagar",
+    "filters": {
+      "allLabel": "Todas las transacciones",
+      "recurring": "Recurrentes",
+      "recurringLabel": "Transacciones recurrentes"
+    },
+    "actions": {
+      "category": "Categoría",
+      "changeCategoryCurrently": "Cambiar categoría, actual",
+      "edit": "Editar detalles",
+      "delete": "Eliminar transacción",
+      "deleteForever": "Eliminar definitivamente"
+    },
+    "empty": {
+      "helper": "Aún no hay entradas",
+      "period": "No hay entradas guardadas en este periodo.",
+      "loadError": "No se pueden mostrar las transacciones ahora."
+    },
+    "noMatches": {
+      "helper": "No hay entradas coincidentes"
+    },
+    "context": {
+      "recoverableEntry": "entrada recuperable mostrada",
+      "recoverableEntries": "entradas recuperables mostradas",
+      "recurringItem": "elemento recurrente mostrado",
+      "recurringItems": "elementos recurrentes mostrados",
+      "reviewEntry": "entrada por revisar mostrada",
+      "reviewEntries": "entradas por revisar mostradas",
+      "entryShown": "entrada mostrada",
+      "entriesShown": "entradas mostradas"
+    },
+    "time": {
+      "previousYear": "Año anterior",
+      "nextYear": "Año siguiente",
+      "select": "Seleccionar",
+      "useCustomRange": "Usar rango personalizado",
+      "customRange": "Rango personalizado",
+      "from": "Desde",
+      "to": "Hasta"
+    },
+    "summaryLabels": {
+      "net": "Neto",
+      "converted": "Convertido para mostrar. Los originales no cambian.",
+      "mixedCurrencies": "Las monedas mixtas se muestran por separado."
+    },
+    "deleted": {
+      "title": "Eliminadas recientemente",
+      "helper": "Toca una entrada para restaurarla o eliminarla definitivamente.",
+      "retention": "Las entradas eliminadas permanecen aquí 30 días.",
+      "empty": "No hay entradas eliminadas",
+      "noMatches": "No hay entradas eliminadas que coincidan.",
+      "deleteQuestion": "¿Eliminar transacción?",
+      "moveToBin": "Mover a Bin",
+      "moveToBinHelper": "¿Mover esta entrada a Bin?",
+      "deleteForeverQuestion": "¿Eliminar definitivamente?",
+      "cannotBeUndone": "Esta acción no se puede deshacer."
+    },
+    "recurring": {
+      "title": "Elementos recurrentes",
+      "helper": "Revisa pagos e ingresos repetitivos.",
+      "unboundedHelper": "El modo recurrente no se limita al mes seleccionado.",
+      "emptyTitle": "No hay entradas recurrentes",
+      "emptyHelper": "Las transacciones repetitivas aparecerán aquí.",
+      "active": "Activo",
+      "paused": "Pausado",
+      "on": "Activado",
+      "off": "Desactivado",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "stop": "Detener",
+      "stopQuestion": "¿Detener recurrencia?",
+      "stopHelper": "Este elemento guardado permanecerá en Actividad.",
+      "stopFuture": "Detener repeticiones futuras",
+      "details": "Detalles recurrentes",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "starts": "Empieza",
+      "ends": "Termina",
+      "untilOff": "Hasta que se desactive",
+      "start": "Inicio",
+      "end": "Fin",
+      "noEndDate": "Sin fecha final",
+      "repeatUntilOff": "Repetir hasta que lo desactive",
+      "pauseRecurring": "Pausar recurrencia",
+      "resumeRecurring": "Reanudar recurrencia",
+      "stopRecurring": "Detener recurrencia",
+      "frequency": "Frecuencia recurrente",
+      "endDateRequired": "Elige una fecha final o repite hasta desactivar."
+    },
+    "note": {
+      "add": "Añadir nota",
+      "edit": "Editar nota",
+      "save": "Guardar nota",
+      "saveError": "No se pudo guardar la nota. Inténtalo de nuevo."
+    },
+    "details": {
+      "type": "Tipo de transacción",
+      "itemName": "Nombre del elemento",
+      "occurredDate": "Fecha",
+      "reviewState": "Estado de revisión",
+      "saveChanges": "Guardar cambios"
+    },
+    "limit": {
+      "over": "Sobre el límite",
+      "label": "Límite",
+      "left": "restante"
+    }
+  },
   "owed": {
     "owed": "Debido",
     "owedToMe": "Me deben",
