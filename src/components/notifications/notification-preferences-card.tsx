@@ -1,9 +1,8 @@
 "use client";
 
-import { Bell, BellOff, Send } from "lucide-react";
+import { Bell, BellOff, ChevronDown } from "lucide-react";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import type { NotificationPreferences } from "@/domain/notifications/types";
-import { notificationCopyTemplates } from "@/domain/notifications/copy";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/components/i18n/locale-provider";
 import {
@@ -19,10 +18,6 @@ type NotificationPreferencesCardProps = {
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
   registerPushSubscriptionAction: (
-    state: NotificationPreferencesActionState,
-    formData: FormData,
-  ) => Promise<NotificationPreferencesActionState>;
-  sendTestPushNotificationAction: (
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
@@ -83,7 +78,6 @@ export function NotificationPreferencesCard({
   preferences,
   action,
   registerPushSubscriptionAction,
-  sendTestPushNotificationAction,
 }: NotificationPreferencesCardProps) {
   const { locale } = useLocale();
   const [state, formAction, isPending] = useActionState(action, {
@@ -93,10 +87,10 @@ export function NotificationPreferencesCard({
   const current = state.preferences ?? preferences;
   const [browserStatus, setBrowserStatus] = useState<BrowserNotificationStatus>(() => getBrowserNotificationStatus());
   const [browserMessage, setBrowserMessage] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isBrowserPending, startBrowserTransition] = useTransition();
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const canUseNotifications = browserStatus !== "unsupported";
-  const canSendTest = browserStatus === "granted";
   const scheduledPushReady = Boolean(vapidPublicKey);
 
   const enableCopy = useMemo(() => {
@@ -114,6 +108,8 @@ export function NotificationPreferencesCard({
 
     return t("notifications.permissionNeeded", locale);
   }, [browserStatus, locale, scheduledPushReady]);
+
+  const notificationStatusLabel = browserStatus === "granted" ? t("notifications.enabledShort", locale) : t("notifications.disabled", locale);
 
   async function registerSubscriptionIfPossible() {
     if (!vapidPublicKey) {
@@ -178,74 +174,36 @@ export function NotificationPreferencesCard({
     });
   }
 
-  async function sendLocalTestNotification() {
-    const registration = await getReadyServiceWorkerRegistration();
-    const options: NotificationOptions = {
-      body: notificationCopyTemplates.test.body,
-      data: { url: "/assistant" },
-      icon: "/icons/calm-wallet-icon-192.png",
-      tag: "calm-wallet-test",
-    };
-
-    if (registration?.showNotification) {
-      await registration.showNotification(notificationCopyTemplates.test.title, options);
-    } else {
-      new Notification(notificationCopyTemplates.test.title, options);
-    }
-  }
-
-  function handleTestNotification() {
-    startBrowserTransition(async () => {
-      setBrowserMessage(null);
-
-      if (!("Notification" in window)) {
-        setBrowserStatus("unsupported");
-        setBrowserMessage(t("notifications.unsupported", locale));
-        return;
-      }
-
-      if (Notification.permission !== "granted") {
-        setBrowserStatus(Notification.permission);
-        setBrowserMessage(t("notifications.permissionNeeded", locale));
-        return;
-      }
-
-      try {
-        if (vapidPublicKey) {
-          await registerSubscriptionIfPossible();
-          const serverResult = await sendTestPushNotificationAction(initialNotificationPreferencesActionState, new FormData());
-
-          if (serverResult.status === "success") {
-            setBrowserMessage(serverResult.message);
-            return;
-          }
-        }
-
-        await sendLocalTestNotification();
-        setBrowserMessage(t("notifications.testSent", locale));
-      } catch {
-        setBrowserMessage(t("notifications.testCouldNotSend", locale));
-      }
-    });
-  }
-
   return (
-    <div className="space-y-3">
-      <div className="rounded-2xl bg-slate-50 px-3 py-3">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 rounded-full bg-white p-2 text-sky-700">
-            {browserStatus === "denied" || browserStatus === "unsupported" ? (
-              <BellOff aria-hidden="true" className="size-4" />
-            ) : (
-              <Bell aria-hidden="true" className="size-4" />
-            )}
-          </span>
-          <div className="min-w-0 flex-1 space-y-2">
-            <div>
-              <p className="text-sm font-medium text-slate-900">{t("notifications.notifications", locale)}</p>
-              <p className="text-xs leading-4 text-slate-500">{enableCopy}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
+    <div className="rounded-2xl border border-slate-200 bg-white">
+      <button
+        aria-expanded={isExpanded}
+        className="grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-3 py-3 text-left"
+        onClick={() => setIsExpanded((value) => !value)}
+        type="button"
+      >
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700">
+          {browserStatus === "denied" || browserStatus === "unsupported" ? (
+            <BellOff aria-hidden="true" className="size-4" />
+          ) : (
+            <Bell aria-hidden="true" className="size-4" />
+          )}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-medium text-slate-900">{t("notifications.notifications", locale)}</span>
+          <span className="block truncate text-xs leading-5 text-slate-500">{notificationStatusLabel}</span>
+        </span>
+        <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition ${isExpanded ? "rotate-180" : ""}`} />
+      </button>
+
+      {isExpanded ? (
+        <div className="space-y-3 border-t border-slate-100 px-3 pb-3 pt-2">
+          <div className="rounded-2xl bg-slate-50 px-3 py-3">
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium text-slate-900">{t("notifications.settings", locale)}</p>
+                <p className="text-xs leading-4 text-slate-500">{enableCopy}</p>
+              </div>
               <Button
                 className="h-9 px-3 text-xs"
                 disabled={!canUseNotifications || browserStatus === "denied" || isBrowserPending}
@@ -254,57 +212,48 @@ export function NotificationPreferencesCard({
               >
                 {browserStatus === "granted" ? t("notifications.enabledShort", locale) : t("notifications.enableNotifications", locale)}
               </Button>
-              <Button
-                className="h-9 bg-white px-3 text-xs text-slate-700 hover:bg-slate-100"
-                disabled={!canSendTest || isBrowserPending}
-                onClick={handleTestNotification}
-                type="button"
-              >
-                <Send aria-hidden="true" className="mr-1.5 size-3.5" />
-                {t("notifications.sendTest", locale)}
-              </Button>
+              {browserMessage ? <p className="text-xs leading-4 text-sky-700">{browserMessage}</p> : null}
             </div>
-            {browserMessage ? <p className="text-xs leading-4 text-sky-700">{browserMessage}</p> : null}
           </div>
-        </div>
-      </div>
 
-      <form action={formAction} className="space-y-2.5">
-        {state.message ? (
-          <p className={`text-sm ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{state.message}</p>
-        ) : null}
-        <ToggleCard
-          defaultChecked={current.dailyReminderEnabled}
-          description={t("notifications.dailyReminderHelper", locale)}
-          name="dailyReminderEnabled"
-          title={t("notifications.dailyReminder", locale)}
-        />
-        <ToggleCard
-          defaultChecked={current.monthlyReviewEnabled}
-          description={t("notifications.monthlyReportHelper", locale)}
-          name="monthlyReviewEnabled"
-          title={t("notifications.monthlyReport", locale)}
-        />
-        <ToggleCard
-          defaultChecked={current.recurringNotificationsEnabled}
-          description={t("notifications.recurringEntriesHelper", locale)}
-          name="recurringNotificationsEnabled"
-          title={t("notifications.recurringEntries", locale)}
-        />
-        <ToggleCard
-          defaultChecked={current.limitAlertsEnabled}
-          description={t("notifications.limitAlertsHelper", locale)}
-          name="limitAlertsEnabled"
-          title={t("notifications.limitAlerts", locale)}
-        />
-        <Button disabled={isPending} type="submit">
-          {isPending ? t("common.saving", locale) : t("notifications.saveSettings", locale)}
-        </Button>
-      </form>
-      {!scheduledPushReady ? (
-        <p className="text-xs leading-4 text-slate-500">
-          {t("notifications.deviceTestWorksScheduledNotReady", locale)}
-        </p>
+          <form action={formAction} className="space-y-2.5">
+            {state.message ? (
+              <p className={`text-sm ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{state.message}</p>
+            ) : null}
+            <ToggleCard
+              defaultChecked={current.dailyReminderEnabled}
+              description={t("notifications.dailyReminderHelper", locale)}
+              name="dailyReminderEnabled"
+              title={t("notifications.dailyReminder", locale)}
+            />
+            <ToggleCard
+              defaultChecked={current.monthlyReviewEnabled}
+              description={t("notifications.monthlyReportHelper", locale)}
+              name="monthlyReviewEnabled"
+              title={t("notifications.monthlyReport", locale)}
+            />
+            <ToggleCard
+              defaultChecked={current.recurringNotificationsEnabled}
+              description={t("notifications.recurringEntriesHelper", locale)}
+              name="recurringNotificationsEnabled"
+              title={t("notifications.recurringEntries", locale)}
+            />
+            <ToggleCard
+              defaultChecked={current.limitAlertsEnabled}
+              description={t("notifications.limitAlertsHelper", locale)}
+              name="limitAlertsEnabled"
+              title={t("notifications.limitAlerts", locale)}
+            />
+            <Button disabled={isPending} type="submit">
+              {isPending ? t("common.saving", locale) : t("notifications.saveSettings", locale)}
+            </Button>
+          </form>
+          {!scheduledPushReady ? (
+            <p className="text-xs leading-4 text-slate-500">
+              {t("notifications.deviceTestWorksScheduledNotReady", locale)}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

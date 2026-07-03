@@ -15,13 +15,18 @@ function renderSelector(
 }
 
 describe("language selector", () => {
-  it("renders supported language options", () => {
+  it("renders supported language options after expanding", () => {
     renderSelector(vi.fn(async () => ({ status: "success" as const, message: "Language saved.", uiLocale: "en" as const })));
 
-    expect(screen.getByRole("option", { name: "English" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Română" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Français" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Español" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Language/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Language/ }));
+
+    expect(screen.getByRole("button", { name: "🇬🇧 English" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "🇷🇴 Română" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "🇫🇷 Français" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "🇪🇸 Español" })).toBeInTheDocument();
   });
 
   it("saves Romanian selection", async () => {
@@ -32,7 +37,8 @@ describe("language selector", () => {
     }));
     renderSelector(action);
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "ro" } });
+    fireEvent.click(screen.getByRole("button", { name: /Language/ }));
+    fireEvent.click(screen.getByRole("button", { name: "🇷🇴 Română" }));
 
     await waitFor(() => expect(action).toHaveBeenCalled());
     const submitted = action.mock.calls[0]?.[1] as FormData;
@@ -47,7 +53,8 @@ describe("language selector", () => {
     }));
     renderSelector(action);
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "fr" } });
+    fireEvent.click(screen.getByRole("button", { name: /Language/ }));
+    fireEvent.click(screen.getByRole("button", { name: "🇫🇷 Français" }));
 
     expect(await screen.findByText("Language could not be saved.")).toBeInTheDocument();
     expect(screen.queryByText(/database|supabase|raw/i)).not.toBeInTheDocument();

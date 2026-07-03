@@ -128,20 +128,31 @@ describe("protected shell PWA install affordance", () => {
     expect(settingsPanel).toHaveClass("max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]");
     expect(settingsPanel).toHaveClass("overflow-y-auto");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Light reminders are optional, calm, and user-controlled.")).toBeInTheDocument();
-    expect(screen.getAllByText("Language").length).toBeGreaterThan(0);
-    expect(screen.getByText("Choose the app language.")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Language" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "English" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Română" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Français" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Español" })).toBeInTheDocument();
+    const languageButton = screen.getByRole("button", { name: /Language/ });
+    const notificationsButton = screen.getByRole("button", { name: /Notifications/ });
+    expect(languageButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(languageButton).toHaveAttribute("aria-expanded", "false");
+    expect(notificationsButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("App language")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Send test/i })).not.toBeInTheDocument();
+
+    fireEvent.click(languageButton);
+
+    expect(screen.getByText("App language")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "🇬🇧 English" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "🇷🇴 Română" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "🇫🇷 Français" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "🇪🇸 Español" })).toBeInTheDocument();
+
+    fireEvent.click(notificationsButton);
+
     expect(screen.getByText("Daily reminder")).toBeInTheDocument();
     expect(screen.getByText("Monthly report")).toBeInTheDocument();
     expect(screen.getByText("Recurring entries")).toBeInTheDocument();
     expect(screen.getByText("Limit alerts")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Enable notifications" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Send test/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close settings overlay" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save notification settings" })).toBeInTheDocument();
@@ -156,13 +167,15 @@ describe("protected shell PWA install affordance", () => {
     renderProtectedShell();
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-    fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "ro" } });
+    fireEvent.click(screen.getByRole("button", { name: /Language/ }));
+    fireEvent.click(screen.getByRole("button", { name: "🇷🇴 Română" }));
 
     await waitFor(() => expect(updateUserPreferencesAction).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole("link", { name: "Asistent" })).toBeInTheDocument());
 
     expect(screen.getByRole("link", { name: "Activitate" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Perspective" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Notificări/ }));
     expect(screen.getByText("Reminder zilnic")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Activează notificările" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvează setările notificărilor" })).toBeInTheDocument();

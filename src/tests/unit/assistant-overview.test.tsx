@@ -110,7 +110,8 @@ describe("assistant overview", () => {
       </LocaleProvider>,
     );
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "ro" } });
+    fireEvent.click(screen.getByRole("button", { name: /Language/ }));
+    fireEvent.click(screen.getByRole("button", { name: "🇷🇴 Română" }));
 
     await waitFor(() => expect(updateUserPreferencesAction).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText("Urmărește banii într-o propoziție")).toBeInTheDocument());

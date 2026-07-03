@@ -35,7 +35,6 @@ export function HeaderSettingsButton({
   userPreferencesAction,
   notificationPreferencesAction,
   registerPushSubscriptionAction,
-  sendTestPushNotificationAction,
 }: HeaderSettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { locale } = useLocale();
@@ -81,7 +80,6 @@ export function HeaderSettingsButton({
                 action={notificationPreferencesAction}
                 preferences={notificationPreferences}
                 registerPushSubscriptionAction={registerPushSubscriptionAction}
-                sendTestPushNotificationAction={sendTestPushNotificationAction}
               />
             </div>
           </div>
