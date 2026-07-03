@@ -342,6 +342,33 @@ describe("transactions overview", () => {
     expect(screen.getByPlaceholderText("Search entries")).toBeInTheDocument();
   });
 
+  it("localizes Activity Owed summary and note metadata in Romanian", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <TransactionsOverview
+          {...makeOverviewProps()}
+          items={[makeTransactionItem({ title: "Market transaction" })]}
+          owedNotes={[
+            makeOwedNote({ currentAmount: 100, originalAmount: 100, currency: "USD", note: null }),
+            makeOwedNote({ id: "owed-2", direction: "i_owe", personName: "Ana", currentAmount: 10, originalAmount: 10, currency: "USD", note: null }),
+          ]}
+          stagedImports={[]}
+          stagedImportDetails={{}}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "De primit/plătit" }));
+
+    const owedPanel = screen.getByText("Bani de primit/plătit").closest(".rounded-2xl") as HTMLElement;
+    expect(within(owedPanel).getByText(/100\s*USD de primit · 10\s*USD de plătit/)).toBeInTheDocument();
+    expect(within(owedPanel).getAllByText("De primit").length).toBeGreaterThan(0);
+    expect(within(owedPanel).getAllByText("De plătit").length).toBeGreaterThan(0);
+    expect(within(owedPanel).getAllByText(/Actualizat 1 iul/)).toHaveLength(2);
+    expect(within(owedPanel).getByText(/Creează reminder/)).toBeInTheDocument();
+    expect(within(owedPanel).queryByText(/owed to you|you owe|Owed to me|I owe|Updated Jul|Create owed note/i)).not.toBeInTheDocument();
+  });
+
   it("shows compact empty Owed management with a create action", () => {
     render(
       <TransactionsOverview

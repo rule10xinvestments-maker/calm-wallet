@@ -1667,6 +1667,7 @@ export function TransactionsOverview({
                 adjustAmountAction={adjustOwedNoteAmountAction}
                 createAction={createOwedNoteAction}
                 defaultCurrency={activeDisplayCurrency}
+                locale={locale}
                 notes={owedNotes}
                 settleAction={settleOwedNoteAction}
                 title={t("assistant.owed.title", locale)}

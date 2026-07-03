@@ -46,6 +46,7 @@ describe("i18n helper", () => {
     expect(t("assistant.actions.owed", "es")).toBe("Pendientes");
     expect(t("assistant.owed.title", "es")).toBe("Pendientes");
     expect(t("owed.createOwedNote", "es")).toBe("Crear recordatorio");
+    expect(t("owed.updated", "ro")).toBe("Actualizat");
   });
 
   it.each([

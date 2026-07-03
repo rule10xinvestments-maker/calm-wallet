@@ -27,40 +27,59 @@ type MoneyOwedPanelProps = {
 
 const currencyOptions = ["RON", "EUR", "USD", "GBP"] as const;
 
-function formatOwedAmount(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
+function getIntlLocale(locale: SupportedLocale) {
+  if (locale === "ro") {
+    return "ro-RO";
+  }
+
+  if (locale === "fr") {
+    return "fr-FR";
+  }
+
+  if (locale === "es") {
+    return "es-ES";
+  }
+
+  return "en-US";
+}
+
+function formatOwedAmount(amount: number, currency: string, locale: SupportedLocale) {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
     style: "currency",
     currency,
     maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
   }).format(amount);
 }
 
-function formatOwedDate(value: string) {
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatOwedDate(value: string, locale: SupportedLocale) {
+  return new Date(value).toLocaleDateString(getIntlLocale(locale), { month: "short", day: "numeric" });
 }
 
 function getDirectionLabel(direction: OwedNoteDirection, locale: SupportedLocale = "en") {
   return direction === "owed_to_me" ? t("owed.owedToMe", locale) : t("owed.iOwe", locale);
 }
 
-function buildOwedSummary(notes: OwedNote[]) {
+function buildOwedSummary(notes: OwedNote[], locale: SupportedLocale) {
   const openNotes = notes.filter((note) => note.status === "open");
 
   if (!openNotes.length) {
-    return "No open money reminders.";
+    return t("owed.noOpenReminders", locale);
   }
 
   const currencies = new Set(openNotes.map((note) => note.currency));
 
   if (currencies.size > 1) {
-    return `${openNotes.length} open money ${openNotes.length === 1 ? "reminder" : "reminders"}`;
+    return t(openNotes.length === 1 ? "owed.openReminderCount" : "owed.openRemindersCount", locale, { count: openNotes.length });
   }
 
   const currency = openNotes[0]?.currency ?? "USD";
   const owedToMe = openNotes.filter((note) => note.direction === "owed_to_me").reduce((sum, note) => sum + note.currentAmount, 0);
   const iOwe = openNotes.filter((note) => note.direction === "i_owe").reduce((sum, note) => sum + note.currentAmount, 0);
 
-  return `${formatOwedAmount(owedToMe, currency)} owed to you · ${formatOwedAmount(iOwe, currency)} you owe`;
+  return t("owed.summary", locale, {
+    owedToMe: formatOwedAmount(owedToMe, currency, locale),
+    iOwe: formatOwedAmount(iOwe, currency, locale),
+  });
 }
 
 function OwedOptionButton({
@@ -197,11 +216,11 @@ export function MoneyOwedPanel({
                   <p className="truncate text-sm font-semibold text-slate-900">{note.personName}</p>
                   <p className="text-xs text-slate-500">
                     {note.note ? `${note.note} · ` : ""}
-                    Updated {formatOwedDate(note.updatedAt)}
+                    {t("owed.updated", locale)} {formatOwedDate(note.updatedAt, locale)}
                   </p>
                 </div>
                 <p className={`shrink-0 text-sm font-semibold ${direction === "owed_to_me" ? "text-emerald-700" : "text-amber-700"}`}>
-                  {formatOwedAmount(note.currentAmount, note.currency)}
+                  {formatOwedAmount(note.currentAmount, note.currency, locale)}
                 </p>
               </div>
               <div className="grid grid-cols-4 gap-1.5">
@@ -290,7 +309,7 @@ export function MoneyOwedPanel({
         {items.map((note) => {
           const isExpanded = activityExpandedNoteId === note.id;
           const isEditorOpen = isExpanded && editor?.noteId === note.id;
-          const preview = note.note ? note.note : `Updated ${formatOwedDate(note.updatedAt)}`;
+          const preview = note.note ? note.note : `${t("owed.updated", locale)} ${formatOwedDate(note.updatedAt, locale)}`;
 
           return (
             <div className="rounded-xl bg-white ring-1 ring-slate-100" key={note.id}>
@@ -310,7 +329,7 @@ export function MoneyOwedPanel({
                   </span>
                 </span>
                 <span className={`text-sm font-semibold ${direction === "owed_to_me" ? "text-emerald-700" : "text-amber-700"}`}>
-                  {formatOwedAmount(note.currentAmount, note.currency)}
+                  {formatOwedAmount(note.currentAmount, note.currency, locale)}
                 </span>
               </button>
               {isExpanded ? (
@@ -468,7 +487,7 @@ export function MoneyOwedPanel({
             type="button"
           >
             {dueDateAdded && createOptionalSection !== "dueDate" ? <Check aria-hidden="true" className="size-3.5" /> : <Calendar aria-hidden="true" className="size-3.5" />}
-            <span className="truncate">{dueDateAdded && createOptionalSection !== "dueDate" ? formatOwedDate(`${createDueDate}T00:00:00.000Z`) : t("common.dueDate", locale)}</span>
+            <span className="truncate">{dueDateAdded && createOptionalSection !== "dueDate" ? formatOwedDate(`${createDueDate}T00:00:00.000Z`, locale) : t("common.dueDate", locale)}</span>
           </button>
         </div>
         {createOptionalSection === "note" ? (
@@ -508,7 +527,7 @@ export function MoneyOwedPanel({
     title || shouldShowSummary ? (
       <div className="space-y-1">
         {title ? <p className="text-sm font-semibold text-slate-900">{title}</p> : null}
-        {shouldShowSummary ? <p className="text-xs leading-5 text-slate-500">{buildOwedSummary(openNotes)}</p> : null}
+        {shouldShowSummary ? <p className="text-xs leading-5 text-slate-500">{buildOwedSummary(openNotes, locale)}</p> : null}
       </div>
     ) : null;
 
