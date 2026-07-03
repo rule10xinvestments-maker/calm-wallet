@@ -115,6 +115,10 @@ function pickerCategoryLabels() {
     .map((button) => button.textContent);
 }
 
+function expectElementBefore(first: Element, second: Element) {
+  expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+}
+
 describe("assistant composer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -567,6 +571,47 @@ describe("assistant composer", () => {
 
     expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Category: Groceries" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps the Limits create form to two primary rows and opens the category grid below row two", () => {
+    renderComposer(undefined, [], undefined, manualCategoryOptions);
+
+    openLimitsPanel();
+    fireEvent.click(screen.getByRole("button", { name: /Create a limit/ }));
+
+    const amountCurrencyRow = screen.getByRole("group", { name: "Limit amount and currency" });
+    const categoryPeriodRow = screen.getByRole("group", { name: "Limit category and period" });
+    const amountInput = screen.getByLabelText("Amount");
+    const currencySelect = screen.getByLabelText("Currency");
+    const categoryButton = screen.getByRole("button", { name: "Category: Housing" });
+    const weeklyButton = screen.getByRole("button", { name: "weekly" });
+    const initialCurrency = (currencySelect as HTMLSelectElement).value;
+
+    expect(amountCurrencyRow).toContainElement(amountInput);
+    expect(amountCurrencyRow).toContainElement(currencySelect);
+    expect(categoryPeriodRow).toContainElement(categoryButton);
+    expect(categoryPeriodRow).toContainElement(weeklyButton);
+    expectElementBefore(amountCurrencyRow, categoryPeriodRow);
+    expectElementBefore(amountInput, currencySelect);
+    expectElementBefore(categoryButton, weeklyButton);
+    expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
+
+    fireEvent.change(amountInput, { target: { value: "450" } });
+    fireEvent.click(screen.getByRole("button", { name: "monthly" }));
+    expect(screen.getByLabelText("Repeat every month")).toBeChecked();
+    fireEvent.click(categoryButton);
+
+    const picker = screen.getByLabelText("Category picker");
+    expectElementBefore(categoryPeriodRow, picker);
+    expectElementBefore(amountCurrencyRow, picker);
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Groceries" }));
+
+    expect(screen.getByRole("button", { name: "Category: Groceries" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Amount")).toHaveValue(450);
+    expect(screen.getByLabelText("Currency")).toHaveValue(initialCurrency);
+    expect(screen.getByRole("button", { name: "monthly" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Repeat every month")).toBeChecked();
   });
 
   it("keeps Assistant Limits close behavior compact", () => {

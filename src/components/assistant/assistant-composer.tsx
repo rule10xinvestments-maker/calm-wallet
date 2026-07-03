@@ -1186,7 +1186,39 @@ export function AssistantComposer({
             <input name="monthStart" type="hidden" value={getCurrentMonthStartKey()} />
             <input name="repeats" type="hidden" value={limitRepeats ? "on" : "off"} />
             <input name="categoryId" type="hidden" value={limitCategoryId} />
-            <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+            <div aria-label="Limit amount and currency" className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-2" role="group">
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
+                <input
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                  inputMode="decimal"
+                  min="0.01"
+                  name="amount"
+                  onChange={(event) => setLimitAmount(event.target.value)}
+                  placeholder="300"
+                  required
+                  step="0.01"
+                  type="number"
+                  value={limitAmount}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
+                <select
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                  name="currency"
+                  onChange={(event) => setLimitCurrency(getSupportedManualCurrency(event.target.value))}
+                  value={limitCurrency}
+                >
+                  {manualCurrencyOptions.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div aria-label="Limit category and period" className="grid grid-cols-[minmax(0,1fr)_minmax(7.75rem,0.85fr)] gap-2" role="group">
               <div className="space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("common.category", locale)}</span>
                 <button
@@ -1210,48 +1242,6 @@ export function AssistantComposer({
                   <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isLimitCategoryPickerOpen ? "rotate-180" : ""}`} />
                 </button>
               </div>
-              <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
-                <input
-                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                  inputMode="decimal"
-                  min="0.01"
-                  name="amount"
-                  onChange={(event) => setLimitAmount(event.target.value)}
-                  placeholder="300"
-                  required
-                  step="0.01"
-                  type="number"
-                  value={limitAmount}
-                />
-              </label>
-            </div>
-            {isLimitCategoryPickerOpen ? (
-              <CategoryIconGridPicker
-                categories={limitCategoryOptions}
-                onSelect={(category) => {
-                  setLimitCategoryId(category.id);
-                  setIsLimitCategoryPickerOpen(false);
-                }}
-                selectedCategoryId={limitCategoryId}
-              />
-            ) : null}
-            <div className="grid grid-cols-[5.5rem_1fr] gap-2">
-              <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
-                <select
-                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                  name="currency"
-                  onChange={(event) => setLimitCurrency(getSupportedManualCurrency(event.target.value))}
-                  value={limitCurrency}
-                >
-                  {manualCurrencyOptions.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <div className="space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("assistant.limits.period", locale)}</span>
                 <div className="grid min-h-11 grid-cols-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
@@ -1272,6 +1262,16 @@ export function AssistantComposer({
                 <input name="period" type="hidden" value={limitPeriod} />
               </div>
             </div>
+            {isLimitCategoryPickerOpen ? (
+              <CategoryIconGridPicker
+                categories={limitCategoryOptions}
+                onSelect={(category) => {
+                  setLimitCategoryId(category.id);
+                  setIsLimitCategoryPickerOpen(false);
+                }}
+                selectedCategoryId={limitCategoryId}
+              />
+            ) : null}
             <label className="flex min-h-11 items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
               <input
                 checked={limitRepeats}
