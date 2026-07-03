@@ -64,11 +64,6 @@ const deletedTab: ActivityFilterTab = {
   Icon: Trash2,
 };
 
-const importTypeLabels: Record<StagedImportListItem["importType"], string> = {
-  receipt_image: "Receipt image",
-  csv_import: "CSV import",
-};
-
 function getSearchableTransactionText(item: TransactionListItem) {
   return [
     item.title,
@@ -595,17 +590,21 @@ function buildTransactionListItemFromReviewResult(
   };
 }
 
+function getImportTypeLabel(importType: StagedImportListItem["importType"], locale: string) {
+  return t(`imports.type.${importType}`, locale);
+}
+
 function getReviewCompletionLabel(reviewProgress: {
   totalCandidateCount: number;
   acceptedCount: number;
   rejectedCount: number;
   pendingCount: number;
-}) {
+}, locale: string) {
   if (reviewProgress.totalCandidateCount > 0 && reviewProgress.pendingCount === 0) {
-    return "Review complete";
+    return t("imports.reviewComplete", locale);
   }
 
-  return "Review remaining";
+  return t("imports.reviewRemaining", locale);
 }
 
 function getReviewProgressLabel(reviewProgress: {
@@ -613,22 +612,26 @@ function getReviewProgressLabel(reviewProgress: {
   acceptedCount: number;
   rejectedCount: number;
   pendingCount: number;
-}) {
+}, locale: string) {
   if (reviewProgress.totalCandidateCount === 0) {
-    return "No items to review";
+    return t("imports.noItemsToReview", locale);
   }
 
   if (reviewProgress.pendingCount === 0) {
-    return "Review complete";
+    return t("imports.reviewComplete", locale);
   }
 
   const reviewedCount = reviewProgress.acceptedCount + reviewProgress.rejectedCount;
 
   if (reviewedCount === 0) {
-    return `${reviewProgress.pendingCount} ${reviewProgress.pendingCount === 1 ? "item" : "items"} to review`;
+    return t("imports.itemsToReview", locale)
+      .replace("{count}", String(reviewProgress.pendingCount))
+      .replace("{item}", t(reviewProgress.pendingCount === 1 ? "imports.item" : "imports.items", locale));
   }
 
-  return `${reviewedCount} of ${reviewProgress.totalCandidateCount} reviewed`;
+  return t("imports.reviewedOfTotal", locale)
+    .replace("{reviewed}", String(reviewedCount))
+    .replace("{total}", String(reviewProgress.totalCandidateCount));
 }
 
 function getLifecycleStatusLabel(args: {
@@ -637,28 +640,28 @@ function getLifecycleStatusLabel(args: {
     totalCandidateCount: number;
     pendingCount: number;
   };
-}) {
+}, locale: string) {
   if (args.status === "uploaded") {
-    return "Uploaded";
+    return t("imports.status.uploaded", locale);
   }
 
   if (args.status === "parsing") {
-    return "Parsing";
+    return t("imports.status.parsing", locale);
   }
 
   if (args.status === "failed") {
-    return "Failed";
+    return t("imports.status.failed", locale);
   }
 
   if (args.status === "reviewed") {
-    return "Review complete";
+    return t("imports.reviewComplete", locale);
   }
 
   if (args.reviewProgress.pendingCount === 0) {
-    return "Review complete";
+    return t("imports.reviewComplete", locale);
   }
 
-  return "Ready for review";
+  return t("imports.status.readyForReview", locale);
 }
 
 type StagedImportCardProps = {
@@ -683,6 +686,7 @@ function CandidateReviewEntry({
   initialReviewActionState,
   onResolved,
 }: CandidateReviewEntryProps) {
+  const { locale } = useLocale();
   const [isExpanded, setIsExpanded] = useState(false);
   const [reviewActionState, setReviewActionState] = useState(initialReviewActionState);
   const [isPending, setIsPending] = useState(false);
@@ -691,7 +695,7 @@ function CandidateReviewEntry({
   const defaultTitle =
     candidate.description && candidate.description !== "No description provided"
       ? candidate.description
-      : candidate.originalFilename ?? "Receipt entry";
+      : candidate.originalFilename ?? t("imports.receiptEntry", locale);
   const defaultMerchant = candidate.merchantGuess === "No merchant guess" ? "" : candidate.merchantGuess;
   const amountMissing = candidate.amountMinor === null;
 
@@ -725,7 +729,7 @@ function CandidateReviewEntry({
           </p>
           {amountMissing ? (
             <p className="w-fit rounded-full bg-white px-2 py-1 text-xs font-medium text-amber-700">
-              We couldn&apos;t read the total. Add amount before saving.
+              {t("imports.amountRequiredBeforeSaving", locale)}
             </p>
           ) : null}
           {candidate.importType === "receipt_image" && candidate.ocrStatusLabel ? (
@@ -733,7 +737,7 @@ function CandidateReviewEntry({
           ) : null}
         </div>
         <p className="shrink-0 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700">
-          Review
+          {t("common.review", locale)}
         </p>
       </button>
       {isExpanded ? (
@@ -749,18 +753,18 @@ function CandidateReviewEntry({
             <input name="decision" type="hidden" value="accept" />
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1 text-xs font-medium text-slate-600">
-                Amount
+                {t("common.amount", locale)}
                 <input
                   className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   defaultValue={candidate.amountMinor ? String(candidate.amountMinor / 100) : ""}
                   inputMode="decimal"
                   name="amount"
-                  placeholder="Total"
+                  placeholder={t("imports.totalPlaceholder", locale)}
                   required
                 />
               </label>
               <label className="space-y-1 text-xs font-medium text-slate-600">
-                Currency
+                {t("common.currency", locale)}
                 <input
                   className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm uppercase text-slate-900"
                   defaultValue={candidate.currency ?? "RON"}
@@ -771,7 +775,7 @@ function CandidateReviewEntry({
               </label>
             </div>
             <label className="space-y-1 text-xs font-medium text-slate-600">
-              Title
+              {t("imports.titleLabel", locale)}
               <input
                 className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                 defaultValue={defaultTitle}
@@ -779,7 +783,7 @@ function CandidateReviewEntry({
               />
             </label>
             <label className="space-y-1 text-xs font-medium text-slate-600">
-              Merchant
+              {t("common.merchant", locale)}
               <input
                 className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                 defaultValue={defaultMerchant}
@@ -787,13 +791,13 @@ function CandidateReviewEntry({
               />
             </label>
             <label className="space-y-1 text-xs font-medium text-slate-600">
-              Category
+              {t("common.category", locale)}
               <select
                 className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                 defaultValue={defaultCategoryId}
                 name="categoryId"
               >
-                <option value="">Uncategorized</option>
+                <option value="">{t("common.uncategorized", locale)}</option>
                 {categories
                   .filter((category) => category.direction === "expense" || category.direction === "both")
                   .map((category) => (
@@ -804,7 +808,7 @@ function CandidateReviewEntry({
               </select>
             </label>
             <label className="space-y-1 text-xs font-medium text-slate-600">
-              Note
+              {t("common.note", locale)}
               <textarea
                 className="min-h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                 defaultValue={candidate.description === "No description provided" ? "" : candidate.description}
@@ -826,14 +830,14 @@ function CandidateReviewEntry({
                 }}
                 type="button"
               >
-                Discard
+                {t("imports.discard", locale)}
               </button>
               <button
                 className="min-h-10 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 disabled={isPending}
                 type="submit"
               >
-                Save expense
+                {t("imports.saveExpense", locale)}
               </button>
             </div>
           </form>
@@ -850,6 +854,7 @@ function StagedImportCard({
   reviewAction,
   initialReviewActionState,
 }: StagedImportCardProps) {
+  const { locale } = useLocale();
   const [candidatePreviews, setCandidatePreviews] = useState(detail?.candidatePreviews ?? []);
   const [reviewProgress, setReviewProgress] = useState(
     detail?.reviewProgress ?? {
@@ -863,14 +868,14 @@ function StagedImportCard({
   const [reviewActionState, setReviewActionState] = useState(initialReviewActionState);
   const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
   const pendingCandidates = candidatePreviews.filter((candidate) => candidate.acceptanceState === "pending");
-  const reviewSummary = detail?.reviewSummary ?? "No candidates yet.";
-  const acceptanceSummary = detail?.acceptanceSummary ?? "No candidates yet.";
-  const reviewCompletionLabel = getReviewCompletionLabel(reviewProgress);
-  const progressLabel = getReviewProgressLabel(reviewProgress);
+  const reviewSummary = detail?.reviewSummary ?? t("imports.noCandidatesYet", locale);
+  const acceptanceSummary = detail?.acceptanceSummary ?? t("imports.noCandidatesYet", locale);
+  const reviewCompletionLabel = getReviewCompletionLabel(reviewProgress, locale);
+  const progressLabel = getReviewProgressLabel(reviewProgress, locale);
   const lifecycleStatusLabel = getLifecycleStatusLabel({
     status: importStatus,
     reviewProgress,
-  });
+  }, locale);
 
   useEffect(() => {
     setCandidatePreviews(detail?.candidatePreviews ?? []);
@@ -925,56 +930,56 @@ function StagedImportCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
           <p className="break-words text-sm font-medium text-slate-900">{item.originalFilename}</p>
-          <p className="text-xs uppercase tracking-wide text-slate-500">{importTypeLabels[item.importType]}</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500">{getImportTypeLabel(item.importType, locale)}</p>
         </div>
         <p className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">{lifecycleStatusLabel}</p>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
         <span>{item.mimeType}</span>
-        <span>Created {formatImportDate(item.createdAt)}</span>
-        <span>Updated {formatImportDate(item.updatedAt)}</span>
+        <span>{t("imports.created", locale)} {formatImportDate(item.createdAt)}</span>
+        <span>{t("imports.updated", locale)} {formatImportDate(item.updatedAt)}</span>
         <span>{progressLabel}</span>
       </div>
       {importStatus === "failed" ? (
-        <p className="mt-2 text-xs text-rose-600">Import failed. No review is available for this upload.</p>
+        <p className="mt-2 text-xs text-rose-600">{t("imports.failedNoReview", locale)}</p>
       ) : null}
       <details className="mt-3">
-        <summary className="cursor-pointer text-xs font-medium text-sky-700">View details</summary>
+        <summary className="cursor-pointer text-xs font-medium text-sky-700">{t("imports.viewDetails", locale)}</summary>
         <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 text-xs text-slate-600">
           <p>
-            <span className="font-medium text-slate-800">Type:</span> {importTypeLabels[item.importType]}
+            <span className="font-medium text-slate-800">{t("imports.typeLabel", locale)}:</span> {getImportTypeLabel(item.importType, locale)}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Status:</span> {lifecycleStatusLabel}
+            <span className="font-medium text-slate-800">{t("imports.statusLabel", locale)}:</span> {lifecycleStatusLabel}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Filename:</span> {item.originalFilename}
+            <span className="font-medium text-slate-800">{t("imports.filename", locale)}:</span> {item.originalFilename}
           </p>
           <p>
-            <span className="font-medium text-slate-800">MIME type:</span> {item.mimeType}
+            <span className="font-medium text-slate-800">{t("imports.mimeType", locale)}:</span> {item.mimeType}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Created:</span> {formatImportDate(item.createdAt)}
+            <span className="font-medium text-slate-800">{t("imports.created", locale)}:</span> {formatImportDate(item.createdAt)}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Updated:</span> {formatImportDate(item.updatedAt)}
+            <span className="font-medium text-slate-800">{t("imports.updated", locale)}:</span> {formatImportDate(item.updatedAt)}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Candidates:</span> {reviewProgress.totalCandidateCount}
+            <span className="font-medium text-slate-800">{t("imports.candidates", locale)}:</span> {reviewProgress.totalCandidateCount}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Review progress:</span>{" "}
+            <span className="font-medium text-slate-800">{t("imports.reviewProgress", locale)}:</span>{" "}
             {progressLabel}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Candidate review:</span> {reviewSummary}
+            <span className="font-medium text-slate-800">{t("imports.candidateReview", locale)}:</span> {reviewSummary}
           </p>
           <p>
-            <span className="font-medium text-slate-800">Candidate acceptance:</span> {acceptanceSummary}
+            <span className="font-medium text-slate-800">{t("imports.candidateAcceptance", locale)}:</span> {acceptanceSummary}
           </p>
           {pendingCandidates.length ? (
             <div className="space-y-2">
-              <p className="font-medium text-slate-800">Pending review</p>
+              <p className="font-medium text-slate-800">{t("imports.pendingReview", locale)}</p>
               <div className="space-y-2">
                 {pendingCandidates.map((candidate) => (
                   <div key={candidate.id} className="rounded-xl bg-slate-50 px-3 py-2">
@@ -982,7 +987,9 @@ function StagedImportCard({
                     <p>{candidate.dateLabel}</p>
                     <p>{candidate.description}</p>
                     <p>{candidate.merchantGuess}</p>
-                    <p>{candidate.reviewState} review | {candidate.acceptanceState} acceptance</p>
+                    <p>
+                      {candidate.reviewState} {t("common.review", locale).toLowerCase()} | {candidate.acceptanceState} {t("imports.acceptance", locale)}
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {candidate.canAccept ? (
                         <button
@@ -991,11 +998,11 @@ function StagedImportCard({
                           onClick={() => void handleReviewDecision(candidate.id, "accept")}
                           type="button"
                         >
-                          Accept candidate
+                          {t("imports.acceptCandidate", locale)}
                         </button>
                       ) : (
                         <p className="rounded-2xl bg-white px-3 py-2 text-xs font-medium text-amber-700">
-                          We couldn&apos;t read the total. Add amount before saving.
+                          {t("imports.amountRequiredBeforeSaving", locale)}
                         </p>
                       )}
                       <button
@@ -1004,7 +1011,7 @@ function StagedImportCard({
                         onClick={() => void handleReviewDecision(candidate.id, "reject")}
                         type="button"
                       >
-                        Reject candidate
+                        {t("imports.rejectCandidate", locale)}
                       </button>
                     </div>
                   </div>
@@ -1012,10 +1019,10 @@ function StagedImportCard({
               </div>
             </div>
           ) : (
-            <p>{reviewProgress.totalCandidateCount > 0 ? reviewCompletionLabel : "No pending items to review."}</p>
+            <p>{reviewProgress.totalCandidateCount > 0 ? reviewCompletionLabel : t("imports.noPendingItems", locale)}</p>
           )}
           <ReviewActionMessage state={reviewActionState} />
-          {importStatus === "failed" ? <p>The import could not be prepared for review.</p> : null}
+          {importStatus === "failed" ? <p>{t("imports.couldNotPrepare", locale)}</p> : null}
         </div>
       </details>
     </div>
@@ -1757,8 +1764,8 @@ export function TransactionsOverview({
       {betaStagedImports.length ? (
         <Card>
           <CardHeader>
-            <CardTitle>Staged imports</CardTitle>
-            <CardDescription>Recent private uploads staged for review, completion, or safe parse status.</CardDescription>
+            <CardTitle>{t("imports.stagedImports", locale)}</CardTitle>
+            <CardDescription>{t("imports.stagedImportsHelper", locale)}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {betaStagedImports.map((item) => (

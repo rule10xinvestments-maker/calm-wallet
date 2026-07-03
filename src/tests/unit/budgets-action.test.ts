@@ -148,4 +148,34 @@ describe("budget actions", () => {
     expect(result.status).toBe("success");
     expect(result.message).toBe("Limit removed.");
   });
+
+  it("does not leak raw backend errors when saving a limit fails", async () => {
+    const { upsertCategoryLimitAction } = await import("@/lib/actions/budgets");
+    upsertCategoryLimit.mockRejectedValueOnce(new Error("Supabase policy stack trace"));
+    const formData = new FormData();
+    formData.set("monthStart", "2026-04-01");
+    formData.set("categoryId", "22222222-2222-2222-2222-222222222222");
+    formData.set("amount", "75");
+    formData.set("currency", "ron");
+    formData.set("period", "weekly");
+
+    const result = await upsertCategoryLimitAction({ status: "idle", message: null, budget: null }, formData);
+
+    expect(result.status).toBe("error");
+    expect(result.message).toBe("Unable to save limit.");
+    expect(result.message).not.toContain("Supabase");
+  });
+
+  it("does not leak raw backend errors when removing a limit fails", async () => {
+    const { deleteMonthlyCategoryBudgetAction } = await import("@/lib/actions/budgets");
+    deleteMonthlyCategoryBudget.mockRejectedValueOnce(new Error("delete from budgets violated constraint"));
+    const formData = new FormData();
+    formData.set("budgetId", "33333333-3333-3333-3333-333333333333");
+
+    const result = await deleteMonthlyCategoryBudgetAction({ status: "idle", message: null, budget: null }, formData);
+
+    expect(result.status).toBe("error");
+    expect(result.message).toBe("Unable to remove limit.");
+    expect(result.message).not.toContain("constraint");
+  });
 });

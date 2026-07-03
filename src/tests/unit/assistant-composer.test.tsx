@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import type { Budget } from "@/domain/budgets/types";
 import type { OwedNote } from "@/domain/owed-notes/types";
 import type { AssistantActionState } from "@/lib/server/assistant";
@@ -48,6 +49,32 @@ function renderComposer(
 
 function renderComposerWithImports() {
   return renderComposer(undefined, [], undefined, [], true);
+}
+
+function renderComposerWithImportsLocale(locale: "en" | "ro" | "fr" | "es") {
+  return render(
+    <LocaleProvider savedLocale={locale}>
+      <AssistantComposer
+        action={async () => ({
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        })}
+        categoryOptions={[]}
+        initialState={{
+          status: "idle",
+          message: null,
+          reviewState: null,
+          latestTransaction: null,
+          recentItems: [],
+        }}
+        importsEnabled
+        recentItems={[]}
+      />
+    </LocaleProvider>,
+  );
 }
 
 function openImportUpload() {
@@ -1063,6 +1090,22 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Import PDF statement" })).toBeDisabled();
   });
 
+  it("renders migrated import controls in Romanian without translating user content", () => {
+    renderComposerWithImportsLocale("ro");
+
+    fireEvent.click(screen.getByRole("button", { name: "Bon" }));
+
+    expect(screen.getByText("Import bon")).toBeInTheDocument();
+    expect(screen.getByLabelText("Fă poză")).toBeInTheDocument();
+    expect(screen.getByLabelText("Încarcă imagine")).toBeInTheDocument();
+
+    const file = new File(["bon"], "bon-mlbb.jpg", { type: "image/jpeg" });
+    const fileInput = screen.getByLabelText("Fișier") as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(fileInput.files?.[0]?.name).toBe("bon-mlbb.jpg");
+  });
+
   it("collapses staged import controls after opening them", () => {
     renderComposerWithImports();
 
@@ -1134,7 +1177,7 @@ describe("assistant composer", () => {
     resolveUpload();
 
     expect(await screen.findByText("Receipt uploaded for review. Open Activity \u2192 Review to add the total.")).toBeInTheDocument();
-    expect(await screen.findByText("Uploaded receipt.jpg as receipt_image.")).toBeInTheDocument();
+    expect(await screen.findByText("Uploaded receipt.jpg as Receipt image.")).toBeInTheDocument();
     expect(uploadReceiptImageAction).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "idle",
@@ -1177,7 +1220,7 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import CSV statement" }));
 
     expect(await screen.findByText("CSV import staged 1 review candidate.")).toBeInTheDocument();
-    expect(screen.getByText("Uploaded statement.csv as csv_import.")).toBeInTheDocument();
+    expect(screen.getByText("Uploaded statement.csv as CSV import.")).toBeInTheDocument();
     expect(uploadCsvBankStatementAction).toHaveBeenCalled();
   });
 
@@ -1232,7 +1275,7 @@ describe("assistant composer", () => {
     await waitFor(() => {
       expect(screen.getByText("CSV import staged 1 review candidate.")).toBeInTheDocument();
     });
-    expect(screen.getByText("Uploaded statement.csv as csv_import.")).toBeInTheDocument();
+    expect(screen.getByText("Uploaded statement.csv as CSV import.")).toBeInTheDocument();
     expect(uploadCsvBankStatementAction).toHaveBeenCalled();
   });
 

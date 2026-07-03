@@ -22,6 +22,12 @@ describe("i18n helper", () => {
     expect(t("common.notARealKey", "ro")).toBe("common.notARealKey");
   });
 
+  it("returns audited import and notification labels in supported locales", () => {
+    expect(t("assistant.imports.chooseFileFirst", "ro")).toBe("Alege mai întâi o imagine de bon sau un fișier CSV.");
+    expect(t("imports.noCandidatesYet", "fr")).toBe("Aucun candidat pour le moment.");
+    expect(t("notifications.saveSettings", "es")).toBe("Guardar ajustes de notificaciones");
+  });
+
   it.each([
     ["ro-RO", "ro"],
     ["fr-FR", "fr"],

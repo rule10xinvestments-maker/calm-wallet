@@ -40,10 +40,10 @@ export async function recategorizeTransactionAction(
     revalidatePath("/assistant");
     revalidatePath("/insights");
     return result;
-  } catch (error) {
+  } catch {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to update category.",
+      message: "Unable to update category.",
     };
   }
 }
@@ -74,10 +74,10 @@ export async function deleteTransactionAction(
     revalidatePath("/assistant");
     revalidatePath("/insights");
     return result;
-  } catch (error) {
+  } catch {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to delete transaction.",
+      message: "Unable to delete transaction.",
     };
   }
 }
@@ -108,10 +108,10 @@ export async function restoreTransactionAction(
     revalidatePath("/assistant");
     revalidatePath("/insights");
     return result;
-  } catch (error) {
+  } catch {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to restore transaction.",
+      message: "Unable to restore transaction.",
     };
   }
 }

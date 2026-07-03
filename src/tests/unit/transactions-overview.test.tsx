@@ -1907,6 +1907,22 @@ describe("transactions overview", () => {
     expect(screen.getByRole("button", { name: "Reject candidate" })).toBeInTheDocument();
   });
 
+  it("renders migrated staged import labels in Romanian without translating imported content", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <TransactionsOverview {...makeOverviewProps()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Importuri pregătite")).toBeInTheDocument();
+    expect(screen.getAllByText("Imagine bon")).toHaveLength(2);
+    expect(screen.getByText("Vezi detalii")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Acceptă candidat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Respinge candidat" })).toBeInTheDocument();
+    expect(screen.getByText("Lunch receipt")).toBeInTheDocument();
+    expect(screen.getByText("Corner Cafe")).toBeInTheDocument();
+  });
+
   it("shows incomplete receipt candidates in Review without treating them as normal transactions", () => {
     render(
       <TransactionsOverview

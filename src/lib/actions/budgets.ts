@@ -15,6 +15,18 @@ function parseAmountToMinorUnits(value: string) {
   return Math.round(normalized * 100);
 }
 
+function limitActionErrorMessage(operation: "save" | "update" | "remove" = "save") {
+  if (operation === "remove") {
+    return "Unable to remove limit.";
+  }
+
+  if (operation === "update") {
+    return "Unable to update limit.";
+  }
+
+  return "Unable to save limit.";
+}
+
 export async function upsertMonthlyCategoryBudgetAction(
   _prevState: BudgetActionState,
   formData: FormData,
@@ -57,11 +69,11 @@ export async function upsertMonthlyCategoryBudgetAction(
       message: "Limit saved.",
       budget,
     };
-  } catch (error) {
+  } catch {
     return {
       ...initialBudgetActionState,
       status: "error",
-      message: error instanceof Error ? error.message.replaceAll("Budget", "Limit").replaceAll("budget", "limit") : "Unable to save limit.",
+      message: limitActionErrorMessage("save"),
     };
   }
 }
@@ -113,11 +125,11 @@ export async function upsertCategoryLimitAction(
       message: "Limit saved.",
       budget,
     };
-  } catch (error) {
+  } catch {
     return {
       ...initialBudgetActionState,
       status: "error",
-      message: error instanceof Error ? error.message.replaceAll("Budget", "Limit").replaceAll("budget", "limit") : "Unable to save limit.",
+      message: limitActionErrorMessage("save"),
     };
   }
 }
@@ -152,11 +164,11 @@ async function manageCategoryLimit(formData: FormData, operation: "pause" | "res
       message: operation === "delete" ? "Limit removed." : operation === "pause" ? "Limit paused." : "Limit resumed.",
       budget,
     };
-  } catch (error) {
+  } catch {
     return {
       ...initialBudgetActionState,
       status: "error",
-      message: error instanceof Error ? error.message.replaceAll("Budget", "Limit").replaceAll("budget", "limit") : "Unable to update limit.",
+      message: limitActionErrorMessage("update"),
     };
   }
 }
@@ -198,11 +210,11 @@ export async function deleteMonthlyCategoryBudgetAction(
       message: "Limit removed.",
       budget,
     };
-  } catch (error) {
+  } catch {
     return {
       ...initialBudgetActionState,
       status: "error",
-      message: error instanceof Error ? error.message.replaceAll("Budget", "Limit").replaceAll("budget", "limit") : "Unable to remove limit.",
+      message: limitActionErrorMessage("remove"),
     };
   }
 }

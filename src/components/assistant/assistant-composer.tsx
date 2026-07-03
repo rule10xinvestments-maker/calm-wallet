@@ -502,7 +502,7 @@ export function AssistantComposer({
     if (!selectedFile) {
       setUploadState({
         status: "error",
-        message: "Choose a receipt image or CSV file first.",
+        message: t("assistant.imports.chooseFileFirst", locale),
         importType: null,
         filename: null,
       });
@@ -514,8 +514,8 @@ export function AssistantComposer({
         status: "error",
         message:
           selectedImportType === "receipt_image"
-            ? "Choose an image file for receipt image imports."
-            : "Choose a CSV file for CSV imports.",
+            ? t("assistant.imports.chooseReceiptImage", locale)
+            : t("assistant.imports.chooseCsv", locale),
         importType: selectedImportType,
         filename: selectedFile.name,
       });
@@ -525,7 +525,7 @@ export function AssistantComposer({
     if (selectedImportType === "receipt_image" && selectedFile.size > receiptImageMaxBytes) {
       setUploadState({
         status: "error",
-        message: "Receipt image is too large.",
+        message: t("assistant.imports.receiptTooLarge", locale),
         importType: selectedImportType,
         filename: selectedFile.name,
       });
@@ -535,7 +535,7 @@ export function AssistantComposer({
     if (selectedImportType === "csv_import" && selectedFile.size > CSV_IMPORT_MAX_BYTES) {
       setUploadState({
         status: "error",
-        message: "CSV file is too large.",
+        message: t("assistant.imports.csvTooLarge", locale),
         importType: selectedImportType,
         filename: selectedFile.name,
       });
@@ -544,7 +544,7 @@ export function AssistantComposer({
 
     setUploadState({
       status: "uploading",
-      message: "Uploading staged import...",
+      message: t("assistant.imports.uploadingStaged", locale),
       importType: selectedImportType,
       filename: selectedFile.name,
     });
@@ -704,15 +704,15 @@ export function AssistantComposer({
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Receipt import</p>
-              <p className="text-xs text-slate-500">Add one receipt image into private staged storage.</p>
+              <p className="text-sm font-medium text-slate-900">{t("assistant.imports.receiptTitle", locale)}</p>
+              <p className="text-xs text-slate-500">{t("assistant.imports.receiptHelper", locale)}</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
-              Close
+              {t("common.close", locale)}
             </button>
           </div>
 
@@ -729,18 +729,20 @@ export function AssistantComposer({
               <p className="font-medium">{uploadState.message}</p>
               {uploadState.status === "success" && uploadState.importType && uploadState.filename ? (
                 <p className="mt-1 text-xs text-slate-600">
-                  Uploaded {uploadState.filename} as {uploadState.importType}.
+                  {t("assistant.imports.uploadedAs", locale)
+                    .replace("{filename}", uploadState.filename)
+                    .replace("{type}", t(`imports.type.${uploadState.importType}`, locale))}
                 </p>
               ) : null}
               {uploadState.status === "error" && uploadState.filename ? (
-                <p className="mt-1 text-xs text-slate-600">File: {uploadState.filename}</p>
+                <p className="mt-1 text-xs text-slate-600">{t("imports.file", locale)}: {uploadState.filename}</p>
               ) : null}
             </div>
           ) : null}
 
           <form className="space-y-3" onSubmit={handleImportUploadSubmit}>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Take photo</span>
+              <span className="text-sm font-medium text-slate-700">{t("assistant.imports.takePhoto", locale)}</span>
               <input
                 accept="image/*"
                 className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
@@ -750,10 +752,10 @@ export function AssistantComposer({
               />
             </label>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Upload image</span>
+              <span className="text-sm font-medium text-slate-700">{t("assistant.imports.uploadImage", locale)}</span>
               <input
                 accept="image/*"
-                aria-label="File"
+                aria-label={t("imports.file", locale)}
                 className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
                 onChange={(event) => chooseImportFile("receipt_image", event.target.files?.[0] ?? null)}
                 type="file"
@@ -764,11 +766,11 @@ export function AssistantComposer({
               disabled
               type="button"
             >
-              Upload PDF receipt
+              {t("assistant.imports.uploadPdfReceipt", locale)}
             </button>
 
             <Button className="w-full" disabled={uploadState.status === "uploading"} type="submit">
-              {uploadState.status === "uploading" ? "Uploading..." : "Upload receipt"}
+              {uploadState.status === "uploading" ? t("imports.uploading", locale) : t("assistant.imports.uploadReceipt", locale)}
             </Button>
           </form>
         </div>
@@ -778,15 +780,15 @@ export function AssistantComposer({
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Statement import</p>
-              <p className="text-xs text-slate-500">Import a CSV statement into private staged review.</p>
+              <p className="text-sm font-medium text-slate-900">{t("assistant.imports.statementTitle", locale)}</p>
+              <p className="text-xs text-slate-500">{t("assistant.imports.statementHelper", locale)}</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
-              Close
+              {t("common.close", locale)}
             </button>
           </div>
 
@@ -803,21 +805,23 @@ export function AssistantComposer({
               <p className="font-medium">{uploadState.message}</p>
               {uploadState.status === "success" && uploadState.importType && uploadState.filename ? (
                 <p className="mt-1 text-xs text-slate-600">
-                  Uploaded {uploadState.filename} as {uploadState.importType}.
+                  {t("assistant.imports.uploadedAs", locale)
+                    .replace("{filename}", uploadState.filename)
+                    .replace("{type}", t(`imports.type.${uploadState.importType}`, locale))}
                 </p>
               ) : null}
               {uploadState.status === "error" && uploadState.filename ? (
-                <p className="mt-1 text-xs text-slate-600">File: {uploadState.filename}</p>
+                <p className="mt-1 text-xs text-slate-600">{t("imports.file", locale)}: {uploadState.filename}</p>
               ) : null}
             </div>
           ) : null}
 
           <form className="space-y-3" onSubmit={handleImportUploadSubmit}>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Import CSV statement</span>
+              <span className="text-sm font-medium text-slate-700">{t("assistant.imports.importCsvStatement", locale)}</span>
               <input
                 accept=".csv,text/csv"
-                aria-label="File"
+                aria-label={t("imports.file", locale)}
                 className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
                 onChange={(event) => chooseImportFile("csv_import", event.target.files?.[0] ?? null)}
                 type="file"
@@ -828,11 +832,11 @@ export function AssistantComposer({
               disabled
               type="button"
             >
-              Import PDF statement
+              {t("assistant.imports.importPdfStatement", locale)}
             </button>
 
             <Button className="w-full" disabled={uploadState.status === "uploading"} type="submit">
-              {uploadState.status === "uploading" ? "Uploading..." : "Import CSV statement"}
+              {uploadState.status === "uploading" ? t("imports.uploading", locale) : t("assistant.imports.importCsvStatement", locale)}
             </Button>
           </form>
         </div>

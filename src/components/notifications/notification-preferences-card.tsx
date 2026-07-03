@@ -5,10 +5,12 @@ import { useActionState, useMemo, useState, useTransition } from "react";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import { notificationCopyTemplates } from "@/domain/notifications/copy";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/components/i18n/locale-provider";
 import {
   initialNotificationPreferencesActionState,
   type NotificationPreferencesActionState,
 } from "@/lib/actions/notifications-state";
+import { t } from "@/lib/i18n";
 
 type NotificationPreferencesCardProps = {
   preferences: NotificationPreferences;
@@ -83,6 +85,7 @@ export function NotificationPreferencesCard({
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
 }: NotificationPreferencesCardProps) {
+  const { locale } = useLocale();
   const [state, formAction, isPending] = useActionState(action, {
     ...initialNotificationPreferencesActionState,
     preferences,
@@ -98,23 +101,23 @@ export function NotificationPreferencesCard({
 
   const enableCopy = useMemo(() => {
     if (browserStatus === "unsupported") {
-      return "Notifications are not supported here.";
+      return t("notifications.unsupported", locale);
     }
 
     if (browserStatus === "denied") {
-      return "Notifications are blocked in this browser.";
+      return t("notifications.blocked", locale);
     }
 
     if (browserStatus === "granted") {
-      return scheduledPushReady ? "Notifications are enabled." : "Test notifications are enabled. Scheduled reminders are not ready yet.";
+      return scheduledPushReady ? t("notifications.enabled", locale) : t("notifications.testEnabledScheduledNotReady", locale);
     }
 
-    return "Notification permission is needed first.";
-  }, [browserStatus, scheduledPushReady]);
+    return t("notifications.permissionNeeded", locale);
+  }, [browserStatus, locale, scheduledPushReady]);
 
   async function registerSubscriptionIfPossible() {
     if (!vapidPublicKey) {
-      setBrowserMessage("Test notifications are ready. Scheduled reminders are not ready yet.");
+      setBrowserMessage(t("notifications.testReadyScheduledNotReady", locale));
       return false;
     }
 
@@ -122,7 +125,7 @@ export function NotificationPreferencesCard({
       const registration = await getReadyServiceWorkerRegistration();
 
       if (!registration || !("pushManager" in registration)) {
-        setBrowserMessage("Notifications are not ready yet.");
+        setBrowserMessage(t("notifications.notReady", locale));
         return false;
       }
 
@@ -140,10 +143,10 @@ export function NotificationPreferencesCard({
       formData.set("auth", subscriptionJson.keys?.auth ?? "");
       formData.set("userAgent", navigator.userAgent);
       const result = await registerPushSubscriptionAction(initialNotificationPreferencesActionState, formData);
-      setBrowserMessage(result.status === "success" ? "Notifications are ready." : "Notifications are not ready yet.");
+      setBrowserMessage(result.status === "success" ? t("notifications.ready", locale) : t("notifications.notReady", locale));
       return result.status === "success";
     } catch {
-      setBrowserMessage("Notifications are not ready yet.");
+      setBrowserMessage(t("notifications.notReady", locale));
       return false;
     }
   }
@@ -154,7 +157,7 @@ export function NotificationPreferencesCard({
 
       if (!("Notification" in window)) {
         setBrowserStatus("unsupported");
-        setBrowserMessage("Notifications are not supported here.");
+        setBrowserMessage(t("notifications.unsupported", locale));
         return;
       }
 
@@ -162,12 +165,12 @@ export function NotificationPreferencesCard({
       setBrowserStatus(permission);
 
       if (permission === "denied") {
-        setBrowserMessage("Notifications are blocked in this browser.");
+        setBrowserMessage(t("notifications.blocked", locale));
         return;
       }
 
       if (permission !== "granted") {
-        setBrowserMessage("Notification permission is needed first.");
+        setBrowserMessage(t("notifications.permissionNeeded", locale));
         return;
       }
 
@@ -197,13 +200,13 @@ export function NotificationPreferencesCard({
 
       if (!("Notification" in window)) {
         setBrowserStatus("unsupported");
-        setBrowserMessage("Notifications are not supported here.");
+        setBrowserMessage(t("notifications.unsupported", locale));
         return;
       }
 
       if (Notification.permission !== "granted") {
         setBrowserStatus(Notification.permission);
-        setBrowserMessage("Notification permission is needed first.");
+        setBrowserMessage(t("notifications.permissionNeeded", locale));
         return;
       }
 
@@ -219,9 +222,9 @@ export function NotificationPreferencesCard({
         }
 
         await sendLocalTestNotification();
-        setBrowserMessage("Test notification sent.");
+        setBrowserMessage(t("notifications.testSent", locale));
       } catch {
-        setBrowserMessage("Test notification could not be sent.");
+        setBrowserMessage(t("notifications.testCouldNotSend", locale));
       }
     });
   }
@@ -239,7 +242,7 @@ export function NotificationPreferencesCard({
           </span>
           <div className="min-w-0 flex-1 space-y-2">
             <div>
-              <p className="text-sm font-medium text-slate-900">Notifications</p>
+              <p className="text-sm font-medium text-slate-900">{t("notifications.notifications", locale)}</p>
               <p className="text-xs leading-4 text-slate-500">{enableCopy}</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -249,7 +252,7 @@ export function NotificationPreferencesCard({
                 onClick={handleEnableNotifications}
                 type="button"
               >
-                {browserStatus === "granted" ? "Enabled" : "Enable notifications"}
+                {browserStatus === "granted" ? t("notifications.enabledShort", locale) : t("notifications.enableNotifications", locale)}
               </Button>
               <Button
                 className="h-9 bg-white px-3 text-xs text-slate-700 hover:bg-slate-100"
@@ -258,7 +261,7 @@ export function NotificationPreferencesCard({
                 type="button"
               >
                 <Send aria-hidden="true" className="mr-1.5 size-3.5" />
-                Send test
+                {t("notifications.sendTest", locale)}
               </Button>
             </div>
             {browserMessage ? <p className="text-xs leading-4 text-sky-700">{browserMessage}</p> : null}
@@ -272,35 +275,35 @@ export function NotificationPreferencesCard({
         ) : null}
         <ToggleCard
           defaultChecked={current.dailyReminderEnabled}
-          description="A gentle evening nudge around 8 PM."
+          description={t("notifications.dailyReminderHelper", locale)}
           name="dailyReminderEnabled"
-          title="Daily reminder"
+          title={t("notifications.dailyReminder", locale)}
         />
         <ToggleCard
           defaultChecked={current.monthlyReviewEnabled}
-          description="A calm prompt when a new month starts."
+          description={t("notifications.monthlyReportHelper", locale)}
           name="monthlyReviewEnabled"
-          title="Monthly report"
+          title={t("notifications.monthlyReport", locale)}
         />
         <ToggleCard
           defaultChecked={current.recurringNotificationsEnabled}
-          description="A note when a repeating entry is added."
+          description={t("notifications.recurringEntriesHelper", locale)}
           name="recurringNotificationsEnabled"
-          title="Recurring entries"
+          title={t("notifications.recurringEntries", locale)}
         />
         <ToggleCard
           defaultChecked={current.limitAlertsEnabled}
-          description="A calm check-in near or over a category limit."
+          description={t("notifications.limitAlertsHelper", locale)}
           name="limitAlertsEnabled"
-          title="Limit alerts"
+          title={t("notifications.limitAlerts", locale)}
         />
         <Button disabled={isPending} type="submit">
-          {isPending ? "Saving..." : "Save notification settings"}
+          {isPending ? t("common.saving", locale) : t("notifications.saveSettings", locale)}
         </Button>
       </form>
       {!scheduledPushReady ? (
         <p className="text-xs leading-4 text-slate-500">
-          Test notifications work on this device. Scheduled reminders are not ready yet.
+          {t("notifications.deviceTestWorksScheduledNotReady", locale)}
         </p>
       ) : null}
     </div>

@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireAuthenticatedSession = vi.fn();
+const deleteTransaction = vi.fn();
 const permanentlyDeleteTransaction = vi.fn();
+const restoreTransaction = vi.fn();
 const updateTransaction = vi.fn();
 const createSupabaseTransactionService = vi.fn(async () => ({
+  deleteTransaction,
   permanentlyDeleteTransaction,
+  restoreTransaction,
   updateTransaction,
 }));
 const revalidatePath = vi.fn();
@@ -25,6 +29,7 @@ describe("transaction actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireAuthenticatedSession.mockResolvedValue({ user: { id: "user-1" } });
+    deleteTransaction.mockResolvedValue(undefined);
     permanentlyDeleteTransaction.mockResolvedValue({
       transaction: {
         id: "txn-1",
@@ -35,9 +40,60 @@ describe("transaction actions", () => {
     updateTransaction.mockResolvedValue({
       transaction: {
         id: "txn-1",
+        transactionType: "expense",
+        merchant: "Market",
+        itemName: "Market",
+        note: null,
       },
       eventCreated: false,
     });
+    restoreTransaction.mockResolvedValue(undefined);
+  });
+
+  it("does not leak raw database errors from recategorizing", async () => {
+    const { recategorizeTransactionAction } = await import("@/lib/actions/transactions");
+    updateTransaction.mockRejectedValueOnce(new Error("category_memories relation does not exist"));
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("categoryId", "category-1");
+
+    const result = await recategorizeTransactionAction({ status: "idle", message: null }, formData);
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Unable to update category.",
+    });
+    expect(result.message).not.toContain("relation");
+  });
+
+  it("does not leak raw database errors from soft delete", async () => {
+    const { deleteTransactionAction } = await import("@/lib/actions/transactions");
+    deleteTransaction.mockRejectedValueOnce(new Error("delete failed: raw postgres detail"));
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+
+    const result = await deleteTransactionAction({ status: "idle", message: null }, formData);
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Unable to delete transaction.",
+    });
+    expect(result.message).not.toContain("postgres");
+  });
+
+  it("does not leak raw database errors from restore", async () => {
+    const { restoreTransactionAction } = await import("@/lib/actions/transactions");
+    restoreTransaction.mockRejectedValueOnce(new Error("restore failed: raw postgres detail"));
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+
+    const result = await restoreTransactionAction({ status: "idle", message: null }, formData);
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Unable to restore transaction.",
+    });
+    expect(result.message).not.toContain("postgres");
   });
 
   it("does not leak raw database errors from permanent delete", async () => {

@@ -144,6 +144,9 @@ describe("protected shell PWA install affordance", () => {
 
     expect(screen.getByRole("link", { name: "Activitate" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Perspective" })).toBeInTheDocument();
+    expect(screen.getByText("Reminder zilnic")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Activează notificările" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvează setările notificărilor" })).toBeInTheDocument();
   });
 
   it("renders the protected header as a compact shared mobile headline", () => {
