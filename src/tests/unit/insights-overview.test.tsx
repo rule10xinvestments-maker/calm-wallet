@@ -425,8 +425,9 @@ describe("insights overview", () => {
 
     expect(screen.getByText("Claritate lunară")).toBeInTheDocument();
     expect(screen.getByText("Doar bani urmăriți. Nu este un extras bancar.")).toBeInTheDocument();
-    expect(screen.getByText("Instantaneu lunar")).toBeInTheDocument();
-    expect(screen.getByText("Vizualizare urmărită")).toBeInTheDocument();
+    expect(screen.getByText("Rezumat lunar")).toBeInTheDocument();
+    expect(screen.queryByText("Instantaneu lunar")).not.toBeInTheDocument();
+    expect(screen.getByText("Analiză pe categorii")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bare" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cheltuieli" })).toBeInTheDocument();
     expect(screen.getByText("Cele mai mari cheltuieli luna aceasta")).toBeInTheDocument();

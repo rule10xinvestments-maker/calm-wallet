@@ -327,7 +327,7 @@
     "helper": "Înțelege banii urmăriți.",
     "trackedMoneyOnly": "Doar bani urmăriți. Nu este un extras bancar.",
     "tracked": "urmărit",
-    "trackedView": "Vizualizare urmărită",
+    "trackedView": "Analiză pe categorii",
     "trackedBalance": "Sold urmărit",
     "net": "Net",
     "monthlyNet": "Net lunar",
@@ -380,11 +380,11 @@
     "empty": {
       "title": "Nimic urmărit încă",
       "helper": "Adaugă o tranzacție sau verifică un bon importat, iar pagina va afișa semnale lunare.",
-      "noTransactionsInMonth": "Ai istoric urmărit, dar încă nu ai tranzacții în {month}.",
+      "noTransactionsInMonth": "Ai istoric urmărit, dar încă nu ai intrări în {month}.",
       "viewLatestMonth": "Vezi ultima lună cu activitate"
     },
     "snapshot": {
-      "title": "Instantaneu lunar",
+      "title": "Rezumat lunar",
       "trackedTransactionCount": "{count} {entry} urmărite"
     },
     "converted": {
@@ -459,7 +459,7 @@
       "noEntriesBy": "Nu există intrări până la {date}.",
       "selectedPoint": "Punct selectat",
       "noTrendData": "Nu există date de trend încă",
-      "noTransactionsThisMonth": "Nu există tranzacții urmărite luna aceasta.",
+      "noTransactionsThisMonth": "Nu există intrări urmărite luna aceasta.",
       "noIncomeThisMonth": "Nu există venit urmărit luna aceasta.",
       "noSpendingThisMonth": "Nu există cheltuieli urmărite luna aceasta.",
       "noMoneyMovement": "Nu există mișcare de bani urmărită în această perioadă.",
