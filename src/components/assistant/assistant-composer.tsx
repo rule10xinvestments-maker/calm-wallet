@@ -42,6 +42,8 @@ import {
 import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { CSV_IMPORT_MAX_BYTES } from "@/lib/imports/storage";
 import type { AssistantActionState } from "@/lib/server/assistant";
+import { useLocale } from "@/components/i18n/locale-provider";
+import { t } from "@/lib/i18n";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
@@ -138,26 +140,26 @@ function getReceiptUploadFailureMessage(error: unknown) {
 
 const importActionPanelItems: Array<{
   id: ActionPanel;
-  label: string;
+  labelKey: string;
   Icon: LucideIcon;
 }> = [
-  { id: "receipt", label: "Receipt", Icon: Receipt },
-  { id: "statement", label: "Statement", Icon: FileSpreadsheet },
-  { id: "recent", label: "Recent", Icon: History },
-  { id: "limits", label: "Limits", Icon: CircleGauge },
-  { id: "owed", label: "Owed", Icon: HandCoins },
-  { id: "manual", label: "Manual", Icon: Plus },
+  { id: "receipt", labelKey: "assistant.actions.receipt", Icon: Receipt },
+  { id: "statement", labelKey: "assistant.actions.statement", Icon: FileSpreadsheet },
+  { id: "recent", labelKey: "assistant.actions.recent", Icon: History },
+  { id: "limits", labelKey: "assistant.actions.limits", Icon: CircleGauge },
+  { id: "owed", labelKey: "assistant.actions.owed", Icon: HandCoins },
+  { id: "manual", labelKey: "assistant.actions.manual", Icon: Plus },
 ];
 
 const betaActionPanelItems: Array<{
   id: ActionPanel;
-  label: string;
+  labelKey: string;
   Icon: LucideIcon;
 }> = [
-  { id: "recent", label: "Recent", Icon: History },
-  { id: "limits", label: "Limits", Icon: CircleGauge },
-  { id: "owed", label: "Owed", Icon: HandCoins },
-  { id: "manual", label: "Manual", Icon: Plus },
+  { id: "recent", labelKey: "assistant.actions.recent", Icon: History },
+  { id: "limits", labelKey: "assistant.actions.limits", Icon: CircleGauge },
+  { id: "owed", labelKey: "assistant.actions.owed", Icon: HandCoins },
+  { id: "manual", labelKey: "assistant.actions.manual", Icon: Plus },
 ];
 
 async function noopBudgetAction(state: BudgetActionState) {
@@ -261,6 +263,7 @@ export function AssistantComposer({
   settleOwedNoteAction = noopOwedNoteAction,
   importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
+  const { locale } = useLocale();
   const supportedDefaultCurrency = getSupportedManualCurrency(defaultCurrency);
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
   const [manualName, setManualName] = useState("");
@@ -310,7 +313,7 @@ export function AssistantComposer({
     manualCategoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
     categoryOptions.find((category) => category.id === effectiveManualCategoryId) ??
     null;
-  const selectedCategoryLabel = selectedCategory?.label ?? "Other";
+  const selectedCategoryLabel = selectedCategory?.label ?? t("common.other", locale);
   const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
   const SelectedCategoryIcon = selectedCategoryVisuals.icon;
   const submittedManualCategoryId = selectedCategory?.isSynthetic ? "" : effectiveManualCategoryId;
@@ -349,7 +352,7 @@ export function AssistantComposer({
     if (state.status === "success") {
       setManualFeedback({
         status: "success",
-        message: state.message?.startsWith("Saved and set") ? state.message : "Saved.",
+        message: state.message?.startsWith("Saved and set") ? state.message : t("transactions.saved", locale),
       });
       setManualName("");
       setManualAmount("");
@@ -368,11 +371,11 @@ export function AssistantComposer({
     if (state.status === "error") {
       setManualFeedback({
         status: "error",
-        message: "Couldn't save this item. Please check the amount and try again.",
+        message: t("assistant.manual.errors.saveFailed", locale),
       });
       setManualLastSubmitted(false);
     }
-  }, [manualLastSubmitted, state.message, state.status]);
+  }, [locale, manualLastSubmitted, state.message, state.status]);
 
   useEffect(() => {
     if (limitState.status === "success") {
@@ -393,14 +396,14 @@ export function AssistantComposer({
 
   function getManualDateLabel() {
     if (!manualDate) {
-      return "Date";
+      return t("common.date", locale);
     }
 
     const today = new Date();
     const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     if (manualDate === todayKey) {
-      return "Today";
+      return t("common.today", locale);
     }
 
     return new Date(`${manualDate}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -416,7 +419,7 @@ export function AssistantComposer({
   }
 
   function getLimitCategoryLabel(categoryId: string) {
-    return categoryOptions.find((category) => category.id === categoryId)?.label ?? "Category";
+    return categoryOptions.find((category) => category.id === categoryId)?.label ?? t("common.category", locale);
   }
 
   function editLimit(limit: Budget) {
@@ -447,10 +450,10 @@ export function AssistantComposer({
     const trimmed = manualMerchant.trim();
 
     if (!trimmed) {
-      return "Merchant";
+      return t("common.merchant", locale);
     }
 
-    return trimmed.length <= 16 ? trimmed : "Merchant added";
+    return trimmed.length <= 16 ? trimmed : t("assistant.manual.merchantAdded", locale);
   }
 
   function chooseManualTransactionType(type: "expense" | "income") {
@@ -603,7 +606,8 @@ export function AssistantComposer({
           <p className="font-medium">{state.message}</p>
           {state.latestTransaction ? (
             <p className="mt-1 text-xs text-slate-600">
-              Latest item: {state.latestTransaction.itemName || state.latestTransaction.merchant || "Unnamed transaction"} saved with {state.latestTransaction.reviewState}.
+              {t("assistant.feedback.latestItem", locale)}: {state.latestTransaction.itemName || state.latestTransaction.merchant || t("transactions.transaction", locale)}{" "}
+              {t("assistant.feedback.savedWith", locale)} {state.latestTransaction.reviewState}.
             </p>
           ) : null}
         </div>
@@ -616,22 +620,23 @@ export function AssistantComposer({
         className="space-y-3"
       >
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Message</span>
+          <span className="text-sm font-medium text-slate-700">{t("assistant.quickAdd.messageLabel", locale)}</span>
           <textarea
             className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
             name="naturalLanguageInput"
-            placeholder="Spent $18 on groceries"
+            placeholder={t("assistant.quickAdd.placeholder", locale)}
           />
         </label>
 
         <Button className="w-full" disabled={isPending} type="submit">
-          {isPending ? "Working..." : "Send"}
+          {isPending ? t("assistant.quickAdd.working", locale) : t("assistant.quickAdd.send", locale)}
         </Button>
       </form>
 
       <div className={`grid gap-1 rounded-2xl bg-slate-50 p-1 ${importsEnabled ? "grid-cols-3" : "grid-cols-4"}`}>
-        {(importsEnabled ? importActionPanelItems : betaActionPanelItems).map(({ id, label, Icon }) => {
+        {(importsEnabled ? importActionPanelItems : betaActionPanelItems).map(({ id, labelKey, Icon }) => {
           const isOpen = openPanel === id;
+          const label = t(labelKey, locale);
 
           if (id === "recent") {
             return (
@@ -829,33 +834,33 @@ export function AssistantComposer({
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Manual</p>
-              <p className="whitespace-nowrap text-xs text-slate-500">Add one item without chat.</p>
+              <p className="text-sm font-medium text-slate-900">{t("assistant.manual.title", locale)}</p>
+              <p className="whitespace-nowrap text-xs text-slate-500">{t("assistant.manual.helper", locale)}</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
-              Close
+              {t("common.close", locale)}
             </button>
           </div>
           <div className="space-y-3 rounded-2xl bg-white p-3">
             <form
               action={(formData) => {
                 if (!manualAmount.trim()) {
-                  setManualFeedback({ status: "error", message: "Add an amount before saving." });
+                  setManualFeedback({ status: "error", message: t("assistant.manual.errors.amountRequired", locale) });
                   setManualLastSubmitted(false);
                   return;
                 }
 
                 if (manualRecurringEnabled && !manualRecurringOpenEnded && !manualRecurringEndDate) {
-                  setManualFeedback({ status: "error", message: "Choose an end date or repeat until turned off." });
+                  setManualFeedback({ status: "error", message: t("assistant.manual.errors.recurringEndRequired", locale) });
                   setManualLastSubmitted(false);
                   return;
                 }
 
-                setManualFeedback({ status: "pending", message: "Saving..." });
+                setManualFeedback({ status: "pending", message: t("common.saving", locale) });
                 setManualLastSubmitted(true);
                 formAction(formData);
               }}
@@ -881,19 +886,19 @@ export function AssistantComposer({
               ) : null}
 
               <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">Name</span>
+                <span className="text-xs font-medium text-slate-600">{t("common.name", locale)}</span>
                 <input
                   className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                   name="itemName"
                   onChange={(event) => setManualName(event.target.value)}
-                  placeholder="Coffee, Groceries, Rent"
+                  placeholder={t("assistant.manual.namePlaceholder", locale)}
                   value={manualName}
                 />
               </label>
 
               <div className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
                 <label className="block space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Amount</span>
+                  <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
                   <input
                     className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                     inputMode="decimal"
@@ -904,7 +909,7 @@ export function AssistantComposer({
                   />
                 </label>
                 <label className="block space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Currency</span>
+                  <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
                   <select
                     className="min-h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold uppercase text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                     name="currency"
@@ -922,7 +927,7 @@ export function AssistantComposer({
 
               <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]">
                 <div
-                  aria-label="Transaction type"
+                  aria-label={t("assistant.manual.transactionType", locale)}
                   className="grid min-h-[3.5rem] grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white"
                   role="group"
                 >
@@ -935,7 +940,7 @@ export function AssistantComposer({
                     type="button"
                   >
                     <ReceiptText aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                    <span className="whitespace-nowrap">Spend</span>
+                    <span className="whitespace-nowrap">{t("common.spend", locale)}</span>
                   </button>
                   <button
                     aria-pressed={manualTransactionType === "income"}
@@ -946,12 +951,12 @@ export function AssistantComposer({
                     type="button"
                   >
                     <Wallet aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                    <span className="whitespace-nowrap">Income</span>
+                    <span className="whitespace-nowrap">{t("common.income", locale)}</span>
                   </button>
                 </div>
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
-                  aria-label={`Category: ${selectedCategoryLabel}`}
+                  aria-label={`${t("common.category", locale)}: ${selectedCategoryLabel}`}
                   className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border bg-white px-1.5 py-1.5 text-center text-xs font-semibold text-slate-700 transition ${
                     manualOptionalPanel === "category" ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-slate-50"
                   }`}
@@ -959,7 +964,7 @@ export function AssistantComposer({
                   type="button"
                 >
                   <SelectedCategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} style={{ color: selectedCategoryVisuals.primary }} />
-                  <span>Category</span>
+                  <span>{t("common.category", locale)}</span>
                   <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight text-slate-600">
                     {selectedCategoryLabel}
                   </span>
@@ -982,7 +987,7 @@ export function AssistantComposer({
                 {[
                   ["date", getManualDateLabel(), Boolean(manualDate), CalendarDays],
                   ["merchant", getMerchantButtonLabel(), Boolean(manualMerchant.trim()), Store],
-                  ["note", manualNote.trim() ? "Note added" : "Note", Boolean(manualNote.trim()), StickyNote],
+                  ["note", manualNote.trim() ? t("assistant.manual.noteAdded", locale) : t("common.note", locale), Boolean(manualNote.trim()), StickyNote],
                 ].map(([panel, label, isFilled, Icon]) => {
                   const ChipIcon = Icon as LucideIcon;
 
@@ -1009,7 +1014,7 @@ export function AssistantComposer({
 
                   {manualOptionalPanel === "date" ? (
                     <label className="block space-y-1 rounded-xl border border-slate-200 bg-white p-2">
-                      <span className="text-xs font-medium text-slate-600">Date</span>
+                      <span className="text-xs font-medium text-slate-600">{t("common.date", locale)}</span>
                       <input
                         className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                         onChange={(event) => setManualDate(event.target.value)}
@@ -1021,11 +1026,11 @@ export function AssistantComposer({
 
                   {manualOptionalPanel === "merchant" ? (
                     <label className="block space-y-1 rounded-xl border border-slate-200 bg-white p-2">
-                      <span className="text-xs font-medium text-slate-600">Merchant</span>
+                      <span className="text-xs font-medium text-slate-600">{t("common.merchant", locale)}</span>
                       <input
                         className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                         onChange={(event) => setManualMerchant(event.target.value)}
-                        placeholder="Optional merchant"
+                        placeholder={t("assistant.manual.optionalMerchant", locale)}
                         value={manualMerchant}
                       />
                     </label>
@@ -1033,11 +1038,11 @@ export function AssistantComposer({
 
                   {manualOptionalPanel === "note" ? (
                     <label className="block space-y-1 rounded-xl border border-slate-200 bg-white p-2">
-                      <span className="text-xs font-medium text-slate-600">Note</span>
+                      <span className="text-xs font-medium text-slate-600">{t("common.note", locale)}</span>
                       <textarea
                         className="min-h-20 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                         onChange={(event) => setManualNote(event.target.value)}
-                        placeholder="Optional note"
+                        placeholder={t("assistant.manual.optionalNote", locale)}
                         value={manualNote}
                       />
                     </label>
@@ -1046,7 +1051,7 @@ export function AssistantComposer({
                 <label className="flex min-h-11 items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <Repeat2 aria-hidden="true" className="size-4 text-slate-500" strokeWidth={2.1} />
-                    Recurring
+                    {t("assistant.manual.recurring", locale)}
                   </span>
                   <input
                     checked={manualRecurringEnabled}
@@ -1057,7 +1062,7 @@ export function AssistantComposer({
                 </label>
                 {manualRecurringEnabled ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-slate-500">Repeats automatically as tracked entries.</p>
+                    <p className="text-xs text-slate-500">{t("assistant.manual.recurringHelper", locale)}</p>
                     <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
                       {(["weekly", "monthly", "yearly"] as const).map((frequency) => (
                         <button
@@ -1069,13 +1074,13 @@ export function AssistantComposer({
                           onClick={() => setManualRecurringFrequency(frequency)}
                           type="button"
                         >
-                          {frequency}
+                          {t(`assistant.manual.frequency.${frequency}`, locale)}
                         </button>
                       ))}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <label className="block space-y-1">
-                        <span className="text-xs font-medium text-slate-600">Start date</span>
+                        <span className="text-xs font-medium text-slate-600">{t("assistant.manual.startDate", locale)}</span>
                         <input
                           className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                           onChange={(event) => setManualRecurringStartDate(event.target.value)}
@@ -1084,7 +1089,7 @@ export function AssistantComposer({
                         />
                       </label>
                       <label className="block space-y-1">
-                        <span className="text-xs font-medium text-slate-600">End date</span>
+                        <span className="text-xs font-medium text-slate-600">{t("assistant.manual.endDate", locale)}</span>
                         <input
                           className={`min-h-10 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
                             manualRecurringOpenEnded
@@ -1116,7 +1121,7 @@ export function AssistantComposer({
                         }}
                         type="checkbox"
                       />
-                      <span>Repeat until I turn it off</span>
+                      <span>{t("assistant.manual.repeatUntilOff", locale)}</span>
                     </label>
                   </div>
                 ) : null}
@@ -1135,7 +1140,7 @@ export function AssistantComposer({
                 </p>
               ) : null}
               <Button className="w-full" disabled={isPending} type="submit">
-                {isPending && manualLastSubmitted ? "Saving..." : "Save item"}
+                {isPending && manualLastSubmitted ? t("common.saving", locale) : t("assistant.manual.saveItem", locale)}
               </Button>
             </form>
           </div>
@@ -1146,15 +1151,15 @@ export function AssistantComposer({
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Limits</p>
-              <p className="whitespace-nowrap text-xs text-slate-500">Set weekly or monthly limits.</p>
+              <p className="text-sm font-medium text-slate-900">{t("assistant.limits.title", locale)}</p>
+              <p className="whitespace-nowrap text-xs text-slate-500">{t("assistant.limits.helper", locale)}</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
-              Close
+              {t("common.close", locale)}
             </button>
           </div>
 
@@ -1162,19 +1167,19 @@ export function AssistantComposer({
             <LimitOptionButton
               Icon={Plus}
               expanded={expandedLimitSection === "create"}
-              helper="Set a category limit."
+              helper={t("assistant.limits.createHelper", locale)}
               onClick={() => toggleLimitSection("create")}
-              title="Create a limit"
+              title={t("assistant.limits.createTitle", locale)}
             />
             {expandedLimitSection === "create" ? (
           <form action={limitFormAction} className="space-y-3 rounded-2xl bg-white p-3">
-            <p className="text-sm font-semibold text-slate-900">{editingLimitId ? "Edit limit" : "Set a limit"}</p>
+            <p className="text-sm font-semibold text-slate-900">{editingLimitId ? t("assistant.limits.editLimit", locale) : t("assistant.limits.setLimit", locale)}</p>
             <input name="budgetId" type="hidden" value={editingLimitId ?? ""} />
             <input name="monthStart" type="hidden" value={getCurrentMonthStartKey()} />
             <input name="repeats" type="hidden" value={limitRepeats ? "on" : "off"} />
             <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
               <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">Category</span>
+                <span className="text-xs font-medium text-slate-600">{t("common.category", locale)}</span>
                 <select
                   className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                   name="categoryId"
@@ -1190,7 +1195,7 @@ export function AssistantComposer({
                 </select>
               </label>
               <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">Amount</span>
+                <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
                 <input
                   className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                   inputMode="decimal"
@@ -1207,7 +1212,7 @@ export function AssistantComposer({
             </div>
             <div className="grid grid-cols-[5.5rem_1fr] gap-2">
               <label className="block space-y-1">
-                <span className="text-xs font-medium text-slate-600">Currency</span>
+                <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
                 <select
                   className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                   name="currency"
@@ -1222,7 +1227,7 @@ export function AssistantComposer({
                 </select>
               </label>
               <div className="space-y-1">
-                <span className="text-xs font-medium text-slate-600">Period</span>
+                <span className="text-xs font-medium text-slate-600">{t("assistant.limits.period", locale)}</span>
                 <div className="grid min-h-11 grid-cols-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                   {(["weekly", "monthly"] as const).map((period) => (
                     <button
@@ -1234,7 +1239,7 @@ export function AssistantComposer({
                       onClick={() => setLimitPeriod(period)}
                       type="button"
                     >
-                      {period}
+                      {t(`assistant.limits.periodButtons.${period}`, locale)}
                     </button>
                   ))}
                 </div>
@@ -1248,7 +1253,7 @@ export function AssistantComposer({
                 onChange={(event) => setLimitRepeats(event.currentTarget.checked)}
                 type="checkbox"
               />
-              <span>Repeat every {limitPeriod === "weekly" ? "week" : "month"}</span>
+              <span>{limitPeriod === "weekly" ? t("assistant.limits.repeatWeekly", locale) : t("assistant.limits.repeatMonthly", locale)}</span>
             </label>
             {limitState.message ? (
               <p className={`rounded-xl px-3 py-2 text-sm ${limitState.status === "error" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
@@ -1257,11 +1262,11 @@ export function AssistantComposer({
             ) : null}
             <div className="grid grid-cols-[1fr_auto] gap-2">
               <Button disabled={isLimitPending || limitCategoryOptions.length === 0} type="submit">
-                {isLimitPending ? "Saving..." : "Save limit"}
+                {isLimitPending ? t("common.saving", locale) : t("assistant.limits.saveLimit", locale)}
               </Button>
               {editingLimitId ? (
                 <button className="rounded-xl px-3 text-sm font-medium text-slate-600 hover:bg-slate-50" onClick={resetLimitForm} type="button">
-                  Cancel
+                  {t("common.cancel", locale)}
                 </button>
               ) : null}
             </div>
@@ -1271,15 +1276,15 @@ export function AssistantComposer({
             <LimitOptionButton
               Icon={SlidersHorizontal}
               expanded={expandedLimitSection === "manage"}
-              helper="Edit, pause, or remove limits."
+              helper={t("assistant.limits.manageHelper", locale)}
               onClick={() => toggleLimitSection("manage")}
-              title="Manage limits"
+              title={t("assistant.limits.manageTitle", locale)}
             />
           </div>
 
           {expandedLimitSection === "manage" ? (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700">Your limits</p>
+            <p className="text-sm font-medium text-slate-700">{t("assistant.limits.yourLimits", locale)}</p>
             {categoryLimits.length ? (
               categoryLimits.map((limit) => {
                 const categoryLabel = getLimitCategoryLabel(limit.categoryId);
@@ -1296,25 +1301,27 @@ export function AssistantComposer({
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">{categoryLabel}</p>
                         <p className="text-xs text-slate-500">
-                          {limit.period === "weekly" ? "Weekly" : "Monthly"} · {formatLimitAmount(limit)} · {limit.isActive ? "Active" : "Paused"}
+                          {`${limit.period === "weekly" ? t("assistant.limits.weekly", locale) : t("assistant.limits.monthly", locale)} · ${formatLimitAmount(limit)} · ${
+                            limit.isActive ? t("assistant.limits.active", locale) : t("assistant.limits.paused", locale)
+                          }`}
                         </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <button className="rounded-lg bg-slate-50 px-2 py-2 text-xs font-medium text-slate-700" onClick={() => editLimit(limit)} type="button">
-                        Edit
+                        {t("common.edit", locale)}
                       </button>
                       <form action={limit.isActive ? pauseFormAction : resumeFormAction}>
                         <input name="budgetId" type="hidden" value={limit.id} />
                         <button className="w-full rounded-lg bg-slate-50 px-2 py-2 text-xs font-medium text-slate-700" type="submit">
-                          {limit.isActive ? "Pause" : "Resume"}
+                          {limit.isActive ? t("assistant.limits.pause", locale) : t("assistant.limits.resume", locale)}
                         </button>
                       </form>
                       {isConfirmingRemove ? (
                         <form action={deleteFormAction}>
                           <input name="budgetId" type="hidden" value={limit.id} />
                           <button className="w-full rounded-lg bg-rose-50 px-2 py-2 text-xs font-medium text-rose-700" type="submit">
-                            Confirm
+                            {t("common.confirm", locale)}
                           </button>
                         </form>
                       ) : (
@@ -1323,7 +1330,7 @@ export function AssistantComposer({
                           onClick={() => setConfirmRemoveLimitId(limit.id)}
                           type="button"
                         >
-                          Remove
+                          {t("common.remove", locale)}
                         </button>
                       )}
                     </div>
@@ -1331,7 +1338,7 @@ export function AssistantComposer({
                 );
               })
             ) : (
-              <p className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">No limits yet.</p>
+              <p className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">{t("assistant.limits.noLimits", locale)}</p>
             )}
             {[pauseState, resumeState, deleteState].map((actionState, index) =>
               actionState.message ? (
@@ -1352,15 +1359,15 @@ export function AssistantComposer({
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-900">Money owed</p>
-              <p className="whitespace-nowrap text-xs text-slate-500">Create and update reminders.</p>
+              <p className="text-sm font-medium text-slate-900">{t("assistant.owed.title", locale)}</p>
+              <p className="whitespace-nowrap text-xs text-slate-500">{t("assistant.owed.helper", locale)}</p>
             </div>
             <button
               className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
-              Close
+              {t("common.close", locale)}
             </button>
           </div>
             <MoneyOwedPanel
@@ -1369,6 +1376,7 @@ export function AssistantComposer({
               defaultCurrency={supportedDefaultCurrency}
               notes={owedNotes}
               settleAction={settleOwedNoteAction}
+              locale={locale}
               summary={false}
               title={null}
               updateNoteAction={updateOwedNoteNoteAction}
@@ -1378,7 +1386,7 @@ export function AssistantComposer({
 
       {isRecentOpen && visibleRecentItems.length ? (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-700">Recent items</p>
+          <p className="text-sm font-medium text-slate-700">{t("assistant.recent.title", locale)}</p>
           {visibleRecentItems.map((item) => (
             <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
               <div className="min-w-0">
@@ -1387,7 +1395,7 @@ export function AssistantComposer({
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
-                {item.needsReview ? <p className="text-xs text-amber-600">Needs review</p> : null}
+                {item.needsReview ? <p className="text-xs text-amber-600">{t("common.needsReview", locale)}</p> : null}
               </div>
             </div>
           ))}

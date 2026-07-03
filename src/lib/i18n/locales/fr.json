@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Enregistrer",
+    "saving": "Enregistrement...",
     "cancel": "Annuler",
     "delete": "Supprimer",
     "edit": "Modifier",
@@ -16,6 +17,8 @@
     "loading": "Chargement",
     "retry": "Réessayer",
     "all": "Tout",
+    "today": "Aujourd’hui",
+    "optional": "Optionnel",
     "spend": "Dépenses",
     "income": "Revenus",
     "review": "Vérification",
@@ -31,12 +34,119 @@
     "currency": "Devise",
     "date": "Date",
     "name": "Nom",
-    "person": "Personne"
+    "person": "Personne",
+    "merchant": "Commerçant"
   },
   "nav": {
     "assistant": "Assistant",
     "activity": "Activité",
     "insights": "Analyses"
+  },
+  "assistant": {
+    "brand": "Calm Wallet",
+    "heroTitle": "Votre argent. Une vue claire.",
+    "signedInAs": "Connecté en tant que",
+    "pageLabel": "Assistant",
+    "mainTitle": "Suivez votre argent en une phrase",
+    "mainHelper": "Écrivez ce que vous avez dépensé ou gagné. Calm Wallet l’enregistre rapidement, et vous pouvez corriger les détails à tout moment.",
+    "loadError": {
+      "title": "Les données récentes n’ont pas pu se charger",
+      "helper": "Réessayez depuis la navigation du bas. Aucun détail financier n’a été modifié."
+    },
+    "quickAdd": {
+      "title": "Ajout rapide",
+      "helper": "Écrivez ce qui s’est passé. Nous l’organisons.",
+      "examples": "Exemples : \"Café 12\", \"Courses 85\".",
+      "messageLabel": "Message",
+      "placeholder": "Dépensé 18 € en courses",
+      "send": "Envoyer",
+      "working": "Traitement..."
+    },
+    "actions": {
+      "receipt": "Reçu",
+      "statement": "Relevé",
+      "recent": "Récent",
+      "limits": "Limites",
+      "owed": "À recevoir/payer",
+      "manual": "Manuel"
+    },
+    "feedback": {
+      "latestItem": "Dernier élément",
+      "savedWith": "enregistré avec"
+    },
+    "manual": {
+      "title": "Manuel",
+      "helper": "Ajoutez un élément sans chat.",
+      "transactionType": "Type de transaction",
+      "namePlaceholder": "Café, courses, loyer",
+      "merchantAdded": "Commerçant ajouté",
+      "noteAdded": "Note ajoutée",
+      "optionalMerchant": "Commerçant optionnel",
+      "optionalNote": "Note optionnelle",
+      "recurring": "Récurrent",
+      "recurringHelper": "Se répète automatiquement comme entrée suivie.",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "repeatUntilOff": "Répéter jusqu’à désactivation",
+      "saveItem": "Enregistrer l’élément",
+      "frequency": {
+        "weekly": "hebdomadaire",
+        "monthly": "mensuel",
+        "yearly": "annuel"
+      },
+      "errors": {
+        "amountRequired": "Ajoutez un montant avant d’enregistrer.",
+        "recurringEndRequired": "Choisissez une date de fin ou répétez jusqu’à désactivation.",
+        "saveFailed": "Impossible d’enregistrer cet élément. Vérifiez le montant et réessayez."
+      }
+    },
+    "limits": {
+      "title": "Limites",
+      "helper": "Définissez des limites hebdomadaires ou mensuelles.",
+      "createTitle": "Créer une limite",
+      "createHelper": "Définissez une limite de catégorie.",
+      "setLimit": "Définir une limite",
+      "editLimit": "Modifier la limite",
+      "period": "Période",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel",
+      "periodButtons": {
+        "weekly": "hebdomadaire",
+        "monthly": "mensuel"
+      },
+      "repeatWeekly": "Répéter chaque semaine",
+      "repeatMonthly": "Répéter chaque mois",
+      "saveLimit": "Enregistrer la limite",
+      "manageTitle": "Gérer les limites",
+      "manageHelper": "Modifiez, mettez en pause ou supprimez des limites.",
+      "yourLimits": "Vos limites",
+      "active": "Active",
+      "paused": "En pause",
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "noLimits": "Aucune limite pour le moment."
+    },
+    "owed": {
+      "title": "Argent dû",
+      "helper": "Créez et mettez à jour des rappels.",
+      "owedToMeHelper": "Argent que d’autres vous doivent.",
+      "iOweHelper": "Argent que vous devez payer.",
+      "createNoteHelper": "Ajoutez un rappel d’argent."
+    },
+    "recent": {
+      "title": "Éléments récents"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "helper": "Les rappels légers sont optionnels, calmes et contrôlés par vous.",
+    "closeOverlay": "Fermer le panneau des paramètres",
+    "language": "Langue",
+    "languageHelper": "Choisissez la langue de l’application.",
+    "savingLanguage": "Enregistrement de la langue...",
+    "languageSaved": "Langue enregistrée.",
+    "languageSaveError": "La langue n’a pas pu être enregistrée.",
+    "signOut": "Se déconnecter"
   },
   "transactions": {
     "transaction": "Transaction",
@@ -63,7 +173,19 @@
     "open": "Ouvert",
     "settled": "Réglé",
     "settle": "Régler",
-    "reopen": "Rouvrir"
+    "reopen": "Rouvrir",
+    "subtract": "Soustraire",
+    "addNote": "Ajouter une note",
+    "saveNote": "Enregistrer la note",
+    "addAmount": "Ajouter un montant",
+    "subtractAmount": "Soustraire un montant",
+    "markSettledQuestion": "Marquer comme réglé ?",
+    "markSettled": "Marquer réglé",
+    "noteAdded": "Note ajoutée",
+    "noOpenReminders": "Aucun rappel d’argent ouvert.",
+    "openReminderCount": "{count} rappel d’argent ouvert",
+    "openRemindersCount": "{count} rappels d’argent ouverts",
+    "summary": "{owedToMe} à recevoir · {iOwe} à payer"
   },
   "notifications": {
     "notifications": "Notifications",

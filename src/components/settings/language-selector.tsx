@@ -8,6 +8,7 @@ import {
   type UserPreferencesActionState,
 } from "@/lib/actions/preferences-state";
 import type { SupportedLocale } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 
 type LanguageSelectorProps = {
   action: (
@@ -45,11 +46,11 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
         </span>
         <div className="min-w-0 flex-1 space-y-2">
           <div>
-            <p className="text-sm font-medium text-slate-900">Language</p>
-            <p className="text-xs leading-5 text-slate-500">Choose the app language.</p>
+            <p className="text-sm font-medium text-slate-900">{t("settings.language", locale)}</p>
+            <p className="text-xs leading-5 text-slate-500">{t("settings.languageHelper", locale)}</p>
           </div>
           <label className="sr-only" htmlFor="uiLocale">
-            Language
+            {t("settings.language", locale)}
           </label>
           <select
             className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
@@ -67,10 +68,10 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
               </option>
             ))}
           </select>
-          {isPending ? <p className="text-xs text-slate-500">Saving language...</p> : null}
+          {isPending ? <p className="text-xs text-slate-500">{t("settings.savingLanguage", locale)}</p> : null}
           {state.message ? (
             <p className={state.status === "error" ? "text-xs text-rose-600" : "text-xs text-emerald-700"}>
-              {state.message}
+              {state.status === "error" ? t("settings.languageSaveError", locale) : t("settings.languageSaved", locale)}
             </p>
           ) : null}
         </div>

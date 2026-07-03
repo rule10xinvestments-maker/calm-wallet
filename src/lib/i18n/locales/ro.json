@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Salvează",
+    "saving": "Se salvează...",
     "cancel": "Anulează",
     "delete": "Șterge",
     "edit": "Editează",
@@ -16,6 +17,8 @@
     "loading": "Se încarcă",
     "retry": "Reîncearcă",
     "all": "Toate",
+    "today": "Azi",
+    "optional": "Opțional",
     "spend": "Cheltuieli",
     "income": "Venit",
     "review": "Verificare",
@@ -31,12 +34,119 @@
     "currency": "Monedă",
     "date": "Dată",
     "name": "Nume",
-    "person": "Persoană"
+    "person": "Persoană",
+    "merchant": "Comerciant"
   },
   "nav": {
     "assistant": "Asistent",
     "activity": "Activitate",
     "insights": "Perspective"
+  },
+  "assistant": {
+    "brand": "Calm Wallet",
+    "heroTitle": "Banii tăi. O privire clară.",
+    "signedInAs": "Conectat ca",
+    "pageLabel": "Asistent",
+    "mainTitle": "Urmărește banii într-o propoziție",
+    "mainHelper": "Scrie ce ai cheltuit sau câștigat. Calm Wallet salvează rapid, iar detaliile pot fi corectate oricând.",
+    "loadError": {
+      "title": "Cele mai noi date nu s-au încărcat",
+      "helper": "Încearcă din nou din navigarea de jos. Nu s-au schimbat detalii financiare."
+    },
+    "quickAdd": {
+      "title": "Adăugare rapidă",
+      "helper": "Scrie ce s-a întâmplat. Organizăm noi.",
+      "examples": "Exemple: \"Cafea 12\", \"Cumpărături 85\".",
+      "messageLabel": "Mesaj",
+      "placeholder": "Am cheltuit 18 lei pe cumpărături",
+      "send": "Trimite",
+      "working": "Se procesează..."
+    },
+    "actions": {
+      "receipt": "Bon",
+      "statement": "Extras",
+      "recent": "Recente",
+      "limits": "Limite",
+      "owed": "Datorii",
+      "manual": "Manual"
+    },
+    "feedback": {
+      "latestItem": "Ultimul element",
+      "savedWith": "salvat cu"
+    },
+    "manual": {
+      "title": "Manual",
+      "helper": "Adaugă un element fără chat.",
+      "transactionType": "Tip tranzacție",
+      "namePlaceholder": "Cafea, cumpărături, chirie",
+      "merchantAdded": "Comerciant adăugat",
+      "noteAdded": "Notă adăugată",
+      "optionalMerchant": "Comerciant opțional",
+      "optionalNote": "Notă opțională",
+      "recurring": "Recurent",
+      "recurringHelper": "Se repetă automat ca înregistrări urmărite.",
+      "startDate": "Data de început",
+      "endDate": "Data de final",
+      "repeatUntilOff": "Repetă până îl opresc",
+      "saveItem": "Salvează elementul",
+      "frequency": {
+        "weekly": "săptămânal",
+        "monthly": "lunar",
+        "yearly": "anual"
+      },
+      "errors": {
+        "amountRequired": "Adaugă o sumă înainte de salvare.",
+        "recurringEndRequired": "Alege o dată de final sau repetă până îl oprești.",
+        "saveFailed": "Nu s-a putut salva elementul. Verifică suma și încearcă din nou."
+      }
+    },
+    "limits": {
+      "title": "Limite",
+      "helper": "Setează limite săptămânale sau lunare.",
+      "createTitle": "Creează o limită",
+      "createHelper": "Setează o limită pe categorie.",
+      "setLimit": "Setează o limită",
+      "editLimit": "Editează limita",
+      "period": "Perioadă",
+      "weekly": "Săptămânal",
+      "monthly": "Lunar",
+      "periodButtons": {
+        "weekly": "săptămânal",
+        "monthly": "lunar"
+      },
+      "repeatWeekly": "Repetă în fiecare săptămână",
+      "repeatMonthly": "Repetă în fiecare lună",
+      "saveLimit": "Salvează limita",
+      "manageTitle": "Gestionează limite",
+      "manageHelper": "Editează, pune pe pauză sau elimină limite.",
+      "yourLimits": "Limitele tale",
+      "active": "Activă",
+      "paused": "Pauzată",
+      "pause": "Pauză",
+      "resume": "Reia",
+      "noLimits": "Nu există limite încă."
+    },
+    "owed": {
+      "title": "Bani de primit/plătit",
+      "helper": "Creează și actualizează reminder-e.",
+      "owedToMeHelper": "Bani pe care alții ți-i datorează.",
+      "iOweHelper": "Bani pe care trebuie să îi plătești.",
+      "createNoteHelper": "Adaugă un reminder de bani."
+    },
+    "recent": {
+      "title": "Elemente recente"
+    }
+  },
+  "settings": {
+    "title": "Setări",
+    "helper": "Reminder-ele ușoare sunt opționale, calme și controlate de tine.",
+    "closeOverlay": "Închide panoul de setări",
+    "language": "Limbă",
+    "languageHelper": "Alege limba aplicației.",
+    "savingLanguage": "Se salvează limba...",
+    "languageSaved": "Limba a fost salvată.",
+    "languageSaveError": "Limba nu a putut fi salvată.",
+    "signOut": "Deconectare"
   },
   "transactions": {
     "transaction": "Tranzacție",
@@ -63,7 +173,19 @@
     "open": "Deschis",
     "settled": "Achitat",
     "settle": "Achită",
-    "reopen": "Redeschide"
+    "reopen": "Redeschide",
+    "subtract": "Scade",
+    "addNote": "Adaugă o notă",
+    "saveNote": "Salvează nota",
+    "addAmount": "Adaugă sumă",
+    "subtractAmount": "Scade sumă",
+    "markSettledQuestion": "Marchezi ca achitat?",
+    "markSettled": "Marchează achitat",
+    "noteAdded": "Notă adăugată",
+    "noOpenReminders": "Nu există reminder-e de bani deschise.",
+    "openReminderCount": "{count} reminder de bani deschis",
+    "openRemindersCount": "{count} reminder-e de bani deschise",
+    "summary": "{owedToMe} de primit · {iOwe} de plătit"
   },
   "notifications": {
     "notifications": "Notificări",

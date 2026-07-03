@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ArrowDownLeft, ArrowUpRight, Calendar, Check, ChevronDown, CirclePlus, FileText } from "lucide-react";
 import type { OwedNote, OwedNoteDirection } from "@/domain/owed-notes/types";
 import { initialOwedNoteActionState, type OwedNoteActionState } from "@/lib/actions/owed-notes-state";
+import { t, type SupportedLocale } from "@/lib/i18n";
 
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
 type OwedSection = "owed_to_me" | "i_owe" | "create" | null;
@@ -21,6 +22,7 @@ type MoneyOwedPanelProps = {
   title?: string | null;
   summary?: boolean;
   variant?: "assistant" | "activity";
+  locale?: SupportedLocale;
 };
 
 const currencyOptions = ["RON", "EUR", "USD", "GBP"] as const;
@@ -37,8 +39,8 @@ function formatOwedDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function getDirectionLabel(direction: OwedNoteDirection) {
-  return direction === "owed_to_me" ? "Owed to me" : "I owe";
+function getDirectionLabel(direction: OwedNoteDirection, locale: SupportedLocale = "en") {
+  return direction === "owed_to_me" ? t("owed.owedToMe", locale) : t("owed.iOwe", locale);
 }
 
 function buildOwedSummary(notes: OwedNote[]) {
@@ -105,6 +107,7 @@ export function MoneyOwedPanel({
   title = "Money owed",
   summary = true,
   variant = "assistant",
+  locale = "en",
 }: MoneyOwedPanelProps) {
   const [localNotes, setLocalNotes] = useState(notes);
   const [expandedSection, setExpandedSection] = useState<OwedSection>(null);
@@ -180,7 +183,7 @@ export function MoneyOwedPanel({
 
   function renderNoteRows(direction: OwedNoteDirection, items: OwedNote[]) {
     if (!items.length) {
-      return <p className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">No open money reminders.</p>;
+      return <p className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">{t("owed.noOpenReminders", locale)}</p>;
     }
 
     return (
@@ -209,7 +212,13 @@ export function MoneyOwedPanel({
                     onClick={() => setEditor((current) => (current?.noteId === note.id && current.kind === kind ? null : { noteId: note.id, kind }))}
                     type="button"
                   >
-                    {kind === "add" ? "Add" : kind === "subtract" ? "Subtract" : kind === "note" ? "Note" : "Settle"}
+                    {kind === "add"
+                      ? t("common.add", locale)
+                      : kind === "subtract"
+                        ? t("owed.subtract", locale)
+                        : kind === "note"
+                          ? t("common.note", locale)
+                          : t("owed.settle", locale)}
                   </button>
                 ))}
               </div>
@@ -221,7 +230,7 @@ export function MoneyOwedPanel({
                       className="min-h-20 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                       defaultValue={note.note ?? ""}
                       name="note"
-                      placeholder="Add a note"
+                      placeholder={t("owed.addNote", locale)}
                     />
                   ) : (
                     <>
@@ -231,7 +240,7 @@ export function MoneyOwedPanel({
                         inputMode="decimal"
                         min="0.01"
                         name="amount"
-                        placeholder="Amount"
+                        placeholder={t("common.amount", locale)}
                         required
                         step="0.01"
                         type="number"
@@ -243,20 +252,24 @@ export function MoneyOwedPanel({
                     disabled={editor.kind === "note" ? isNotePending : isAdjustPending}
                     type="submit"
                   >
-                    {editor.kind === "note" ? "Save note" : editor.kind === "add" ? "Add amount" : "Subtract amount"}
+                    {editor.kind === "note"
+                      ? t("owed.saveNote", locale)
+                      : editor.kind === "add"
+                        ? t("owed.addAmount", locale)
+                        : t("owed.subtractAmount", locale)}
                   </button>
                 </form>
               ) : null}
               {isEditorOpen && editor.kind === "settle" ? (
                 <form action={settleFormAction} className="grid gap-2 rounded-xl bg-slate-50 p-2">
                   <input name="owedNoteId" type="hidden" value={note.id} />
-                  <p className="text-sm font-medium text-slate-800">Mark this as settled?</p>
+                  <p className="text-sm font-medium text-slate-800">{t("owed.markSettledQuestion", locale)}</p>
                   <button
                     className="min-h-10 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                     disabled={isSettlePending}
                     type="submit"
                   >
-                    Mark settled
+                    {t("owed.markSettled", locale)}
                   </button>
                 </form>
               ) : null}
@@ -269,7 +282,7 @@ export function MoneyOwedPanel({
 
   function renderActivityNoteRows(direction: OwedNoteDirection, items: OwedNote[]) {
     if (!items.length) {
-      return <p className="rounded-xl bg-white px-3 py-2 text-xs text-slate-500">No open money reminders.</p>;
+      return <p className="rounded-xl bg-white px-3 py-2 text-xs text-slate-500">{t("owed.noOpenReminders", locale)}</p>;
     }
 
     return (
@@ -293,7 +306,7 @@ export function MoneyOwedPanel({
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold text-slate-900">{note.personName}</span>
                   <span className="block truncate text-xs leading-5 text-slate-500">
-                    {getDirectionLabel(direction)} - {preview}
+                    {getDirectionLabel(direction, locale)} - {preview}
                   </span>
                 </span>
                 <span className={`text-sm font-semibold ${direction === "owed_to_me" ? "text-emerald-700" : "text-amber-700"}`}>
@@ -312,7 +325,13 @@ export function MoneyOwedPanel({
                         onClick={() => setEditor((current) => (current?.noteId === note.id && current.kind === kind ? null : { noteId: note.id, kind }))}
                         type="button"
                       >
-                        {kind === "add" ? "Add" : kind === "subtract" ? "Subtract" : kind === "note" ? "Note" : "Settle"}
+                        {kind === "add"
+                          ? t("common.add", locale)
+                          : kind === "subtract"
+                            ? t("owed.subtract", locale)
+                            : kind === "note"
+                              ? t("common.note", locale)
+                              : t("owed.settle", locale)}
                       </button>
                     ))}
                   </div>
@@ -324,7 +343,7 @@ export function MoneyOwedPanel({
                           className="min-h-20 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                           defaultValue={note.note ?? ""}
                           name="note"
-                          placeholder="Add a note"
+                          placeholder={t("owed.addNote", locale)}
                         />
                       ) : (
                         <>
@@ -334,7 +353,7 @@ export function MoneyOwedPanel({
                             inputMode="decimal"
                             min="0.01"
                             name="amount"
-                            placeholder="Amount"
+                            placeholder={t("common.amount", locale)}
                             required
                             step="0.01"
                             type="number"
@@ -346,20 +365,24 @@ export function MoneyOwedPanel({
                         disabled={editor.kind === "note" ? isNotePending : isAdjustPending}
                         type="submit"
                       >
-                        {editor.kind === "note" ? "Save note" : editor.kind === "add" ? "Add amount" : "Subtract amount"}
+                        {editor.kind === "note"
+                          ? t("owed.saveNote", locale)
+                          : editor.kind === "add"
+                            ? t("owed.addAmount", locale)
+                            : t("owed.subtractAmount", locale)}
                       </button>
                     </form>
                   ) : null}
                   {isEditorOpen && editor.kind === "settle" ? (
                     <form action={settleFormAction} className="grid gap-2 rounded-xl bg-slate-50 p-2">
                       <input name="owedNoteId" type="hidden" value={note.id} />
-                      <p className="text-sm font-medium text-slate-800">Mark this as settled?</p>
+                      <p className="text-sm font-medium text-slate-800">{t("owed.markSettledQuestion", locale)}</p>
                       <button
                         className="min-h-10 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                         disabled={isSettlePending}
                         type="submit"
                       >
-                        Mark settled
+                        {t("owed.markSettled", locale)}
                       </button>
                     </form>
                   ) : null}
@@ -392,21 +415,21 @@ export function MoneyOwedPanel({
               onClick={() => setCreateDirection(direction)}
               type="button"
             >
-              {getDirectionLabel(direction)}
+              {getDirectionLabel(direction, locale)}
             </button>
           ))}
         </div>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-600">Person</span>
-          <input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" name="personName" placeholder="Name" required />
+          <span className="text-xs font-medium text-slate-600">{t("common.person", locale)}</span>
+          <input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" name="personName" placeholder={t("common.name", locale)} required />
         </label>
         <div className="grid grid-cols-[1fr_5rem] gap-2">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Amount</span>
+            <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
             <input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" inputMode="decimal" min="0.01" name="amount" required step="0.01" type="number" />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Currency</span>
+            <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
             <select className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm font-semibold" defaultValue={normalizedDefaultCurrency} name="currency">
               {currencyOptions.map((currency) => (
                 <option key={currency} value={currency}>
@@ -430,7 +453,7 @@ export function MoneyOwedPanel({
             type="button"
           >
             {noteAdded && createOptionalSection !== "note" ? <Check aria-hidden="true" className="size-3.5" /> : <FileText aria-hidden="true" className="size-3.5" />}
-            <span className="truncate">{noteAdded && createOptionalSection !== "note" ? "Note added" : "Note"}</span>
+            <span className="truncate">{noteAdded && createOptionalSection !== "note" ? t("owed.noteAdded", locale) : t("common.note", locale)}</span>
           </button>
           <button
             aria-expanded={createOptionalSection === "dueDate"}
@@ -445,16 +468,16 @@ export function MoneyOwedPanel({
             type="button"
           >
             {dueDateAdded && createOptionalSection !== "dueDate" ? <Check aria-hidden="true" className="size-3.5" /> : <Calendar aria-hidden="true" className="size-3.5" />}
-            <span className="truncate">{dueDateAdded && createOptionalSection !== "dueDate" ? formatOwedDate(`${createDueDate}T00:00:00.000Z`) : "Due date"}</span>
+            <span className="truncate">{dueDateAdded && createOptionalSection !== "dueDate" ? formatOwedDate(`${createDueDate}T00:00:00.000Z`) : t("common.dueDate", locale)}</span>
           </button>
         </div>
         {createOptionalSection === "note" ? (
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Note</span>
+            <span className="text-xs font-medium text-slate-600">{t("common.note", locale)}</span>
             <textarea
               className="min-h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
               onChange={(event) => setCreateNote(event.target.value)}
-              placeholder="Optional"
+              placeholder={t("common.optional", locale)}
               ref={createNoteRef}
               value={createNote}
             />
@@ -462,7 +485,7 @@ export function MoneyOwedPanel({
         ) : null}
         {createOptionalSection === "dueDate" ? (
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Due date</span>
+            <span className="text-xs font-medium text-slate-600">{t("common.dueDate", locale)}</span>
             <input
               className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
               onChange={(event) => setCreateDueDate(event.target.value)}
@@ -474,7 +497,7 @@ export function MoneyOwedPanel({
         ) : null}
         <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={isCreatePending} type="submit">
           <Check aria-hidden="true" className="size-4" />
-          Save
+          {t("common.save", locale)}
         </button>
       </form>
     );
@@ -495,20 +518,20 @@ export function MoneyOwedPanel({
     return (
       <div className="space-y-3 rounded-2xl bg-slate-50 p-3">
         {panelHeader}
-        {!hasOpenNotes ? <p className="rounded-xl bg-white px-3 py-3 text-sm text-slate-500">No open money reminders.</p> : null}
+        {!hasOpenNotes ? <p className="rounded-xl bg-white px-3 py-3 text-sm text-slate-500">{t("owed.noOpenReminders", locale)}</p> : null}
         {hasOpenNotes ? (
           <div className="space-y-3">
             <section className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <ArrowDownLeft aria-hidden="true" className="size-4 text-emerald-700" strokeWidth={2.2} />
-                Owed to me
+                {t("owed.owedToMe", locale)}
               </div>
               {renderActivityNoteRows("owed_to_me", owedToMeNotes)}
             </section>
             <section className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <ArrowUpRight aria-hidden="true" className="size-4 text-amber-700" strokeWidth={2.2} />
-                I owe
+                {t("owed.iOwe", locale)}
               </div>
               {renderActivityNoteRows("i_owe", iOweNotes)}
             </section>
@@ -522,7 +545,7 @@ export function MoneyOwedPanel({
         >
           <span className="flex items-center gap-2">
             <CirclePlus aria-hidden="true" className="size-4 text-sky-700" strokeWidth={2.2} />
-            Create owed note
+            {t("owed.createOwedNote", locale)}
           </span>
           <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition-transform ${expandedSection === "create" ? "rotate-180" : ""}`} strokeWidth={2.2} />
         </button>
@@ -542,26 +565,26 @@ export function MoneyOwedPanel({
       <div className="space-y-2">
         <OwedOptionButton
           expanded={expandedSection === "owed_to_me"}
-          helper="Money others owe you."
+          helper={t("assistant.owed.owedToMeHelper", locale)}
           icon={<ArrowDownLeft aria-hidden="true" className="size-4" strokeWidth={2.2} />}
           onClick={() => toggleSection("owed_to_me")}
-          title="Owed to me"
+          title={t("owed.owedToMe", locale)}
         />
         {expandedSection === "owed_to_me" ? renderNoteRows("owed_to_me", owedToMeNotes) : null}
         <OwedOptionButton
           expanded={expandedSection === "i_owe"}
-          helper="Money you need to pay."
+          helper={t("assistant.owed.iOweHelper", locale)}
           icon={<ArrowUpRight aria-hidden="true" className="size-4" strokeWidth={2.2} />}
           onClick={() => toggleSection("i_owe")}
-          title="I owe"
+          title={t("owed.iOwe", locale)}
         />
         {expandedSection === "i_owe" ? renderNoteRows("i_owe", iOweNotes) : null}
         <OwedOptionButton
           expanded={expandedSection === "create"}
-          helper="Add a money reminder."
+          helper={t("assistant.owed.createNoteHelper", locale)}
           icon={<CirclePlus aria-hidden="true" className="size-4" strokeWidth={2.2} />}
           onClick={() => toggleSection("create")}
-          title="Create owed note"
+          title={t("owed.createOwedNote", locale)}
         />
         {expandedSection === "create" ? renderCreateForm() : null}
       </div>

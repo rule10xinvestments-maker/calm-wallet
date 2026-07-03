@@ -1,10 +1,18 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { AssistantOverview } from "@/components/screens/assistant-overview";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
+import { LanguageSelector } from "@/components/settings/language-selector";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
 import type { Transaction } from "@/domain/transactions/types";
+import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 
 const noopAssistantAction = async () => initialAssistantActionState;
+const updateUserPreferencesAction = vi.fn(async (_state: UserPreferencesActionState, formData: FormData) => ({
+  status: "success" as const,
+  message: "Language saved.",
+  uiLocale: formData.get("uiLocale") as "en" | "ro" | "fr" | "es",
+}));
 
 const recentTransaction: Transaction = {
   id: "transaction-1",
@@ -29,6 +37,105 @@ const recentTransaction: Transaction = {
 };
 
 describe("assistant overview", () => {
+  it("renders default English Assistant copy", () => {
+    render(
+      <AssistantOverview
+        action={noopAssistantAction}
+        categoryOptions={[]}
+        initialState={initialAssistantActionState}
+        recentTransactions={[]}
+      />,
+    );
+
+    expect(screen.getByText("Track money in one sentence")).toBeInTheDocument();
+    expect(screen.getByText("Quick add")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
+  });
+
+  it("renders Romanian, French, and Spanish Assistant titles from locale", () => {
+    const { rerender } = render(
+      <LocaleProvider savedLocale="ro">
+        <AssistantOverview
+          action={noopAssistantAction}
+          categoryOptions={[]}
+          initialState={initialAssistantActionState}
+          recentTransactions={[]}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Urmărește banii într-o propoziție")).toBeInTheDocument();
+    expect(screen.getByText("Adăugare rapidă")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Trimite" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recente" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Datorii" })).toBeInTheDocument();
+
+    rerender(
+      <LocaleProvider savedLocale="fr">
+        <AssistantOverview
+          action={noopAssistantAction}
+          categoryOptions={[]}
+          initialState={initialAssistantActionState}
+          recentTransactions={[]}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Suivez votre argent en une phrase")).toBeInTheDocument();
+
+    rerender(
+      <LocaleProvider savedLocale="es">
+        <AssistantOverview
+          action={noopAssistantAction}
+          categoryOptions={[]}
+          initialState={initialAssistantActionState}
+          recentTransactions={[]}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Registra tu dinero en una frase")).toBeInTheDocument();
+  });
+
+  it("updates Assistant copy when language changes without route reload", async () => {
+    render(
+      <LocaleProvider savedLocale="en">
+        <LanguageSelector action={updateUserPreferencesAction} />
+        <AssistantOverview
+          action={noopAssistantAction}
+          categoryOptions={[]}
+          initialState={initialAssistantActionState}
+          recentTransactions={[]}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "ro" } });
+
+    await waitFor(() => expect(updateUserPreferencesAction).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText("Urmărește banii într-o propoziție")).toBeInTheDocument());
+    expect(screen.queryByText("Track money in one sentence")).not.toBeInTheDocument();
+  });
+
+  it("does not translate user-entered quick add text before submit", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <AssistantOverview
+          action={noopAssistantAction}
+          categoryOptions={[]}
+          initialState={initialAssistantActionState}
+          recentTransactions={[]}
+        />
+      </LocaleProvider>,
+    );
+
+    const input = screen.getByLabelText("Mesaj");
+    fireEvent.change(input, { target: { value: "am platit chirie 1200" } });
+
+    expect(input).toHaveValue("am platit chirie 1200");
+    expect(screen.queryByDisplayValue("Rent")).not.toBeInTheDocument();
+  });
+
   it("renders safe load-error copy without financial details", () => {
     render(
       <AssistantOverview

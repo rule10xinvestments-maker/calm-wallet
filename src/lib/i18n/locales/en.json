@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
@@ -16,6 +17,8 @@
     "loading": "Loading",
     "retry": "Retry",
     "all": "All",
+    "today": "Today",
+    "optional": "Optional",
     "spend": "Spend",
     "income": "Income",
     "review": "Review",
@@ -31,12 +34,119 @@
     "currency": "Currency",
     "date": "Date",
     "name": "Name",
-    "person": "Person"
+    "person": "Person",
+    "merchant": "Merchant"
   },
   "nav": {
     "assistant": "Assistant",
     "activity": "Activity",
     "insights": "Insights"
+  },
+  "assistant": {
+    "brand": "Calm Wallet",
+    "heroTitle": "Your money. One clear view.",
+    "signedInAs": "Signed in as",
+    "pageLabel": "Assistant",
+    "mainTitle": "Track money in one sentence",
+    "mainHelper": "Write what you spent or earned. Calm Wallet saves it quickly, and you can fix details anytime.",
+    "loadError": {
+      "title": "Latest data could not load",
+      "helper": "Try again from the bottom navigation. No financial details were changed."
+    },
+    "quickAdd": {
+      "title": "Quick add",
+      "helper": "Type what happened. We'll organize it.",
+      "examples": "Examples: \"Coffee 12\", \"Groceries 85\".",
+      "messageLabel": "Message",
+      "placeholder": "Spent $18 on groceries",
+      "send": "Send",
+      "working": "Working..."
+    },
+    "actions": {
+      "receipt": "Receipt",
+      "statement": "Statement",
+      "recent": "Recent",
+      "limits": "Limits",
+      "owed": "Owed",
+      "manual": "Manual"
+    },
+    "feedback": {
+      "latestItem": "Latest item",
+      "savedWith": "saved with"
+    },
+    "manual": {
+      "title": "Manual",
+      "helper": "Add one item without chat.",
+      "transactionType": "Transaction type",
+      "namePlaceholder": "Coffee, Groceries, Rent",
+      "merchantAdded": "Merchant added",
+      "noteAdded": "Note added",
+      "optionalMerchant": "Optional merchant",
+      "optionalNote": "Optional note",
+      "recurring": "Recurring",
+      "recurringHelper": "Repeats automatically as tracked entries.",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "repeatUntilOff": "Repeat until I turn it off",
+      "saveItem": "Save item",
+      "frequency": {
+        "weekly": "weekly",
+        "monthly": "monthly",
+        "yearly": "yearly"
+      },
+      "errors": {
+        "amountRequired": "Add an amount before saving.",
+        "recurringEndRequired": "Choose an end date or repeat until turned off.",
+        "saveFailed": "Couldn't save this item. Please check the amount and try again."
+      }
+    },
+    "limits": {
+      "title": "Limits",
+      "helper": "Set weekly or monthly limits.",
+      "createTitle": "Create a limit",
+      "createHelper": "Set a category limit.",
+      "setLimit": "Set a limit",
+      "editLimit": "Edit limit",
+      "period": "Period",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "periodButtons": {
+        "weekly": "weekly",
+        "monthly": "monthly"
+      },
+      "repeatWeekly": "Repeat every week",
+      "repeatMonthly": "Repeat every month",
+      "saveLimit": "Save limit",
+      "manageTitle": "Manage limits",
+      "manageHelper": "Edit, pause, or remove limits.",
+      "yourLimits": "Your limits",
+      "active": "Active",
+      "paused": "Paused",
+      "pause": "Pause",
+      "resume": "Resume",
+      "noLimits": "No limits yet."
+    },
+    "owed": {
+      "title": "Money owed",
+      "helper": "Create and update reminders.",
+      "owedToMeHelper": "Money others owe you.",
+      "iOweHelper": "Money you need to pay.",
+      "createNoteHelper": "Add a money reminder."
+    },
+    "recent": {
+      "title": "Recent items"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "helper": "Light reminders are optional, calm, and user-controlled.",
+    "closeOverlay": "Close settings overlay",
+    "language": "Language",
+    "languageHelper": "Choose the app language.",
+    "savingLanguage": "Saving language...",
+    "languageSaved": "Language saved.",
+    "languageSaveError": "Language could not be saved.",
+    "signOut": "Sign out"
   },
   "transactions": {
     "transaction": "Transaction",
@@ -63,7 +173,19 @@
     "open": "Open",
     "settled": "Settled",
     "settle": "Settle",
-    "reopen": "Reopen"
+    "reopen": "Reopen",
+    "subtract": "Subtract",
+    "addNote": "Add a note",
+    "saveNote": "Save note",
+    "addAmount": "Add amount",
+    "subtractAmount": "Subtract amount",
+    "markSettledQuestion": "Mark this as settled?",
+    "markSettled": "Mark settled",
+    "noteAdded": "Note added",
+    "noOpenReminders": "No open money reminders.",
+    "openReminderCount": "{count} open money reminder",
+    "openRemindersCount": "{count} open money reminders",
+    "summary": "{owedToMe} owed to you · {iOwe} you owe"
   },
   "notifications": {
     "notifications": "Notifications",
