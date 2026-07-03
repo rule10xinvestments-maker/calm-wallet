@@ -200,7 +200,7 @@ describe("transactions read model", () => {
 
     expect(items[0]?.title).toBe("Chirie");
     expect(items[0]?.reviewLabel).toBe("Necesită verificare");
-    expect(items[0]?.categoryLabel).toBe("Necategorizat");
+    expect(items[0]?.categoryLabel).toBe("Uncategorized");
   });
 
   it("keeps recurring status separate from the Activity date label", () => {

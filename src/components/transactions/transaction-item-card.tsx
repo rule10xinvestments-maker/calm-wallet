@@ -153,7 +153,7 @@ function getCategoryIcon(item: TransactionListItem): LucideIcon {
     return CircleHelp;
   }
 
-  if (item.reviewLabel !== "Reviewed") {
+  if (item.reviewState !== "reviewed") {
     return AlertCircle;
   }
 
@@ -240,7 +240,7 @@ export function TransactionItemCard({
   const ActionCategoryIcon = getCategoryIcon(categoryIconItem);
   const categoryVisuals = getCategoryVisualsByName(displayItem.categoryLabel);
   const actionCategoryVisuals = getCategoryVisualsByName(selectedCategoryLabel);
-  const needsReview = displayItem.reviewLabel !== "Reviewed";
+  const needsReview = displayItem.reviewState !== "reviewed";
   const categoryAttentionKey = getCategoryLabelKey(displayItem.categoryLabel) ?? (getCategoryLabel(displayItem.categoryLabel, "en") || "uncategorized").toLowerCase();
   const actionCategoryAttentionKey = getCategoryLabelKey(selectedCategoryLabel) ?? (getCategoryLabel(selectedCategoryLabel, "en") || "uncategorized").toLowerCase();
   const categoryIconNeedsAttention =

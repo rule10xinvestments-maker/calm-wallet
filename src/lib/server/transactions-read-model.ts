@@ -522,7 +522,7 @@ export function mapTransactionsToListItems(
       amountTone: transaction.transactionType,
       currency: transaction.currency || currencyFallback,
       reviewLabel: reviewMeta.label,
-      categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : t("common.uncategorized", locale),
+      categoryLabel: transaction.categoryId ? categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
       itemName: transaction.itemName,
       merchant: transaction.merchant,
       note: transaction.note,
@@ -1667,7 +1667,7 @@ function buildLargestInsightsEntries(args: {
           month: "short",
           day: "numeric",
         }),
-        categoryLabel: transaction.categoryId ? args.categoryLabels[transaction.categoryId] || "Controlled category" : t("common.uncategorized"),
+        categoryLabel: transaction.categoryId ? args.categoryLabels[transaction.categoryId] || "Controlled category" : "Uncategorized",
         currency: args.displayCurrency,
         isApproximate,
       };

@@ -12,6 +12,7 @@ const initialState: TransactionMutationState = {
 
 const categories: TransactionCategoryOption[] = [
   { id: "cat-dining", label: "Dining", direction: "expense" },
+  { id: "cat-investments", label: "Investments", direction: "both" },
   { id: "cat-travel", label: "Travel", direction: "expense" },
   { id: "cat-salary", label: "Salary", direction: "income" },
   { id: "cat-gifts", label: "Gifts", direction: "both" },
@@ -108,6 +109,32 @@ describe("transaction item card", () => {
     ).not.toThrow();
 
     expect(screen.getByText("Necategorizat · May 5")).toBeInTheDocument();
+  });
+
+  it("keeps canonical category and review logic stable in Romanian", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <TransactionItemCard
+          categories={categories}
+          deleteAction={vi.fn(async () => initialState)}
+          initialState={initialState}
+          item={makeItem({
+            categoryId: "cat-investments",
+            categoryLabel: "Investments",
+            reviewLabel: "Verificat",
+            reviewState: "reviewed",
+          })}
+          recategorizeAction={vi.fn(async () => initialState)}
+          updateAction={vi.fn(async () => initialState)}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Investiții · May 5")).toBeInTheDocument();
+    expect(screen.queryByText("Necategorizat · May 5")).not.toBeInTheDocument();
+    expect(screen.queryByText("Review")).not.toBeInTheDocument();
+    expect(screen.queryByText("Verificare")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Investiții categorie icon")).toBeInTheDocument();
   });
 
   it("renders a compact collapsed transaction row with a category icon by default", () => {

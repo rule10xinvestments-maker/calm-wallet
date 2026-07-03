@@ -12,7 +12,13 @@ describe("category label i18n", () => {
     expect(getCategoryLabelKey("category-self-employment")).toBe("categories.selfEmployment");
     expect(getCategoryLabelKey("cat-investments")).toBe("categories.investments");
     expect(getCategoryLabelKey("investment_income")).toBe("categories.investments");
+    expect(getCategoryLabelKey("Investments")).toBe("categories.investments");
     expect(getCategoryLabel("manual-default-groceries", "ro")).toBe("Alimente");
+  });
+
+  it("keeps translated category labels out of canonical key lookup", () => {
+    expect(getCategoryLabel("Investments", "ro")).toBe("Investiții");
+    expect(getCategoryLabelKey("Investiții")).toBeNull();
   });
 
   it("uses the supplied category object without changing stored identifiers", () => {
