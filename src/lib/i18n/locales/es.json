@@ -67,7 +67,7 @@
       "statement": "Extracto",
       "recent": "Recientes",
       "limits": "Límites",
-      "owed": "Por cobrar/pagar",
+      "owed": "Pendientes",
       "manual": "Manual"
     },
     "feedback": {
@@ -127,11 +127,11 @@
       "noLimits": "Aún no hay límites."
     },
     "owed": {
-      "title": "Dinero por cobrar/pagar",
+      "title": "Pendientes",
       "helper": "Crea y actualiza recordatorios.",
-      "owedToMeHelper": "Dinero que otros te deben.",
-      "iOweHelper": "Dinero que debes pagar.",
-      "createNoteHelper": "Añade un recordatorio de dinero."
+      "owedToMeHelper": "Lo que otros te deben.",
+      "iOweHelper": "Lo que debes pagar.",
+      "createNoteHelper": "Añade un recordatorio."
     },
     "recent": {
       "title": "Elementos recientes"
@@ -189,7 +189,7 @@
     "searchPlaceholder": "Buscar entradas",
     "searchAria": "Buscar transacciones",
     "summary": "Resumen",
-    "owed": "Por cobrar/pagar",
+    "owed": "Pendientes",
     "filters": {
       "allLabel": "Todas las transacciones",
       "recurring": "Recurrentes",
@@ -302,7 +302,7 @@
     "owed": "Debido",
     "owedToMe": "Me deben",
     "iOwe": "Yo debo",
-    "createOwedNote": "Crear nota de deuda",
+    "createOwedNote": "Crear recordatorio",
     "moneyReminder": "Recordatorio de dinero",
     "open": "Abierto",
     "settled": "Saldado",

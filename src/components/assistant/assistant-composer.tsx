@@ -677,7 +677,7 @@ export function AssistantComposer({
                 <input name="toolName" type="hidden" value="list_transactions" />
                 <button
                   aria-expanded={isOpen}
-                  className={`flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium leading-tight transition ${
+                  className={`flex h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium leading-tight transition ${
                     isOpen ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:bg-white/80"
                   }`}
                   disabled={isPending}
@@ -697,7 +697,7 @@ export function AssistantComposer({
                   type="submit"
                 >
                   <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
-                  <span>{label}</span>
+                  <span className="flex max-h-[2.15em] items-center overflow-hidden leading-[1.05]">{label}</span>
                 </button>
               </form>
             );
@@ -706,7 +706,7 @@ export function AssistantComposer({
           return (
             <button
               aria-expanded={isOpen}
-              className={`flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium leading-tight transition ${
+              className={`flex h-16 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium leading-tight transition ${
                 isOpen ? "bg-white text-sky-700 shadow-sm" : "text-slate-600 hover:bg-white/80"
               }`}
               key={id}
@@ -714,7 +714,7 @@ export function AssistantComposer({
               type="button"
             >
               <Icon aria-hidden="true" className="size-4" strokeWidth={2} />
-              <span>{label}</span>
+              <span className="flex max-h-[2.15em] items-center overflow-hidden leading-[1.05]">{label}</span>
             </button>
           );
         })}

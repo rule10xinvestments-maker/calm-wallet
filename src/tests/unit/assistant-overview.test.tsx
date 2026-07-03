@@ -82,6 +82,7 @@ describe("assistant overview", () => {
     );
 
     expect(screen.getByText("Suivez votre argent en une phrase")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "À régler" })).toBeInTheDocument();
 
     rerender(
       <LocaleProvider savedLocale="es">
@@ -95,6 +96,8 @@ describe("assistant overview", () => {
     );
 
     expect(screen.getByText("Registra tu dinero en una frase")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pendientes" })).toBeInTheDocument();
+    expect(screen.queryByText("Por cobrar/pagar")).not.toBeInTheDocument();
   });
 
   it("updates Assistant copy when language changes without route reload", async () => {

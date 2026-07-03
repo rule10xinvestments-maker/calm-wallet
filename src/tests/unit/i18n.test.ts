@@ -43,6 +43,9 @@ describe("i18n helper", () => {
     expect(t("notifications.disabledHelper", "ro")).toBe("Notificările sunt dezactivate.");
     expect(t("notifications.disabledHelper", "fr")).toBe("Les notifications sont désactivées.");
     expect(t("notifications.disabledHelper", "es")).toBe("Las notificaciones están desactivadas.");
+    expect(t("assistant.actions.owed", "es")).toBe("Pendientes");
+    expect(t("assistant.owed.title", "es")).toBe("Pendientes");
+    expect(t("owed.createOwedNote", "es")).toBe("Crear recordatorio");
   });
 
   it.each([

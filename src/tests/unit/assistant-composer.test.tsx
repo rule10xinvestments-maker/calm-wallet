@@ -245,6 +245,27 @@ describe("assistant composer", () => {
     expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
   });
 
+  it("uses calmer Spanish Owed copy and keeps the action row stable", () => {
+    renderComposerWithLocale("es");
+
+    const owedActionButton = screen.getByRole("button", { name: "Pendientes" });
+    expect(owedActionButton).toHaveClass("h-16");
+    expect(screen.getByRole("button", { name: "Recientes" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Límites" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
+    expect(screen.queryByText("Por cobrar/pagar")).not.toBeInTheDocument();
+
+    fireEvent.click(owedActionButton);
+
+    expect(screen.getAllByText("Pendientes").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Lo que otros te deben.")).toBeInTheDocument();
+    expect(screen.getByText("Lo que debes pagar.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Crear recordatorio/ })).toBeInTheDocument();
+    expect(screen.getByText("Añade un recordatorio.")).toBeInTheDocument();
+    expect(screen.queryByText("Dinero por cobrar/pagar")).not.toBeInTheDocument();
+    expect(screen.queryByText(/nota de deuda/i)).not.toBeInTheDocument();
+  });
+
   it("creates an owed note from Assistant and preserves collapsed optional values", async () => {
     const createOwedNoteAction = vi.fn(async () => ({
       status: "success" as const,
