@@ -688,6 +688,11 @@ describe("assistant composer", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Limite" }));
+    expect(screen.getByRole("button", { name: "Închide" })).toBeInTheDocument();
+    expect(screen.getByText("Limită pe categorie.")).toBeInTheDocument();
+    expect(screen.getByText("Editează sau oprește limite.")).toBeInTheDocument();
+    expect(screen.queryByText("Setează o limită pe categorie.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Editează, pune pe pauză sau elimină limite.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Creează o limită/ }));
     fireEvent.click(screen.getByRole("button", { name: "Categorie: Locuință" }));
 

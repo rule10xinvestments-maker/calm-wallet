@@ -193,14 +193,14 @@ function LimitOptionButton({
       onClick={onClick}
       type="button"
     >
-      <span className={`flex size-8 items-center justify-center rounded-xl ${expanded ? "bg-sky-50 text-sky-700" : "bg-slate-50 text-slate-600"}`}>
+      <span className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${expanded ? "bg-sky-50 text-sky-700" : "bg-slate-50 text-slate-600"}`}>
         <Icon aria-hidden="true" className="size-4" strokeWidth={2.2} />
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-slate-900">{title}</span>
-        <span className="block whitespace-nowrap text-xs leading-5 text-slate-500">{helper}</span>
+        <span className="block break-words text-sm font-semibold leading-5 text-slate-900">{title}</span>
+        <span className="block max-h-10 overflow-hidden whitespace-normal break-words text-xs leading-5 text-slate-500">{helper}</span>
       </span>
-      <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} strokeWidth={2.2} />
+      <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} strokeWidth={2.2} />
     </button>
   );
 }
@@ -722,13 +722,13 @@ export function AssistantComposer({
 
       {isReceiptPanelOpen ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+          <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
               <p className="text-sm font-medium text-slate-900">{t("assistant.imports.receiptTitle", locale)}</p>
-              <p className="text-xs text-slate-500">{t("assistant.imports.receiptHelper", locale)}</p>
+              <p className="break-words text-xs leading-5 text-slate-500">{t("assistant.imports.receiptHelper", locale)}</p>
             </div>
             <button
-              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 sm:px-3"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
@@ -798,13 +798,13 @@ export function AssistantComposer({
 
       {isStatementPanelOpen ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+          <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
               <p className="text-sm font-medium text-slate-900">{t("assistant.imports.statementTitle", locale)}</p>
-              <p className="text-xs text-slate-500">{t("assistant.imports.statementHelper", locale)}</p>
+              <p className="break-words text-xs leading-5 text-slate-500">{t("assistant.imports.statementHelper", locale)}</p>
             </div>
             <button
-              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 sm:px-3"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
@@ -864,13 +864,13 @@ export function AssistantComposer({
 
       {isManualPanelOpen ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+          <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
               <p className="text-sm font-medium text-slate-900">{t("assistant.manual.title", locale)}</p>
-              <p className="whitespace-nowrap text-xs text-slate-500">{t("assistant.manual.helper", locale)}</p>
+              <p className="break-words text-xs leading-5 text-slate-500">{t("assistant.manual.helper", locale)}</p>
             </div>
             <button
-              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 sm:px-3"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
@@ -1181,13 +1181,13 @@ export function AssistantComposer({
 
       {isLimitsPanelOpen ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+          <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
               <p className="text-sm font-medium text-slate-900">{t("assistant.limits.title", locale)}</p>
-              <p className="whitespace-nowrap text-xs text-slate-500">{t("assistant.limits.helper", locale)}</p>
+              <p className="break-words text-xs leading-5 text-slate-500">{t("assistant.limits.helper", locale)}</p>
             </div>
             <button
-              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 sm:px-3"
               onClick={() => setOpenPanel(null)}
               type="button"
             >
@@ -1407,13 +1407,13 @@ export function AssistantComposer({
 
       {isOwedPanelOpen ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+          <div className="flex min-w-0 items-start justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
               <p className="text-sm font-medium text-slate-900">{t("assistant.owed.title", locale)}</p>
-              <p className="whitespace-nowrap text-xs text-slate-500">{t("assistant.owed.helper", locale)}</p>
+              <p className="break-words text-xs leading-5 text-slate-500">{t("assistant.owed.helper", locale)}</p>
             </div>
             <button
-              className="rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+              className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 sm:px-3"
               onClick={() => setOpenPanel(null)}
               type="button"
             >

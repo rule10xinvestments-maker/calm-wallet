@@ -47,6 +47,8 @@ describe("i18n helper", () => {
     expect(t("assistant.owed.title", "es")).toBe("Pendientes");
     expect(t("owed.createOwedNote", "es")).toBe("Crear recordatorio");
     expect(t("owed.updated", "ro")).toBe("Actualizat");
+    expect(t("assistant.limits.createHelper", "ro")).toBe("Limită pe categorie.");
+    expect(t("assistant.limits.manageHelper", "ro")).toBe("Editează sau oprește limite.");
   });
 
   it.each([
