@@ -950,11 +950,23 @@ describe("transactions overview", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
-    fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
+    const customRangeButton = screen.getByRole("button", { name: "Use custom range" });
+    expect(customRangeButton).toHaveClass("border-slate-200");
+    expect(screen.getByText("Choose dates")).toBeInTheDocument();
+    expect(customRangeButton.querySelector(".lucide-chevron-right")).toBeInTheDocument();
+
+    fireEvent.click(customRangeButton);
+    expect(customRangeButton).toHaveClass("bg-sky-600");
     expect(screen.getByLabelText("Start date")).toBeInTheDocument();
     expect(screen.getByLabelText("End date")).toBeInTheDocument();
     expect(document.querySelector('input[type="date"]')).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apply range" })).toBeInTheDocument();
+    expect(screen.getByText("Use YYYY-MM-DD")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply range" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Clear custom range" })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-99-10" } });
+    expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply range" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Clear custom range" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
@@ -962,8 +974,14 @@ describe("transactions overview", () => {
     expect(screen.queryByLabelText("End date")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-06-12" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-06-10" } });
+    expect(screen.getByText("End date must be after start date")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply range" })).toBeDisabled();
+
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-06-10" } });
     fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-06-12" } });
+    expect(screen.getByRole("button", { name: "Apply range" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Apply range" }));
 
     expect(screen.getByRole("button", { name: "Use custom range" })).toHaveClass("bg-sky-600");
