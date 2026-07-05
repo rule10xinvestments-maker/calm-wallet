@@ -34,6 +34,7 @@ type ImportReviewActionHandler = (
 type ActivityFilterView = TransactionsView | "recurring" | "deleted";
 type ActivityPeriod = "month" | "custom";
 type ActivitySummaryMode = "all" | "spend" | "income" | "context";
+type CustomRangeField = "start" | "end";
 
 type ActivityFilterTab = {
   value: ActivityFilterView;
@@ -182,6 +183,30 @@ function isValidDateInput(value: string) {
 
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && toDateInputValue(date) === value;
+}
+
+function getCalendarMonthLabel(year: number, monthIndex: number) {
+  return new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function getCalendarDays(year: number, monthIndex: number) {
+  const firstDay = new Date(year, monthIndex, 1);
+  const dayCount = new Date(year, monthIndex + 1, 0).getDate();
+  const leadingEmptyDays = firstDay.getDay();
+
+  return [
+    ...Array.from({ length: leadingEmptyDays }, () => null),
+    ...Array.from({ length: dayCount }, (_, dayIndex) => {
+      const date = new Date(year, monthIndex, dayIndex + 1);
+      return {
+        dateKey: toDateInputValue(date),
+        day: dayIndex + 1,
+      };
+    }),
+  ];
 }
 
 function filterTransactionsForPeriod(
@@ -1204,6 +1229,12 @@ export function TransactionsOverview({
   const [customDraftFrom, setCustomDraftFrom] = useState("");
   const [customDraftTo, setCustomDraftTo] = useState("");
   const [isCustomRangeEditorOpen, setIsCustomRangeEditorOpen] = useState(false);
+  const [customActiveField, setCustomActiveField] = useState<CustomRangeField>("start");
+  const [customCalendarMonth, setCustomCalendarMonth] = useState(() => ({
+    year: currentDate.getFullYear(),
+    monthIndex: currentDate.getMonth(),
+  }));
+  const [isManualCustomEntryOpen, setIsManualCustomEntryOpen] = useState(false);
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
   const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
@@ -1273,6 +1304,11 @@ export function TransactionsOverview({
       : isCustomDraftFromValid && isCustomDraftToValid && customDraftFrom > customDraftTo
         ? t("activity.time.endDateMustBeAfterStartDate", locale)
         : null;
+  const customCalendarDays = useMemo(
+    () => getCalendarDays(customCalendarMonth.year, customCalendarMonth.monthIndex),
+    [customCalendarMonth.monthIndex, customCalendarMonth.year],
+  );
+  const customCalendarMonthLabel = getCalendarMonthLabel(customCalendarMonth.year, customCalendarMonth.monthIndex);
   const currentMonthKey = getCurrentMonthKey(currentDate);
   const selectedMonthKey = getMonthKey(selectedMonth.year, selectedMonth.monthIndex);
   const monthOptions = useMemo(
@@ -1289,6 +1325,47 @@ export function TransactionsOverview({
       }),
     [activeDisplayCurrency, activeItems, fxRates, visiblePickerYear],
   );
+  const showPreviousCustomCalendarMonth = () => {
+    setCustomCalendarMonth((month) => {
+      const nextDate = new Date(month.year, month.monthIndex - 1, 1);
+      return { year: nextDate.getFullYear(), monthIndex: nextDate.getMonth() };
+    });
+  };
+  const showNextCustomCalendarMonth = () => {
+    setCustomCalendarMonth((month) => {
+      const nextDate = new Date(month.year, month.monthIndex + 1, 1);
+      return { year: nextDate.getFullYear(), monthIndex: nextDate.getMonth() };
+    });
+  };
+  const pickCustomDate = (dateKey: string) => {
+    if (customActiveField === "start") {
+      setCustomDraftFrom(dateKey);
+      if (customDraftTo && dateKey > customDraftTo) {
+        setCustomDraftTo("");
+      }
+      setCustomActiveField("end");
+      return;
+    }
+
+    if (!customDraftFrom || dateKey < customDraftFrom) {
+      setCustomDraftFrom(dateKey);
+      setCustomDraftTo("");
+      setCustomActiveField("end");
+      return;
+    }
+
+    setCustomDraftTo(dateKey);
+  };
+  const clearCustomRange = () => {
+    setActivePeriod("month");
+    setCustomFrom("");
+    setCustomTo("");
+    setCustomDraftFrom("");
+    setCustomDraftTo("");
+    setCustomActiveField("start");
+    setIsManualCustomEntryOpen(false);
+    setIsCustomRangeEditorOpen(false);
+  };
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
   const isRecurringView = activeView === "recurring";
@@ -1559,6 +1636,12 @@ export function TransactionsOverview({
                             onClick={() => {
                               setSelectedMonth({ year: visiblePickerYear, monthIndex: month.monthIndex });
                               setActivePeriod("month");
+                              setCustomFrom("");
+                              setCustomTo("");
+                              setCustomDraftFrom("");
+                              setCustomDraftTo("");
+                              setCustomActiveField("start");
+                              setIsManualCustomEntryOpen(false);
                               setIsCustomRangeEditorOpen(false);
                               setIsTimeframeOpen(false);
                             }}
@@ -1586,6 +1669,12 @@ export function TransactionsOverview({
                       onClick={() => {
                         setCustomDraftFrom(customFrom);
                         setCustomDraftTo(customTo);
+                        setCustomActiveField(customFrom && !customTo ? "end" : "start");
+                        setIsManualCustomEntryOpen(false);
+                        const sourceDate = customFrom ? new Date(`${customFrom}T00:00:00.000Z`) : new Date(selectedMonth.year, selectedMonth.monthIndex, 1);
+                        if (!Number.isNaN(sourceDate.getTime())) {
+                          setCustomCalendarMonth({ year: sourceDate.getFullYear(), monthIndex: sourceDate.getMonth() });
+                        }
                         setIsCustomRangeEditorOpen((isOpen) => !isOpen);
                       }}
                       type="button"
@@ -1607,31 +1696,120 @@ export function TransactionsOverview({
                           </p>
                         ) : null}
                         <div className="grid grid-cols-2 gap-2">
-                          <label className="space-y-1 text-xs font-medium text-slate-600">
-                            {t("activity.time.startDate", locale)}
-                            <input
-                              aria-invalid={hasCustomDraft && !isCustomDraftFromValid ? "true" : "false"}
-                              className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                              inputMode="numeric"
-                              onChange={(event) => setCustomDraftFrom(event.target.value)}
-                              placeholder="YYYY-MM-DD"
-                              type="text"
-                              value={customDraftFrom}
-                            />
-                          </label>
-                          <label className="space-y-1 text-xs font-medium text-slate-600">
-                            {t("activity.time.endDate", locale)}
-                            <input
-                              aria-invalid={hasCustomDraft && !isCustomDraftToValid ? "true" : "false"}
-                              className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                              inputMode="numeric"
-                              onChange={(event) => setCustomDraftTo(event.target.value)}
-                              placeholder="YYYY-MM-DD"
-                              type="text"
-                              value={customDraftTo}
-                            />
-                          </label>
+                          <button
+                            className={`min-h-12 rounded-xl border px-2 py-1.5 text-left transition ${
+                              customActiveField === "start" ? "border-sky-300 bg-sky-50 text-sky-900" : "border-slate-200 bg-slate-50 text-slate-700"
+                            }`}
+                            onClick={() => setCustomActiveField("start")}
+                            type="button"
+                          >
+                            <span className="block text-[11px] font-semibold uppercase tracking-wide">{t("activity.time.from", locale)}</span>
+                            <span className="block text-xs font-semibold">{customDraftFrom || t("activity.time.pickStartDate", locale)}</span>
+                          </button>
+                          <button
+                            className={`min-h-12 rounded-xl border px-2 py-1.5 text-left transition ${
+                              customActiveField === "end" ? "border-sky-300 bg-sky-50 text-sky-900" : "border-slate-200 bg-slate-50 text-slate-700"
+                            }`}
+                            onClick={() => setCustomActiveField("end")}
+                            type="button"
+                          >
+                            <span className="block text-[11px] font-semibold uppercase tracking-wide">{t("activity.time.to", locale)}</span>
+                            <span className="block text-xs font-semibold">{customDraftTo || t("activity.time.pickEndDate", locale)}</span>
+                          </button>
                         </div>
+                        <div className="rounded-xl border border-slate-100 bg-slate-50 p-2">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <button
+                              aria-label={t("activity.time.previousMonth", locale)}
+                              className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-900"
+                              onClick={showPreviousCustomCalendarMonth}
+                              type="button"
+                            >
+                              <ChevronLeft aria-hidden="true" size={16} strokeWidth={2.2} />
+                            </button>
+                            <p className="text-sm font-semibold text-slate-900">{customCalendarMonthLabel}</p>
+                            <button
+                              aria-label={t("activity.time.nextMonth", locale)}
+                              className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-900"
+                              onClick={showNextCustomCalendarMonth}
+                              type="button"
+                            >
+                              <ChevronRight aria-hidden="true" size={16} strokeWidth={2.2} />
+                            </button>
+                          </div>
+                          <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-500">
+                            {["S", "M", "T", "W", "T", "F", "S"].map((weekday, index) => (
+                              <span key={`${weekday}-${index}`}>{weekday}</span>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-7 gap-1">
+                            {customCalendarDays.map((day, index) => {
+                              if (!day) {
+                                return <span aria-hidden="true" key={`empty-${index}`} />;
+                              }
+
+                              const isStart = customDraftFrom === day.dateKey;
+                              const isEnd = customDraftTo === day.dateKey;
+                              const isInRange = customDraftFrom && customDraftTo && day.dateKey > customDraftFrom && day.dateKey < customDraftTo;
+                              const isToday = toDateInputValue(currentDate) === day.dateKey;
+
+                              return (
+                                <button
+                                  aria-label={day.dateKey}
+                                  className={`min-h-8 rounded-lg text-xs font-semibold transition ${
+                                    isStart || isEnd
+                                      ? "bg-sky-600 text-white shadow-sm"
+                                      : isInRange
+                                        ? "bg-sky-100 text-sky-800"
+                                        : isToday
+                                          ? "bg-white text-sky-800 ring-1 ring-sky-200"
+                                          : "bg-white text-slate-700 hover:bg-sky-50"
+                                  }`}
+                                  key={day.dateKey}
+                                  onClick={() => pickCustomDate(day.dateKey)}
+                                  type="button"
+                                >
+                                  {day.day}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <button
+                          className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                          onClick={() => setIsManualCustomEntryOpen((isOpen) => !isOpen)}
+                          type="button"
+                        >
+                          {isManualCustomEntryOpen ? t("activity.time.hideManualEntry", locale) : t("activity.time.typeDates", locale)}
+                        </button>
+                        {isManualCustomEntryOpen ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="space-y-1 text-xs font-medium text-slate-600">
+                              {t("activity.time.startDate", locale)}
+                              <input
+                                aria-invalid={hasCustomDraft && !isCustomDraftFromValid ? "true" : "false"}
+                                className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                                inputMode="numeric"
+                                onChange={(event) => setCustomDraftFrom(event.target.value)}
+                                placeholder="YYYY-MM-DD"
+                                type="text"
+                                value={customDraftFrom}
+                              />
+                            </label>
+                            <label className="space-y-1 text-xs font-medium text-slate-600">
+                              {t("activity.time.endDate", locale)}
+                              <input
+                                aria-invalid={hasCustomDraft && !isCustomDraftToValid ? "true" : "false"}
+                                className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                                inputMode="numeric"
+                                onChange={(event) => setCustomDraftTo(event.target.value)}
+                                placeholder="YYYY-MM-DD"
+                                type="text"
+                                value={customDraftTo}
+                              />
+                            </label>
+                          </div>
+                        ) : null}
                         <p className="px-1 text-[11px] font-medium text-slate-500">
                           {customRangeError ?? t("activity.time.useDateFormat", locale)}
                         </p>
@@ -1647,6 +1825,7 @@ export function TransactionsOverview({
                               setCustomFrom(customDraftFrom);
                               setCustomTo(customDraftTo);
                               setActivePeriod("custom");
+                              setIsManualCustomEntryOpen(false);
                             }}
                             type="button"
                           >
@@ -1655,14 +1834,7 @@ export function TransactionsOverview({
                           {activePeriod === "custom" || hasCustomDraft ? (
                             <button
                               className="min-h-9 rounded-lg bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                              onClick={() => {
-                                setActivePeriod("month");
-                                setCustomFrom("");
-                                setCustomTo("");
-                                setCustomDraftFrom("");
-                                setCustomDraftTo("");
-                                setIsCustomRangeEditorOpen(false);
-                              }}
+                              onClick={clearCustomRange}
                               type="button"
                             >
                               {t("activity.time.clearCustomRange", locale)}

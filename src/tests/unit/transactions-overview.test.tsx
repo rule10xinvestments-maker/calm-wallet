@@ -926,22 +926,22 @@ describe("transactions overview", () => {
           makeTransactionItem({
             id: "before",
             title: "before range",
-            occurredAt: "2026-06-01T10:00:00.000Z",
+            occurredAt: dateInCurrentMonth(9),
           }),
           makeTransactionItem({
             id: "inside-start",
             title: "inside start",
-            occurredAt: "2026-06-10T10:00:00.000Z",
+            occurredAt: dateInCurrentMonth(10),
           }),
           makeTransactionItem({
             id: "inside-end",
             title: "inside end",
-            occurredAt: "2026-06-12T10:00:00.000Z",
+            occurredAt: dateInCurrentMonth(12),
           }),
           makeTransactionItem({
             id: "after",
             title: "after range",
-            occurredAt: "2026-06-13T10:00:00.000Z",
+            occurredAt: dateInCurrentMonth(13),
           }),
         ]}
         stagedImports={[]}
@@ -949,6 +949,8 @@ describe("transactions overview", () => {
       />,
     );
 
+    const rangeStart = dateInCurrentMonth(10).slice(0, 10);
+    const rangeEnd = dateInCurrentMonth(12).slice(0, 10);
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
     const customRangeButton = screen.getByRole("button", { name: "Use custom range" });
     expect(customRangeButton).toHaveClass("border-slate-200");
@@ -957,13 +959,20 @@ describe("transactions overview", () => {
 
     fireEvent.click(customRangeButton);
     expect(customRangeButton).toHaveClass("bg-sky-600");
-    expect(screen.getByLabelText("Start date")).toBeInTheDocument();
-    expect(screen.getByLabelText("End date")).toBeInTheDocument();
+    expect(screen.getByText("Pick a start date")).toBeInTheDocument();
+    expect(screen.getByText("Pick an end date")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("End date")).not.toBeInTheDocument();
     expect(document.querySelector('input[type="date"]')).not.toBeInTheDocument();
     expect(screen.getByText("Use YYYY-MM-DD")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply range" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Clear custom range" })).not.toBeInTheDocument();
 
+    expect(screen.getByRole("button", { name: "Type dates" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Type dates" }));
+    expect(screen.getByLabelText("Start date")).toBeInTheDocument();
+    expect(screen.getByLabelText("End date")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide manual entry" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-99-10" } });
     expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply range" })).toBeDisabled();
@@ -974,13 +983,13 @@ describe("transactions overview", () => {
     expect(screen.queryByLabelText("End date")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
-    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-06-12" } });
-    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-06-10" } });
-    expect(screen.getByText("End date must be after start date")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: rangeStart }));
+    expect(screen.getByText(rangeStart)).toBeInTheDocument();
+    expect(screen.getByText("Pick an end date")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply range" })).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-06-10" } });
-    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-06-12" } });
+    fireEvent.click(screen.getByRole("button", { name: rangeEnd }));
+    expect(screen.getByText(rangeEnd)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply range" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Apply range" }));
 
@@ -996,7 +1005,8 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear custom range" }));
     expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
-    expect(screen.queryByText("inside start")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("bg-sky-600");
+    expect(screen.getByText("inside start")).toBeInTheDocument();
   });
 
   it("selecting a month closes custom range fields", () => {
@@ -1017,13 +1027,13 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
-    expect(screen.getByLabelText("Start date")).toBeInTheDocument();
+    expect(screen.getByText("Pick a start date")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` }));
 
     expect(screen.getByRole("button", { name: currentMonthLabel() })).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
-    expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
+    expect(screen.queryByText("Pick a start date")).not.toBeInTheDocument();
   });
 
   it("keeps search and type filters composed with the selected period", () => {

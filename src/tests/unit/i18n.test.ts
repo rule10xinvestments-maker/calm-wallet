@@ -55,6 +55,9 @@ describe("i18n helper", () => {
     expect(t("activity.time.chooseDates", "en")).toBe("Choose dates");
     expect(t("activity.time.enterValidDate", "ro")).toBe("Introdu o dată validă");
     expect(t("activity.time.endDateMustBeAfterStartDate", "es")).toBe("La fecha final debe ser posterior a la inicial");
+    expect(t("activity.time.typeDates", "ro")).toBe("Scrie datele");
+    expect(t("activity.time.hideManualEntry", "fr")).toBe("Masquer la saisie manuelle");
+    expect(t("activity.time.pickStartDate", "es")).toBe("Elige la fecha inicial");
   });
 
   it.each([
