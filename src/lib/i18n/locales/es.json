@@ -231,6 +231,8 @@
       "endDate": "Fecha final",
       "applyRange": "Aplicar rango",
       "clearCustomRange": "Borrar rango",
+      "type": "Escribir",
+      "closeCustom": "Cerrar rango",
       "typeDates": "Escribir fechas",
       "hideManualEntry": "Ocultar entrada manual",
       "pickStartDate": "Elige la fecha inicial",

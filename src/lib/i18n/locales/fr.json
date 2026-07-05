@@ -231,6 +231,8 @@
       "endDate": "Date de fin",
       "applyRange": "Appliquer la plage",
       "clearCustomRange": "Effacer la plage",
+      "type": "Saisir",
+      "closeCustom": "Fermer la plage",
       "typeDates": "Saisir les dates",
       "hideManualEntry": "Masquer la saisie manuelle",
       "pickStartDate": "Choisir la date de début",

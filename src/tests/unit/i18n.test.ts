@@ -58,6 +58,8 @@ describe("i18n helper", () => {
     expect(t("activity.time.typeDates", "ro")).toBe("Scrie datele");
     expect(t("activity.time.hideManualEntry", "fr")).toBe("Masquer la saisie manuelle");
     expect(t("activity.time.pickStartDate", "es")).toBe("Elige la fecha inicial");
+    expect(t("activity.time.type", "ro")).toBe("Scrie");
+    expect(t("activity.time.closeCustom", "fr")).toBe("Fermer la plage");
   });
 
   it.each([

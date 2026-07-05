@@ -1542,13 +1542,21 @@ export function TransactionsOverview({
                         : "border-slate-200 bg-slate-50 text-slate-700 hover:border-sky-200 hover:bg-sky-50"
                     }`}
                     onClick={() => {
-                      setIsTimeframeOpen((isOpen) => {
-                        if (isOpen && activePeriod !== "custom") {
-                          setIsCustomRangeEditorOpen(false);
+                      const nextOpen = !isTimeframeOpen;
+                      if (nextOpen && activePeriod === "custom") {
+                        setCustomDraftFrom(customFrom);
+                        setCustomDraftTo(customTo);
+                        setCustomActiveField("start");
+                        setIsManualCustomEntryOpen(false);
+                        const sourceDate = customFrom ? new Date(`${customFrom}T00:00:00.000Z`) : new Date(selectedMonth.year, selectedMonth.monthIndex, 1);
+                        if (!Number.isNaN(sourceDate.getTime())) {
+                          setCustomCalendarMonth({ year: sourceDate.getFullYear(), monthIndex: sourceDate.getMonth() });
                         }
-
-                        return !isOpen;
-                      });
+                        setIsCustomRangeEditorOpen(true);
+                      } else if (!nextOpen || activePeriod !== "custom") {
+                        setIsCustomRangeEditorOpen(false);
+                      }
+                      setIsTimeframeOpen(nextOpen);
                     }}
                     type="button"
                   >
@@ -1588,76 +1596,80 @@ export function TransactionsOverview({
                 </div>
                 {isTimeframeOpen ? (
                   <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
-                    <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-2 py-1.5">
-                      <button
-                        aria-label={t("activity.time.previousYear", locale)}
-                        className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-                        onClick={() => setVisiblePickerYear((year) => year - 1)}
-                        type="button"
-                      >
-                        <ChevronLeft aria-hidden="true" size={16} strokeWidth={2.2} />
-                      </button>
-                      <p className="text-sm font-semibold text-slate-900">{visiblePickerYear}</p>
-                      <button
-                        aria-label={t("activity.time.nextYear", locale)}
-                        className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-                        onClick={() => setVisiblePickerYear((year) => year + 1)}
-                        type="button"
-                      >
-                        <ChevronRight aria-hidden="true" size={16} strokeWidth={2.2} />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
-                      {monthOptions.map((month) => {
-                        const isSelected = activePeriod === "month" && selectedMonthKey === month.monthKey;
-                        const isCurrent = currentMonthKey === month.monthKey;
-                        const unselectedToneClass =
-                          month.tone === "positive"
-                            ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                            : month.tone === "negative"
-                              ? "bg-rose-50 text-rose-800 hover:bg-rose-100"
-                              : "bg-white text-slate-600 hover:bg-slate-50";
-                        const selectedIndicatorClass =
-                          month.tone === "positive"
-                            ? "bg-emerald-500"
-                            : month.tone === "negative"
-                              ? "bg-rose-500"
-                              : "";
-
-                        return (
+                    {!isCustomRangeEditorOpen ? (
+                      <>
+                        <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-2 py-1.5">
                           <button
-                            aria-label={`${t("activity.time.select", locale)} ${month.fullLabel}`}
-                            className={`relative min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
-                              isSelected
-                                ? `bg-sky-600 text-white shadow-sm ring-1 ring-sky-700 ${isCurrent ? "outline outline-2 outline-offset-1 outline-sky-200" : ""}`
-                                : `${unselectedToneClass} ${isCurrent ? "ring-2 ring-sky-200" : ""}`
-                            }`}
-                            key={month.monthKey}
-                            onClick={() => {
-                              setSelectedMonth({ year: visiblePickerYear, monthIndex: month.monthIndex });
-                              setActivePeriod("month");
-                              setCustomFrom("");
-                              setCustomTo("");
-                              setCustomDraftFrom("");
-                              setCustomDraftTo("");
-                              setCustomActiveField("start");
-                              setIsManualCustomEntryOpen(false);
-                              setIsCustomRangeEditorOpen(false);
-                              setIsTimeframeOpen(false);
-                            }}
+                            aria-label={t("activity.time.previousYear", locale)}
+                            className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                            onClick={() => setVisiblePickerYear((year) => year - 1)}
                             type="button"
                           >
-                            <span>{month.shortLabel}</span>
-                            {isSelected && selectedIndicatorClass ? (
-                              <span
-                                aria-hidden="true"
-                                className={`absolute bottom-1 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full ${selectedIndicatorClass}`}
-                              />
-                            ) : null}
+                            <ChevronLeft aria-hidden="true" size={16} strokeWidth={2.2} />
                           </button>
-                        );
-                      })}
-                    </div>
+                          <p className="text-sm font-semibold text-slate-900">{visiblePickerYear}</p>
+                          <button
+                            aria-label={t("activity.time.nextYear", locale)}
+                            className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                            onClick={() => setVisiblePickerYear((year) => year + 1)}
+                            type="button"
+                          >
+                            <ChevronRight aria-hidden="true" size={16} strokeWidth={2.2} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
+                          {monthOptions.map((month) => {
+                            const isSelected = activePeriod === "month" && selectedMonthKey === month.monthKey;
+                            const isCurrent = currentMonthKey === month.monthKey;
+                            const unselectedToneClass =
+                              month.tone === "positive"
+                                ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                                : month.tone === "negative"
+                                  ? "bg-rose-50 text-rose-800 hover:bg-rose-100"
+                                  : "bg-white text-slate-600 hover:bg-slate-50";
+                            const selectedIndicatorClass =
+                              month.tone === "positive"
+                                ? "bg-emerald-500"
+                                : month.tone === "negative"
+                                  ? "bg-rose-500"
+                                  : "";
+
+                            return (
+                              <button
+                                aria-label={`${t("activity.time.select", locale)} ${month.fullLabel}`}
+                                className={`relative min-h-9 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                                  isSelected
+                                    ? `bg-sky-600 text-white shadow-sm ring-1 ring-sky-700 ${isCurrent ? "outline outline-2 outline-offset-1 outline-sky-200" : ""}`
+                                    : `${unselectedToneClass} ${isCurrent ? "ring-2 ring-sky-200" : ""}`
+                                }`}
+                                key={month.monthKey}
+                                onClick={() => {
+                                  setSelectedMonth({ year: visiblePickerYear, monthIndex: month.monthIndex });
+                                  setActivePeriod("month");
+                                  setCustomFrom("");
+                                  setCustomTo("");
+                                  setCustomDraftFrom("");
+                                  setCustomDraftTo("");
+                                  setCustomActiveField("start");
+                                  setIsManualCustomEntryOpen(false);
+                                  setIsCustomRangeEditorOpen(false);
+                                  setIsTimeframeOpen(false);
+                                }}
+                                type="button"
+                              >
+                                <span>{month.shortLabel}</span>
+                                {isSelected && selectedIndicatorClass ? (
+                                  <span
+                                    aria-hidden="true"
+                                    className={`absolute bottom-1 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full ${selectedIndicatorClass}`}
+                                  />
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : null}
                     <button
                       aria-label={t("activity.time.useCustomRange", locale)}
                       aria-expanded={isCustomRangeEditorOpen}
@@ -1695,28 +1707,44 @@ export function TransactionsOverview({
                             {customFrom} - {customTo}
                           </p>
                         ) : null}
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
                           <button
-                            className={`min-h-12 rounded-xl border px-2 py-1.5 text-left transition ${
-                              customActiveField === "start" ? "border-sky-300 bg-sky-50 text-sky-900" : "border-slate-200 bg-slate-50 text-slate-700"
+                            className={`min-h-11 rounded-lg px-2 py-1 text-center transition ${
+                              !isManualCustomEntryOpen && customActiveField === "start" ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"
                             }`}
-                            onClick={() => setCustomActiveField("start")}
+                            onClick={() => {
+                              setCustomActiveField("start");
+                              setIsManualCustomEntryOpen(false);
+                            }}
                             type="button"
                           >
-                            <span className="block text-[11px] font-semibold uppercase tracking-wide">{t("activity.time.from", locale)}</span>
-                            <span className="block text-xs font-semibold">{customDraftFrom || t("activity.time.pickStartDate", locale)}</span>
+                            <span className="block text-[11px] font-semibold">{t("activity.time.from", locale)}</span>
+                            <span className="block truncate text-[10px] font-medium">{customDraftFrom || t("activity.time.pickStartDate", locale)}</span>
                           </button>
                           <button
-                            className={`min-h-12 rounded-xl border px-2 py-1.5 text-left transition ${
-                              customActiveField === "end" ? "border-sky-300 bg-sky-50 text-sky-900" : "border-slate-200 bg-slate-50 text-slate-700"
+                            className={`min-h-11 rounded-lg px-2 py-1 text-center transition ${
+                              !isManualCustomEntryOpen && customActiveField === "end" ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"
                             }`}
-                            onClick={() => setCustomActiveField("end")}
+                            onClick={() => {
+                              setCustomActiveField("end");
+                              setIsManualCustomEntryOpen(false);
+                            }}
                             type="button"
                           >
-                            <span className="block text-[11px] font-semibold uppercase tracking-wide">{t("activity.time.to", locale)}</span>
-                            <span className="block text-xs font-semibold">{customDraftTo || t("activity.time.pickEndDate", locale)}</span>
+                            <span className="block text-[11px] font-semibold">{t("activity.time.to", locale)}</span>
+                            <span className="block truncate text-[10px] font-medium">{customDraftTo || t("activity.time.pickEndDate", locale)}</span>
+                          </button>
+                          <button
+                            className={`min-h-11 rounded-lg px-2 py-1 text-center text-[11px] font-semibold transition ${
+                              isManualCustomEntryOpen ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"
+                            }`}
+                            onClick={() => setIsManualCustomEntryOpen(true)}
+                            type="button"
+                          >
+                            {t("activity.time.type", locale)}
                           </button>
                         </div>
+                        {!isManualCustomEntryOpen ? (
                         <div className="rounded-xl border border-slate-100 bg-slate-50 p-2">
                           <div className="mb-2 flex items-center justify-between gap-2">
                             <button
@@ -1775,13 +1803,7 @@ export function TransactionsOverview({
                             })}
                           </div>
                         </div>
-                        <button
-                          className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                          onClick={() => setIsManualCustomEntryOpen((isOpen) => !isOpen)}
-                          type="button"
-                        >
-                          {isManualCustomEntryOpen ? t("activity.time.hideManualEntry", locale) : t("activity.time.typeDates", locale)}
-                        </button>
+                        ) : null}
                         {isManualCustomEntryOpen ? (
                           <div className="grid grid-cols-2 gap-2">
                             <label className="space-y-1 text-xs font-medium text-slate-600">
@@ -1813,7 +1835,14 @@ export function TransactionsOverview({
                         <p className="px-1 text-[11px] font-medium text-slate-500">
                           {customRangeError ?? t("activity.time.useDateFormat", locale)}
                         </p>
-                        <div className={activePeriod === "custom" || hasCustomDraft ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            className="min-h-9 rounded-lg bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                            onClick={clearCustomRange}
+                            type="button"
+                          >
+                            {t("activity.time.closeCustom", locale)}
+                          </button>
                           <button
                             className="min-h-9 rounded-lg bg-sky-600 px-2 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"
                             disabled={!canApplyCustomRange}
@@ -1826,20 +1855,13 @@ export function TransactionsOverview({
                               setCustomTo(customDraftTo);
                               setActivePeriod("custom");
                               setIsManualCustomEntryOpen(false);
+                              setIsCustomRangeEditorOpen(false);
+                              setIsTimeframeOpen(false);
                             }}
                             type="button"
                           >
-                            {t("activity.time.applyRange", locale)}
+                            {t("common.save", locale)}
                           </button>
-                          {activePeriod === "custom" || hasCustomDraft ? (
-                            <button
-                              className="min-h-9 rounded-lg bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                              onClick={clearCustomRange}
-                              type="button"
-                            >
-                              {t("activity.time.clearCustomRange", locale)}
-                            </button>
-                          ) : null}
                         </div>
                       </div>
                     ) : null}

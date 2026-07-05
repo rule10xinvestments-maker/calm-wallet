@@ -231,6 +231,8 @@
       "endDate": "Data de sfârșit",
       "applyRange": "Aplică intervalul",
       "clearCustomRange": "Șterge intervalul",
+      "type": "Scrie",
+      "closeCustom": "Închide intervalul",
       "typeDates": "Scrie datele",
       "hideManualEntry": "Ascunde introducerea manuală",
       "pickStartDate": "Alege data de început",
