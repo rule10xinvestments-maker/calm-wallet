@@ -597,6 +597,99 @@ describe("natural-language assistant parser", () => {
     });
   });
 
+  it("prefers currency-adjacent price over leading item quantity", () => {
+    expect(parseNaturalLanguageAssistantInput("2 cafele 11 lei")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      currency: "RON",
+      merchant: "cafele",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("am platit 2 cafele 11 lei")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      currency: "RON",
+      merchant: "Cafele",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("2 coffees 11 ron")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      currency: "RON",
+      merchant: "coffees",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("3 cafés 9€")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "9",
+      currency: "EUR",
+      merchant: "cafés",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("j’ai payé 2 cafés 11 €")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      currency: "EUR",
+      merchant: "Cafés",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("compré 2 cafés 11 euros")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      currency: "EUR",
+      merchant: "Cafés",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+  });
+
+  it("preserves normal amount behavior around currency markers", () => {
+    expect(parseNaturalLanguageAssistantInput("11 lei cafea")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      currency: "RON",
+      merchant: "cafea",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("cafea 11 lei")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      currency: "RON",
+      merchant: "cafea",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+
+    expect(parseNaturalLanguageAssistantInput("cafele 11")).toEqual({
+      kind: "create_transaction",
+      transactionType: "expense",
+      amount: "11",
+      merchant: "cafele",
+      reviewState: "needs_attention",
+      uncertaintyReason: "Category needs review.",
+    });
+  });
+
   it("keeps shorthand labels clean when no currency token is present", () => {
     expect(parseNaturalLanguageAssistantInput("cartofi 10")).toEqual({
       kind: "create_transaction",

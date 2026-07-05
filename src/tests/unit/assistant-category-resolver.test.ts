@@ -386,7 +386,7 @@ describe("controlled category resolver", () => {
   });
 
   it("maps multilingual dining vocabulary and keeps Bolt Food stronger than Bolt", () => {
-    for (const phrase of ["coffee 12", "cafea 12", "café 5", "cafe 5", "restaurante 40", "Tazz 45", "Bolt Food 60"]) {
+    for (const phrase of ["coffee 12", "coffees 11", "cafea 12", "cafele 11", "café 5", "cafés 9", "cafe 5", "restaurante 40", "Tazz 45", "Bolt Food 60"]) {
       expectCategory(phrase, "expense", "cat-dining");
     }
   });

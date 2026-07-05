@@ -931,6 +931,34 @@ describe("assistant server integration", () => {
     );
   });
 
+  it("treats leading quantity as context when a later amount has currency", async () => {
+    const services = makeTransactionServices();
+
+    const result = await runNaturalLanguageAssistantCommand({
+      userId: "user-1",
+      text: "2 cafele 11 lei",
+      transactionService: services,
+      categoryOptions: controlledCategories,
+    });
+
+    expect(services.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        transactionType: "expense",
+        amountMinor: 1100,
+        currency: "RON",
+        itemName: "cafele",
+        merchant: null,
+        categoryId: "33333333-3333-3333-3333-333333333333",
+      }),
+      { actorType: "ai" },
+    );
+    const [, createdInput] = vi.mocked(services.createTransaction).mock.calls[0]!;
+    expect(createdInput.reviewState).toBe("reviewed");
+    expect(createdInput.uncertaintyReason).toBeUndefined();
+    expect(result.status).toBe("success");
+  });
+
   it("creates a valid natural-language income through the approved path", async () => {
     const services = makeTransactionServices();
 

@@ -34,7 +34,7 @@ const categoryVocabulary: CategoryVocabularyEntry[] = [
   {
     slug: "dining",
     confidence: "high",
-    aliases: ["restaurant", "cafe", "coffee", "cafea", "lunch", "dinner", "breakfast", "pizza", "burger", "shaorma", "kebab", "takeaway", "delivery", "glovo", "tazz", "bolt food", "food delivery", "meniul zilei"],
+    aliases: ["restaurant", "cafe", "cafes", "cafés", "coffee", "coffees", "cafea", "cafele", "lunch", "dinner", "breakfast", "pizza", "burger", "shaorma", "kebab", "takeaway", "delivery", "glovo", "tazz", "bolt food", "food delivery", "meniul zilei"],
   },
   {
     slug: "transport",

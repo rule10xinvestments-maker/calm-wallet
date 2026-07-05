@@ -2,6 +2,7 @@ import {
   cleanTransactionIntentTitle,
   containsTransactionIntentPhrase,
   findTransactionIntentHint,
+  type TransactionIntentHint,
 } from "@/lib/transaction-intent-vocabulary";
 
 export type NaturalLanguageCreateTransactionIntent = {
@@ -111,10 +112,6 @@ const supportedCurrencyTokenSource = Array.from(supportedCurrencyTokens.keys())
   .sort((a, b) => b.length - a.length)
   .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");
-const amountPattern = new RegExp(
-  `(^|\\s)(?:(${supportedCurrencyTokenSource})\\s*)?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?(?=\\s|$)`,
-  "i",
-);
 const signedAmountPattern = new RegExp(
   `(^|\\s)([+-])\\s*(?:(${supportedCurrencyTokenSource})\\s*)?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?(?=\\s|$)`,
   "i",
@@ -123,6 +120,15 @@ const multiAmountPattern = new RegExp(
   `(^|[\\s,;])([+-])?\\s*(?:(${supportedCurrencyTokenSource})\\s*)?${amountSource}(?:\\s*(${supportedCurrencyTokenSource}))?(?=[\\s,;.!?]|$)`,
   "gi",
 );
+
+type AmountCandidate = {
+  amount: string;
+  currency?: string;
+  hasAdjacentCurrency: boolean;
+  sign?: "+" | "-";
+  tokenStart: number;
+  tokenEnd: number;
+};
 
 function normalizeInput(input: string) {
   return input.trim().replace(/\s+/g, " ");
@@ -233,14 +239,115 @@ function parseQuestionDateRange(input: string) {
   return monthRangeFromName(input) ?? {};
 }
 
-function stripAmount(input: string, amountMatch: RegExpMatchArray) {
-  const start = amountMatch.index ?? -1;
+function getCurrencyFromToken(token: string | undefined) {
+  return token ? supportedCurrencyTokens.get(token.toUpperCase()) : undefined;
+}
 
-  if (start < 0) {
-    return input;
+function findAmountCandidates(input: string): AmountCandidate[] {
+  const matches: AmountCandidate[] = [];
+
+  multiAmountPattern.lastIndex = 0;
+
+  for (const match of input.matchAll(multiAmountPattern)) {
+    const amount = match[4];
+
+    if (!amount) {
+      continue;
+    }
+
+    const matchStart = match.index ?? 0;
+    const prefixLength = match[1]?.length ?? 0;
+    const tokenStart = matchStart + prefixLength;
+    const tokenEnd = matchStart + match[0].length;
+    const currencyToken = match[3] ?? match[5];
+    const sign = match[2] === "+" || match[2] === "-" ? match[2] : undefined;
+
+    matches.push({
+      amount,
+      currency: getCurrencyFromToken(currencyToken),
+      hasAdjacentCurrency: Boolean(currencyToken),
+      sign,
+      tokenStart,
+      tokenEnd,
+    });
   }
 
-  return `${input.slice(0, start)} ${input.slice(start + amountMatch[0].length)}`.trim();
+  return matches;
+}
+
+function stripAmountCandidate(input: string, candidate: AmountCandidate) {
+  return `${input.slice(0, candidate.tokenStart)} ${input.slice(candidate.tokenEnd)}`.trim();
+}
+
+function stripLeadingQuantityContext(value: string, shouldStrip: boolean) {
+  if (!shouldStrip) {
+    return value;
+  }
+
+  return value.replace(new RegExp(`^${amountSource}\\s*(?:x|×)?\\s+(?=[A-Za-zÀ-ž])`, "i"), "").trim();
+}
+
+function hasMeaningfulItemText(value: string) {
+  return /[A-Za-zÀ-ž]/.test(value) && !/[;,]/.test(value);
+}
+
+function findNormalizedExpenseIntentPrefix(value: string) {
+  const normalized = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const match = normalized.match(
+    /^(i paid|paid|spent|bought|purchased|am platit|platit|am cumparat|cumparat|j ai paye|jai paye|paye|j ai achete|jai achete|achete|pague|he pagado|pagado|compre|he comprado|comprado)\b/,
+  );
+
+  return match?.[1] ?? null;
+}
+
+function findFallbackTransactionIntentHint(value: string): TransactionIntentHint | null {
+  const matchedPhrase = findNormalizedExpenseIntentPrefix(value);
+
+  return matchedPhrase ? { kind: "expense", confidence: "clear", matchedPhrase } : null;
+}
+
+function cleanFallbackTransactionIntentTitle(value: string) {
+  const matchedPhrase = findNormalizedExpenseIntentPrefix(value);
+
+  if (!matchedPhrase) {
+    return undefined;
+  }
+
+  const originalTokens = value.match(/[\p{L}\p{N}]+/gu) ?? [];
+  const phraseWordCount = matchedPhrase.split(" ").length;
+
+  return originalTokens.slice(phraseWordCount).join(" ").trim() || undefined;
+}
+
+function isIntentOnlyPrefix(value: string) {
+  return containsTransactionIntentPhrase(value) || Boolean(findNormalizedExpenseIntentPrefix(value));
+}
+
+function isLikelyQuantityBeforeCurrencyAmount(input: string, occurrences: AmountCandidate[]) {
+  const pricedOccurrence = occurrences.find((occurrence) => occurrence.hasAdjacentCurrency && !occurrence.sign);
+
+  if (!pricedOccurrence) {
+    return false;
+  }
+
+  const quantityOccurrence = occurrences.find(
+    (occurrence) => occurrence.tokenStart < pricedOccurrence.tokenStart && !occurrence.hasAdjacentCurrency && !occurrence.sign,
+  );
+
+  if (!quantityOccurrence) {
+    return false;
+  }
+
+  const beforeQuantity = input.slice(0, quantityOccurrence.tokenStart).trim();
+  const itemText = input.slice(quantityOccurrence.tokenEnd, pricedOccurrence.tokenStart).trim();
+
+  return (!beforeQuantity || isIntentOnlyPrefix(beforeQuantity)) && hasMeaningfulItemText(itemText);
 }
 
 function extractAmount(input: string) {
@@ -256,46 +363,28 @@ function extractAmount(input: string) {
       currency: currencyToken ? supportedCurrencyTokens.get(currencyToken) : undefined,
       text: `${input.slice(0, signStart)} ${input.slice(signEnd)}`.trim().replace(/\s+/g, " "),
       transactionType: signedAmountMatch[2] === "+" ? ("income" as const) : ("expense" as const),
+      hasAdjacentCurrency: Boolean(currencyToken),
     };
   }
 
-  const amountMatch = input.match(amountPattern);
+  const amountCandidates = findAmountCandidates(input);
+  const amountCandidate = amountCandidates.find((candidate) => candidate.hasAdjacentCurrency) ?? amountCandidates[0];
 
-  if (!amountMatch?.[3]) {
+  if (!amountCandidate) {
     return null;
   }
 
   return {
-    amount: amountMatch[3],
-    currency: (amountMatch[2] ?? amountMatch[4])
-      ? supportedCurrencyTokens.get((amountMatch[2] ?? amountMatch[4] ?? "").toUpperCase())
-      : undefined,
-    text: stripAmount(input, amountMatch).replace(/\s+/g, " "),
+    amount: amountCandidate.amount,
+    currency: amountCandidate.currency,
+    text: stripAmountCandidate(input, amountCandidate).replace(/\s+/g, " "),
     transactionType: undefined,
+    hasAdjacentCurrency: amountCandidate.hasAdjacentCurrency,
   };
 }
 
 function findAmountOccurrences(input: string) {
-  const matches: Array<{
-    tokenStart: number;
-    tokenEnd: number;
-  }> = [];
-
-  multiAmountPattern.lastIndex = 0;
-
-  for (const match of input.matchAll(multiAmountPattern)) {
-    const matchStart = match.index ?? 0;
-    const prefixLength = match[1]?.length ?? 0;
-    const tokenStart = matchStart + prefixLength;
-    const tokenEnd = matchStart + match[0].length;
-
-    matches.push({
-      tokenStart,
-      tokenEnd,
-    });
-  }
-
-  return matches;
+  return findAmountCandidates(input);
 }
 
 function cleanMultiEntryPart(value: string) {
@@ -310,6 +399,10 @@ function maybeParseMultiCreateIntent(input: string): NaturalLanguageAssistantInt
   const occurrences = findAmountOccurrences(input);
 
   if (occurrences.length < 2) {
+    return null;
+  }
+
+  if (isLikelyQuantityBeforeCurrencyAmount(input, occurrences)) {
     return null;
   }
 
@@ -592,7 +685,7 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
   const amount = amountResult.amount;
   const withoutAmount = amountResult.text;
   const currencyResult = extractCurrencyToken(withoutAmount);
-  const cleanTextWithoutAmount = stripCurrencyTokens(currencyResult.text);
+  const cleanTextWithoutAmount = stripLeadingQuantityContext(stripCurrencyTokens(currencyResult.text), amountResult.hasAdjacentCurrency);
   const currency = amountResult.currency ?? currencyResult.currency;
 
   if (amountResult.transactionType) {
@@ -607,15 +700,20 @@ export function parseNaturalLanguageAssistantInput(rawInput: string): NaturalLan
     });
   }
 
-  const intentHint = findTransactionIntentHint(cleanTextWithoutAmount);
+  const primaryIntentHint = findTransactionIntentHint(cleanTextWithoutAmount);
+  const fallbackIntentHint = primaryIntentHint ? null : findFallbackTransactionIntentHint(cleanTextWithoutAmount);
+  const intentHint = primaryIntentHint ?? fallbackIntentHint;
   if (intentHint) {
-    const cleanedTitle = cleanTransactionIntentTitle(cleanTextWithoutAmount, intentHint);
+    const cleanedTitle = stripLeadingQuantityContext(
+      (primaryIntentHint ? cleanTransactionIntentTitle(cleanTextWithoutAmount, intentHint) : cleanFallbackTransactionIntentTitle(cleanTextWithoutAmount)) ?? "",
+      amountResult.hasAdjacentCurrency,
+    );
 
     if (intentHint.kind === "income") {
       const merchant =
-        cleanedTitle ??
-        (/^got\s+paid\b/i.test(cleanTextWithoutAmount) ? "Paycheck" : undefined) ??
-        (/salary|salariu|salaire|salario/i.test(cleanTextWithoutAmount) ? "Salary" : undefined) ??
+        cleanedTitle ||
+        (/^got\s+paid\b/i.test(cleanTextWithoutAmount) ? "Paycheck" : undefined) ||
+        (/salary|salariu|salaire|salario/i.test(cleanTextWithoutAmount) ? "Salary" : undefined) ||
         "Income";
 
       return buildCreateIntent({
