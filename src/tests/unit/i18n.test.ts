@@ -49,6 +49,9 @@ describe("i18n helper", () => {
     expect(t("owed.updated", "ro")).toBe("Actualizat");
     expect(t("assistant.limits.createHelper", "ro")).toBe("Limită pe categorie.");
     expect(t("assistant.limits.manageHelper", "ro")).toBe("Editează sau oprește limite.");
+    expect(t("activity.time.applyRange", "ro")).toBe("Aplică intervalul");
+    expect(t("activity.time.clearCustomRange", "fr")).toBe("Effacer la plage");
+    expect(t("activity.time.startDate", "es")).toBe("Fecha inicial");
   });
 
   it.each([

@@ -226,6 +226,10 @@
       "select": "Seleccionar",
       "useCustomRange": "Usar rango personalizado",
       "customRange": "Rango personalizado",
+      "startDate": "Fecha inicial",
+      "endDate": "Fecha final",
+      "applyRange": "Aplicar rango",
+      "clearCustomRange": "Borrar rango",
       "from": "Desde",
       "to": "Hasta"
     },

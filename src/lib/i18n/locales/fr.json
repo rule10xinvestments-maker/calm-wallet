@@ -226,6 +226,10 @@
       "select": "Sélectionner",
       "useCustomRange": "Utiliser une période personnalisée",
       "customRange": "Période personnalisée",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "applyRange": "Appliquer la plage",
+      "clearCustomRange": "Effacer la plage",
       "from": "Du",
       "to": "Au"
     },

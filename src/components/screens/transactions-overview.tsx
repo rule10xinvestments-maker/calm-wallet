@@ -1192,6 +1192,8 @@ export function TransactionsOverview({
   const [visiblePickerYear, setVisiblePickerYear] = useState(() => currentDate.getFullYear());
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [customDraftFrom, setCustomDraftFrom] = useState("");
+  const [customDraftTo, setCustomDraftTo] = useState("");
   const [isCustomRangeEditorOpen, setIsCustomRangeEditorOpen] = useState(false);
   const [activeDisplayCurrency, setActiveDisplayCurrency] = useState(() => normalizeCurrency(displayCurrency));
   const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
@@ -1248,8 +1250,8 @@ export function TransactionsOverview({
   const hasMixedCurrencies = activitySummary.length > 1;
   const summaryMode = getSummaryMode(activeView);
   const shouldShowSummaryControl = summaryMode !== "context" && activeView !== "recurring";
-  const periodLabel = getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex);
-  const compactPeriodLabel = activePeriod === "month" ? getMonthLabel(selectedMonth.year, selectedMonth.monthIndex, "short") : "Custom";
+  const periodLabel = activePeriod === "month" ? getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex) : t("activity.time.customRange", locale);
+  const compactPeriodLabel = activePeriod === "month" ? getMonthLabel(selectedMonth.year, selectedMonth.monthIndex, "short") : t("activity.time.customRange", locale);
   const currentMonthKey = getCurrentMonthKey(currentDate);
   const selectedMonthKey = getMonthKey(selectedMonth.year, selectedMonth.monthIndex);
   const monthOptions = useMemo(
@@ -1261,13 +1263,10 @@ export function TransactionsOverview({
           shortLabel: new Date(visiblePickerYear, monthIndex, 1).toLocaleDateString("en-US", { month: "short" }),
           fullLabel,
           monthKey: getMonthKey(visiblePickerYear, monthIndex),
-          tone:
-            activePeriod === "custom"
-              ? ("neutral" as const)
-              : getMonthNetTone(activeItems, visiblePickerYear, monthIndex, activeDisplayCurrency, fxRates),
+          tone: getMonthNetTone(activeItems, visiblePickerYear, monthIndex, activeDisplayCurrency, fxRates),
         };
       }),
-    [activeDisplayCurrency, activeItems, activePeriod, fxRates, visiblePickerYear],
+    [activeDisplayCurrency, activeItems, fxRates, visiblePickerYear],
   );
   const hasSearchQuery = searchQuery.trim().length > 0;
   const isDeletedView = activeView === "deleted";
@@ -1557,38 +1556,77 @@ export function TransactionsOverview({
                     </div>
                     <button
                       aria-label={t("activity.time.useCustomRange", locale)}
-                      aria-expanded={activePeriod === "custom" && isCustomRangeEditorOpen}
+                      aria-expanded={isCustomRangeEditorOpen}
                       className={`min-h-9 w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
-                        activePeriod === "custom" ? "bg-sky-600 text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
+                        activePeriod === "custom" || isCustomRangeEditorOpen ? "bg-sky-600 text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
                       }`}
                       onClick={() => {
-                        setActivePeriod("custom");
-                        setIsCustomRangeEditorOpen((isOpen) => (activePeriod === "custom" ? !isOpen : true));
+                        setCustomDraftFrom(customFrom);
+                        setCustomDraftTo(customTo);
+                        setIsCustomRangeEditorOpen((isOpen) => !isOpen);
                       }}
                       type="button"
                     >
                       {t("activity.time.customRange", locale)}
                     </button>
-                    {activePeriod === "custom" && isCustomRangeEditorOpen ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        <label className="space-y-1 text-xs font-medium text-slate-600">
-                          {t("activity.time.from", locale)}
-                          <input
-                            className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                            onChange={(event) => setCustomFrom(event.target.value)}
-                            type="date"
-                            value={customFrom}
-                          />
-                        </label>
-                        <label className="space-y-1 text-xs font-medium text-slate-600">
-                          {t("activity.time.to", locale)}
-                          <input
-                            className="min-h-9 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                            onChange={(event) => setCustomTo(event.target.value)}
-                            type="date"
-                            value={customTo}
-                          />
-                        </label>
+                    {isCustomRangeEditorOpen ? (
+                      <div className="space-y-2 rounded-xl bg-white p-2">
+                        {activePeriod === "custom" && customFrom && customTo ? (
+                          <p className="rounded-lg bg-sky-50 px-2 py-1.5 text-xs font-medium text-sky-800">
+                            {customFrom} - {customTo}
+                          </p>
+                        ) : null}
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="space-y-1 text-xs font-medium text-slate-600">
+                            {t("activity.time.startDate", locale)}
+                            <input
+                              className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                              inputMode="numeric"
+                              onChange={(event) => setCustomDraftFrom(event.target.value)}
+                              placeholder="YYYY-MM-DD"
+                              type="text"
+                              value={customDraftFrom}
+                            />
+                          </label>
+                          <label className="space-y-1 text-xs font-medium text-slate-600">
+                            {t("activity.time.endDate", locale)}
+                            <input
+                              className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                              inputMode="numeric"
+                              onChange={(event) => setCustomDraftTo(event.target.value)}
+                              placeholder="YYYY-MM-DD"
+                              type="text"
+                              value={customDraftTo}
+                            />
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            className="min-h-9 rounded-lg bg-sky-600 px-2 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700"
+                            onClick={() => {
+                              setCustomFrom(customDraftFrom);
+                              setCustomTo(customDraftTo);
+                              setActivePeriod("custom");
+                            }}
+                            type="button"
+                          >
+                            {t("activity.time.applyRange", locale)}
+                          </button>
+                          <button
+                            className="min-h-9 rounded-lg bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                            onClick={() => {
+                              setActivePeriod("month");
+                              setCustomFrom("");
+                              setCustomTo("");
+                              setCustomDraftFrom("");
+                              setCustomDraftTo("");
+                              setIsCustomRangeEditorOpen(false);
+                            }}
+                            type="button"
+                          >
+                            {t("activity.time.clearCustomRange", locale)}
+                          </button>
+                        </div>
                       </div>
                     ) : null}
                   </div>

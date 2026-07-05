@@ -226,6 +226,10 @@
       "select": "Selectează",
       "useCustomRange": "Folosește interval personalizat",
       "customRange": "Interval personalizat",
+      "startDate": "Data de început",
+      "endDate": "Data de sfârșit",
+      "applyRange": "Aplică intervalul",
+      "clearCustomRange": "Șterge intervalul",
       "from": "De la",
       "to": "Până la"
     },

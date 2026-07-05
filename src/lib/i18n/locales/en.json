@@ -226,6 +226,10 @@
       "select": "Select",
       "useCustomRange": "Use custom range",
       "customRange": "Custom range",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "applyRange": "Apply range",
+      "clearCustomRange": "Clear custom range",
       "from": "From",
       "to": "To"
     },
