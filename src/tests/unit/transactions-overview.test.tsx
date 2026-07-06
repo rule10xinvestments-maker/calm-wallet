@@ -308,6 +308,84 @@ describe("transactions overview", () => {
     expect(screen.getByText("visible history")).toBeInTheDocument();
   });
 
+  it("applies and clears an Activity inspect category context without changing category values", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "txn-btc",
+            title: "Btctusdt",
+            categoryId: "investments",
+            categoryLabel: "Investments",
+          }),
+          makeTransactionItem({
+            id: "txn-market",
+            title: "Market",
+            categoryId: "groceries",
+            categoryLabel: "Groceries",
+          }),
+        ]}
+        initialInspectCategory="investments"
+        stagedImportDetails={{}}
+        stagedImports={[]}
+      />,
+    );
+
+    expect(screen.getByText("Showing Investments")).toBeInTheDocument();
+    expect(screen.getByText("Btctusdt")).toBeInTheDocument();
+    expect(screen.queryByText("Market")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(screen.queryByText("Showing Investments")).not.toBeInTheDocument();
+    expect(screen.getByText("Market")).toBeInTheDocument();
+  });
+
+  it("ignores invalid Activity inspect categories safely", () => {
+    render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "txn-btc",
+            title: "Btctusdt",
+            categoryId: "investments",
+            categoryLabel: "Investments",
+          }),
+        ]}
+        initialInspectCategory="investitii"
+        stagedImportDetails={{}}
+        stagedImports={[]}
+      />,
+    );
+
+    expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+    expect(screen.getByText("Btctusdt")).toBeInTheDocument();
+  });
+
+  it("highlights a focused Activity transaction when the query context matches a loaded row", () => {
+    const { container } = render(
+      <TransactionsOverview
+        {...makeOverviewProps()}
+        items={[
+          makeTransactionItem({
+            id: "txn-focus",
+            title: "Focused coffee",
+            categoryId: "dining",
+            categoryLabel: "Dining",
+          }),
+        ]}
+        initialFocusTransactionId="txn-focus"
+        stagedImportDetails={{}}
+        stagedImports={[]}
+      />,
+    );
+
+    const focusedRow = container.querySelector('[data-transaction-id="txn-focus"]');
+    expect(focusedRow).toHaveClass("ring-sky-300");
+  });
+
   it("expands Owed below the controls and keeps owed notes separate from transaction rows", () => {
     render(
       <TransactionsOverview

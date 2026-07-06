@@ -14,6 +14,7 @@
     "restore": "Restaurează",
     "confirm": "Confirmă",
     "search": "Caută",
+    "clear": "Șterge",
     "loading": "Se încarcă",
     "retry": "Reîncearcă",
     "all": "Toate",
@@ -190,6 +191,10 @@
     "searchAria": "Caută tranzacții",
     "summary": "Rezumat",
     "owed": "De primit/plătit",
+    "inspect": {
+      "viewInActivity": "Vezi în Activitate",
+      "showingCategory": "Se afișează {category}"
+    },
     "filters": {
       "allLabel": "Toate tranzacțiile",
       "recurring": "Recurente",

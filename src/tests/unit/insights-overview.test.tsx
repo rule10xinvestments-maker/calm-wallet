@@ -2741,6 +2741,26 @@ describe("insights overview", () => {
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
+  it("links Insights transaction and category inspect actions to Activity context", () => {
+    renderInsights(makeInsightsData());
+
+    const largestCard = screen.getByTestId("largest-entries-card");
+    expect(within(largestCard).getByRole("link", { name: "View in Activity" })).toHaveAttribute(
+      "href",
+      "/transactions?month=2026-04&category=groceries&focusTransaction=txn-1",
+    );
+
+    const inspectLinks = screen.getAllByRole("link", { name: "View in Activity" });
+    expect(inspectLinks.some((link) => link.getAttribute("href") === "/transactions?month=2026-04&category=groceries")).toBe(true);
+  });
+
+  it("renders translated Insights inspect labels without translating query values", () => {
+    renderInsights(makeInsightsData(), { locale: "ro" });
+
+    const inspectLinks = screen.getAllByRole("link", { name: "Vezi în Activitate" });
+    expect(inspectLinks.some((link) => link.getAttribute("href")?.includes("category=groceries"))).toBe(true);
+  });
+
   it("switches largest entries between top expenses and income with icons and share copy", () => {
     renderInsights(
       makeInsightsData({

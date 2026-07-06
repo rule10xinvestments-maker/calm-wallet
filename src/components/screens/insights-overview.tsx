@@ -124,6 +124,55 @@ function restoreDesktopScroll(snapshot: { x: number; y: number } | null) {
   window.setTimeout(restore, 120);
 }
 
+function getInspectMonthFromDate(value: string | null | undefined) {
+  return value && /^\d{4}-\d{2}/.test(value) ? value.slice(0, 7) : null;
+}
+
+function getInspectCategoryValue(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const labelKey = getCategoryLabelKey(value);
+  return labelKey ? labelKey.replace(/^categories\./, "") : value;
+}
+
+function buildActivityInspectHref({
+  category,
+  focusTransaction,
+  month,
+}: {
+  category?: string | null;
+  focusTransaction?: string | null;
+  month?: string | null;
+}) {
+  const params = new URLSearchParams();
+  if (month) {
+    params.set("month", month);
+  }
+  if (category) {
+    params.set("category", category);
+  }
+  if (focusTransaction) {
+    params.set("focusTransaction", focusTransaction);
+  }
+
+  const query = params.toString();
+  return query ? `/transactions?${query}` : "/transactions";
+}
+
+function InspectActivityLink({ href, locale }: { href: string; locale: string }) {
+  return (
+    <Link
+      aria-label={t("activity.inspect.viewInActivity", locale)}
+      className="flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-50 hover:text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+      href={href}
+    >
+      <Eye aria-hidden="true" className="h-4 w-4" />
+    </Link>
+  );
+}
+
 function InsightsQueryButton({
   "aria-current": ariaCurrent,
   "aria-label": ariaLabel,
@@ -1524,6 +1573,7 @@ function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: Spe
         </p>
         <SpendingMixRows
           displayCurrency={data.displayCurrency}
+          inspectMonth={data.selectedMonth}
           items={spendingMixItems}
           onSelect={setSelectedKey}
           selectedKey={effectiveSelectedKey}
@@ -1545,12 +1595,14 @@ function TimeframeMixChart({ data, segment }: { data: InsightsData; segment: Spe
 }
 
 function TimeframeCategoryBreakdown({
+  inspectMonth,
   items,
   segment = "expenses",
   showIcons = false,
   emptyMessage = "No tracked spending in this timeframe yet.",
   expandable = false,
 }: {
+  inspectMonth: string;
   items: SpendingMixCategoryItem[];
   segment?: SpendingMixSegment;
   showIcons?: boolean;
@@ -1574,41 +1626,48 @@ function TimeframeCategoryBreakdown({
         const isExpanded = expandedKey === item.key;
         const displayLabel = getCategoryLabel(item.label, locale);
         const countLabel = `${percent}% ${t("insights.of", locale)} ${isIncome ? t("insights.incomeLower", locale) : t("insights.spendingLower", locale)} - ${formatTransactionCountLabel(item.transactionCount, locale)}`;
+        const inspectCategory = getInspectCategoryValue(item.key) ?? getInspectCategoryValue(item.label);
 
         if (expandable) {
           return (
             <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
-              <button
-                aria-expanded={isExpanded}
-                aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${displayLabel} ${t("insights.entries", locale)}`}
-                className={`grid w-full gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
-                  showIcons ? "grid-cols-[2rem_1fr]" : "grid-cols-1"
-                }`}
-                onClick={() => setExpandedKey(isExpanded ? null : item.key)}
-                type="button"
-              >
-                {showIcons ? <CategoryShareIcon label={item.label} percentage={percent} segment={segment} /> : null}
-                <span className="min-w-0 space-y-2">
-                  <span className="grid grid-cols-[1fr_auto] gap-3">
-                    <span className="min-w-0">
-                      <span className="truncate text-sm font-medium text-slate-900">{displayLabel}</span>
-                      <span className="block text-xs text-slate-500">{countLabel}</span>
+              <div className="grid grid-cols-[1fr_auto] gap-3">
+                <button
+                  aria-expanded={isExpanded}
+                  aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${displayLabel} ${t("insights.entries", locale)}`}
+                  className={`grid min-w-0 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                    showIcons ? "grid-cols-[2rem_1fr] gap-3" : "grid-cols-1"
+                  }`}
+                  onClick={() => setExpandedKey(isExpanded ? null : item.key)}
+                  type="button"
+                >
+                  {showIcons ? <CategoryShareIcon label={item.label} percentage={percent} segment={segment} /> : null}
+                  <span className="min-w-0 space-y-2">
+                    <span className="grid grid-cols-[1fr_auto] items-start gap-3">
+                      <span className="min-w-0">
+                        <span className="truncate text-sm font-medium text-slate-900">{displayLabel}</span>
+                        <span className="block text-xs text-slate-500">{countLabel}</span>
+                      </span>
+                      <span className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</span>
                     </span>
-                    <span className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</span>
+                    <span className="block h-2 overflow-hidden rounded-full bg-slate-100">
+                      <span
+                        aria-label={`${displayLabel} ${isIncome ? "income" : "spending"} share ${percent}%`}
+                        aria-valuemax={100}
+                        aria-valuemin={0}
+                        aria-valuenow={percent}
+                        className="block h-full rounded-full"
+                        role="meter"
+                        style={{ backgroundColor: chartColor, width: `${percent}%` }}
+                      />
+                    </span>
                   </span>
-                  <span className="block h-2 overflow-hidden rounded-full bg-slate-100">
-                    <span
-                      aria-label={`${displayLabel} ${isIncome ? "income" : "spending"} share ${percent}%`}
-                      aria-valuemax={100}
-                      aria-valuemin={0}
-                      aria-valuenow={percent}
-                      className="block h-full rounded-full"
-                      role="meter"
-                      style={{ backgroundColor: chartColor, width: `${percent}%` }}
-                    />
-                  </span>
-                </span>
-              </button>
+                </button>
+                <InspectActivityLink
+                  href={buildActivityInspectHref({ category: inspectCategory, month: inspectMonth })}
+                  locale={locale}
+                />
+              </div>
               {showIcons && !isIncome && getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
                 <Link
                   className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
@@ -1621,7 +1680,15 @@ function TimeframeCategoryBreakdown({
                 <div className={showIcons ? "ml-11 mt-2 rounded-lg bg-slate-50 px-3 py-2" : "mt-2 rounded-lg bg-slate-50 px-3 py-2"}>
                   <div className="space-y-2">
                     {item.recentEntries.map((entry) => (
-                      <div className="grid grid-cols-[1fr_auto] gap-3" key={entry.id}>
+                      <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3" key={entry.id}>
+                        <InspectActivityLink
+                          href={buildActivityInspectHref({
+                            category: inspectCategory,
+                            focusTransaction: entry.id,
+                            month: getInspectMonthFromDate(entry.occurredAt) ?? inspectMonth,
+                          })}
+                          locale={locale}
+                        />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title)}</p>
                           <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
@@ -1637,7 +1704,7 @@ function TimeframeCategoryBreakdown({
         }
 
         return (
-          <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
+          <div className="grid grid-cols-[1fr_auto_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
             <div className={`grid min-w-0 ${showIcons ? "grid-cols-[2rem_1fr] gap-3" : "grid-cols-1"}`}>
               {showIcons ? (
                 <CategoryShareIcon label={item.label} percentage={percent} segment={segment} />
@@ -1658,6 +1725,10 @@ function TimeframeCategoryBreakdown({
               </div>
             </div>
             <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
+            <InspectActivityLink
+              href={buildActivityInspectHref({ category: inspectCategory, month: inspectMonth })}
+              locale={locale}
+            />
           </div>
         );
       })}
@@ -1798,10 +1869,14 @@ function buildCumulativeTrendItems({
 }
 
 function TrendCategoryEntryList({
+  category,
   entries,
+  inspectMonth,
   tone,
 }: {
+  category: string | null;
   entries: TrendCategoryItem["recentEntries"];
+  inspectMonth: string;
   tone: "income" | "expense";
 }) {
   const { locale } = useLocale();
@@ -1821,7 +1896,15 @@ function TrendCategoryEntryList({
             : `-${amountDisplay}`;
 
         return (
-          <div className="grid grid-cols-[1fr_auto] gap-3 rounded-lg bg-white px-3 py-2" key={entry.id}>
+          <div className="grid grid-cols-[auto_1fr_auto] gap-3 rounded-lg bg-white px-3 py-2" key={entry.id}>
+            <InspectActivityLink
+              href={buildActivityInspectHref({
+                category,
+                focusTransaction: entry.id,
+                month: getInspectMonthFromDate(entry.occurredAt) ?? inspectMonth,
+              })}
+              locale={locale}
+            />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-1.5">
                 <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title || "Unnamed transaction")}</p>
@@ -1844,11 +1927,13 @@ function TrendCategoryEntryList({
 
 function TrendCategoryExplorer({
   displayCurrency,
+  inspectMonth,
   items,
   onClearSelectedDay,
   selectedDay,
 }: {
   displayCurrency: string;
+  inspectMonth: string;
   items: TrendCategoryItem[];
   onClearSelectedDay: () => void;
   selectedDay: TrendPointSelection;
@@ -1904,6 +1989,9 @@ function TrendCategoryExplorer({
         ? "text-rose-700"
         : "text-slate-500";
   const selectedDayLabel = selectedDay ? formatSpendingDayLabel(selectedDay) : null;
+  const selectedInspectCategory = selectedItem
+    ? getInspectCategoryValue(selectedItem.key) ?? getInspectCategoryValue(selectedItem.label)
+    : null;
 
   if (!sortedItems.length) {
     return (
@@ -1969,13 +2057,17 @@ function TrendCategoryExplorer({
       ) : null}
       {selectedItem ? (
         <div className="rounded-lg bg-slate-50 px-3 py-3">
-          <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
+          <div className="mb-3 grid grid-cols-[1fr_auto_auto] gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">{getCategoryLabel(selectedItem.label, locale)}</p>
               <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount, locale)}</p>
               {selectedDayLabel ? <p className="text-xs text-slate-500">{t("insights.trend.through", locale)} {selectedDayLabel}</p> : null}
             </div>
             <p className={`whitespace-nowrap text-sm font-semibold ${selectedAmountClass}`}>{selectedHasMovement ? selectedAmountDisplay : formatMoney(0, displayCurrency)}</p>
+            <InspectActivityLink
+              href={buildActivityInspectHref({ category: selectedInspectCategory, month: inspectMonth })}
+              locale={locale}
+            />
           </div>
           {selectedHasMovement ? <div className="mb-3 grid gap-2 text-xs text-slate-600">
             {selectedIncomeMinor > 0 ? (
@@ -1998,20 +2090,22 @@ function TrendCategoryExplorer({
               {selectedIncomeEntries.length ? (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-slate-700">{t("insights.income", locale)}</p>
-                  <TrendCategoryEntryList entries={selectedIncomeEntries} tone="income" />
+                  <TrendCategoryEntryList category={selectedInspectCategory} entries={selectedIncomeEntries} inspectMonth={inspectMonth} tone="income" />
                 </div>
               ) : null}
               {selectedExpenseEntries.length ? (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-slate-700">{t("insights.spending", locale)}</p>
-                  <TrendCategoryEntryList entries={selectedExpenseEntries} tone="expense" />
+                  <TrendCategoryEntryList category={selectedInspectCategory} entries={selectedExpenseEntries} inspectMonth={inspectMonth} tone="expense" />
                 </div>
               ) : null}
               {!selectedIncomeEntries.length && !selectedExpenseEntries.length ? <p className="text-xs text-slate-500">{t("insights.detailsCouldNotLoad", locale)}</p> : null}
             </div>
           ) : (
             <TrendCategoryEntryList
+              category={selectedInspectCategory}
               entries={selectedIsIncomeOnly ? selectedIncomeEntries : selectedExpenseEntries}
+              inspectMonth={inspectMonth}
               tone={selectedIsIncomeOnly ? "income" : "expense"}
             />
           )}
@@ -2210,6 +2304,7 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
             {isTrend ? (
               <TrendCategoryExplorer
                 displayCurrency={data.displayCurrency}
+                inspectMonth={data.selectedMonth}
                 items={trendBreakdownItems}
                 onClearSelectedDay={() => setSelectedTrendDay(null)}
                 selectedDay={selectedTrendDay}
@@ -2218,6 +2313,7 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
               <TimeframeCategoryBreakdown
                 emptyMessage={breakdownEmptyMessage}
                 expandable={data.selectedChartMode === "bars"}
+                inspectMonth={data.selectedMonth}
                 items={breakdownItems}
                 segment={breakdownSegment}
                 showIcons
@@ -2567,6 +2663,7 @@ type GroupedMixEntry = {
   count: number;
   totalMinor: number;
   latestOccurredAt: string;
+  focusTransactionId: string | null;
 };
 
 function normalizeMixEntryTitle(title: string) {
@@ -2640,6 +2737,7 @@ function buildGroupedMixEntries(entries: SpendingMixRecentEntry[], displayCurren
       count: group.count,
       totalMinor: group.totalMinor,
       latestOccurredAt: group.latestOccurredAt,
+      focusTransactionId: group.count === 1 ? group.firstEntry.id : null,
     }))
     .sort((a, b) => {
       if (b.totalMinor !== a.totalMinor) {
@@ -2659,12 +2757,14 @@ function buildGroupedMixEntries(entries: SpendingMixRecentEntry[], displayCurren
 function SpendingMixRows({
   displayCurrency,
   items,
+  inspectMonth,
   onSelect,
   selectedKey,
   segment,
   visibleItems,
 }: {
   displayCurrency: string;
+  inspectMonth: string;
   items: InsightsData["categoryBreakdown"];
   onSelect: (key: string) => void;
   selectedKey: string | null;
@@ -2695,6 +2795,7 @@ function SpendingMixRows({
         const chartColor = getCategoryChartColor(item);
         const groupedEntries = isExpanded ? buildGroupedMixEntries(item.recentEntries, displayCurrency) : [];
         const displayLabel = getCategoryLabel(item.label, locale);
+        const inspectCategory = getInspectCategoryValue(item.key) ?? getInspectCategoryValue(item.label);
 
         return (
           <div key={item.key} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
@@ -2740,6 +2841,12 @@ function SpendingMixRows({
                 </span>
               </span>
             </button>
+            <div className="ml-11 mt-2">
+              <InspectActivityLink
+                href={buildActivityInspectHref({ category: inspectCategory, month: inspectMonth })}
+                locale={locale}
+              />
+            </div>
             {getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
               <Link
                 className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
@@ -2753,7 +2860,15 @@ function SpendingMixRows({
                 <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
                   <div className="space-y-2">
                     {groupedEntries.map((entry) => (
-                      <div key={entry.key} className="grid grid-cols-[1fr_auto] gap-3">
+                      <div key={entry.key} className="grid grid-cols-[auto_1fr_auto] items-start gap-3">
+                        <InspectActivityLink
+                          href={buildActivityInspectHref({
+                            category: inspectCategory,
+                            focusTransaction: entry.focusTransactionId,
+                            month: getInspectMonthFromDate(entry.latestOccurredAt) ?? inspectMonth,
+                          })}
+                          locale={locale}
+                        />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-slate-800">{entry.title}</p>
                           <p className="text-xs text-slate-500">{entry.metaLabel}</p>
@@ -2829,7 +2944,15 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
             const categoryDisplayLabel = getCategoryLabel(item.categoryLabel, locale);
 
             return (
-              <div key={item.id} className="grid grid-cols-[1.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+              <div key={item.id} className="grid grid-cols-[auto_1.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                <InspectActivityLink
+                  href={buildActivityInspectHref({
+                    category: getInspectCategoryValue(item.categoryLabel),
+                    focusTransaction: item.id,
+                    month: getInspectMonthFromDate(item.occurredAt) ?? data.selectedMonth,
+                  })}
+                  locale={locale}
+                />
                 <CategoryIcon aria-hidden="true" className="mt-0.5 h-4 w-4" style={{ color: visuals.primary }} />
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>

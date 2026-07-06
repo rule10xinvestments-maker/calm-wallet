@@ -38,6 +38,9 @@ type TransactionsPageProps = {
   searchParams?: Promise<{
     view?: string;
     q?: string;
+    month?: string;
+    category?: string;
+    focusTransaction?: string;
   }>;
 };
 
@@ -220,6 +223,9 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       updateAction={updateTransactionAction}
       updateOwedNoteNoteAction={updateOwedNoteNoteAction}
       loadError={loadError}
+      initialInspectCategory={resolvedSearchParams.category ?? null}
+      initialFocusTransactionId={resolvedSearchParams.focusTransaction ?? null}
+      initialInspectMonth={resolvedSearchParams.month ?? null}
     />
   );
 }

@@ -14,6 +14,7 @@
     "restore": "Restaurer",
     "confirm": "Confirmer",
     "search": "Rechercher",
+    "clear": "Effacer",
     "loading": "Chargement",
     "retry": "Réessayer",
     "all": "Tout",
@@ -190,6 +191,10 @@
     "searchAria": "Rechercher des transactions",
     "summary": "Résumé",
     "owed": "À recevoir/payer",
+    "inspect": {
+      "viewInActivity": "Voir dans Activité",
+      "showingCategory": "Affichage de {category}"
+    },
     "filters": {
       "allLabel": "Toutes les transactions",
       "recurring": "Récurrents",

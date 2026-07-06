@@ -14,6 +14,7 @@
     "restore": "Restaurar",
     "confirm": "Confirmar",
     "search": "Buscar",
+    "clear": "Borrar",
     "loading": "Cargando",
     "retry": "Reintentar",
     "all": "Todo",
@@ -190,6 +191,10 @@
     "searchAria": "Buscar transacciones",
     "summary": "Resumen",
     "owed": "Pendientes",
+    "inspect": {
+      "viewInActivity": "Ver en Actividad",
+      "showingCategory": "Mostrando {category}"
+    },
     "filters": {
       "allLabel": "Todas las transacciones",
       "recurring": "Recurrentes",

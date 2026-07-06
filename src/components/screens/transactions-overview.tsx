@@ -21,7 +21,7 @@ import type { TransactionMutationState } from "@/lib/server/transaction-mutation
 import type { OwedNote } from "@/domain/owed-notes/types";
 import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 import { t } from "@/lib/i18n";
-import { getCategoryDisplayLabel, getCategoryLabel } from "@/lib/categories/category-labels";
+import { getCategoryDisplayLabel, getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
@@ -143,6 +143,57 @@ function getMonthKey(year: number, monthIndex: number) {
 
 function getCurrentMonthKey(now = new Date()) {
   return getMonthKey(now.getFullYear(), now.getMonth());
+}
+
+function parseMonthParam(value: string | null | undefined) {
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [yearPart, monthPart] = value.split("-");
+  const year = Number(yearPart);
+  const monthNumber = Number(monthPart);
+
+  if (!Number.isInteger(year) || !Number.isInteger(monthNumber) || monthNumber < 1 || monthNumber > 12) {
+    return null;
+  }
+
+  return { year, monthIndex: monthNumber - 1 };
+}
+
+function normalizeInspectCategory(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+}
+
+function transactionMatchesInspectCategory(item: TransactionListItem, categoryContext: string | null) {
+  if (!categoryContext) {
+    return true;
+  }
+
+  if (item.categoryId === categoryContext) {
+    return true;
+  }
+
+  const contextKey = getCategoryLabelKey(categoryContext);
+  if (!contextKey) {
+    return false;
+  }
+
+  return getCategoryLabelKey(item.categoryId) === contextKey || getCategoryLabelKey(item.categoryLabel) === contextKey;
+}
+
+function getInitialInspectCategory(category: string | null | undefined, items: TransactionListItem[]) {
+  const normalized = normalizeInspectCategory(category);
+  if (!normalized) {
+    return null;
+  }
+
+  return items.some((item) => transactionMatchesInspectCategory(item, normalized)) ? normalized : null;
 }
 
 function getPeriodBounds(
@@ -516,6 +567,9 @@ type TransactionsOverviewProps = {
   adjustOwedNoteAmountAction?: OwedNoteActionHandler;
   updateOwedNoteNoteAction?: OwedNoteActionHandler;
   settleOwedNoteAction?: OwedNoteActionHandler;
+  initialInspectCategory?: string | null;
+  initialFocusTransactionId?: string | null;
+  initialInspectMonth?: string | null;
 };
 
 async function noopOwedNoteAction(state: OwedNoteActionState) {
@@ -1213,17 +1267,21 @@ export function TransactionsOverview({
   adjustOwedNoteAmountAction = noopOwedNoteAction,
   updateOwedNoteNoteAction = noopOwedNoteAction,
   settleOwedNoteAction = noopOwedNoteAction,
+  initialInspectCategory = null,
+  initialFocusTransactionId = null,
+  initialInspectMonth = null,
 }: TransactionsOverviewProps) {
   const { locale } = useLocale();
   const currentDate = useMemo(() => new Date(), []);
+  const initialMonthSelection = parseMonthParam(initialInspectMonth);
   const [activeView, setActiveView] = useState<ActivityFilterView>(currentView);
   const [searchQuery, setSearchQuery] = useState(query);
   const [activePeriod, setActivePeriod] = useState<ActivityPeriod>("month");
   const [selectedMonth, setSelectedMonth] = useState(() => ({
-    year: currentDate.getFullYear(),
-    monthIndex: currentDate.getMonth(),
+    year: initialMonthSelection?.year ?? currentDate.getFullYear(),
+    monthIndex: initialMonthSelection?.monthIndex ?? currentDate.getMonth(),
   }));
-  const [visiblePickerYear, setVisiblePickerYear] = useState(() => currentDate.getFullYear());
+  const [visiblePickerYear, setVisiblePickerYear] = useState(() => initialMonthSelection?.year ?? currentDate.getFullYear());
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [customDraftFrom, setCustomDraftFrom] = useState("");
@@ -1241,6 +1299,10 @@ export function TransactionsOverview({
   const [isOwedOpen, setIsOwedOpen] = useState(false);
   const [activeItems, setActiveItems] = useState(items);
   const [deletedItems, setDeletedItems] = useState(recentlyDeletedItems);
+  const [categoryContext, setCategoryContext] = useState<string | null>(() => getInitialInspectCategory(initialInspectCategory, items));
+  const [focusedTransactionId] = useState(() =>
+    initialFocusTransactionId && items.some((item) => item.id === initialFocusTransactionId) ? initialFocusTransactionId : null,
+  );
   const betaStagedImportDetails = importsEnabled ? stagedImportDetails : {};
   const betaStagedImports = importsEnabled ? stagedImports : [];
   const [stagedDetails, setStagedDetails] = useState(betaStagedImportDetails);
@@ -1270,14 +1332,32 @@ export function TransactionsOverview({
       return filterTransactions(activeItems.filter((item) => item.isRecurring), searchQuery);
     }
 
-    const viewItems = filterTransactionsForActiveView(periodItems, activeView);
+    const viewItems = filterTransactionsForActiveView(periodItems, activeView).filter((item) => transactionMatchesInspectCategory(item, categoryContext));
     return filterTransactions(viewItems, searchQuery);
-  }, [activeItems, activeView, periodItems, searchQuery]);
+  }, [activeItems, activeView, categoryContext, periodItems, searchQuery]);
   const filteredDeletedItems = useMemo(
     () => filterTransactions(deletedItems, searchQuery),
     [deletedItems, searchQuery],
   );
   const filteredItems = activeView === "deleted" ? filteredDeletedItems : filteredActiveItems;
+  const categoryContextLabel = categoryContext
+    ? getCategoryLabel(
+        categories.find((category) => category.id === categoryContext)?.label ?? categoryContext,
+        locale,
+        categories.find((category) => category.id === categoryContext)?.label ?? categoryContext,
+      )
+    : null;
+
+  useEffect(() => {
+    if (!focusedTransactionId || typeof document === "undefined") {
+      return;
+    }
+
+    const element = Array.from(document.querySelectorAll<HTMLElement>("[data-transaction-id]")).find(
+      (candidate) => candidate.dataset.transactionId === focusedTransactionId,
+    );
+    element?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }, [focusedTransactionId, filteredItems.length]);
   const filteredPendingCandidates = useMemo(
     () => (activeView === "needs-review" ? filterCandidates(pendingCandidates, searchQuery) : []),
     [activeView, pendingCandidates, searchQuery],
@@ -1952,6 +2032,18 @@ export function TransactionsOverview({
             {!shouldShowSummaryControl && !isDeletedView && !isRecurringView ? (
               <p className="px-1 text-xs font-medium text-slate-500">{contextEntryLabel}</p>
             ) : null}
+            {categoryContext && categoryContextLabel ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900">
+                <span>{t("activity.inspect.showingCategory", locale).replace("{category}", categoryContextLabel)}</span>
+                <button
+                  className="rounded-full px-2 py-0.5 text-sky-700 transition hover:bg-white"
+                  onClick={() => setCategoryContext(null)}
+                  type="button"
+                >
+                  {t("common.clear", locale)}
+                </button>
+              </div>
+            ) : null}
           </div>
           <form
             action="/transactions"
@@ -2005,17 +2097,22 @@ export function TransactionsOverview({
                   />
                 ))}
                 {filteredItems.map((item) => (
-                  <TransactionItemCard
+                  <div
                     key={item.id}
-                    categories={categories}
-                    deleteAction={deleteAction}
-                    initialState={initialActionState}
-                    item={item}
-                    onDeleted={handleItemDeleted}
-                    recategorizeAction={recategorizeAction}
-                    recurringMode={isRecurringView}
-                    updateAction={updateAction}
-                  />
+                    className={focusedTransactionId === item.id ? "rounded-2xl ring-2 ring-sky-300 ring-offset-2 ring-offset-white" : ""}
+                    data-transaction-id={item.id}
+                  >
+                    <TransactionItemCard
+                      categories={categories}
+                      deleteAction={deleteAction}
+                      initialState={initialActionState}
+                      item={item}
+                      onDeleted={handleItemDeleted}
+                      recategorizeAction={recategorizeAction}
+                      recurringMode={isRecurringView}
+                      updateAction={updateAction}
+                    />
+                  </div>
                 ))}
               </>
             )
