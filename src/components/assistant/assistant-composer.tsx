@@ -1242,7 +1242,7 @@ export function AssistantComposer({
                 </select>
               </label>
             </div>
-            <div aria-label="Limit category and period" className="grid grid-cols-[minmax(0,1fr)_minmax(7.75rem,0.85fr)] gap-2" role="group">
+            <div aria-label="Limit category and period" className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-[minmax(7rem,0.72fr)_minmax(10rem,1fr)]" role="group">
               <div className="space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("common.category", locale)}</span>
                 <button
@@ -1254,13 +1254,14 @@ export function AssistantComposer({
                   onClick={() => setIsLimitCategoryPickerOpen((isOpen) => !isOpen)}
                   type="button"
                 >
-                  <span className="flex min-w-0 items-center">
+                  <span className="flex min-w-0 items-center gap-2">
                     <SelectedLimitCategoryIcon
                       aria-hidden="true"
                       className="size-4 shrink-0"
                       strokeWidth={2.1}
                       style={{ color: selectedLimitCategoryVisuals.primary }}
                     />
+                    <span className="min-w-0 truncate">{selectedLimitCategoryDisplayLabel}</span>
                   </span>
                   <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isLimitCategoryPickerOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -1271,7 +1272,7 @@ export function AssistantComposer({
                   {(["weekly", "monthly"] as const).map((period) => (
                     <button
                       aria-pressed={limitPeriod === period}
-                      className={`text-sm font-semibold capitalize transition ${
+                      className={`min-w-0 px-2 py-2 text-sm font-semibold capitalize leading-tight transition ${
                         limitPeriod === period ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-white"
                       }`}
                       key={period}

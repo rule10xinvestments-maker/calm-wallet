@@ -103,7 +103,7 @@
     },
     "limits": {
       "title": "Limite",
-      "helper": "Setează limite săptămânale sau lunare.",
+      "helper": "Setează limite.",
       "createTitle": "Creează o limită",
       "createHelper": "Limită pe categorie.",
       "setLimit": "Setează o limită",
@@ -115,7 +115,7 @@
         "weekly": "săptămânal",
         "monthly": "lunar"
       },
-      "repeatWeekly": "Repetă în fiecare săptămână",
+      "repeatWeekly": "Repetă săptămânal",
       "repeatMonthly": "Repetă în fiecare lună",
       "saveLimit": "Salvează limita",
       "manageTitle": "Gestionează limite",
