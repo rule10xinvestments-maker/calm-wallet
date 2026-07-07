@@ -963,6 +963,27 @@ describe("assistant composer", () => {
     expect(formData.get("categoryLabel")).toBe("Groceries");
   });
 
+  it("keeps Romanian Manual controls readable on mobile", () => {
+    renderComposerWithLocale("ro", undefined, [], undefined, manualCategoryOptions);
+
+    fireEvent.click(screen.getByRole("button", { name: "Manual" }));
+
+    const transactionTypeGroup = screen.getByRole("group", { name: "Tip tranzacție" });
+    expect(transactionTypeGroup.parentElement).not.toHaveClass("min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]");
+    expect(screen.getByRole("button", { name: "Cheltuială" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Venit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Magazin" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Recurent"));
+
+    expect(screen.getByText("Creează automat înregistrări urmărite.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "săptămânal" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "lunar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "anual" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Data de început").parentElement?.parentElement).toHaveClass("grid-cols-1");
+    expect(screen.getByLabelText("Data de sfârșit")).toBeDisabled();
+  });
+
   it("keeps Manual category picker buttons calm while leaving the selected category obvious", () => {
     renderComposer(undefined, [], undefined, manualCategoryOptions);
 

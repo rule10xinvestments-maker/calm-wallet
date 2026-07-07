@@ -266,6 +266,7 @@ export function AssistantComposer({
 }: AssistantComposerProps) {
   const { locale } = useLocale();
   const useRomanianLimitLayout = locale === "ro";
+  const useRomanianManualLayout = locale === "ro";
   const supportedDefaultCurrency = getSupportedManualCurrency(defaultCurrency);
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
   const [manualName, setManualName] = useState("");
@@ -479,7 +480,7 @@ export function AssistantComposer({
     const trimmed = manualMerchant.trim();
 
     if (!trimmed) {
-      return t("common.merchant", locale);
+      return useRomanianManualLayout ? t("assistant.manual.merchantChip", locale) : t("common.merchant", locale);
     }
 
     return trimmed.length <= 16 ? trimmed : t("assistant.manual.merchantAdded", locale);
@@ -958,10 +959,14 @@ export function AssistantComposer({
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]">
+              <div
+                className={`grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 ${
+                  useRomanianManualLayout ? "" : "min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]"
+                }`}
+              >
                 <div
                   aria-label={t("assistant.manual.transactionType", locale)}
-                  className="grid min-h-[3.5rem] grid-cols-2 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  className="grid min-h-[3.5rem] grid-cols-2 rounded-lg border border-slate-200 bg-white"
                   role="group"
                 >
                   <button
@@ -973,7 +978,7 @@ export function AssistantComposer({
                     type="button"
                   >
                     <ReceiptText aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                    <span className="whitespace-nowrap">{t("common.spend", locale)}</span>
+                    <span className="whitespace-nowrap">{useRomanianManualLayout ? t("assistant.manual.spend", locale) : t("common.spend", locale)}</span>
                   </button>
                   <button
                     aria-pressed={manualTransactionType === "income"}
@@ -1039,7 +1044,7 @@ export function AssistantComposer({
                       type="button"
                     >
                       <ChipIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                      <span className="max-w-full break-words leading-tight">{label as string}</span>
+                      <span className="max-w-full whitespace-nowrap leading-tight">{label as string}</span>
                     </button>
                   );
                 })}
@@ -1096,11 +1101,11 @@ export function AssistantComposer({
                 {manualRecurringEnabled ? (
                   <div className="space-y-2">
                     <p className="text-xs text-slate-500">{t("assistant.manual.recurringHelper", locale)}</p>
-                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-50 p-1">
+                    <div className="grid grid-cols-[minmax(7rem,1.35fr)_minmax(4.5rem,0.85fr)_minmax(4.5rem,0.85fr)] gap-1 rounded-xl bg-slate-50 p-1">
                       {(["weekly", "monthly", "yearly"] as const).map((frequency) => (
                         <button
                           aria-pressed={manualRecurringFrequency === frequency}
-                          className={`min-h-10 rounded-lg px-2 py-1 text-xs font-semibold capitalize transition ${
+                          className={`min-h-10 min-w-0 rounded-lg px-2 py-1 text-sm font-semibold capitalize leading-tight transition ${
                             manualRecurringFrequency === frequency ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"
                           }`}
                           key={frequency}
@@ -1111,7 +1116,7 @@ export function AssistantComposer({
                         </button>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={useRomanianManualLayout ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
                       <label className="block space-y-1">
                         <span className="text-xs font-medium text-slate-600">{t("assistant.manual.startDate", locale)}</span>
                         <input

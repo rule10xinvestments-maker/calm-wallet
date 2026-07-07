@@ -79,15 +79,17 @@
       "title": "Manual",
       "helper": "Adaugă un element fără chat.",
       "transactionType": "Tip tranzacție",
+      "spend": "Cheltuială",
       "namePlaceholder": "Cafea, cumpărături, chirie",
+      "merchantChip": "Magazin",
       "merchantAdded": "Comerciant adăugat",
       "noteAdded": "Notă adăugată",
       "optionalMerchant": "Comerciant opțional",
       "optionalNote": "Notă opțională",
       "recurring": "Recurent",
-      "recurringHelper": "Se repetă automat ca înregistrări urmărite.",
+      "recurringHelper": "Creează automat înregistrări urmărite.",
       "startDate": "Data de început",
-      "endDate": "Data de final",
+      "endDate": "Data de sfârșit",
       "repeatUntilOff": "Repetă până îl opresc",
       "saveItem": "Salvează elementul",
       "frequency": {
@@ -97,7 +99,7 @@
       },
       "errors": {
         "amountRequired": "Adaugă o sumă înainte de salvare.",
-        "recurringEndRequired": "Alege o dată de final sau repetă până îl oprești.",
+        "recurringEndRequired": "Alege o dată de sfârșit sau repetă până îl oprești.",
         "saveFailed": "Nu s-a putut salva elementul. Verifică suma și încearcă din nou."
       }
     },
