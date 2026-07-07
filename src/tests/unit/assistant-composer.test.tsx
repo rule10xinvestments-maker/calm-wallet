@@ -695,7 +695,16 @@ describe("assistant composer", () => {
     expect(screen.queryByText("Setează o limită pe categorie.")).not.toBeInTheDocument();
     expect(screen.queryByText("Editează, pune pe pauză sau elimină limite.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Creează o limită/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Categorie: Locuință" }));
+    const categoryPeriodRow = screen.getByRole("group", { name: "Limit category and period" });
+    const romanianCategoryButton = screen.getByRole("button", { name: "Categorie: Locuință" });
+    const weeklyButton = screen.getByRole("button", { name: "săptămânal" });
+
+    expect(categoryPeriodRow).toHaveClass("space-y-2");
+    expect(romanianCategoryButton).toHaveTextContent("Locuință");
+    expect(weeklyButton).toBeInTheDocument();
+    expect(screen.getByLabelText("Repetă săptămânal")).toBeChecked();
+
+    fireEvent.click(romanianCategoryButton);
 
     const picker = screen.getByLabelText("Category picker");
     expect(within(picker).getByRole("button", { name: "Locuință" })).toHaveAttribute("aria-pressed", "true");

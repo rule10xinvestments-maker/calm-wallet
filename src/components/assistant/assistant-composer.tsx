@@ -265,6 +265,7 @@ export function AssistantComposer({
   importsEnabled = areImportsEnabled(),
 }: AssistantComposerProps) {
   const { locale } = useLocale();
+  const useRomanianLimitLayout = locale === "ro";
   const supportedDefaultCurrency = getSupportedManualCurrency(defaultCurrency);
   const [state, formAction, isPending] = useActionState<AssistantActionState, FormData>(action, initialState);
   const [manualName, setManualName] = useState("");
@@ -1242,25 +1243,30 @@ export function AssistantComposer({
                 </select>
               </label>
             </div>
-            <div aria-label="Limit category and period" className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-2" role="group">
+            <div
+              aria-label="Limit category and period"
+              className={useRomanianLimitLayout ? "space-y-2" : "grid grid-cols-[5.25rem_minmax(0,1fr)] gap-2"}
+              role="group"
+            >
               <div className="space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("common.category", locale)}</span>
                 <button
                   aria-expanded={isLimitCategoryPickerOpen}
                   aria-label={`${t("common.category", locale)}: ${selectedLimitCategoryDisplayLabel}`}
-                  className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border bg-slate-50 px-2 py-2 text-left text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
+                  className={`flex min-h-11 w-full items-center rounded-xl border bg-slate-50 py-2 text-left text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
                     isLimitCategoryPickerOpen ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-white"
-                  }`}
+                  } ${useRomanianLimitLayout ? "justify-between gap-2 px-3" : "justify-center gap-1.5 px-2"}`}
                   onClick={() => setIsLimitCategoryPickerOpen((isOpen) => !isOpen)}
                   type="button"
                 >
-                  <span className="flex shrink-0 items-center">
+                  <span className={`flex items-center ${useRomanianLimitLayout ? "min-w-0 gap-2" : "shrink-0"}`}>
                     <SelectedLimitCategoryIcon
                       aria-hidden="true"
                       className="size-4 shrink-0"
                       strokeWidth={2.1}
                       style={{ color: selectedLimitCategoryVisuals.primary }}
                     />
+                    {useRomanianLimitLayout ? <span className="min-w-0 truncate">{selectedLimitCategoryDisplayLabel}</span> : null}
                   </span>
                   <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isLimitCategoryPickerOpen ? "rotate-180" : ""}`} />
                 </button>
