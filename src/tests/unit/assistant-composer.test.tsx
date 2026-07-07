@@ -540,7 +540,7 @@ describe("assistant composer", () => {
     expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
     const closedCategoryButton = screen.getByRole("button", { name: "Category: Housing" });
     expect(closedCategoryButton).toHaveAttribute("aria-expanded", "false");
-    expect(closedCategoryButton).toHaveTextContent("Housing");
+    expect(closedCategoryButton).toHaveTextContent("");
     expect(closedCategoryButton.querySelector(".lucide-house")).toBeInTheDocument();
     expect(screen.getByLabelText("Currency")).toHaveValue("RON");
     expect(screen.getByRole("button", { name: "weekly" })).toHaveAttribute("aria-pressed", "true");
@@ -634,7 +634,7 @@ describe("assistant composer", () => {
 
     expect(screen.queryByRole("combobox", { name: "Category" })).not.toBeInTheDocument();
     const closedCategoryButton = screen.getByRole("button", { name: "Category: Housing" });
-    expect(closedCategoryButton).toHaveTextContent("Housing");
+    expect(closedCategoryButton).toHaveTextContent("");
     expect(closedCategoryButton.querySelector(".lucide-house")).toBeInTheDocument();
     fireEvent.click(closedCategoryButton);
 
@@ -652,7 +652,7 @@ describe("assistant composer", () => {
     expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
     const groceriesCategoryButton = screen.getByRole("button", { name: "Category: Groceries" });
     expect(groceriesCategoryButton).toHaveAttribute("aria-expanded", "false");
-    expect(groceriesCategoryButton).toHaveTextContent("Groceries");
+    expect(groceriesCategoryButton).toHaveTextContent("");
     expect(groceriesCategoryButton.querySelector(".lucide-shopping-basket")).toBeInTheDocument();
   });
 
@@ -712,7 +712,7 @@ describe("assistant composer", () => {
     expect(formData.get("categoryId")).toBe("category-groceries");
   });
 
-  it("keeps the Limits create form readable with compact category and wider period controls", () => {
+  it("keeps the Limits create form readable with icon-only category and wider period controls", () => {
     renderComposer(undefined, [], undefined, manualCategoryOptions);
 
     openLimitsPanel();
@@ -730,11 +730,11 @@ describe("assistant composer", () => {
     expect(amountCurrencyRow).toContainElement(currencySelect);
     expect(categoryPeriodRow).toContainElement(categoryButton);
     expect(categoryPeriodRow).toContainElement(weeklyButton);
-    expect(categoryPeriodRow).toHaveClass("min-[360px]:grid-cols-[minmax(7rem,0.72fr)_minmax(10rem,1fr)]");
+    expect(categoryPeriodRow).toHaveClass("grid-cols-[5.25rem_minmax(0,1fr)]");
     expectElementBefore(amountCurrencyRow, categoryPeriodRow);
     expectElementBefore(amountInput, currencySelect);
     expectElementBefore(categoryButton, weeklyButton);
-    expect(categoryButton).toHaveTextContent("Housing");
+    expect(categoryButton).toHaveTextContent("");
     expect(screen.queryByLabelText("Category picker")).not.toBeInTheDocument();
 
     fireEvent.change(amountInput, { target: { value: "450" } });

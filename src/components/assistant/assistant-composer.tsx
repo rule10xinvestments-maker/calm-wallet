@@ -1242,26 +1242,25 @@ export function AssistantComposer({
                 </select>
               </label>
             </div>
-            <div aria-label="Limit category and period" className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-[minmax(7rem,0.72fr)_minmax(10rem,1fr)]" role="group">
+            <div aria-label="Limit category and period" className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-2" role="group">
               <div className="space-y-1">
                 <span className="text-xs font-medium text-slate-600">{t("common.category", locale)}</span>
                 <button
                   aria-expanded={isLimitCategoryPickerOpen}
                   aria-label={`${t("common.category", locale)}: ${selectedLimitCategoryDisplayLabel}`}
-                  className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
+                  className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border bg-slate-50 px-2 py-2 text-left text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
                     isLimitCategoryPickerOpen ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-white"
                   }`}
                   onClick={() => setIsLimitCategoryPickerOpen((isOpen) => !isOpen)}
                   type="button"
                 >
-                  <span className="flex min-w-0 items-center gap-2">
+                  <span className="flex shrink-0 items-center">
                     <SelectedLimitCategoryIcon
                       aria-hidden="true"
                       className="size-4 shrink-0"
                       strokeWidth={2.1}
                       style={{ color: selectedLimitCategoryVisuals.primary }}
                     />
-                    <span className="min-w-0 truncate">{selectedLimitCategoryDisplayLabel}</span>
                   </span>
                   <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isLimitCategoryPickerOpen ? "rotate-180" : ""}`} />
                 </button>
