@@ -2741,7 +2741,7 @@ describe("insights overview", () => {
     expect(screen.getByText("Market")).toBeInTheDocument();
   });
 
-  it("links Insights transaction and category inspect actions to Activity context", () => {
+  it("links Insights transaction inspect actions to Activity context without category-level inspect links", () => {
     renderInsights(makeInsightsData());
 
     const largestCard = screen.getByTestId("largest-entries-card");
@@ -2751,7 +2751,9 @@ describe("insights overview", () => {
     );
 
     const inspectLinks = screen.getAllByRole("link", { name: "View in Activity" });
-    expect(inspectLinks.some((link) => link.getAttribute("href") === "/transactions?month=2026-04&category=groceries")).toBe(true);
+    expect(inspectLinks).toHaveLength(1);
+    expect(inspectLinks.every((link) => link.getAttribute("href")?.includes("focusTransaction="))).toBe(true);
+    expect(inspectLinks.some((link) => link.getAttribute("href") === "/transactions?month=2026-04&category=groceries")).toBe(false);
   });
 
   it("renders translated Insights inspect labels without translating query values", () => {
@@ -2759,6 +2761,7 @@ describe("insights overview", () => {
 
     const inspectLinks = screen.getAllByRole("link", { name: "Vezi în Activitate" });
     expect(inspectLinks.some((link) => link.getAttribute("href")?.includes("category=groceries"))).toBe(true);
+    expect(inspectLinks.every((link) => link.getAttribute("href")?.includes("focusTransaction="))).toBe(true);
   });
 
   it("switches largest entries between top expenses and income with icons and share copy", () => {
@@ -3222,6 +3225,9 @@ describe("insights overview", () => {
     expect(screen.getByText("Corner market")).toBeInTheDocument();
     expect(screen.queryByText("corner market")).not.toBeInTheDocument();
     expect(screen.getByText("Apr 22")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "View in Activity" }).some((link) =>
+      link.getAttribute("href") === "/transactions?month=2026-04&category=groceries&focusTransaction=entry-1",
+    )).toBe(true);
     expect(screen.getByRole("button", { name: "Hide Groceries entries" })).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.click(screen.getByText("2 entries"));

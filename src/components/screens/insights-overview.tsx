@@ -1631,7 +1631,7 @@ function TimeframeCategoryBreakdown({
         if (expandable) {
           return (
             <div className="border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
-              <div className="grid grid-cols-[1fr_auto] gap-3">
+              <div>
                 <button
                   aria-expanded={isExpanded}
                   aria-label={`${isExpanded ? t("insights.hide", locale) : t("insights.show", locale)} ${displayLabel} ${t("insights.entries", locale)}`}
@@ -1663,10 +1663,6 @@ function TimeframeCategoryBreakdown({
                     </span>
                   </span>
                 </button>
-                <InspectActivityLink
-                  href={buildActivityInspectHref({ category: inspectCategory, month: inspectMonth })}
-                  locale={locale}
-                />
               </div>
               {showIcons && !isIncome && getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
                 <Link
@@ -1680,20 +1676,22 @@ function TimeframeCategoryBreakdown({
                 <div className={showIcons ? "ml-11 mt-2 rounded-lg bg-slate-50 px-3 py-2" : "mt-2 rounded-lg bg-slate-50 px-3 py-2"}>
                   <div className="space-y-2">
                     {item.recentEntries.map((entry) => (
-                      <div className="grid grid-cols-[auto_1fr_auto] items-start gap-3" key={entry.id}>
-                        <InspectActivityLink
-                          href={buildActivityInspectHref({
-                            category: inspectCategory,
-                            focusTransaction: entry.id,
-                            month: getInspectMonthFromDate(entry.occurredAt) ?? inspectMonth,
-                          })}
-                          locale={locale}
-                        />
+                      <div className="grid grid-cols-[1fr_auto] items-start gap-3" key={entry.id}>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title)}</p>
                           <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
                         </div>
-                        <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
+                          <InspectActivityLink
+                            href={buildActivityInspectHref({
+                              category: inspectCategory,
+                              focusTransaction: entry.id,
+                              month: getInspectMonthFromDate(entry.occurredAt) ?? inspectMonth,
+                            })}
+                            locale={locale}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1704,7 +1702,7 @@ function TimeframeCategoryBreakdown({
         }
 
         return (
-          <div className="grid grid-cols-[1fr_auto_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
+          <div className="grid grid-cols-[1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0" key={item.key}>
             <div className={`grid min-w-0 ${showIcons ? "grid-cols-[2rem_1fr] gap-3" : "grid-cols-1"}`}>
               {showIcons ? (
                 <CategoryShareIcon label={item.label} percentage={percent} segment={segment} />
@@ -1725,10 +1723,6 @@ function TimeframeCategoryBreakdown({
               </div>
             </div>
             <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{item.amountDisplay}</p>
-            <InspectActivityLink
-              href={buildActivityInspectHref({ category: inspectCategory, month: inspectMonth })}
-              locale={locale}
-            />
           </div>
         );
       })}
@@ -1896,15 +1890,7 @@ function TrendCategoryEntryList({
             : `-${amountDisplay}`;
 
         return (
-          <div className="grid grid-cols-[auto_1fr_auto] gap-3 rounded-lg bg-white px-3 py-2" key={entry.id}>
-            <InspectActivityLink
-              href={buildActivityInspectHref({
-                category,
-                focusTransaction: entry.id,
-                month: getInspectMonthFromDate(entry.occurredAt) ?? inspectMonth,
-              })}
-              locale={locale}
-            />
+          <div className="grid grid-cols-[1fr_auto] gap-3 rounded-lg bg-white px-3 py-2" key={entry.id}>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-1.5">
                 <p className="truncate text-sm font-medium text-slate-800">{formatTransactionTitleForDisplay(entry.title || "Unnamed transaction")}</p>
@@ -1917,7 +1903,17 @@ function TrendCategoryEntryList({
               </div>
               <p className="text-xs text-slate-500">{entry.occurredLabel}</p>
             </div>
-            <p className={`whitespace-nowrap text-sm font-semibold ${amountClass}`}>{signedAmount}</p>
+            <div className="flex flex-col items-end gap-1">
+              <p className={`whitespace-nowrap text-sm font-semibold ${amountClass}`}>{signedAmount}</p>
+              <InspectActivityLink
+                href={buildActivityInspectHref({
+                  category,
+                  focusTransaction: entry.id,
+                  month: getInspectMonthFromDate(entry.occurredAt) ?? inspectMonth,
+                })}
+                locale={locale}
+              />
+            </div>
           </div>
         );
       })}
@@ -2057,17 +2053,13 @@ function TrendCategoryExplorer({
       ) : null}
       {selectedItem ? (
         <div className="rounded-lg bg-slate-50 px-3 py-3">
-          <div className="mb-3 grid grid-cols-[1fr_auto_auto] gap-3">
+          <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">{getCategoryLabel(selectedItem.label, locale)}</p>
               <p className="text-xs text-slate-500">{formatTransactionCountLabel(selectedItem.transactionCount, locale)}</p>
               {selectedDayLabel ? <p className="text-xs text-slate-500">{t("insights.trend.through", locale)} {selectedDayLabel}</p> : null}
             </div>
             <p className={`whitespace-nowrap text-sm font-semibold ${selectedAmountClass}`}>{selectedHasMovement ? selectedAmountDisplay : formatMoney(0, displayCurrency)}</p>
-            <InspectActivityLink
-              href={buildActivityInspectHref({ category: selectedInspectCategory, month: inspectMonth })}
-              locale={locale}
-            />
           </div>
           {selectedHasMovement ? <div className="mb-3 grid gap-2 text-xs text-slate-600">
             {selectedIncomeMinor > 0 ? (
@@ -2841,12 +2833,6 @@ function SpendingMixRows({
                 </span>
               </span>
             </button>
-            <div className="ml-11 mt-2">
-              <InspectActivityLink
-                href={buildActivityInspectHref({ category: inspectCategory, month: inspectMonth })}
-                locale={locale}
-              />
-            </div>
             {getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
               <Link
                 className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
@@ -2860,20 +2846,24 @@ function SpendingMixRows({
                 <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
                   <div className="space-y-2">
                     {groupedEntries.map((entry) => (
-                      <div key={entry.key} className="grid grid-cols-[auto_1fr_auto] items-start gap-3">
-                        <InspectActivityLink
-                          href={buildActivityInspectHref({
-                            category: inspectCategory,
-                            focusTransaction: entry.focusTransactionId,
-                            month: getInspectMonthFromDate(entry.latestOccurredAt) ?? inspectMonth,
-                          })}
-                          locale={locale}
-                        />
+                      <div key={entry.key} className="grid grid-cols-[1fr_auto] items-start gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-slate-800">{entry.title}</p>
                           <p className="text-xs text-slate-500">{entry.metaLabel}</p>
                         </div>
-                        <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
+                          {entry.focusTransactionId ? (
+                            <InspectActivityLink
+                              href={buildActivityInspectHref({
+                                category: inspectCategory,
+                                focusTransaction: entry.focusTransactionId,
+                                month: getInspectMonthFromDate(entry.latestOccurredAt) ?? inspectMonth,
+                              })}
+                              locale={locale}
+                            />
+                          ) : null}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2944,15 +2934,7 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
             const categoryDisplayLabel = getCategoryLabel(item.categoryLabel, locale);
 
             return (
-              <div key={item.id} className="grid grid-cols-[auto_1.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                <InspectActivityLink
-                  href={buildActivityInspectHref({
-                    category: getInspectCategoryValue(item.categoryLabel),
-                    focusTransaction: item.id,
-                    month: getInspectMonthFromDate(item.occurredAt) ?? data.selectedMonth,
-                  })}
-                  locale={locale}
-                />
+              <div key={item.id} className="grid grid-cols-[1.25rem_1fr_auto] items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
                 <CategoryIcon aria-hidden="true" className="mt-0.5 h-4 w-4" style={{ color: visuals.primary }} />
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">{formatTransactionTitleForDisplay(item.title)}</p>
@@ -2965,7 +2947,17 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
                     </p>
                   ) : null}
                 </div>
-                <p className={`whitespace-nowrap text-sm font-semibold ${isIncome ? "text-emerald-700" : "text-rose-700"}`}>{item.amountDisplay}</p>
+                <div className="flex flex-col items-end gap-1">
+                  <p className={`whitespace-nowrap text-sm font-semibold ${isIncome ? "text-emerald-700" : "text-rose-700"}`}>{item.amountDisplay}</p>
+                  <InspectActivityLink
+                    href={buildActivityInspectHref({
+                      category: getInspectCategoryValue(item.categoryLabel),
+                      focusTransaction: item.id,
+                      month: getInspectMonthFromDate(item.occurredAt) ?? data.selectedMonth,
+                    })}
+                    locale={locale}
+                  />
+                </div>
               </div>
             );
           })
