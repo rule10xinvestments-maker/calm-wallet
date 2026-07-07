@@ -977,10 +977,17 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByLabelText("Recurent"));
 
     expect(screen.getByText("Creează automat înregistrări urmărite.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Repetare/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Program/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("Data de început")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Repetare/ }));
     expect(screen.getByRole("button", { name: "săptămânal" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "lunar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "anual" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Data de început").parentElement?.parentElement).toHaveClass("grid-cols-1");
+
+    fireEvent.click(screen.getByRole("button", { name: /Program/ }));
+    expect(screen.getByLabelText("Data de început")).toHaveClass("w-full");
     expect(screen.getByLabelText("Data de sfârșit")).toBeDisabled();
   });
 
@@ -1062,9 +1069,16 @@ describe("assistant composer", () => {
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
     fireEvent.click(screen.getByLabelText("Recurring"));
     expect(screen.getByText("Repeats automatically as tracked entries.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "monthly" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Frequency/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Schedule/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Frequency/ }));
+    const selectedMonthly = screen.getAllByRole("button", { name: /monthly/ }).find((button) => button.getAttribute("aria-pressed") === "true");
+    expect(selectedMonthly).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "weekly" }));
-    expect(screen.getByLabelText("Start date").parentElement?.parentElement).toHaveClass("grid-cols-2");
+
+    fireEvent.click(screen.getByRole("button", { name: /Schedule/ }));
     expect(screen.getByLabelText("Start date")).toHaveClass("px-3");
     expect(screen.getByLabelText("End date")).toHaveClass("px-3");
     expect(screen.getByLabelText("Repeat until I turn it off")).toBeChecked();
@@ -1093,6 +1107,7 @@ describe("assistant composer", () => {
     openManualEntry();
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
     fireEvent.click(screen.getByLabelText("Recurring"));
+    fireEvent.click(screen.getByRole("button", { name: /Schedule/ }));
     fireEvent.click(screen.getByLabelText("Repeat until I turn it off"));
     expect(screen.getByLabelText("Repeat until I turn it off")).not.toBeChecked();
     expect(screen.getByLabelText("End date")).not.toBeDisabled();

@@ -78,6 +78,7 @@ type UploadFlowState = {
 
 type ActionPanel = "receipt" | "statement" | "recent" | "manual" | "limits" | "owed";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
+type ManualRecurringPanel = "frequency" | "schedule" | null;
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
 type ManualCategoryOption = CategoryPickerOption;
 type LimitSection = "create" | "manage" | null;
@@ -284,6 +285,7 @@ export function AssistantComposer({
   const [manualRecurringStartDate, setManualRecurringStartDate] = useState("");
   const [manualRecurringEndDate, setManualRecurringEndDate] = useState("");
   const [manualRecurringOpenEnded, setManualRecurringOpenEnded] = useState(true);
+  const [manualRecurringPanel, setManualRecurringPanel] = useState<ManualRecurringPanel>(null);
   const [manualFeedback, setManualFeedback] = useState<ManualFeedback>({ status: "idle", message: null });
   const [manualLastSubmitted, setManualLastSubmitted] = useState(false);
   const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
@@ -484,6 +486,20 @@ export function AssistantComposer({
     }
 
     return trimmed.length <= 16 ? trimmed : t("assistant.manual.merchantAdded", locale);
+  }
+
+  function getManualRecurringFrequencyLabel() {
+    return t(`assistant.manual.frequency.${manualRecurringFrequency}`, locale);
+  }
+
+  function getManualRecurringScheduleSummary() {
+    const startDate = manualRecurringStartDate || manualDate || getTodayDateKey();
+
+    if (manualRecurringOpenEnded) {
+      return `${startDate} · ${t("assistant.manual.untilOffSummary", locale)}`;
+    }
+
+    return manualRecurringEndDate ? `${startDate} · ${manualRecurringEndDate}` : startDate;
   }
 
   function chooseManualTransactionType(type: "expense" | "income") {
@@ -1101,66 +1117,109 @@ export function AssistantComposer({
                 {manualRecurringEnabled ? (
                   <div className="space-y-2">
                     <p className="text-xs text-slate-500">{t("assistant.manual.recurringHelper", locale)}</p>
-                    <div className="grid grid-cols-[minmax(7rem,1.35fr)_minmax(4.5rem,0.85fr)_minmax(4.5rem,0.85fr)] gap-1 rounded-xl bg-slate-50 p-1">
-                      {(["weekly", "monthly", "yearly"] as const).map((frequency) => (
-                        <button
-                          aria-pressed={manualRecurringFrequency === frequency}
-                          className={`min-h-10 min-w-0 rounded-lg px-2 py-1 text-sm font-semibold capitalize leading-tight transition ${
-                            manualRecurringFrequency === frequency ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-white"
-                          }`}
-                          key={frequency}
-                          onClick={() => setManualRecurringFrequency(frequency)}
-                          type="button"
-                        >
-                          {t(`assistant.manual.frequency.${frequency}`, locale)}
-                        </button>
-                      ))}
-                    </div>
-                    <div className={useRomanianManualLayout ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
-                      <label className="block space-y-1">
-                        <span className="text-xs font-medium text-slate-600">{t("assistant.manual.startDate", locale)}</span>
-                        <input
-                          className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                          onChange={(event) => setManualRecurringStartDate(event.target.value)}
-                          type="date"
-                          value={manualRecurringStartDate || manualDate || getTodayDateKey()}
+                    <div className="space-y-1 rounded-xl bg-slate-50 p-1">
+                      <button
+                        aria-expanded={manualRecurringPanel === "frequency"}
+                        className="grid min-h-12 w-full grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2 py-2 text-left transition hover:bg-slate-50"
+                        onClick={() => setManualRecurringPanel((current) => (current === "frequency" ? null : "frequency"))}
+                        type="button"
+                      >
+                        <Repeat2 aria-hidden="true" className="size-4 text-slate-500" strokeWidth={2.1} />
+                        <span className="min-w-0">
+                          <span className="block text-xs font-semibold text-slate-700">{t("assistant.manual.frequencyLabel", locale)}</span>
+                          <span className="block break-words text-sm font-semibold capitalize leading-tight text-slate-900">{getManualRecurringFrequencyLabel()}</span>
+                        </span>
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={`size-4 shrink-0 text-slate-400 transition-transform ${manualRecurringPanel === "frequency" ? "rotate-180" : ""}`}
+                          strokeWidth={2.2}
                         />
-                      </label>
-                      <label className="block space-y-1">
-                        <span className="text-xs font-medium text-slate-600">{t("assistant.manual.endDate", locale)}</span>
-                        <input
-                          className={`min-h-10 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
-                            manualRecurringOpenEnded
-                              ? "border-slate-200 bg-slate-100 text-slate-400"
-                              : "border-slate-200 bg-slate-50 text-slate-900"
-                          }`}
-                          disabled={manualRecurringOpenEnded}
-                          onChange={(event) => {
-                            setManualRecurringEndDate(event.target.value);
-                            if (manualFeedback.status === "error") {
-                              setManualFeedback({ status: "idle", message: null });
-                            }
-                          }}
-                          type="date"
-                          value={manualRecurringEndDate}
-                        />
-                      </label>
+                      </button>
+                      {manualRecurringPanel === "frequency" ? (
+                        <div className="space-y-1">
+                          {(["weekly", "monthly", "yearly"] as const).map((frequency) => (
+                            <button
+                              aria-pressed={manualRecurringFrequency === frequency}
+                              className={`flex min-h-11 w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold capitalize transition ${
+                                manualRecurringFrequency === frequency ? "bg-sky-600 text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100"
+                              }`}
+                              key={frequency}
+                              onClick={() => setManualRecurringFrequency(frequency)}
+                              type="button"
+                            >
+                              <span>{t(`assistant.manual.frequency.${frequency}`, locale)}</span>
+                              {manualRecurringFrequency === frequency ? <span aria-hidden="true">✓</span> : null}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                    <label className="flex min-h-11 items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-                      <input
-                        checked={manualRecurringOpenEnded}
-                        className="size-5 accent-sky-600"
-                        onChange={(event) => {
-                          setManualRecurringOpenEnded(event.currentTarget.checked);
-                          if (event.currentTarget.checked) {
-                            setManualRecurringEndDate("");
-                            setManualFeedback({ status: "idle", message: null });
-                          }
-                        }}
-                        type="checkbox"
-                      />
-                      <span>{t("assistant.manual.repeatUntilOff", locale)}</span>
-                    </label>
+                    <div className="space-y-1 rounded-xl bg-slate-50 p-1">
+                      <button
+                        aria-expanded={manualRecurringPanel === "schedule"}
+                        className="grid min-h-12 w-full grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-white px-2 py-2 text-left transition hover:bg-slate-50"
+                        onClick={() => setManualRecurringPanel((current) => (current === "schedule" ? null : "schedule"))}
+                        type="button"
+                      >
+                        <CalendarDays aria-hidden="true" className="size-4 text-slate-500" strokeWidth={2.1} />
+                        <span className="min-w-0">
+                          <span className="block text-xs font-semibold text-slate-700">{t("assistant.manual.scheduleLabel", locale)}</span>
+                          <span className="block break-words text-sm font-medium leading-tight text-slate-900">{getManualRecurringScheduleSummary()}</span>
+                        </span>
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={`size-4 shrink-0 text-slate-400 transition-transform ${manualRecurringPanel === "schedule" ? "rotate-180" : ""}`}
+                          strokeWidth={2.2}
+                        />
+                      </button>
+                      {manualRecurringPanel === "schedule" ? (
+                        <div className="space-y-2 rounded-lg bg-white p-2">
+                          <label className="block space-y-1">
+                            <span className="text-xs font-medium text-slate-600">{t("assistant.manual.startDate", locale)}</span>
+                            <input
+                              className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                              onChange={(event) => setManualRecurringStartDate(event.target.value)}
+                              type="date"
+                              value={manualRecurringStartDate || manualDate || getTodayDateKey()}
+                            />
+                          </label>
+                          <label className="block space-y-1">
+                            <span className="text-xs font-medium text-slate-600">{t("assistant.manual.endDate", locale)}</span>
+                            <input
+                              className={`min-h-10 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
+                                manualRecurringOpenEnded
+                                  ? "border-slate-200 bg-slate-100 text-slate-400"
+                                  : "border-slate-200 bg-slate-50 text-slate-900"
+                              }`}
+                              disabled={manualRecurringOpenEnded}
+                              onChange={(event) => {
+                                setManualRecurringEndDate(event.target.value);
+                                if (manualFeedback.status === "error") {
+                                  setManualFeedback({ status: "idle", message: null });
+                                }
+                              }}
+                              type="date"
+                              value={manualRecurringEndDate}
+                            />
+                          </label>
+                          <label className="flex min-h-11 items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                            <input
+                              checked={manualRecurringOpenEnded}
+                              className="size-5 accent-sky-600"
+                              onChange={(event) => {
+                                setManualRecurringOpenEnded(event.currentTarget.checked);
+                                if (event.currentTarget.checked) {
+                                  setManualRecurringEndDate("");
+                                  setManualFeedback({ status: "idle", message: null });
+                                }
+                              }}
+                              type="checkbox"
+                            />
+                            <span>{t("assistant.manual.repeatUntilOff", locale)}</span>
+                          </label>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </div>
