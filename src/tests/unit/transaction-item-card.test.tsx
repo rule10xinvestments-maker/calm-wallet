@@ -499,7 +499,8 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByLabelText("Recurring")).toBeChecked();
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Repeat until I turn it off")).toBeChecked();
     expect(screen.getByLabelText("End")).toBeDisabled();
     expect(screen.getByText("No end date")).toBeInTheDocument();
@@ -633,7 +634,8 @@ describe("transaction item card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /bill/i }));
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    expect(await screen.findByText("Paused")).toBeInTheDocument();
+    expect(screen.getByLabelText("Recurring")).toBeChecked();
+    expect(screen.queryByText("Paused")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Resume recurring" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -891,6 +893,7 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Occurred date")).toBeInTheDocument();
     expect(screen.getByLabelText("Date and recurring controls").querySelectorAll(".lucide-repeat-2")).toHaveLength(1);
     expect(screen.getByLabelText("Recurring")).not.toBeChecked();
+    expect(screen.queryByText("Disabled")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Recurring frequency" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Recurring"));
@@ -899,6 +902,22 @@ describe("transaction item card", () => {
     expect(screen.getByLabelText("Start")).toBeInTheDocument();
     expect(screen.getByLabelText("End")).toBeDisabled();
     expect(screen.getByText("No end date")).toBeInTheDocument();
+  });
+
+  it("keeps Spanish compact recurring control icon-only in details", () => {
+    renderCardWithLocale("es");
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Editar detalles" }));
+
+    expect(screen.getByLabelText("Date and recurring controls").querySelectorAll(".lucide-repeat-2")).toHaveLength(1);
+    expect(screen.getByLabelText("Recurrentes")).not.toBeChecked();
+    expect(screen.queryByText("Desactivado")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Recurrentes"));
+
+    expect(screen.getByLabelText("Recurrentes")).toBeChecked();
+    expect(screen.queryByText("Activado")).not.toBeInTheDocument();
   });
 
   it("toggles inline action panels from their action buttons", () => {

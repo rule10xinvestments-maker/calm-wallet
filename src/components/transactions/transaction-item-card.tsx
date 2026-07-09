@@ -1029,17 +1029,8 @@ export function TransactionItemCard({
                 </label>
                 <fieldset className="grid min-w-0 gap-1">
                   <legend className="text-xs font-medium text-slate-600">{t("activity.filters.recurring", locale)}</legend>
-                  <div className="flex min-h-10 w-full min-w-0 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
-                    <span className="flex shrink-0 items-center text-sm font-semibold text-slate-800">
-                      <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-sky-700" strokeWidth={2.2} />
-                    </span>
-                  {displayItem.isRecurring ? (
-                    <span className={`rounded-full px-1.5 py-1 text-[11px] font-semibold ${selectedRecurringPaused ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                      {selectedRecurringPaused ? t("activity.recurring.paused", locale) : t("activity.recurring.active", locale)}
-                    </span>
-                  ) : (
-                    <label className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <span>{selectedRecurringEnabled ? t("activity.recurring.on", locale) : t("activity.recurring.off", locale)}</span>
+                  <label className="flex min-h-10 w-full min-w-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2">
+                    <Repeat2 aria-hidden="true" className="size-4 shrink-0 text-sky-700" strokeWidth={2.2} />
                       <input
                         aria-label={t("activity.filters.recurring", locale)}
                         checked={selectedRecurringEnabled}
@@ -1053,9 +1044,7 @@ export function TransactionItemCard({
                         }}
                         type="checkbox"
                       />
-                    </label>
-                  )}
-                  </div>
+                  </label>
                 </fieldset>
               </div>
               {selectedRecurringEnabled ? (
