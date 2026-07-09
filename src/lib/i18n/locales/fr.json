@@ -329,6 +329,7 @@
     "owedToMe": "On me doit",
     "iOwe": "Je dois",
     "createOwedNote": "Créer une note de dette",
+    "dueDateShort": "Échéance",
     "moneyReminder": "Rappel d’argent",
     "open": "Ouvert",
     "settled": "Réglé",
@@ -344,6 +345,8 @@
     "noteAdded": "Note ajoutée",
     "updated": "Mis à jour",
     "noOpenReminders": "Aucun rappel d’argent ouvert.",
+    "noOwedToMe": "Rien à recevoir.",
+    "noIOwe": "Rien à payer.",
     "openReminderCount": "{count} rappel d’argent ouvert",
     "openRemindersCount": "{count} rappels d’argent ouverts",
     "summary": "{owedToMe} à recevoir · {iOwe} à payer"

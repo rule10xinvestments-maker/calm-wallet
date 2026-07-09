@@ -82,6 +82,10 @@ function buildOwedSummary(notes: OwedNote[], locale: SupportedLocale) {
   });
 }
 
+function getEmptyOwedCopy(direction: OwedNoteDirection, locale: SupportedLocale) {
+  return direction === "owed_to_me" ? t("owed.noOwedToMe", locale) : t("owed.noIOwe", locale);
+}
+
 function OwedOptionButton({
   expanded,
   helper,
@@ -202,7 +206,7 @@ export function MoneyOwedPanel({
 
   function renderNoteRows(direction: OwedNoteDirection, items: OwedNote[]) {
     if (!items.length) {
-      return <p className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">{t("owed.noOpenReminders", locale)}</p>;
+      return <p className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">{getEmptyOwedCopy(direction, locale)}</p>;
     }
 
     return (
@@ -487,7 +491,7 @@ export function MoneyOwedPanel({
             type="button"
           >
             {dueDateAdded && createOptionalSection !== "dueDate" ? <Check aria-hidden="true" className="size-3.5" /> : <Calendar aria-hidden="true" className="size-3.5" />}
-            <span className="truncate">{dueDateAdded && createOptionalSection !== "dueDate" ? formatOwedDate(`${createDueDate}T00:00:00.000Z`, locale) : t("common.dueDate", locale)}</span>
+            <span className="truncate">{dueDateAdded && createOptionalSection !== "dueDate" ? formatOwedDate(`${createDueDate}T00:00:00.000Z`, locale) : t("owed.dueDateShort", locale)}</span>
           </button>
         </div>
         {createOptionalSection === "note" ? (

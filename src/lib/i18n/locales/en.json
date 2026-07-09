@@ -329,6 +329,7 @@
     "owedToMe": "Owed to me",
     "iOwe": "I owe",
     "createOwedNote": "Create owed note",
+    "dueDateShort": "Due date",
     "moneyReminder": "Money reminder",
     "open": "Open",
     "settled": "Settled",
@@ -344,6 +345,8 @@
     "noteAdded": "Note added",
     "updated": "Updated",
     "noOpenReminders": "No open money reminders.",
+    "noOwedToMe": "No money owed to you.",
+    "noIOwe": "Nothing to pay.",
     "openReminderCount": "{count} open money reminder",
     "openRemindersCount": "{count} open money reminders",
     "summary": "{owedToMe} owed to you · {iOwe} you owe"

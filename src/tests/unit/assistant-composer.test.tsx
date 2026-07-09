@@ -266,6 +266,41 @@ describe("assistant composer", () => {
     expect(screen.queryByText(/nota de deuda/i)).not.toBeInTheDocument();
   });
 
+  it("uses compact Romanian Owed reminder copy in Assistant", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <AssistantComposer
+          action={async () => ({ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] })}
+          adjustOwedNoteAmountAction={owedAction}
+          createOwedNoteAction={owedAction}
+          initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
+          owedNotes={[]}
+          settleOwedNoteAction={owedAction}
+          updateOwedNoteNoteAction={owedAction}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Datorii" }));
+
+    const owedPanel = screen.getByText("Bani de primit/plătit").closest(".rounded-2xl") as HTMLElement;
+    expect(within(owedPanel).getByText("Ține evidența banilor de primit și de plătit.")).toBeInTheDocument();
+    expect(within(owedPanel).getByText("Ce ai de primit.")).toBeInTheDocument();
+    expect(within(owedPanel).getByText("Ce ai de plătit.")).toBeInTheDocument();
+    expect(within(owedPanel).queryByText(/reminder-e/i)).not.toBeInTheDocument();
+
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /De primit/ }));
+    expect(within(owedPanel).getByText("Nu ai bani de primit.")).toBeInTheDocument();
+
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /De plătit/ }));
+    expect(within(owedPanel).getByText("Nu ai datorii de plătit.")).toBeInTheDocument();
+
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /Creează reminder/ }));
+    expect(within(owedPanel).getByRole("button", { name: "Notă" })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: "Termen" })).toBeInTheDocument();
+    expect(within(owedPanel).queryByRole("button", { name: "Scadență" })).not.toBeInTheDocument();
+  });
+
   it("creates an owed note from Assistant and preserves collapsed optional values", async () => {
     const createOwedNoteAction = vi.fn(async () => ({
       status: "success" as const,

@@ -134,9 +134,9 @@
     },
     "owed": {
       "title": "Bani de primit/plătit",
-      "helper": "Creează și actualizează reminder-e.",
-      "owedToMeHelper": "Bani pe care alții ți-i datorează.",
-      "iOweHelper": "Bani pe care trebuie să îi plătești.",
+      "helper": "Ține evidența banilor de primit și de plătit.",
+      "owedToMeHelper": "Ce ai de primit.",
+      "iOweHelper": "Ce ai de plătit.",
       "createNoteHelper": "Adaugă un reminder de bani."
     },
     "recent": {
@@ -331,6 +331,7 @@
     "owedToMe": "De primit",
     "iOwe": "De plătit",
     "createOwedNote": "Creează reminder",
+    "dueDateShort": "Termen",
     "moneyReminder": "Reminder de bani",
     "open": "Deschis",
     "settled": "Achitat",
@@ -345,7 +346,9 @@
     "markSettled": "Marchează achitat",
     "noteAdded": "Notă adăugată",
     "updated": "Actualizat",
-    "noOpenReminders": "Nu există reminder-e de bani deschise.",
+    "noOpenReminders": "Nu ai remindere active.",
+    "noOwedToMe": "Nu ai bani de primit.",
+    "noIOwe": "Nu ai datorii de plătit.",
     "openReminderCount": "{count} reminder de bani deschis",
     "openRemindersCount": "{count} reminder-e de bani deschise",
     "summary": "{owedToMe} de primit · {iOwe} de plătit"
