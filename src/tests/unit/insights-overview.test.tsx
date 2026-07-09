@@ -1397,13 +1397,14 @@ describe("insights overview", () => {
 
     const card = screen.getByTestId("timeframe-insights-card");
 
-    expect(within(card).getByText("Housing")).toBeInTheDocument();
-    expect(within(card).queryByText("Salary")).not.toBeInTheDocument();
+    expect(within(card).getByText("Selected category")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Housing entries" })).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Salary entries" })).not.toBeInTheDocument();
 
     fireEvent.click(within(card).getByRole("button", { name: "Income" }));
 
-    expect(within(card).getByText("Salary")).toBeInTheDocument();
-    expect(within(card).queryByText("Housing")).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Salary entries" })).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Housing entries" })).not.toBeInTheDocument();
   });
 
   it("shows income and spending tooltip content on interaction", () => {
@@ -1705,18 +1706,16 @@ describe("insights overview", () => {
 
     expect(screen.getByRole("img", { name: "Tracked spending by week" })).toBeInTheDocument();
     expect(screen.getByText("Showing weeks with tracked spending.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apr 1–7, $150 spending, tap for category breakdown" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Apr 1–7, $120 spending, tap for category breakdown" })).toHaveClass(
       "grid-cols-[5.85rem_minmax(0,1fr)_auto]",
     );
     expect(screen.getByLabelText("Apr 1–7 Housing spending $120")).toBeInTheDocument();
     expect(screen.queryByText("Apr 15")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Apr 1–7, $150 spending, tap for category breakdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apr 1–7, $120 spending, tap for category breakdown" }));
 
     expect(screen.getByLabelText("Apr 1–7 spending category breakdown")).toBeInTheDocument();
     expect(screen.getByText("Total $150")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Select Housing focus" }));
 
     expect(screen.getByText("Week amounts show Housing only")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apr 1–7, $120 spending, hide category breakdown" })).toBeInTheDocument();
@@ -1755,7 +1754,7 @@ describe("insights overview", () => {
     const card = screen.getByTestId("timeframe-insights-card");
 
     expect(within(card).getByRole("button", { name: "Expenses" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(card).getByText("Groceries")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Groceries entries" })).toBeInTheDocument();
     expect(within(card).getByText("100% of spending - 2 transactions")).toBeInTheDocument();
     expect(within(card).queryByText("Market")).not.toBeInTheDocument();
 
@@ -1827,13 +1826,17 @@ describe("insights overview", () => {
 
     const card = screen.getByTestId("timeframe-insights-card");
 
-    expect(within(card).getByText("Salary")).toBeInTheDocument();
-    expect(within(card).getByText("Bonus")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Salary entries" })).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Show Bonus entries" })).not.toBeInTheDocument();
     expect(within(card).getByText("75% of income - 1 transaction")).toBeInTheDocument();
-    expect(within(card).getByText("25% of income - 1 transaction")).toBeInTheDocument();
     expect(within(card).getAllByText("$30").length).toBeGreaterThan(0);
-    expect(within(card).getAllByText("$10").length).toBeGreaterThan(0);
     expect(within(card).queryByText("Market")).not.toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Show all categories" }));
+
+    expect(within(card).getByRole("button", { name: "Show Bonus entries" })).toBeInTheDocument();
+    expect(within(card).getByText("25% of income - 1 transaction")).toBeInTheDocument();
+    expect(within(card).getAllByText("$10").length).toBeGreaterThan(0);
 
     fireEvent.click(within(card).getByRole("button", { name: "Show Salary entries" }));
 
@@ -1870,7 +1873,7 @@ describe("insights overview", () => {
 
     const card = screen.getByTestId("timeframe-insights-card");
 
-    expect(within(card).getByText("Salary")).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show Salary entries" })).toBeInTheDocument();
     expect(within(card).getByText("100% of income - 1 transaction")).toBeInTheDocument();
     expect(within(card).queryByText("Groceries")).not.toBeInTheDocument();
   });
@@ -1910,7 +1913,7 @@ describe("insights overview", () => {
 
     expect(within(legend).queryByText("Groceries")).not.toBeInTheDocument();
     expect(within(legend).queryByText("Dining")).not.toBeInTheDocument();
-    expect(within(legend).getByRole("button", { name: "Select Groceries focus" })).toHaveStyle({ color: "#16a34a" });
+    expect(within(legend).getByRole("button", { name: "Clear Groceries focus" })).toHaveStyle({ color: "#16a34a" });
     expect(within(legend).getByRole("button", { name: "Select Dining focus" })).toHaveStyle({ color: "#e11d48" });
   });
 
@@ -1945,9 +1948,8 @@ describe("insights overview", () => {
       }),
     );
 
-    const housingBubble = screen.getByRole("button", { name: "Select Housing focus" });
+    const housingBubble = screen.getByRole("button", { name: "Clear Housing focus" });
 
-    fireEvent.click(housingBubble);
 
     expect(housingBubble).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("$120 · 1 day this period")).toBeInTheDocument();
@@ -1958,10 +1960,10 @@ describe("insights overview", () => {
     expect(screen.getByLabelText("Apr 10 Housing spending $120")).toHaveClass("opacity-100");
     expect(screen.getByLabelText("Apr 10 Groceries spending $30")).toHaveClass("opacity-35");
 
-    fireEvent.click(housingBubble);
+    fireEvent.click(screen.getByRole("button", { name: "Select Groceries focus" }));
 
     expect(housingBubble).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apr 10, $30 spending, tap for category breakdown" })).toBeInTheDocument();
     expect(screen.queryByText("$120 · 1 day this period")).not.toBeInTheDocument();
   });
 
@@ -1995,7 +1997,7 @@ describe("insights overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Apr 10, $120 spending, tap for category breakdown" }));
 
-    expect(screen.getByRole("button", { name: "Select Housing focus" })).toHaveClass("opacity-100");
+    expect(screen.getByRole("button", { name: "Clear Housing focus" })).toHaveClass("opacity-100");
     expect(screen.getByRole("button", { name: "Select Groceries focus" })).toHaveClass("opacity-25");
   });
 
@@ -2088,7 +2090,7 @@ describe("insights overview", () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Select Housing focus" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear Housing focus" }));
 
     expect(screen.getByText("Limit")).toBeInTheDocument();
     expect(screen.getByText("RON 1,212 of RON 1,500 used · RON 288 left")).toBeInTheDocument();
@@ -2154,7 +2156,7 @@ describe("insights overview", () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Select Education focus" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear Education focus" }));
 
     expect(screen.queryByText("Recurring")).not.toBeInTheDocument();
     expect(screen.queryByText(/0 active recurring/)).not.toBeInTheDocument();
@@ -2212,13 +2214,13 @@ describe("insights overview", () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Select Other focus" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear Other focus" }));
 
     expect(screen.queryByText("Recurring")).not.toBeInTheDocument();
     expect(screen.queryByText("Cold")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
-    fireEvent.click(screen.getByRole("button", { name: "Select Other focus" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear Other focus" }));
 
     expect(screen.getByText("Recurring")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Inspect Other recurring details" }));
@@ -2251,7 +2253,7 @@ describe("insights overview", () => {
       }),
     );
 
-    const day = screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" });
+    const day = screen.getByRole("button", { name: "Apr 10, $120 spending, tap for category breakdown" });
 
     expect(screen.queryByLabelText("Apr 10 spending category breakdown")).not.toBeInTheDocument();
 
@@ -2269,7 +2271,7 @@ describe("insights overview", () => {
     expect(within(panel).getByText("$30")).toBeInTheDocument();
     expect(within(panel).getByText("20%")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $150 spending, hide category breakdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $120 spending, hide category breakdown" }));
 
     expect(screen.queryByLabelText("Apr 10 spending category breakdown")).not.toBeInTheDocument();
   });
@@ -2301,7 +2303,7 @@ describe("insights overview", () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Apr 29, RON 100 spending, tap for category breakdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apr 29, RON 77.01 spending, tap for category breakdown" }));
 
     const panel = screen.getByLabelText("Apr 29 spending category breakdown");
 
@@ -2349,7 +2351,7 @@ describe("insights overview", () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $150 spending, tap for category breakdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apr 10, $120 spending, tap for category breakdown" }));
     expect(screen.getByLabelText("Apr 10 spending category breakdown")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Apr 12, $50 spending, tap for category breakdown" }));
@@ -2519,14 +2521,29 @@ describe("insights overview", () => {
           makeCategory({ key: "needs-category", label: "Needs category", amountMinor: 7500, amountDisplay: "$75", transactionCount: 3 }),
           makeCategory({ key: "dining", label: "Dining", amountMinor: 2500, amountDisplay: "$25", transactionCount: 1 }),
         ],
+        timeframeBars: [
+          makeTimeframeBar({
+            key: "2026-04-10",
+            label: "10",
+            amountMinor: 10000,
+            amountDisplay: "$100",
+            transactionCount: 4,
+            segments: [
+              { key: "needs-category", label: "Needs category", amountMinor: 7500, amountDisplay: "$75", transactionCount: 3 },
+              { key: "dining", label: "Dining", amountMinor: 2500, amountDisplay: "$25", transactionCount: 1 },
+            ],
+          }),
+        ],
       }),
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all categories" }));
 
     expect(screen.getByRole("img", { name: "Needs category represents 75% of spending" })).toHaveStyle({ color: "#0ea5e9" });
     expect(screen.getByRole("img", { name: "Dining represents 25% of spending" })).toHaveStyle({ color: "#e11d48" });
     expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review");
     expect(screen.getByText("75% of spending - 3 transactions")).toBeInTheDocument();
-    expect(screen.getByText("$75")).toBeInTheDocument();
+    expect(screen.getAllByText("$75").length).toBeGreaterThan(0);
     expect(screen.queryByLabelText("Needs category category color")).not.toBeInTheDocument();
   });
 
@@ -2565,6 +2582,8 @@ describe("insights overview", () => {
       }),
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Show all categories" }));
+
     expectCategoryIcon("Needs category", "lucide-circle-help");
     expectCategoryIcon("Housing", "lucide-house");
     expectCategoryIcon("Transfers", "lucide-arrow-right-left");
@@ -2576,7 +2595,7 @@ describe("insights overview", () => {
     const legend = screen.getByLabelText("Expenses category bubbles");
 
     expect(within(legend).getByRole("button", { name: "Select Transfers focus" })).toBeInTheDocument();
-    expect(within(legend).getByRole("button", { name: "Select Needs category focus" })).toHaveStyle({ color: "#0ea5e9" });
+    expect(within(legend).getByRole("button", { name: "Clear Needs category focus" })).toHaveStyle({ color: "#0ea5e9" });
     expect(within(legend).getByRole("button", { name: "Select Housing focus" })).toHaveStyle({ color: "#4f46e5" });
     expect(within(legend).getByRole("button", { name: "Select Transfers focus" })).toHaveStyle({ color: "#475569" });
     expect(within(legend).getByRole("button", { name: "Select Dining focus" })).toHaveStyle({ color: "#e11d48" });
