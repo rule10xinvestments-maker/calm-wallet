@@ -70,6 +70,9 @@ describe("i18n helper", () => {
     expect(t("assistant.limits.periodButtons.monthly", "fr")).toBe("Mois");
     expect(t("assistant.limits.repeatWeekly", "fr")).toBe("Répéter chaque semaine");
     expect(t("assistant.limits.repeatMonthly", "fr")).toBe("Répéter chaque mois");
+    expect(t("common.merchant", "fr")).toBe("Magasin");
+    expect(t("assistant.manual.merchantAdded", "fr")).toBe("Magasin ajouté");
+    expect(t("assistant.manual.optionalMerchant", "fr")).toBe("Magasin optionnel");
     expect(t("activity.time.applyRange", "ro")).toBe("Aplică intervalul");
     expect(t("activity.time.clearCustomRange", "fr")).toBe("Effacer la plage");
     expect(t("activity.time.startDate", "es")).toBe("Fecha inicial");

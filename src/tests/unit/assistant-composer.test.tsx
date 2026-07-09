@@ -1123,6 +1123,13 @@ describe("assistant composer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Revenus" }));
     expect(screen.getByRole("button", { name: "Revenus" })).toHaveClass("bg-emerald-600");
+
+    fireEvent.click(screen.getByRole("button", { name: "Magasin" }));
+    expect(screen.getByLabelText("Magasin")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Magasin optionnel")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Magasin"), { target: { value: "Boulangerie du quartier" } });
+    expect(screen.getByRole("button", { name: "Magasin ajouté" })).toBeInTheDocument();
   });
 
   it("keeps Romanian Manual controls readable on mobile", () => {

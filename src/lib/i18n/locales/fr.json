@@ -36,7 +36,7 @@
     "date": "Date",
     "name": "Nom",
     "person": "Personne",
-    "merchant": "Commerçant"
+    "merchant": "Magasin"
   },
   "nav": {
     "assistant": "Assistant",
@@ -80,9 +80,9 @@
       "helper": "Ajoutez un élément sans chat.",
       "transactionType": "Type de transaction",
       "namePlaceholder": "Café, courses, loyer",
-      "merchantAdded": "Commerçant ajouté",
+      "merchantAdded": "Magasin ajouté",
       "noteAdded": "Note ajoutée",
-      "optionalMerchant": "Commerçant optionnel",
+      "optionalMerchant": "Magasin optionnel",
       "optionalNote": "Note optionnelle",
       "recurring": "Récurrent",
       "recurringHelper": "Se répète automatiquement comme entrée suivie.",
