@@ -442,6 +442,7 @@
     "bars": {
       "title": "Bare",
       "categoryBars": "Bare pe categorii",
+      "topCategory": "Categoria principală",
       "day": "Zi",
       "week": "Săptămână",
       "month": "Lună",

@@ -1009,10 +1009,12 @@ function BarsCategoryBubble({
 function BarsCategoryFocusPanel({
   category,
   bucketLabel,
+  isFocused = false,
   onInspect,
 }: {
   category: BarsCategoryItem;
   bucketLabel: string;
+  isFocused?: boolean;
   onInspect: (kind: "limit" | "recurring") => void;
 }) {
   const { locale } = useLocale();
@@ -1032,9 +1034,11 @@ function BarsCategoryFocusPanel({
           <p className="text-xs leading-5 text-slate-500">
             {category.amountDisplay} · {category.dayCount} {category.dayCount === 1 ? bucketNoun : `${bucketNoun}s`} {t("insights.thisPeriod", locale)}
           </p>
-          <p className="text-[11px] leading-4 text-slate-400">
-            {t("insights.bars.amountsShowCategoryOnly", locale).replace("{bucket}", bucketLabel).replace("{category}", categoryDisplayLabel)}
-          </p>
+          {isFocused ? (
+            <p className="text-[11px] leading-4 text-slate-400">
+              {t("insights.bars.amountsShowCategoryOnly", locale).replace("{bucket}", bucketLabel).replace("{category}", categoryDisplayLabel)}
+            </p>
+          ) : null}
         </div>
       </div>
       {limit || recurring ? (
@@ -1300,7 +1304,7 @@ function TimeframeBarsChart({
       dayCount,
     };
   });
-  const defaultSelectedCategoryKey =
+  const topCategoryKey =
     activeCategoryItems.reduce<BarsCategoryItem | null>((largest, item) => {
       if (Math.max(item.amountMinor, 0) <= 0) {
         return largest;
@@ -1315,39 +1319,40 @@ function TimeframeBarsChart({
     activeCategoryItems[0]?.key ??
     null;
   const selectedCategoryKeyIsVisible = selectedCategoryKey ? activeCategoryItems.some((item) => item.key === selectedCategoryKey) : false;
-  const effectiveSelectedCategoryKey = selectedCategoryKeyIsVisible ? selectedCategoryKey : defaultSelectedCategoryKey;
-  const selectedCategory = effectiveSelectedCategoryKey ? activeCategoryItems.find((item) => item.key === effectiveSelectedCategoryKey) ?? null : null;
+  const activeSelectedCategoryKey = selectedCategoryKeyIsVisible ? selectedCategoryKey : null;
+  const summaryCategoryKey = activeSelectedCategoryKey ?? topCategoryKey;
+  const summaryCategory = summaryCategoryKey ? activeCategoryItems.find((item) => item.key === summaryCategoryKey) ?? null : null;
   const selectedDay = selectedDayKey ? activeBars.find((bar) => bar.key === selectedDayKey) ?? null : null;
   const selectedDayCategoryKeys = new Set((selectedDay ? (isIncome ? selectedDay.incomeSegments : selectedDay.segments) : []).map((segment) => segment.key));
-  const selectedBreakdownItems = effectiveSelectedCategoryKey ? categoryItems.filter((item) => item.key === effectiveSelectedCategoryKey) : [];
-  const visibleBreakdownItems = barsBreakdownExpanded ? categoryItems : selectedBreakdownItems;
+  const summaryBreakdownItems = summaryCategoryKey ? categoryItems.filter((item) => item.key === summaryCategoryKey) : [];
+  const visibleBreakdownItems = barsBreakdownExpanded ? categoryItems : summaryBreakdownItems;
   const showBreakdownToggle = categoryItems.length > 1;
 
   useEffect(() => {
-    if (!effectiveSelectedCategoryKey) {
+    if (!activeSelectedCategoryKey) {
       return;
     }
 
-    const node = bubbleRefs.current.get(effectiveSelectedCategoryKey);
+    const node = bubbleRefs.current.get(activeSelectedCategoryKey);
     if (typeof node?.scrollIntoView === "function") {
       node.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     }
-  }, [effectiveSelectedCategoryKey]);
+  }, [activeSelectedCategoryKey]);
 
   const legend = activeCategoryItems.length ? (
     <div aria-label={`${isIncome ? t("insights.income", locale) : t("insights.expenses", locale)} ${t("insights.bars.categoryBubbles", locale)}`} className="flex scroll-px-3 gap-2 overflow-x-auto px-1 pb-2 pt-1">
       {activeCategoryItems.map((item) => (
         <BarsCategoryBubble
           isDimmed={Boolean(
-            effectiveSelectedCategoryKey
-              ? effectiveSelectedCategoryKey !== item.key
+            activeSelectedCategoryKey
+              ? activeSelectedCategoryKey !== item.key
               : selectedDay && !selectedDayCategoryKeys.has(item.key)
           )}
-          isSelected={effectiveSelectedCategoryKey === item.key}
+          isSelected={activeSelectedCategoryKey === item.key}
           item={item}
           key={item.key}
           onSelect={() => {
-            setSelectedCategoryKey(item.key);
+            setSelectedCategoryKey((current) => (current === item.key ? null : item.key));
             setBarsBreakdownExpanded(false);
           }}
           setRef={(node) => {
@@ -1365,7 +1370,11 @@ function TimeframeBarsChart({
   const breakdown = categoryItems.length ? (
     <div className="space-y-3">
       <p className="text-sm font-semibold text-slate-900">
-        {barsBreakdownExpanded ? t("insights.mix.categoryBreakdown", locale) : t("insights.mix.selectedCategory", locale)}
+        {barsBreakdownExpanded
+          ? t("insights.mix.categoryBreakdown", locale)
+          : activeSelectedCategoryKey
+            ? t("insights.mix.selectedCategory", locale)
+            : t("insights.bars.topCategory", locale)}
       </p>
       <TimeframeCategoryBreakdown
         emptyMessage={isIncome ? t("insights.trend.noIncomeThisMonth", locale) : t("insights.bars.noTrackedSpendingTimeframe", locale)}
@@ -1374,7 +1383,7 @@ function TimeframeBarsChart({
         items={visibleBreakdownItems}
         onSelect={(key) => setSelectedCategoryKey(key)}
         segment={isIncome ? "income" : "expenses"}
-        selectedKey={effectiveSelectedCategoryKey}
+        selectedKey={activeSelectedCategoryKey}
         showIcons
         totalItems={categoryItems}
       />
@@ -1420,11 +1429,12 @@ function TimeframeBarsChart({
             .replace("{context}", context)}
         </p>
         {legend}
-        {selectedCategory ? (
+        {summaryCategory ? (
           <BarsCategoryFocusPanel
             bucketLabel={bucketLabel}
-            category={selectedCategory}
-            onInspect={(kind) => setDetailSheet({ category: selectedCategory, kind })}
+            category={summaryCategory}
+            isFocused={Boolean(activeSelectedCategoryKey)}
+            onInspect={(kind) => setDetailSheet({ category: summaryCategory, kind })}
           />
         ) : null}
         <div className="space-y-2">
@@ -1435,9 +1445,9 @@ function TimeframeBarsChart({
             const width = `${Math.max(10, Math.round((amountMinor / bucketMax) * 100))}%`;
             const label = getBarsBucketLabel(bar);
             const isSelected = selectedDayKey === bar.key;
-            const containsSelectedCategory = effectiveSelectedCategoryKey ? segments.some((segment) => segment.key === effectiveSelectedCategoryKey) : true;
-            const isBarDimmed = Boolean(effectiveSelectedCategoryKey && !containsSelectedCategory);
-            const selectedCategorySegment = effectiveSelectedCategoryKey ? segments.find((segment) => segment.key === effectiveSelectedCategoryKey) ?? null : null;
+            const containsSelectedCategory = activeSelectedCategoryKey ? segments.some((segment) => segment.key === activeSelectedCategoryKey) : true;
+            const isBarDimmed = Boolean(activeSelectedCategoryKey && !containsSelectedCategory);
+            const selectedCategorySegment = activeSelectedCategoryKey ? segments.find((segment) => segment.key === activeSelectedCategoryKey) ?? null : null;
             const rowAmountDisplay = selectedCategorySegment?.amountDisplay ?? amountDisplay;
             const rowGridClass =
               granularity === "week" ? "grid-cols-[5.85rem_minmax(0,1fr)_auto]" : "grid-cols-[3.25rem_minmax(0,1fr)_auto]";
@@ -1466,7 +1476,7 @@ function TimeframeBarsChart({
                           aria-label={`${label} ${getCategoryLabel(segment.label, locale)} ${context} ${segment.amountDisplay}`}
                           className={`h-full transition-opacity ${
                             index > 0 ? "border-l border-white/80" : ""
-                          } ${effectiveSelectedCategoryKey && containsSelectedCategory && segment.key !== effectiveSelectedCategoryKey ? "opacity-35" : "opacity-100"}`}
+                          } ${activeSelectedCategoryKey && containsSelectedCategory && segment.key !== activeSelectedCategoryKey ? "opacity-35" : "opacity-100"}`}
                           key={segment.key}
                           role="img"
                           style={{
@@ -1485,7 +1495,7 @@ function TimeframeBarsChart({
                     bar={bar}
                     isIncome={isIncome}
                     segments={segments}
-                    selectedCategoryKey={effectiveSelectedCategoryKey}
+                    selectedCategoryKey={activeSelectedCategoryKey}
                     totalDisplay={amountDisplay}
                     totalMinor={amountMinor}
                   />
@@ -1506,11 +1516,12 @@ function TimeframeBarsChart({
         {t("insights.bars.showingMonthsWithTracked", locale).replace("{context}", context)}
       </p>
       {legend}
-      {selectedCategory ? (
+      {summaryCategory ? (
         <BarsCategoryFocusPanel
           bucketLabel={bucketLabel}
-          category={selectedCategory}
-          onInspect={(kind) => setDetailSheet({ category: selectedCategory, kind })}
+          category={summaryCategory}
+          isFocused={Boolean(activeSelectedCategoryKey)}
+          onInspect={(kind) => setDetailSheet({ category: summaryCategory, kind })}
         />
       ) : null}
       <div
@@ -1523,8 +1534,8 @@ function TimeframeBarsChart({
           const amountDisplay = isIncome ? bar.incomeAmountDisplay : bar.amountDisplay;
           const segments = isIncome ? bar.incomeSegments : bar.segments;
           const height = amountMinor > 0 ? Math.max(8, Math.round((amountMinor / max) * 128)) : 2;
-          const containsSelectedCategory = effectiveSelectedCategoryKey ? segments.some((segment) => segment.key === effectiveSelectedCategoryKey) : true;
-          const isBarDimmed = Boolean(effectiveSelectedCategoryKey && !containsSelectedCategory);
+          const containsSelectedCategory = activeSelectedCategoryKey ? segments.some((segment) => segment.key === activeSelectedCategoryKey) : true;
+          const isBarDimmed = Boolean(activeSelectedCategoryKey && !containsSelectedCategory);
 
           return (
             <div className={`flex min-w-0 flex-col items-center gap-2 transition-opacity ${isBarDimmed ? "opacity-35" : "opacity-100"}`} key={bar.key}>
@@ -1539,7 +1550,7 @@ function TimeframeBarsChart({
                       <span
                         aria-label={`${bar.label} ${getCategoryLabel(segment.label, locale)} ${isIncome ? "income" : "spending"} ${segment.amountDisplay}`}
                         className={`h-full transition-opacity ${
-                          effectiveSelectedCategoryKey && containsSelectedCategory && segment.key !== effectiveSelectedCategoryKey ? "opacity-35" : "opacity-100"
+                          activeSelectedCategoryKey && containsSelectedCategory && segment.key !== activeSelectedCategoryKey ? "opacity-35" : "opacity-100"
                         }`}
                         key={segment.key}
                         role="img"

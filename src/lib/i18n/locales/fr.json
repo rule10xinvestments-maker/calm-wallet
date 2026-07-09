@@ -440,6 +440,7 @@
     "bars": {
       "title": "Barres",
       "categoryBars": "Barres par catégorie",
+      "topCategory": "Catégorie principale",
       "day": "Jour",
       "week": "Semaine",
       "month": "Mois",
