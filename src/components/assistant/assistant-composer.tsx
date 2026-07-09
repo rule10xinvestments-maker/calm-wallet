@@ -23,6 +23,7 @@ import {
 import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
 import { Button } from "@/components/ui/button";
 import { CalmDatePicker } from "@/components/ui/calm-date-picker";
+import { CompactCurrencyPicker } from "@/components/ui/compact-currency-picker";
 import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import { getCategoryDisplayLabel } from "@/lib/categories/category-labels";
@@ -98,6 +99,12 @@ const receiptImageMaxBytes = 5 * 1024 * 1024;
 const safeReceiptImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const safeCsvMimeTypes = new Set(["text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"]);
 const manualCurrencyOptions = ["RON", "EUR", "USD", "GBP"] as const;
+const manualCurrencyPickerOptions = [
+  { code: "RON", helper: "lei" },
+  { code: "EUR", helper: "€" },
+  { code: "USD", helper: "$" },
+  { code: "GBP", helper: "£" },
+] as const;
 type ManualCurrencyOption = (typeof manualCurrencyOptions)[number];
 function getSupportedManualCurrency(value: string): ManualCurrencyOption {
   const normalized = value.trim().toUpperCase();
@@ -1009,6 +1016,7 @@ export function AssistantComposer({
             >
               <input name="toolName" type="hidden" value="create_transaction" />
               <input name="transactionType" type="hidden" value={manualTransactionType} />
+              <input name="currency" type="hidden" value={manualCurrency} />
               {submittedManualCategoryId ? <input name="categoryId" type="hidden" value={submittedManualCategoryId} /> : null}
               {submittedManualCategoryId ? (
                 <input name="categoryIdSource" type="hidden" value={manualCategoryWasSelected ? "user" : "suggested"} />
@@ -1049,21 +1057,7 @@ export function AssistantComposer({
                     value={manualAmount}
                   />
                 </label>
-                <label className="block space-y-1">
-                  <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
-                  <select
-                    className="min-h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold uppercase text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                    name="currency"
-                    onChange={(event) => setManualCurrency(event.target.value)}
-                    value={manualCurrency}
-                  >
-                    {manualCurrencyOptions.map((currency) => (
-                      <option key={currency} value={currency}>
-                        {currency}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <CompactCurrencyPicker label={t("common.currency", locale)} onChange={setManualCurrency} options={manualCurrencyPickerOptions} value={manualCurrency} />
               </div>
 
               <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 min-[340px]:grid-cols-[minmax(0,1fr)_3.5rem]">
@@ -1074,8 +1068,8 @@ export function AssistantComposer({
                 >
                   <button
                     aria-pressed={manualTransactionType === "expense"}
-                    className={`flex min-w-0 flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 text-center text-xs font-bold leading-none transition ${
-                      manualTransactionType === "expense" ? "bg-rose-600 text-white" : "bg-white text-slate-600 hover:bg-rose-50"
+                    className={`m-1 flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 py-1.5 text-center text-xs font-bold leading-none transition ${
+                      manualTransactionType === "expense" ? "bg-rose-500 text-white shadow-sm" : "text-slate-600 hover:bg-rose-50"
                     }`}
                     onClick={() => chooseManualTransactionType("expense")}
                     type="button"
@@ -1085,8 +1079,8 @@ export function AssistantComposer({
                   </button>
                   <button
                     aria-pressed={manualTransactionType === "income"}
-                    className={`flex min-w-0 flex-col items-center justify-center gap-0.5 border-l border-slate-200 px-1.5 py-1.5 text-center text-xs font-bold leading-none transition ${
-                      manualTransactionType === "income" ? "bg-emerald-600 text-white" : "bg-white text-slate-600 hover:bg-emerald-50"
+                    className={`m-1 flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 py-1.5 text-center text-xs font-bold leading-none transition ${
+                      manualTransactionType === "income" ? "bg-emerald-500 text-white shadow-sm" : "text-slate-600 hover:bg-emerald-50"
                     }`}
                     onClick={() => chooseManualTransactionType("income")}
                     type="button"

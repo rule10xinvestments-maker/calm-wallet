@@ -439,6 +439,35 @@ describe("assistant composer", () => {
     Object.defineProperty(window, "innerHeight", { configurable: true, value: originalInnerHeight });
   });
 
+  it("opens the Assistant Manual currency picker upward when lower viewport space is tight", () => {
+    const originalInnerHeight = window.innerHeight;
+    renderComposerWithLocale("fr");
+
+    fireEvent.click(screen.getByRole("button", { name: t("assistant.actions.manual", "fr") }));
+
+    const currencyButton = screen.getByRole("button", { name: `${t("common.currency", "fr")}: USD` });
+    const rect = {
+      bottom: 386,
+      height: 44,
+      left: 288,
+      right: 380,
+      toJSON: () => ({}),
+      top: 342,
+      width: 92,
+      x: 288,
+      y: 342,
+    } as DOMRect;
+    const rectSpy = vi.spyOn(currencyButton, "getBoundingClientRect").mockReturnValue(rect);
+
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 420 });
+    fireEvent.click(currencyButton);
+
+    expect(screen.getByRole("group", { name: `${t("common.currency", "fr")} options` })).toHaveClass("bottom-full");
+
+    rectSpy.mockRestore();
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: originalInnerHeight });
+  });
+
   it("prepares natural-language input without bypassing the assistant action", () => {
     const { container } = renderComposer();
 
@@ -469,7 +498,7 @@ describe("assistant composer", () => {
     expect(screen.getByPlaceholderText("Coffee, Groceries, Rent")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Salary/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
-    expect(screen.getByLabelText("Currency")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Currency: USD" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Transaction type" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Spend" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Income" })).toHaveAttribute("aria-pressed", "false");
@@ -960,9 +989,15 @@ describe("assistant composer", () => {
     openManualEntry();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Coffee" } });
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "12.50" } });
-    expect(screen.getByLabelText("Currency").tagName).toBe("SELECT");
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["RON", "EUR", "USD", "GBP"]);
-    fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "EUR" } });
+    expect(screen.queryByRole("combobox", { name: "Currency" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Currency: USD" })).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Currency: USD" }));
+    expect(screen.getByRole("group", { name: "Currency options" })).toBeInTheDocument();
+    for (const currency of ["RON", "EUR", "USD", "GBP"]) {
+      expect(screen.getByRole("button", { name: currency })).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "EUR" }));
+    expect(screen.getByRole("button", { name: "Currency: EUR" })).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(screen.getByRole("button", { name: "Merchant" }));
     fireEvent.change(screen.getByPlaceholderText("Optional merchant"), { target: { value: "Market" } });
     expect(screen.getByRole("button", { name: "Market" })).toBeInTheDocument();
@@ -1030,10 +1065,10 @@ describe("assistant composer", () => {
     expect(transactionTypeGroup).toHaveClass("grid-cols-2");
     expect(transactionTypeGroup.parentElement).toHaveClass("min-[340px]:grid-cols-[minmax(0,1fr)_3.5rem]");
     expect(transactionTypeGroup).toHaveClass("min-h-[3.5rem]");
-    expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("bg-rose-600");
+    expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("rounded-md", "bg-rose-500", "shadow-sm");
     expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("flex-col");
     expect(screen.getByRole("button", { name: "Spend" }).querySelector(".lucide-receipt-text")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Income" })).toHaveClass("bg-white");
+    expect(screen.getByRole("button", { name: "Income" })).not.toHaveClass("bg-white");
     expect(screen.getByRole("button", { name: "Income" })).toHaveClass("flex-col");
     expect(screen.getByRole("button", { name: "Income" }).querySelector(".lucide-wallet")).toBeInTheDocument();
 
@@ -1060,7 +1095,7 @@ describe("assistant composer", () => {
 
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
-    expect(screen.getByRole("button", { name: "Income" })).toHaveClass("bg-emerald-600");
+    expect(screen.getByRole("button", { name: "Income" })).toHaveClass("rounded-md", "bg-emerald-500", "shadow-sm");
     expect(screen.getByRole("button", { name: "Category: Other" }).querySelector(".lucide-tag")).toBeInTheDocument();
   });
 
@@ -1167,7 +1202,7 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Catégorie: Courses" })).toHaveTextContent("");
 
     fireEvent.click(screen.getByRole("button", { name: "Revenus" }));
-    expect(screen.getByRole("button", { name: "Revenus" })).toHaveClass("bg-emerald-600");
+    expect(screen.getByRole("button", { name: "Revenus" })).toHaveClass("rounded-md", "bg-emerald-500");
 
     fireEvent.click(screen.getByRole("button", { name: "Magasin" }));
     expect(screen.getByLabelText("Magasin")).toBeInTheDocument();
@@ -1378,6 +1413,12 @@ describe("assistant composer", () => {
       fireEvent.click(screen.getByRole("button", { name: t("common.date", locale) }));
 
       expect(manual.container.querySelector('input[type="date"]')).not.toBeInTheDocument();
+      expect(screen.queryByRole("combobox", { name: t("common.currency", locale) })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: USD` })).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(screen.getByRole("button", { name: `${t("common.currency", locale)}: USD` }));
+      expect(screen.getByRole("group", { name: `${t("common.currency", locale)} options` })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "GBP" }));
+      expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: GBP` })).toHaveAttribute("aria-expanded", "false");
       expect(screen.getAllByRole("button", { name: new RegExp(t("common.date", locale)) }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
 
