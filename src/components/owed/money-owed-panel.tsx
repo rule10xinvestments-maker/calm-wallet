@@ -141,9 +141,12 @@ export function MoneyOwedPanel({
   const [createDirection, setCreateDirection] = useState<OwedNoteDirection>("owed_to_me");
   const [createOptionalSection, setCreateOptionalSection] = useState<CreateOptionalSection>(null);
   const [createCurrency, setCreateCurrency] = useState(normalizedDefaultCurrency);
+  const [isCreateCurrencyPickerOpen, setIsCreateCurrencyPickerOpen] = useState(false);
+  const [createCurrencyPickerPlacement, setCreateCurrencyPickerPlacement] = useState<"up" | "down">("down");
   const [createNote, setCreateNote] = useState("");
   const [createDueDate, setCreateDueDate] = useState("");
   const [createFormKey, setCreateFormKey] = useState(0);
+  const createCurrencyButtonRef = useRef<HTMLButtonElement>(null);
   const createNoteRef = useRef<HTMLTextAreaElement>(null);
   const [createState, createFormAction, isCreatePending] = useActionState(createAction, initialOwedNoteActionState);
   const [adjustState, adjustFormAction, isAdjustPending] = useActionState(adjustAmountAction, initialOwedNoteActionState);
@@ -168,6 +171,7 @@ export function MoneyOwedPanel({
       setCreateNote("");
       setCreateDueDate("");
       setCreateCurrency(normalizedDefaultCurrency);
+      setIsCreateCurrencyPickerOpen(false);
       setCreateFormKey((key) => key + 1);
     }
   }, [createState, normalizedDefaultCurrency]);
@@ -205,6 +209,34 @@ export function MoneyOwedPanel({
   function toggleSection(section: Exclude<OwedSection, null>) {
     setExpandedSection((current) => (current === section ? null : section));
     setEditor(null);
+  }
+
+  function getCreateCurrencyPickerPlacement() {
+    if (typeof window === "undefined") {
+      return "down";
+    }
+
+    const triggerRect = createCurrencyButtonRef.current?.getBoundingClientRect();
+
+    if (!triggerRect) {
+      return "down";
+    }
+
+    const pickerHeight = 88;
+    const spaceBelow = window.innerHeight - triggerRect.bottom;
+    const spaceAbove = triggerRect.top;
+
+    return spaceBelow < pickerHeight && spaceAbove > spaceBelow ? "up" : "down";
+  }
+
+  function toggleCreateCurrencyPicker() {
+    setCreateCurrencyPickerPlacement(getCreateCurrencyPickerPlacement());
+    setIsCreateCurrencyPickerOpen((isOpen) => !isOpen);
+  }
+
+  function selectCreateCurrency(currency: (typeof currencyOptions)[number]) {
+    setCreateCurrency(currency);
+    setIsCreateCurrencyPickerOpen(false);
   }
 
   function renderNoteRows(direction: OwedNoteDirection, items: OwedNote[]) {
@@ -450,29 +482,48 @@ export function MoneyOwedPanel({
           <span className="text-xs font-medium text-slate-600">{t("common.person", locale)}</span>
           <input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" name="personName" placeholder={t("common.name", locale)} required />
         </label>
-        <div className="grid gap-2">
+        <div className={variant === "assistant" ? "grid grid-cols-[minmax(0,1fr)_5.75rem] gap-2" : "grid gap-2"}>
           <label className="block space-y-1">
             <span className="text-xs font-medium text-slate-600">{t("common.amount", locale)}</span>
             <input className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" inputMode="decimal" min="0.01" name="amount" required step="0.01" type="number" />
           </label>
           {variant === "assistant" ? (
-            <div className="block space-y-1">
+            <div className="relative block space-y-1">
               <span className="text-xs font-medium text-slate-600">{t("common.currency", locale)}</span>
-              <div aria-label={`${t("common.currency", locale)}: ${createCurrency}`} className="grid grid-cols-2 gap-1 rounded-xl bg-slate-50 p-1" role="group">
-                {currencyOptions.map((currency) => (
-                  <button
-                    aria-pressed={createCurrency === currency}
-                    className={`min-h-9 rounded-lg px-2 text-center text-sm font-semibold transition ${
-                      createCurrency === currency ? "bg-sky-600 text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100"
-                    }`}
-                    key={currency}
-                    onClick={() => setCreateCurrency(currency)}
-                    type="button"
-                  >
-                    {currency}
-                  </button>
-                ))}
-              </div>
+              <button
+                aria-expanded={isCreateCurrencyPickerOpen}
+                aria-label={`${t("common.currency", locale)}: ${createCurrency}`}
+                className="flex min-h-10 w-full items-center justify-between gap-1 rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+                onClick={toggleCreateCurrencyPicker}
+                ref={createCurrencyButtonRef}
+                type="button"
+              >
+                <span>{createCurrency}</span>
+                <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition-transform ${isCreateCurrencyPickerOpen ? "rotate-180" : ""}`} strokeWidth={2.2} />
+              </button>
+              {isCreateCurrencyPickerOpen ? (
+                <div
+                  aria-label={`${t("common.currency", locale)} options`}
+                  className={`absolute right-0 z-20 grid w-36 grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-lg ${
+                    createCurrencyPickerPlacement === "up" ? "bottom-full mb-1" : "top-full mt-1"
+                  }`}
+                  role="group"
+                >
+                  {currencyOptions.map((currency) => (
+                    <button
+                      aria-pressed={createCurrency === currency}
+                      className={`min-h-9 rounded-lg px-2 text-center text-sm font-semibold transition ${
+                        createCurrency === currency ? "bg-sky-600 text-white shadow-sm" : "bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      }`}
+                      key={currency}
+                      onClick={() => selectCreateCurrency(currency)}
+                      type="button"
+                    >
+                      {currency}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : (
             <label className="block space-y-1">

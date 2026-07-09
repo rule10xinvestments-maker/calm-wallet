@@ -386,13 +386,17 @@ describe("assistant composer", () => {
     expect(screen.queryByRole("button", { name: /Due date:/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Jul 10/ })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Currency" })).not.toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Currency: USD" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Currency: USD" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "RON" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Currency: USD" }));
+    expect(screen.getByRole("group", { name: "Currency options" })).toBeInTheDocument();
     for (const currency of ["RON", "EUR", "USD", "GBP"]) {
       expect(screen.getByRole("button", { name: currency })).toBeInTheDocument();
     }
     expect(screen.getByRole("button", { name: "USD" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "RON" }));
-    expect(screen.getByRole("group", { name: "Currency: RON" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Currency: RON" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "EUR" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(createOwedNoteAction).toHaveBeenCalled());
@@ -403,6 +407,36 @@ describe("assistant composer", () => {
     expect(await screen.findByText("Money reminder saved.")).toBeInTheDocument();
     expect(await screen.findByText("Danel")).toBeInTheDocument();
     expect(screen.queryByLabelText("Person")).not.toBeInTheDocument();
+  });
+
+  it("opens the Assistant Owed currency picker upward when lower viewport space is tight", () => {
+    const originalInnerHeight = window.innerHeight;
+    renderComposerWithLocale("es");
+
+    fireEvent.click(screen.getByRole("button", { name: t("assistant.actions.owed", "es") }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(t("owed.createOwedNote", "es")) }));
+
+    const currencyButton = screen.getByRole("button", { name: `${t("common.currency", "es")}: USD` });
+    const rect = {
+      bottom: 386,
+      height: 40,
+      left: 288,
+      right: 380,
+      toJSON: () => ({}),
+      top: 346,
+      width: 92,
+      x: 288,
+      y: 346,
+    } as DOMRect;
+    const rectSpy = vi.spyOn(currencyButton, "getBoundingClientRect").mockReturnValue(rect);
+
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 420 });
+    fireEvent.click(currencyButton);
+
+    expect(screen.getByRole("group", { name: `${t("common.currency", "es")} options` })).toHaveClass("bottom-full");
+
+    rectSpy.mockRestore();
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: originalInnerHeight });
   });
 
   it("prepares natural-language input without bypassing the assistant action", () => {
@@ -1363,13 +1397,15 @@ describe("assistant composer", () => {
 
       expect(owed.container.querySelector('input[type="date"]')).not.toBeInTheDocument();
       expect(screen.queryByRole("combobox", { name: t("common.currency", locale) })).not.toBeInTheDocument();
-      expect(screen.getByRole("group", { name: `${t("common.currency", locale)}: USD` })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: USD` })).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(screen.getByRole("button", { name: `${t("common.currency", locale)}: USD` }));
+      expect(screen.getByRole("group", { name: `${t("common.currency", locale)} options` })).toBeInTheDocument();
       for (const currency of ["RON", "EUR", "USD", "GBP"]) {
         expect(screen.getByRole("button", { name: currency })).toBeInTheDocument();
       }
       expect(screen.getByRole("button", { name: "USD" })).toHaveAttribute("aria-pressed", "true");
       fireEvent.click(screen.getByRole("button", { name: "EUR" }));
-      expect(screen.getByRole("group", { name: `${t("common.currency", locale)}: EUR` })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: EUR` })).toHaveAttribute("aria-expanded", "false");
       expect(screen.getAllByRole("button", { name: new RegExp(t("common.dueDate", locale)) }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
 
