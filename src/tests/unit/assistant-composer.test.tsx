@@ -756,6 +756,67 @@ describe("assistant composer", () => {
     expect(formData.get("categoryId")).toBe("category-groceries");
   });
 
+  it("uses compact French Limits period labels without changing submitted values", async () => {
+    const upsertLimitAction = vi.fn(async () => ({
+      ...initialBudgetActionState,
+      status: "idle" as const,
+    }));
+
+    render(
+      <LocaleProvider savedLocale="fr">
+        <AssistantComposer
+          action={async () => ({
+            status: "idle",
+            message: null,
+            reviewState: null,
+            latestTransaction: null,
+            recentItems: [],
+          })}
+          categoryOptions={manualCategoryOptions}
+          initialState={{
+            status: "idle",
+            message: null,
+            reviewState: null,
+            latestTransaction: null,
+            recentItems: [],
+          }}
+          recentItems={[]}
+          upsertLimitAction={upsertLimitAction}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Limites" }));
+    expect(screen.getByText("Définissez vos limites.")).toBeInTheDocument();
+    expect(screen.getByText("Limite par catégorie.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Créer une limite/ }));
+
+    const categoryButton = screen.getByRole("button", { name: /Catégorie:/ });
+    expect(categoryButton).toHaveTextContent("");
+    expect(categoryButton.querySelector(".lucide-house")).toBeInTheDocument();
+    expect(categoryButton.querySelector(".lucide-chevron-down")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Semaine" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Mois" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: "Hebdomadaire" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Répéter chaque semaine")).toBeChecked();
+
+    fireEvent.change(screen.getByLabelText("Montant"), { target: { value: "120" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer la limite" }));
+
+    await waitFor(() => expect(upsertLimitAction).toHaveBeenCalledTimes(1));
+    let [, formData] = upsertLimitAction.mock.calls[0] as unknown as [unknown, FormData];
+    expect(formData.get("period")).toBe("weekly");
+
+    fireEvent.click(screen.getByRole("button", { name: "Mois" }));
+    expect(screen.getByLabelText("Répéter chaque mois")).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer la limite" }));
+
+    await waitFor(() => expect(upsertLimitAction).toHaveBeenCalledTimes(2));
+    [, formData] = upsertLimitAction.mock.calls[1] as unknown as [unknown, FormData];
+    expect(formData.get("period")).toBe("monthly");
+  });
+
   it("keeps the Limits create form readable with icon-only category and wider period controls", () => {
     renderComposer(undefined, [], undefined, manualCategoryOptions);
 

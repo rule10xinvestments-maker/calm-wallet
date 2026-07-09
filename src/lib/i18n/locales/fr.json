@@ -106,17 +106,17 @@
     },
     "limits": {
       "title": "Limites",
-      "helper": "Définissez des limites hebdomadaires ou mensuelles.",
+      "helper": "Définissez vos limites.",
       "createTitle": "Créer une limite",
-      "createHelper": "Définissez une limite de catégorie.",
+      "createHelper": "Limite par catégorie.",
       "setLimit": "Définir une limite",
       "editLimit": "Modifier la limite",
       "period": "Période",
       "weekly": "Hebdomadaire",
       "monthly": "Mensuel",
       "periodButtons": {
-        "weekly": "hebdomadaire",
-        "monthly": "mensuel"
+        "weekly": "Semaine",
+        "monthly": "Mois"
       },
       "repeatWeekly": "Répéter chaque semaine",
       "repeatMonthly": "Répéter chaque mois",

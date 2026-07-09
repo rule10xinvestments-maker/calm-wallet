@@ -56,6 +56,12 @@ describe("i18n helper", () => {
     expect(t("owed.noIOwe", "ro")).toBe("Nu ai datorii de plătit.");
     expect(t("assistant.limits.createHelper", "ro")).toBe("Limită pe categorie.");
     expect(t("assistant.limits.manageHelper", "ro")).toBe("Editează sau oprește limite.");
+    expect(t("assistant.limits.helper", "fr")).toBe("Définissez vos limites.");
+    expect(t("assistant.limits.createHelper", "fr")).toBe("Limite par catégorie.");
+    expect(t("assistant.limits.periodButtons.weekly", "fr")).toBe("Semaine");
+    expect(t("assistant.limits.periodButtons.monthly", "fr")).toBe("Mois");
+    expect(t("assistant.limits.repeatWeekly", "fr")).toBe("Répéter chaque semaine");
+    expect(t("assistant.limits.repeatMonthly", "fr")).toBe("Répéter chaque mois");
     expect(t("activity.time.applyRange", "ro")).toBe("Aplică intervalul");
     expect(t("activity.time.clearCustomRange", "fr")).toBe("Effacer la plage");
     expect(t("activity.time.startDate", "es")).toBe("Fecha inicial");
