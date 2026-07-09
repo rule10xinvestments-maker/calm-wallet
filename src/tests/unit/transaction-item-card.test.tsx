@@ -67,6 +67,25 @@ function renderCard(args: {
   return { deleteAction, recategorizeAction, updateAction };
 }
 
+function renderCardWithLocale(locale: "ro" | "es") {
+  const recategorizeAction = vi.fn(async () => initialState);
+  const updateAction = vi.fn(async () => initialState);
+  const deleteAction = vi.fn(async () => initialState);
+
+  render(
+    <LocaleProvider savedLocale={locale}>
+      <TransactionItemCard
+        categories={categories}
+        deleteAction={deleteAction}
+        initialState={initialState}
+        item={makeItem()}
+        recategorizeAction={recategorizeAction}
+        updateAction={updateAction}
+      />
+    </LocaleProvider>,
+  );
+}
+
 describe("transaction item card", () => {
   it("localizes Activity row actions without translating transaction content", () => {
     render(
@@ -1201,6 +1220,20 @@ describe("transaction item card", () => {
     expect(screen.queryByRole("radio", { name: "Pending review" })).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Needs review" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  });
+
+  it.each([
+    ["ro" as const, "Verificat", "Verifică"],
+    ["es" as const, "Revisado", "Revisar"],
+  ])("uses compact %s review labels in details", (locale, reviewedLabel, needsReviewLabel) => {
+    renderCardWithLocale(locale);
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: locale === "ro" ? "Editează detalii" : "Editar detalles" }));
+
+    expect(screen.getByRole("radio", { name: reviewedLabel })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: needsReviewLabel })).toBeChecked();
+    expect(screen.queryByRole("radio", { name: locale === "ro" ? "Necesită verificare" : "Requiere revisión" })).not.toBeInTheDocument();
   });
 
   it.each([

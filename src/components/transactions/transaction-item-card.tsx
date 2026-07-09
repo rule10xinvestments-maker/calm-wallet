@@ -1177,7 +1177,7 @@ export function TransactionItemCard({
                         value={option.value}
                       />
                       <span className="flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm font-medium text-slate-700 transition peer-checked:border-sky-300 peer-checked:bg-sky-50 peer-checked:text-sky-800">
-                        {option.value === "reviewed" ? t("common.reviewed", locale) : t("common.needsReview", locale)}
+                        {option.value === "reviewed" ? t("common.reviewed", locale) : t("common.needsReviewCompact", locale)}
                       </span>
                     </label>
                   ))}

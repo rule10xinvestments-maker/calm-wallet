@@ -25,6 +25,7 @@
     "review": "Vérification",
     "bin": "Corbeille",
     "needsReview": "À vérifier",
+    "needsReviewCompact": "À vérifier",
     "reviewed": "Vérifié",
     "uncategorized": "Non catégorisé",
     "other": "Autre",

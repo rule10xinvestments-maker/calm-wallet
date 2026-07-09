@@ -25,6 +25,7 @@
     "review": "Review",
     "bin": "Bin",
     "needsReview": "Needs review",
+    "needsReviewCompact": "Needs review",
     "reviewed": "Reviewed",
     "uncategorized": "Uncategorized",
     "other": "Other",
