@@ -317,6 +317,7 @@ export function AssistantComposer({
   const [manualCategoryId, setManualCategoryId] = useState("");
   const [manualCategoryWasSelected, setManualCategoryWasSelected] = useState(false);
   const [manualDate, setManualDate] = useState("");
+  const [manualDateHasInvalidDraft, setManualDateHasInvalidDraft] = useState(false);
   const [manualMerchant, setManualMerchant] = useState("");
   const [manualNote, setManualNote] = useState("");
   const [manualRecurringEnabled, setManualRecurringEnabled] = useState(false);
@@ -1002,6 +1003,12 @@ export function AssistantComposer({
                   return;
                 }
 
+                if (manualDateHasInvalidDraft) {
+                  setManualFeedback({ status: "error", message: t("activity.time.enterValidDate", locale) });
+                  setManualLastSubmitted(false);
+                  return;
+                }
+
                 if (manualRecurringEnabled && !manualRecurringOpenEnded && !manualRecurringEndDate) {
                   setManualFeedback({ status: "error", message: t("assistant.manual.errors.recurringEndRequired", locale) });
                   setManualLastSubmitted(false);
@@ -1146,18 +1153,7 @@ export function AssistantComposer({
 
                   {manualOptionalPanel === "date" ? (
                     <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-2">
-                      <button
-                        aria-label={`${t("common.date", locale)}: ${manualDate || t("common.optional", locale)}`}
-                        className="grid min-h-11 w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-900 transition hover:bg-slate-100"
-                        type="button"
-                      >
-                        <span className="min-w-0">
-                          <span className="block text-xs font-medium text-slate-600">{t("common.date", locale)}</span>
-                          <span className="block whitespace-nowrap text-sm font-semibold leading-tight">{manualDate || "YYYY-MM-DD"}</span>
-                        </span>
-                        <CalendarDays aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-                      </button>
-                      <CalmDatePicker selectedDate={manualDate} onSelect={setManualDate} />
+                      <CalmDatePicker label={t("common.date", locale)} onDraftValidityChange={setManualDateHasInvalidDraft} selectedDate={manualDate} onSelect={setManualDate} />
                     </div>
                   ) : null}
 

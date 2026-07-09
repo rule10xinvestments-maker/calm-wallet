@@ -150,6 +150,7 @@ export function MoneyOwedPanel({
   const [createCurrency, setCreateCurrency] = useState(normalizedDefaultCurrency);
   const [createNote, setCreateNote] = useState("");
   const [createDueDate, setCreateDueDate] = useState("");
+  const [createDueDateHasInvalidDraft, setCreateDueDateHasInvalidDraft] = useState(false);
   const [createFormKey, setCreateFormKey] = useState(0);
   const createNoteRef = useRef<HTMLTextAreaElement>(null);
   const [createState, createFormAction, isCreatePending] = useActionState(createAction, initialOwedNoteActionState);
@@ -174,6 +175,7 @@ export function MoneyOwedPanel({
       setCreateOptionalSection(null);
       setCreateNote("");
       setCreateDueDate("");
+      setCreateDueDateHasInvalidDraft(false);
       setCreateCurrency(normalizedDefaultCurrency);
       setCreateFormKey((key) => key + 1);
     }
@@ -528,21 +530,10 @@ export function MoneyOwedPanel({
         ) : null}
         {createOptionalSection === "dueDate" ? (
           <div className="space-y-2">
-            <button
-              aria-label={`${t("common.dueDate", locale)}: ${createDueDate || t("common.optional", locale)}`}
-              className="grid min-h-11 w-full grid-cols-[1fr_auto] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-900 transition hover:bg-slate-100"
-              type="button"
-            >
-              <span className="min-w-0">
-                <span className="block text-xs font-medium text-slate-600">{t("common.dueDate", locale)}</span>
-                <span className="block whitespace-nowrap text-sm font-semibold leading-tight">{createDueDate || "YYYY-MM-DD"}</span>
-              </span>
-              <Calendar aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
-            </button>
-            <CalmDatePicker selectedDate={createDueDate} onSelect={setCreateDueDate} />
+            <CalmDatePicker label={t("common.dueDate", locale)} onDraftValidityChange={setCreateDueDateHasInvalidDraft} selectedDate={createDueDate} onSelect={setCreateDueDate} />
           </div>
         ) : null}
-        <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={isCreatePending} type="submit">
+        <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={isCreatePending || createDueDateHasInvalidDraft} type="submit">
           <Check aria-hidden="true" className="size-4" />
           {t("common.save", locale)}
         </button>

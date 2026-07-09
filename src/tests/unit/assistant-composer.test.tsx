@@ -380,10 +380,14 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Note added" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Due date" }));
-    expect(screen.getByRole("button", { name: /Due date:/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "2026-07-10" }));
+    const dueDateInput = screen.getByLabelText("Due date");
+    expect(dueDateInput).toHaveAttribute("inputmode", "numeric");
+    fireEvent.change(dueDateInput, { target: { value: "20260710" } });
+    expect(dueDateInput).toHaveValue("2026-07-10");
+    expect(screen.getByText("July 2026")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2026-07-10" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Due date" }));
-    expect(screen.queryByRole("button", { name: /Due date:/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Jul 10/ })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Currency" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Currency: USD" })).toHaveAttribute("aria-expanded", "false");
@@ -1044,7 +1048,7 @@ describe("assistant composer", () => {
     const today = new Date();
     const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     fireEvent.click(screen.getByRole("button", { name: "Date" }));
-    expect(screen.getByRole("button", { name: /Date:/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Date")).toHaveAttribute("inputmode", "numeric");
     fireEvent.click(screen.getByRole("button", { name: todayKey }));
     expect(screen.getByRole("button", { name: "Today" })).toBeInTheDocument();
 
@@ -1054,6 +1058,61 @@ describe("assistant composer", () => {
 
     expect(formData.get("categoryId")).toBe("category-groceries");
     expect(formData.get("occurredAt")).toBe(todayKey);
+  });
+
+  it("auto-formats typed Manual dates, syncs the calendar, and blocks invalid drafts", () => {
+    const action = vi.fn(async (state: AssistantActionState): Promise<AssistantActionState> => state);
+    const { container } = renderComposer(undefined, [], action);
+
+    openManualEntry();
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Date" }));
+
+    const dateInput = screen.getByLabelText("Date");
+    fireEvent.change(dateInput, { target: { value: "20260709" } });
+    expect(dateInput).toHaveValue("2026-07-09");
+    expect(screen.getByText("July 2026")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2026-07-09" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "2026-07-10" }));
+    expect(dateInput).toHaveValue("2026-07-10");
+
+    fireEvent.change(dateInput, { target: { value: "20260231" } });
+    expect(dateInput).toHaveValue("2026-02-31");
+    expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save item" }));
+    expect(action).not.toHaveBeenCalled();
+
+    expect(container.querySelector('input[type="date"]')).not.toBeInTheDocument();
+  });
+
+  it("auto-formats typed Owed due dates, syncs the calendar, and disables invalid drafts", () => {
+    render(
+      <AssistantComposer
+        action={async () => ({ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] })}
+        adjustOwedNoteAmountAction={owedAction}
+        createOwedNoteAction={owedAction}
+        initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
+        owedNotes={[]}
+        settleOwedNoteAction={owedAction}
+        updateOwedNoteNoteAction={owedAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Owed" }));
+    fireEvent.click(screen.getByRole("button", { name: /Create owed note/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Due date" }));
+
+    const dueDateInput = screen.getByLabelText("Due date");
+    fireEvent.change(dueDateInput, { target: { value: "20261225" } });
+    expect(dueDateInput).toHaveValue("2026-12-25");
+    expect(screen.getByText("December 2026")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2026-12-25" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.change(dueDateInput, { target: { value: "20260231" } });
+    expect(dueDateInput).toHaveValue("2026-02-31");
+    expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
   it("renders manual action chips with vertical icons and readable labels", () => {
@@ -1447,7 +1506,7 @@ describe("assistant composer", () => {
       expect(screen.getByRole("button", { name: "USD" })).toHaveAttribute("aria-pressed", "true");
       fireEvent.click(screen.getByRole("button", { name: "EUR" }));
       expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: EUR` })).toHaveAttribute("aria-expanded", "false");
-      expect(screen.getAllByRole("button", { name: new RegExp(t("common.dueDate", locale)) }).length).toBeGreaterThan(0);
+      expect(screen.getByLabelText(t("common.dueDate", locale))).toHaveAttribute("inputmode", "numeric");
       expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
 
       if (locale === "fr") {
