@@ -234,6 +234,7 @@
       "select": "Sélectionner",
       "useCustomRange": "Utiliser une période personnalisée",
       "customRange": "Période personnalisée",
+      "customRangeCompact": "Période",
       "chooseDates": "Choisir les dates",
       "startDate": "Date de début",
       "endDate": "Date de fin",

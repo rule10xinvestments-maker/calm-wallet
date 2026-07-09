@@ -53,6 +53,10 @@ describe("i18n helper", () => {
     expect(t("activity.time.clearCustomRange", "fr")).toBe("Effacer la plage");
     expect(t("activity.time.startDate", "es")).toBe("Fecha inicial");
     expect(t("activity.time.chooseDates", "en")).toBe("Choose dates");
+    expect(t("activity.time.customRangeCompact", "en")).toBe("Custom");
+    expect(t("activity.time.customRangeCompact", "ro")).toBe("Interval");
+    expect(t("activity.time.customRangeCompact", "fr")).toBe("Période");
+    expect(t("activity.time.customRangeCompact", "es")).toBe("Rango");
     expect(t("activity.time.enterValidDate", "ro")).toBe("Introdu o dată validă");
     expect(t("activity.time.endDateMustBeAfterStartDate", "es")).toBe("La fecha final debe ser posterior a la inicial");
     expect(t("activity.time.typeDates", "ro")).toBe("Scrie datele");

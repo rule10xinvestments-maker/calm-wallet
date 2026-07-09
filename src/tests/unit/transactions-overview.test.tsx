@@ -1089,13 +1089,16 @@ describe("transactions overview", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(screen.getByRole("button", { name: "Custom range" })).toHaveAttribute("aria-expanded", "false");
+    const appliedCustomRangeButton = screen.getByRole("button", { name: "Custom range" });
+    expect(appliedCustomRangeButton).toHaveAttribute("aria-expanded", "false");
+    expect(within(appliedCustomRangeButton).getByText("Custom")).toBeInTheDocument();
     expect(screen.queryByText("before range")).not.toBeInTheDocument();
     expect(screen.getByText("inside start")).toBeInTheDocument();
     expect(screen.getByText("inside end")).toBeInTheDocument();
     expect(screen.queryByText("after range")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Custom range" }));
+    fireEvent.click(appliedCustomRangeButton);
+    expect(screen.getAllByText("Custom range").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toBeInTheDocument();
     expect(screen.getByText(rangeStart)).toBeInTheDocument();
     expect(screen.getByText(rangeEnd)).toBeInTheDocument();
@@ -1142,6 +1145,15 @@ describe("transactions overview", () => {
     expect(screen.getByRole("button", { name: "Până la 2025-02-23" })).toBeInTheDocument();
     expect(screen.queryByText("Introdu o dată validă")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvează" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Salvează" }));
+
+    const compactCustomRangeButton = screen.getByRole("button", { name: "Interval personalizat" });
+    expect(within(compactCustomRangeButton).getByText("Interval")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rezumat" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "De primit/plătit" })).toBeInTheDocument();
+
+    fireEvent.click(compactCustomRangeButton);
+    expect(screen.getAllByText("Interval personalizat").length).toBeGreaterThan(0);
   });
 
   it("closing custom range restores the normal month grid", () => {

@@ -234,6 +234,7 @@
       "select": "Seleccionar",
       "useCustomRange": "Usar rango personalizado",
       "customRange": "Rango personalizado",
+      "customRangeCompact": "Rango",
       "chooseDates": "Elige fechas",
       "startDate": "Fecha inicial",
       "endDate": "Fecha final",

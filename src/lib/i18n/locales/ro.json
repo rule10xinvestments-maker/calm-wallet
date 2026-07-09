@@ -236,6 +236,7 @@
       "select": "Selectează",
       "useCustomRange": "Folosește interval personalizat",
       "customRange": "Interval personalizat",
+      "customRangeCompact": "Interval",
       "chooseDates": "Alege datele",
       "startDate": "Data de început",
       "endDate": "Data de sfârșit",

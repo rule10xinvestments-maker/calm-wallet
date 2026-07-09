@@ -1385,7 +1385,7 @@ export function TransactionsOverview({
   const summaryMode = getSummaryMode(activeView);
   const shouldShowSummaryControl = summaryMode !== "context" && activeView !== "recurring";
   const periodLabel = activePeriod === "month" ? getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex) : t("activity.time.customRange", locale);
-  const compactPeriodLabel = activePeriod === "month" ? getMonthLabel(selectedMonth.year, selectedMonth.monthIndex, "short") : t("activity.time.customRange", locale);
+  const compactPeriodLabel = activePeriod === "month" ? getMonthLabel(selectedMonth.year, selectedMonth.monthIndex, "short") : t("activity.time.customRangeCompact", locale);
   const hasCustomDraft = customDraftFrom.trim().length > 0 || customDraftTo.trim().length > 0;
   const hasAppliedCustomRange = activePeriod === "custom" && customFrom.trim().length > 0 && customTo.trim().length > 0;
   const isCustomDraftFromValid = isValidDateInput(customDraftFrom);
