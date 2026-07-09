@@ -4,6 +4,7 @@ import { AssistantComposer } from "@/components/assistant/assistant-composer";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import type { Budget } from "@/domain/budgets/types";
 import { initialBudgetActionState } from "@/lib/actions/budgets-state";
+import { t } from "@/lib/i18n";
 import type { OwedNote } from "@/domain/owed-notes/types";
 import type { AssistantActionState } from "@/lib/server/assistant";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
@@ -1156,8 +1157,8 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "anual" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Program/ }));
-    expect(screen.getByLabelText("Data de început")).toHaveClass("w-full");
-    expect(screen.getByLabelText("Data de sfârșit")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Data de început/ })).toHaveClass("px-3");
+    expect(screen.getByRole("button", { name: /Data de sfârșit/ })).toBeDisabled();
   });
 
   it("keeps Manual category picker buttons calm while leaving the selected category obvious", () => {
@@ -1230,6 +1231,10 @@ describe("assistant composer", () => {
 
   it("keeps recurring off by default and submits compact recurrence fields when enabled", () => {
     const { container } = renderComposer();
+    const today = new Date();
+    const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    const pickedStartDate = `${currentYearMonth}-15`;
+    const pickedEndDate = `${currentYearMonth}-20`;
 
     openManualEntry();
     expect(screen.getByLabelText("Recurring")).not.toBeChecked();
@@ -1240,7 +1245,7 @@ describe("assistant composer", () => {
     expect(screen.getByText("Repeats automatically as tracked entries.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Frequency/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: /Schedule/ })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Start date:/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Frequency/ }));
     const selectedMonthly = screen.getAllByRole("button", { name: /monthly/ }).find((button) => button.getAttribute("aria-pressed") === "true");
@@ -1248,10 +1253,21 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "weekly" }));
 
     fireEvent.click(screen.getByRole("button", { name: /Schedule/ }));
-    expect(screen.getByLabelText("Start date")).toHaveClass("px-3");
-    expect(screen.getByLabelText("End date")).toHaveClass("px-3");
+    expect(container.querySelector('input[type="date"]')).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Start date:/ })).toHaveClass("px-3");
+    expect(screen.getByRole("button", { name: /End date:/ })).toHaveClass("px-3");
     expect(screen.getByLabelText("Repeat until I turn it off")).toBeChecked();
-    expect(screen.getByLabelText("End date")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /End date:/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Start date:/ }));
+    fireEvent.click(screen.getByRole("button", { name: pickedStartDate }));
+    expect(screen.getByRole("button", { name: new RegExp(`Start date: ${pickedStartDate}`) })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Repeat until I turn it off"));
+    expect(screen.getByLabelText("Repeat until I turn it off")).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: /End date:/ }));
+    fireEvent.click(screen.getByRole("button", { name: pickedEndDate }));
+    expect(screen.getByRole("button", { name: new RegExp(`End date: ${pickedEndDate}`) })).toBeInTheDocument();
 
     const forms = container.querySelectorAll("form");
     const form = Array.from(forms).find((candidate) => candidate.querySelector('input[name="toolName"][value="create_transaction"]'));
@@ -1259,8 +1275,8 @@ describe("assistant composer", () => {
 
     expect(formData.get("recurringEnabled")).toBe("on");
     expect(formData.get("recurringFrequency")).toBe("weekly");
-    expect(formData.get("recurringStartDate")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(formData.get("recurringEndDate")).toBeNull();
+    expect(formData.get("recurringStartDate")).toBe(pickedStartDate);
+    expect(formData.get("recurringEndDate")).toBe(pickedEndDate);
   });
 
   it("requires an end date when Manual recurring is not open-ended", () => {
@@ -1279,12 +1295,35 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: /Schedule/ }));
     fireEvent.click(screen.getByLabelText("Repeat until I turn it off"));
     expect(screen.getByLabelText("Repeat until I turn it off")).not.toBeChecked();
-    expect(screen.getByLabelText("End date")).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /End date:/ })).not.toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
 
     expect(action).not.toHaveBeenCalled();
     expect(screen.getByText("Choose an end date or repeat until turned off.")).toBeInTheDocument();
+  });
+
+  it("uses app-controlled recurring schedule date controls in supported locales", () => {
+    for (const locale of ["en", "ro", "fr", "es"] as const) {
+      const { container, unmount } = renderComposerWithLocale(locale);
+
+      fireEvent.click(screen.getByRole("button", { name: t("assistant.actions.manual", locale) }));
+      fireEvent.click(screen.getByLabelText(t("assistant.manual.recurring", locale)));
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(t("assistant.manual.scheduleLabel", locale)) }));
+
+      expect(container.querySelector('input[type="date"]')).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: new RegExp(t("assistant.manual.startDate", locale)) })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: new RegExp(t("assistant.manual.endDate", locale)) })).toBeDisabled();
+      expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
+
+      if (locale === "fr") {
+        expect(screen.queryByText("Setează")).not.toBeInTheDocument();
+        expect(screen.queryByText("Anulează")).not.toBeInTheDocument();
+        expect(screen.queryByText("Șterge")).not.toBeInTheDocument();
+      }
+
+      unmount();
+    }
   });
 
   it("guesses categories from merchant or note unless the user selected one", () => {

@@ -4,6 +4,8 @@ import { useActionState, useCallback, useEffect, useMemo, useState, type FormEve
 import {
   CalendarDays,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleGauge,
   FileSpreadsheet,
   HandCoins,
@@ -79,6 +81,7 @@ type UploadFlowState = {
 type ActionPanel = "receipt" | "statement" | "recent" | "manual" | "limits" | "owed";
 type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 type ManualRecurringPanel = "frequency" | "schedule" | null;
+type ManualRecurringDateField = "start" | "end";
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
 type ManualCategoryOption = CategoryPickerOption;
 type LimitSection = "create" | "manage" | null;
@@ -98,6 +101,34 @@ type ManualCurrencyOption = (typeof manualCurrencyOptions)[number];
 function getSupportedManualCurrency(value: string): ManualCurrencyOption {
   const normalized = value.trim().toUpperCase();
   return manualCurrencyOptions.includes(normalized as ManualCurrencyOption) ? (normalized as ManualCurrencyOption) : "USD";
+}
+
+function toLocalDateKey(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+}
+
+function getCalendarDays(year: number, monthIndex: number) {
+  const firstDay = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const leadingEmptyDays = firstDay.getDay();
+  const days: Array<{ dateKey: string; day: number } | null> = Array.from({ length: leadingEmptyDays }, () => null);
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(year, monthIndex, day);
+    days.push({ dateKey: toLocalDateKey(date), day });
+  }
+
+  return days;
+}
+
+function getDateMonth(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return { year: date.getFullYear(), monthIndex: date.getMonth() };
 }
 
 function buildManualCategoryOptions(categories: ControlledCategoryOption[], transactionType: "expense" | "income"): ManualCategoryOption[] {
@@ -286,6 +317,11 @@ export function AssistantComposer({
   const [manualRecurringEndDate, setManualRecurringEndDate] = useState("");
   const [manualRecurringOpenEnded, setManualRecurringOpenEnded] = useState(true);
   const [manualRecurringPanel, setManualRecurringPanel] = useState<ManualRecurringPanel>(null);
+  const [manualRecurringDateField, setManualRecurringDateField] = useState<ManualRecurringDateField>("start");
+  const [manualRecurringCalendarMonth, setManualRecurringCalendarMonth] = useState(() => {
+    const today = new Date();
+    return { year: today.getFullYear(), monthIndex: today.getMonth() };
+  });
   const [manualFeedback, setManualFeedback] = useState<ManualFeedback>({ status: "idle", message: null });
   const [manualLastSubmitted, setManualLastSubmitted] = useState(false);
   const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
@@ -337,6 +373,19 @@ export function AssistantComposer({
   const selectedCategoryVisuals = getCategoryVisualsByName(selectedCategory?.slug ?? selectedCategoryLabel);
   const SelectedCategoryIcon = selectedCategoryVisuals.icon;
   const submittedManualCategoryId = selectedCategory?.isSynthetic ? "" : effectiveManualCategoryId;
+  const manualRecurringStartValue = manualRecurringStartDate || manualDate || getTodayDateKey();
+  const manualRecurringCalendarDays = useMemo(
+    () => getCalendarDays(manualRecurringCalendarMonth.year, manualRecurringCalendarMonth.monthIndex),
+    [manualRecurringCalendarMonth],
+  );
+  const manualRecurringCalendarMonthLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        month: "long",
+        year: "numeric",
+      }).format(new Date(manualRecurringCalendarMonth.year, manualRecurringCalendarMonth.monthIndex, 1)),
+    [locale, manualRecurringCalendarMonth],
+  );
   const selectedLimitCategory = useMemo(
     () => limitCategoryOptions.find((category) => category.id === limitCategoryId) ?? limitCategoryOptions[0] ?? null,
     [limitCategoryId, limitCategoryOptions],
@@ -493,13 +542,54 @@ export function AssistantComposer({
   }
 
   function getManualRecurringScheduleSummary() {
-    const startDate = manualRecurringStartDate || manualDate || getTodayDateKey();
+    const startDate = manualRecurringStartValue;
 
     if (manualRecurringOpenEnded) {
       return `${startDate} · ${t("assistant.manual.untilOffSummary", locale)}`;
     }
 
     return manualRecurringEndDate ? `${startDate} · ${manualRecurringEndDate}` : startDate;
+  }
+
+  function openManualRecurringDatePicker(field: ManualRecurringDateField) {
+    if (field === "end" && manualRecurringOpenEnded) {
+      return;
+    }
+
+    const sourceDate = field === "start" ? manualRecurringStartValue : manualRecurringEndDate || manualRecurringStartValue;
+    const sourceMonth = getDateMonth(sourceDate);
+
+    if (sourceMonth) {
+      setManualRecurringCalendarMonth(sourceMonth);
+    }
+
+    setManualRecurringDateField(field);
+  }
+
+  function showPreviousManualRecurringMonth() {
+    setManualRecurringCalendarMonth((current) => {
+      const date = new Date(current.year, current.monthIndex - 1, 1);
+      return { year: date.getFullYear(), monthIndex: date.getMonth() };
+    });
+  }
+
+  function showNextManualRecurringMonth() {
+    setManualRecurringCalendarMonth((current) => {
+      const date = new Date(current.year, current.monthIndex + 1, 1);
+      return { year: date.getFullYear(), monthIndex: date.getMonth() };
+    });
+  }
+
+  function pickManualRecurringDate(dateKey: string) {
+    if (manualRecurringDateField === "start") {
+      setManualRecurringStartDate(dateKey);
+      return;
+    }
+
+    setManualRecurringEndDate(dateKey);
+    if (manualFeedback.status === "error") {
+      setManualFeedback({ status: "idle", message: null });
+    }
   }
 
   function chooseManualTransactionType(type: "expense" | "income") {
@@ -930,7 +1020,7 @@ export function AssistantComposer({
                 <>
                   <input name="recurringEnabled" type="hidden" value="on" />
                   <input name="recurringFrequency" type="hidden" value={manualRecurringFrequency} />
-                  <input name="recurringStartDate" type="hidden" value={manualRecurringStartDate || manualDate || getTodayDateKey()} />
+                  <input name="recurringStartDate" type="hidden" value={manualRecurringStartValue} />
                   {!manualRecurringOpenEnded && manualRecurringEndDate ? <input name="recurringEndDate" type="hidden" value={manualRecurringEndDate} /> : null}
                 </>
               ) : null}
@@ -1167,34 +1257,102 @@ export function AssistantComposer({
                       </button>
                       {manualRecurringPanel === "schedule" ? (
                         <div className="space-y-2 rounded-lg bg-white p-2">
-                          <label className="block space-y-1">
-                            <span className="text-xs font-medium text-slate-600">{t("assistant.manual.startDate", locale)}</span>
-                            <input
-                              className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                              onChange={(event) => setManualRecurringStartDate(event.target.value)}
-                              type="date"
-                              value={manualRecurringStartDate || manualDate || getTodayDateKey()}
-                            />
-                          </label>
-                          <label className="block space-y-1">
-                            <span className="text-xs font-medium text-slate-600">{t("assistant.manual.endDate", locale)}</span>
-                            <input
-                              className={`min-h-10 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100 ${
-                                manualRecurringOpenEnded
-                                  ? "border-slate-200 bg-slate-100 text-slate-400"
-                                  : "border-slate-200 bg-slate-50 text-slate-900"
-                              }`}
-                              disabled={manualRecurringOpenEnded}
-                              onChange={(event) => {
-                                setManualRecurringEndDate(event.target.value);
-                                if (manualFeedback.status === "error") {
-                                  setManualFeedback({ status: "idle", message: null });
+                          <button
+                            aria-label={`${t("assistant.manual.startDate", locale)}: ${manualRecurringStartValue}`}
+                            className={`grid min-h-11 w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                              manualRecurringDateField === "start"
+                                ? "border-sky-200 bg-sky-50 text-sky-800 ring-2 ring-sky-50"
+                                : "border-slate-200 bg-slate-50 text-slate-900 hover:bg-slate-100"
+                            }`}
+                            onClick={() => openManualRecurringDatePicker("start")}
+                            type="button"
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-xs font-medium text-slate-600">{t("assistant.manual.startDate", locale)}</span>
+                              <span className="block whitespace-nowrap text-sm font-semibold leading-tight">{manualRecurringStartValue}</span>
+                            </span>
+                            <CalendarDays aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                          </button>
+                          <button
+                            aria-disabled={manualRecurringOpenEnded}
+                            aria-label={`${t("assistant.manual.endDate", locale)}: ${
+                              manualRecurringOpenEnded ? t("assistant.manual.untilOffSummary", locale) : manualRecurringEndDate || t("assistant.manual.endDate", locale)
+                            }`}
+                            className={`grid min-h-11 w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                              manualRecurringOpenEnded
+                                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                : manualRecurringDateField === "end"
+                                  ? "border-sky-200 bg-sky-50 text-sky-800 ring-2 ring-sky-50"
+                                  : "border-slate-200 bg-slate-50 text-slate-900 hover:bg-slate-100"
+                            }`}
+                            disabled={manualRecurringOpenEnded}
+                            onClick={() => openManualRecurringDatePicker("end")}
+                            type="button"
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-xs font-medium text-slate-600">{t("assistant.manual.endDate", locale)}</span>
+                              <span className="block whitespace-nowrap text-sm font-semibold leading-tight">
+                                {manualRecurringOpenEnded ? t("assistant.manual.untilOffSummary", locale) : manualRecurringEndDate || "YYYY-MM-DD"}
+                              </span>
+                            </span>
+                            <CalendarDays aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                          </button>
+                          <div className="rounded-xl border border-slate-100 bg-slate-50 p-2">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <button
+                                aria-label={t("activity.time.previousMonth", locale)}
+                                className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-900"
+                                onClick={showPreviousManualRecurringMonth}
+                                type="button"
+                              >
+                                <ChevronLeft aria-hidden="true" size={16} strokeWidth={2.2} />
+                              </button>
+                              <p className="text-sm font-semibold capitalize text-slate-900">{manualRecurringCalendarMonthLabel}</p>
+                              <button
+                                aria-label={t("activity.time.nextMonth", locale)}
+                                className="flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-900"
+                                onClick={showNextManualRecurringMonth}
+                                type="button"
+                              >
+                                <ChevronRight aria-hidden="true" size={16} strokeWidth={2.2} />
+                              </button>
+                            </div>
+                            <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-500">
+                              {["S", "M", "T", "W", "T", "F", "S"].map((weekday, index) => (
+                                <span key={`${weekday}-${index}`}>{weekday}</span>
+                              ))}
+                            </div>
+                            <div className="grid grid-cols-7 gap-1">
+                              {manualRecurringCalendarDays.map((day, index) => {
+                                if (!day) {
+                                  return <span aria-hidden="true" key={`empty-recurring-${index}`} />;
                                 }
-                              }}
-                              type="date"
-                              value={manualRecurringEndDate}
-                            />
-                          </label>
+
+                                const selectedDate = manualRecurringDateField === "start" ? manualRecurringStartValue : manualRecurringEndDate;
+                                const isSelected = selectedDate === day.dateKey;
+                                const isToday = getTodayDateKey() === day.dateKey;
+
+                                return (
+                                  <button
+                                    aria-label={day.dateKey}
+                                    aria-pressed={isSelected}
+                                    className={`min-h-8 rounded-lg text-xs font-semibold transition ${
+                                      isSelected
+                                        ? "bg-sky-600 text-white shadow-sm"
+                                        : isToday
+                                          ? "bg-white text-sky-800 ring-1 ring-sky-200"
+                                          : "bg-white text-slate-700 hover:bg-sky-50"
+                                    }`}
+                                    key={day.dateKey}
+                                    onClick={() => pickManualRecurringDate(day.dateKey)}
+                                    type="button"
+                                  >
+                                    {day.day}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                           <label className="flex min-h-11 items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                             <input
                               checked={manualRecurringOpenEnded}
@@ -1203,6 +1361,7 @@ export function AssistantComposer({
                                 setManualRecurringOpenEnded(event.currentTarget.checked);
                                 if (event.currentTarget.checked) {
                                   setManualRecurringEndDate("");
+                                  setManualRecurringDateField("start");
                                   setManualFeedback({ status: "idle", message: null });
                                 }
                               }}
