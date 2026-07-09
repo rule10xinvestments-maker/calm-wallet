@@ -385,12 +385,18 @@ describe("assistant composer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Due date" }));
     expect(screen.queryByRole("button", { name: /Due date:/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Jul 10/ })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Currency" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Currency: USD" }));
+    expect(screen.getByRole("button", { name: "USD" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "RON" }));
+    expect(screen.getByRole("button", { name: "Currency: RON" })).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(createOwedNoteAction).toHaveBeenCalled());
     const [, formData] = createOwedNoteAction.mock.calls[0] as unknown as [unknown, FormData];
     expect(formData.get("note")).toBe("Lunch payback");
     expect(formData.get("dueDate")).toBe("2026-07-10");
+    expect(formData.get("currency")).toBe("RON");
     expect(await screen.findByText("Money reminder saved.")).toBeInTheDocument();
     expect(await screen.findByText("Danel")).toBeInTheDocument();
     expect(screen.queryByLabelText("Person")).not.toBeInTheDocument();
@@ -1353,6 +1359,11 @@ describe("assistant composer", () => {
       fireEvent.click(screen.getByRole("button", { name: t("owed.dueDateShort", locale) }));
 
       expect(owed.container.querySelector('input[type="date"]')).not.toBeInTheDocument();
+      expect(screen.queryByRole("combobox", { name: t("common.currency", locale) })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: `${t("common.currency", locale)}: USD` }));
+      expect(screen.getByRole("button", { name: "USD" })).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(screen.getByRole("button", { name: "EUR" }));
+      expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: EUR` })).toHaveAttribute("aria-expanded", "false");
       expect(screen.getAllByRole("button", { name: new RegExp(t("common.dueDate", locale)) }).length).toBeGreaterThan(0);
       expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
 
