@@ -54,6 +54,14 @@ describe("i18n helper", () => {
     expect(t("owed.noOpenReminders", "ro")).toBe("Nu ai remindere active.");
     expect(t("owed.noOwedToMe", "ro")).toBe("Nu ai bani de primit.");
     expect(t("owed.noIOwe", "ro")).toBe("Nu ai datorii de plătit.");
+    expect(t("assistant.owed.owedToMeHelper", "fr")).toBe("À recevoir.");
+    expect(t("assistant.owed.iOweHelper", "fr")).toBe("À payer.");
+    expect(t("assistant.owed.createNoteHelper", "fr")).toBe("Ajoutez un rappel.");
+    expect(t("owed.createOwedNote", "fr")).toBe("Créer un rappel");
+    expect(t("owed.dueDateShort", "fr")).toBe("Date");
+    expect(t("owed.noOpenReminders", "fr")).toBe("Aucun rappel actif.");
+    expect(t("owed.noOwedToMe", "fr")).toBe("Rien à recevoir.");
+    expect(t("owed.noIOwe", "fr")).toBe("Rien à payer.");
     expect(t("assistant.limits.createHelper", "ro")).toBe("Limită pe categorie.");
     expect(t("assistant.limits.manageHelper", "ro")).toBe("Editează sau oprește limite.");
     expect(t("assistant.limits.helper", "fr")).toBe("Définissez vos limites.");

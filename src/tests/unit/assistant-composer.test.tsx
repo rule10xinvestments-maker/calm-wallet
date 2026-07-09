@@ -301,6 +301,42 @@ describe("assistant composer", () => {
     expect(within(owedPanel).queryByRole("button", { name: "Scadență" })).not.toBeInTheDocument();
   });
 
+  it("uses compact French Owed reminder copy in Assistant", () => {
+    render(
+      <LocaleProvider savedLocale="fr">
+        <AssistantComposer
+          action={async () => ({ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] })}
+          adjustOwedNoteAmountAction={owedAction}
+          createOwedNoteAction={owedAction}
+          initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
+          owedNotes={[]}
+          settleOwedNoteAction={owedAction}
+          updateOwedNoteNoteAction={owedAction}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "À régler" }));
+
+    const owedPanel = screen.getByText("Argent dû").closest(".rounded-2xl") as HTMLElement;
+    expect(within(owedPanel).getByText("À recevoir.")).toBeInTheDocument();
+    expect(within(owedPanel).getByText("À payer.")).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: /Créer un rappel/ })).toBeInTheDocument();
+    expect(within(owedPanel).getByText("Ajoutez un rappel.")).toBeInTheDocument();
+    expect(within(owedPanel).queryByText(/note de dette/i)).not.toBeInTheDocument();
+
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /On me doit/ }));
+    expect(within(owedPanel).getByText("Rien à recevoir.")).toBeInTheDocument();
+
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /Je dois/ }));
+    expect(within(owedPanel).getByText("Rien à payer.")).toBeInTheDocument();
+
+    fireEvent.click(within(owedPanel).getByRole("button", { name: /Créer un rappel/ }));
+    expect(within(owedPanel).getByRole("button", { name: "Note" })).toBeInTheDocument();
+    expect(within(owedPanel).getByRole("button", { name: "Date" })).toBeInTheDocument();
+    expect(within(owedPanel).queryByRole("button", { name: "Échéance" })).not.toBeInTheDocument();
+  });
+
   it("creates an owed note from Assistant and preserves collapsed optional values", async () => {
     const createOwedNoteAction = vi.fn(async () => ({
       status: "success" as const,

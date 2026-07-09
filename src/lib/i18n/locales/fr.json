@@ -133,9 +133,9 @@
     "owed": {
       "title": "Argent dû",
       "helper": "Créez et mettez à jour des rappels.",
-      "owedToMeHelper": "Argent que d’autres vous doivent.",
-      "iOweHelper": "Argent que vous devez payer.",
-      "createNoteHelper": "Ajoutez un rappel d’argent."
+      "owedToMeHelper": "À recevoir.",
+      "iOweHelper": "À payer.",
+      "createNoteHelper": "Ajoutez un rappel."
     },
     "recent": {
       "title": "Éléments récents"
@@ -328,8 +328,8 @@
     "owed": "Dû",
     "owedToMe": "On me doit",
     "iOwe": "Je dois",
-    "createOwedNote": "Créer une note de dette",
-    "dueDateShort": "Échéance",
+    "createOwedNote": "Créer un rappel",
+    "dueDateShort": "Date",
     "moneyReminder": "Rappel d’argent",
     "open": "Ouvert",
     "settled": "Réglé",
@@ -344,7 +344,7 @@
     "markSettled": "Marquer réglé",
     "noteAdded": "Note ajoutée",
     "updated": "Mis à jour",
-    "noOpenReminders": "Aucun rappel d’argent ouvert.",
+    "noOpenReminders": "Aucun rappel actif.",
     "noOwedToMe": "Rien à recevoir.",
     "noIOwe": "Rien à payer.",
     "openReminderCount": "{count} rappel d’argent ouvert",
