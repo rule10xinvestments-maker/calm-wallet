@@ -1055,6 +1055,20 @@ describe("transactions overview", () => {
     expect(screen.queryByRole("button", { name: rangeStart })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Start date")).toBeInTheDocument();
     expect(screen.getByLabelText("End date")).toBeInTheDocument();
+    expect(screen.getByLabelText("Start date")).toHaveAttribute("inputmode", "numeric");
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "20250222" } });
+    expect(screen.getByLabelText("Start date")).toHaveValue("2025-02-22");
+    expect(screen.getByRole("button", { name: "From 2025-02-22" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2025/02/23-extra" } });
+    expect(screen.getByLabelText("End date")).toHaveValue("2025-02-23");
+    expect(screen.getByRole("button", { name: "To 2025-02-23" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "202502" } });
+    expect(screen.getByLabelText("Start date")).toHaveValue("2025-02");
+    expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "From Pick a start date" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-99-10" } });
     expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -1094,6 +1108,40 @@ describe("transactions overview", () => {
     expect(trackedMonthButton).toHaveClass("bg-rose-50");
     expect(hasIndicator(trackedMonthButton, "bg-rose-500")).toBe(false);
     expect(screen.getByText("inside start")).toBeInTheDocument();
+  });
+
+  it("formats Romanian custom Type mode dates without treating incomplete drafts as summaries", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <TransactionsOverview
+          {...makeOverviewProps()}
+          items={[makeTransactionItem({ title: "chirie" })]}
+          stagedImports={[]}
+          stagedImportDetails={{}}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: "Folosește interval personalizat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Scrie" }));
+
+    fireEvent.change(screen.getByLabelText("Data de început"), { target: { value: "20250222" } });
+    expect(screen.getByLabelText("Data de început")).toHaveValue("2025-02-22");
+    expect(screen.getByRole("button", { name: "De la 2025-02-22" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvează" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Data de sfârșit"), { target: { value: "2025022" } });
+    expect(screen.getByLabelText("Data de sfârșit")).toHaveValue("2025-02-2");
+    expect(screen.getByText("Introdu o dată validă")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Până la Alege data de sfârșit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvează" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Data de sfârșit"), { target: { value: "20250223" } });
+    expect(screen.getByLabelText("Data de sfârșit")).toHaveValue("2025-02-23");
+    expect(screen.getByRole("button", { name: "Până la 2025-02-23" })).toBeInTheDocument();
+    expect(screen.queryByText("Introdu o dată validă")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvează" })).toBeEnabled();
   });
 
   it("closing custom range restores the normal month grid", () => {

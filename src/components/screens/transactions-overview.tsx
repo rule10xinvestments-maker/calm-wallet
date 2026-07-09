@@ -236,6 +236,20 @@ function isValidDateInput(value: string) {
   return !Number.isNaN(date.getTime()) && toDateInputValue(date) === value;
 }
 
+function formatTypedDateInput(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+
+  if (digits.length <= 4) {
+    return digits;
+  }
+
+  if (digits.length <= 6) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
+
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
 function getCalendarMonthLabel(year: number, monthIndex: number) {
   return new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
     month: "long",
@@ -1799,7 +1813,9 @@ export function TransactionsOverview({
                             type="button"
                           >
                             <span className="block text-[11px] font-semibold">{t("activity.time.from", locale)}</span>
-                            <span className="block truncate text-[10px] font-medium">{customDraftFrom || t("activity.time.pickStartDate", locale)}</span>
+                            <span className="block truncate text-[10px] font-medium">
+                              {isCustomDraftFromValid ? customDraftFrom : t("activity.time.pickStartDate", locale)}
+                            </span>
                           </button>
                           <button
                             className={`min-h-11 rounded-lg px-2 py-1 text-center transition ${
@@ -1812,7 +1828,9 @@ export function TransactionsOverview({
                             type="button"
                           >
                             <span className="block text-[11px] font-semibold">{t("activity.time.to", locale)}</span>
-                            <span className="block truncate text-[10px] font-medium">{customDraftTo || t("activity.time.pickEndDate", locale)}</span>
+                            <span className="block truncate text-[10px] font-medium">
+                              {isCustomDraftToValid ? customDraftTo : t("activity.time.pickEndDate", locale)}
+                            </span>
                           </button>
                           <button
                             className={`min-h-11 rounded-lg px-2 py-1 text-center text-[11px] font-semibold transition ${
@@ -1892,7 +1910,7 @@ export function TransactionsOverview({
                                 aria-invalid={hasCustomDraft && !isCustomDraftFromValid ? "true" : "false"}
                                 className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                                 inputMode="numeric"
-                                onChange={(event) => setCustomDraftFrom(event.target.value)}
+                                onChange={(event) => setCustomDraftFrom(formatTypedDateInput(event.target.value))}
                                 placeholder="YYYY-MM-DD"
                                 type="text"
                                 value={customDraftFrom}
@@ -1904,7 +1922,7 @@ export function TransactionsOverview({
                                 aria-invalid={hasCustomDraft && !isCustomDraftToValid ? "true" : "false"}
                                 className="min-h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
                                 inputMode="numeric"
-                                onChange={(event) => setCustomDraftTo(event.target.value)}
+                                onChange={(event) => setCustomDraftTo(formatTypedDateInput(event.target.value))}
                                 placeholder="YYYY-MM-DD"
                                 type="text"
                                 value={customDraftTo}
