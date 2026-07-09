@@ -380,10 +380,10 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Note added" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Due date" }));
-    expect(screen.getByLabelText("Due date")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-07-10" } });
+    expect(screen.getByRole("button", { name: /Due date:/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "2026-07-10" }));
     fireEvent.click(screen.getByRole("button", { name: "Due date" }));
-    expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Due date:/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Jul 10/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -966,7 +966,8 @@ describe("assistant composer", () => {
     const today = new Date();
     const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     fireEvent.click(screen.getByRole("button", { name: "Date" }));
-    fireEvent.change(screen.getByLabelText("Date"), { target: { value: todayKey } });
+    expect(screen.getByRole("button", { name: /Date:/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: todayKey }));
     expect(screen.getByRole("button", { name: "Today" })).toBeInTheDocument();
 
     const forms = container.querySelectorAll("form");
@@ -1323,6 +1324,45 @@ describe("assistant composer", () => {
       }
 
       unmount();
+    }
+  });
+
+  it("uses app-controlled Manual and Owed date controls in supported locales", () => {
+    for (const locale of ["en", "ro", "fr", "es"] as const) {
+      const manual = renderComposerWithLocale(locale);
+
+      fireEvent.click(screen.getByRole("button", { name: t("assistant.actions.manual", locale) }));
+      fireEvent.click(screen.getByRole("button", { name: t("common.date", locale) }));
+
+      expect(manual.container.querySelector('input[type="date"]')).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: new RegExp(t("common.date", locale)) }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
+
+      if (locale === "fr") {
+        expect(screen.queryByText("Setează")).not.toBeInTheDocument();
+        expect(screen.queryByText("Anulează")).not.toBeInTheDocument();
+        expect(screen.queryByText("Șterge")).not.toBeInTheDocument();
+      }
+
+      manual.unmount();
+
+      const owed = renderComposerWithLocale(locale);
+
+      fireEvent.click(screen.getByRole("button", { name: t("assistant.actions.owed", locale) }));
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(t("owed.createOwedNote", locale)) }));
+      fireEvent.click(screen.getByRole("button", { name: t("owed.dueDateShort", locale) }));
+
+      expect(owed.container.querySelector('input[type="date"]')).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: new RegExp(t("common.dueDate", locale)) }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
+
+      if (locale === "fr") {
+        expect(screen.queryByText("Setează")).not.toBeInTheDocument();
+        expect(screen.queryByText("Anulează")).not.toBeInTheDocument();
+        expect(screen.queryByText("Șterge")).not.toBeInTheDocument();
+      }
+
+      owed.unmount();
     }
   });
 

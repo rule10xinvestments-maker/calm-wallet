@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
 import { Button } from "@/components/ui/button";
+import { CalmDatePicker } from "@/components/ui/calm-date-picker";
 import { MoneyOwedPanel } from "@/components/owed/money-owed-panel";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import { getCategoryDisplayLabel } from "@/lib/categories/category-labels";
@@ -1150,15 +1151,20 @@ export function AssistantComposer({
               </div>
 
                   {manualOptionalPanel === "date" ? (
-                    <label className="block space-y-1 rounded-xl border border-slate-200 bg-white p-2">
-                      <span className="text-xs font-medium text-slate-600">{t("common.date", locale)}</span>
-                      <input
-                        className="min-h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-                        onChange={(event) => setManualDate(event.target.value)}
-                        type="date"
-                        value={manualDate}
-                      />
-                    </label>
+                    <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-2">
+                      <button
+                        aria-label={`${t("common.date", locale)}: ${manualDate || t("common.optional", locale)}`}
+                        className="grid min-h-11 w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-900 transition hover:bg-slate-100"
+                        type="button"
+                      >
+                        <span className="min-w-0">
+                          <span className="block text-xs font-medium text-slate-600">{t("common.date", locale)}</span>
+                          <span className="block whitespace-nowrap text-sm font-semibold leading-tight">{manualDate || "YYYY-MM-DD"}</span>
+                        </span>
+                        <CalendarDays aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+                      </button>
+                      <CalmDatePicker selectedDate={manualDate} onSelect={setManualDate} />
+                    </div>
                   ) : null}
 
                   {manualOptionalPanel === "merchant" ? (

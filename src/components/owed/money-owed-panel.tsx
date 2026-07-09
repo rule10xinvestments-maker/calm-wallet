@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowDownLeft, ArrowUpRight, Calendar, Check, ChevronDown, CirclePlus, FileText } from "lucide-react";
+import { CalmDatePicker } from "@/components/ui/calm-date-picker";
 import type { OwedNote, OwedNoteDirection } from "@/domain/owed-notes/types";
 import { initialOwedNoteActionState, type OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 import { t, type SupportedLocale } from "@/lib/i18n";
@@ -142,7 +143,6 @@ export function MoneyOwedPanel({
   const [createDueDate, setCreateDueDate] = useState("");
   const [createFormKey, setCreateFormKey] = useState(0);
   const createNoteRef = useRef<HTMLTextAreaElement>(null);
-  const createDueDateRef = useRef<HTMLInputElement>(null);
   const [createState, createFormAction, isCreatePending] = useActionState(createAction, initialOwedNoteActionState);
   const [adjustState, adjustFormAction, isAdjustPending] = useActionState(adjustAmountAction, initialOwedNoteActionState);
   const [noteState, noteFormAction, isNotePending] = useActionState(updateNoteAction, initialOwedNoteActionState);
@@ -171,9 +171,6 @@ export function MoneyOwedPanel({
       createNoteRef.current?.focus();
     }
 
-    if (createOptionalSection === "dueDate") {
-      createDueDateRef.current?.focus();
-    }
   }, [createOptionalSection]);
 
   useEffect(() => {
@@ -507,16 +504,20 @@ export function MoneyOwedPanel({
           </label>
         ) : null}
         {createOptionalSection === "dueDate" ? (
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">{t("common.dueDate", locale)}</span>
-            <input
-              className="min-h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-              onChange={(event) => setCreateDueDate(event.target.value)}
-              ref={createDueDateRef}
-              type="date"
-              value={createDueDate}
-            />
-          </label>
+          <div className="space-y-2">
+            <button
+              aria-label={`${t("common.dueDate", locale)}: ${createDueDate || t("common.optional", locale)}`}
+              className="grid min-h-11 w-full grid-cols-[1fr_auto] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-900 transition hover:bg-slate-100"
+              type="button"
+            >
+              <span className="min-w-0">
+                <span className="block text-xs font-medium text-slate-600">{t("common.dueDate", locale)}</span>
+                <span className="block whitespace-nowrap text-sm font-semibold leading-tight">{createDueDate || "YYYY-MM-DD"}</span>
+              </span>
+              <Calendar aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} />
+            </button>
+            <CalmDatePicker selectedDate={createDueDate} onSelect={setCreateDueDate} />
+          </div>
         ) : null}
         <button className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={isCreatePending} type="submit">
           <Check aria-hidden="true" className="size-4" />
