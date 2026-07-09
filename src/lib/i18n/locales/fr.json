@@ -244,6 +244,7 @@
       "closeCustom": "Fermer la plage",
       "typeDates": "Saisir les dates",
       "hideManualEntry": "Masquer la saisie manuelle",
+      "pickDateCompact": "Choisir",
       "pickStartDate": "Choisir la date de début",
       "pickEndDate": "Choisir la date de fin",
       "previousMonth": "Mois précédent",

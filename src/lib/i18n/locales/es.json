@@ -244,6 +244,7 @@
       "closeCustom": "Cerrar rango",
       "typeDates": "Escribir fechas",
       "hideManualEntry": "Ocultar entrada manual",
+      "pickDateCompact": "Fecha",
       "pickStartDate": "Elige la fecha inicial",
       "pickEndDate": "Elige la fecha final",
       "previousMonth": "Mes anterior",

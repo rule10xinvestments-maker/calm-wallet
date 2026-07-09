@@ -57,6 +57,8 @@ describe("i18n helper", () => {
     expect(t("activity.time.customRangeCompact", "ro")).toBe("Interval");
     expect(t("activity.time.customRangeCompact", "fr")).toBe("Période");
     expect(t("activity.time.customRangeCompact", "es")).toBe("Rango");
+    expect(t("activity.time.pickDateCompact", "en")).toBe("Pick date");
+    expect(t("activity.time.pickDateCompact", "ro")).toBe("Alege data");
     expect(t("activity.time.enterValidDate", "ro")).toBe("Introdu o dată validă");
     expect(t("activity.time.endDateMustBeAfterStartDate", "es")).toBe("La fecha final debe ser posterior a la inicial");
     expect(t("activity.time.typeDates", "ro")).toBe("Scrie datele");

@@ -1813,8 +1813,8 @@ export function TransactionsOverview({
                             type="button"
                           >
                             <span className="block text-[11px] font-semibold">{t("activity.time.from", locale)}</span>
-                            <span className="block truncate text-[10px] font-medium">
-                              {isCustomDraftFromValid ? customDraftFrom : t("activity.time.pickStartDate", locale)}
+                            <span className="block whitespace-nowrap text-[10px] font-medium">
+                              {isCustomDraftFromValid ? customDraftFrom : t("activity.time.pickDateCompact", locale)}
                             </span>
                           </button>
                           <button
@@ -1828,8 +1828,8 @@ export function TransactionsOverview({
                             type="button"
                           >
                             <span className="block text-[11px] font-semibold">{t("activity.time.to", locale)}</span>
-                            <span className="block truncate text-[10px] font-medium">
-                              {isCustomDraftToValid ? customDraftTo : t("activity.time.pickEndDate", locale)}
+                            <span className="block whitespace-nowrap text-[10px] font-medium">
+                              {isCustomDraftToValid ? customDraftTo : t("activity.time.pickDateCompact", locale)}
                             </span>
                           </button>
                           <button

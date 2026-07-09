@@ -244,6 +244,7 @@
       "closeCustom": "Close custom",
       "typeDates": "Type dates",
       "hideManualEntry": "Hide manual entry",
+      "pickDateCompact": "Pick date",
       "pickStartDate": "Pick a start date",
       "pickEndDate": "Pick an end date",
       "previousMonth": "Previous month",

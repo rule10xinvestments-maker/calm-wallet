@@ -1039,11 +1039,10 @@ describe("transactions overview", () => {
     fireEvent.click(customRangeButton);
     expect(customRangeButton).toHaveClass("bg-sky-600");
     expect(screen.queryByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "From Pick a start date" })).toHaveClass("bg-sky-600");
-    expect(screen.getByRole("button", { name: "To Pick an end date" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "From Pick date" })).toHaveClass("bg-sky-600");
+    expect(screen.getByRole("button", { name: "To Pick date" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Type" })).toBeInTheDocument();
-    expect(screen.getByText("Pick a start date")).toBeInTheDocument();
-    expect(screen.getByText("Pick an end date")).toBeInTheDocument();
+    expect(screen.getAllByText("Pick date")).toHaveLength(2);
     expect(screen.queryByLabelText("Start date")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("End date")).not.toBeInTheDocument();
     expect(document.querySelector('input[type="date"]')).not.toBeInTheDocument();
@@ -1067,7 +1066,7 @@ describe("transactions overview", () => {
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "202502" } });
     expect(screen.getByLabelText("Start date")).toHaveValue("2025-02");
     expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "From Pick a start date" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "From Pick date" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2026-99-10" } });
     expect(screen.getByText("Enter a valid date")).toBeInTheDocument();
@@ -1080,8 +1079,8 @@ describe("transactions overview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
     fireEvent.click(screen.getByRole("button", { name: rangeStart }));
     expect(screen.getByText(rangeStart)).toBeInTheDocument();
-    expect(screen.getByText("Pick an end date")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "To Pick an end date" })).toHaveClass("bg-sky-600");
+    expect(screen.getAllByText("Pick date")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "To Pick date" })).toHaveClass("bg-sky-600");
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: rangeEnd }));
@@ -1104,7 +1103,7 @@ describe("transactions overview", () => {
     expect(screen.getByText(rangeEnd)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close custom" }));
-    expect(screen.queryByText("Pick a start date")).not.toBeInTheDocument();
+    expect(screen.queryByText("Pick date")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("bg-sky-600");
 
     const trackedMonthButton = screen.getByRole("button", { name: `Select January ${currentYear()}` });
@@ -1127,6 +1126,11 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
     fireEvent.click(screen.getByRole("button", { name: "Folosește interval personalizat" }));
+    expect(screen.getByRole("button", { name: "De la Alege data" })).toHaveClass("bg-sky-600");
+    expect(screen.getByRole("button", { name: "Până la Alege data" })).toBeInTheDocument();
+    expect(screen.getAllByText("Alege data")).toHaveLength(2);
+    expect(screen.queryByText("Alege data de început")).not.toBeInTheDocument();
+    expect(screen.queryByText("Alege data de sfârșit")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Scrie" }));
 
     fireEvent.change(screen.getByLabelText("Data de început"), { target: { value: "20250222" } });
@@ -1137,7 +1141,7 @@ describe("transactions overview", () => {
     fireEvent.change(screen.getByLabelText("Data de sfârșit"), { target: { value: "2025022" } });
     expect(screen.getByLabelText("Data de sfârșit")).toHaveValue("2025-02-2");
     expect(screen.getByText("Introdu o dată validă")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Până la Alege data de sfârșit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Până la Alege data" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvează" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Data de sfârșit"), { target: { value: "20250223" } });
@@ -1174,12 +1178,12 @@ describe("transactions overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
     fireEvent.click(screen.getByRole("button", { name: "Use custom range" }));
-    expect(screen.getByText("Pick a start date")).toBeInTheDocument();
+    expect(screen.getAllByText("Pick date")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: `Select ${currentMonthLabel()}` })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close custom" }));
 
-    expect(screen.queryByText("Pick a start date")).not.toBeInTheDocument();
+    expect(screen.queryByText("Pick date")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: `Select ${currentMonthLabel()}` })).toHaveClass("bg-sky-600");
   });
 
