@@ -975,11 +975,7 @@ export function AssistantComposer({
                 </label>
               </div>
 
-              <div
-                className={`grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 ${
-                  useRomanianManualLayout ? "" : "min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]"
-                }`}
-              >
+              <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-1 min-[340px]:grid-cols-[minmax(0,1fr)_3.5rem]">
                 <div
                   aria-label={t("assistant.manual.transactionType", locale)}
                   className="grid min-h-[3.5rem] grid-cols-2 rounded-lg border border-slate-200 bg-white"
@@ -1011,17 +1007,14 @@ export function AssistantComposer({
                 <button
                   aria-expanded={manualOptionalPanel === "category"}
                   aria-label={`${t("common.category", locale)}: ${selectedCategoryDisplayLabel}`}
-                  className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border bg-white px-1.5 py-1.5 text-center text-xs font-semibold text-slate-700 transition ${
+                  className={`flex min-h-[3.5rem] items-center justify-center gap-0.5 rounded-lg border bg-white px-1.5 py-1.5 text-slate-700 transition ${
                     manualOptionalPanel === "category" ? "border-sky-200 shadow-sm ring-2 ring-sky-50" : "border-slate-200 hover:bg-slate-50"
                   }`}
                   onClick={() => setManualOptionalPanel((current) => (current === "category" ? null : "category"))}
                   type="button"
                 >
                   <SelectedCategoryIcon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.1} style={{ color: selectedCategoryVisuals.primary }} />
-                  <span>{t("common.category", locale)}</span>
-                  <span className="max-w-full break-words text-[0.68rem] font-medium leading-tight text-slate-600">
-                    {selectedCategoryDisplayLabel}
-                  </span>
+                  <ChevronDown aria-hidden="true" className="size-3.5 shrink-0 text-slate-400" strokeWidth={2.2} />
                 </button>
               </div>
 

@@ -983,8 +983,7 @@ describe("assistant composer", () => {
 
     const transactionTypeGroup = screen.getByRole("group", { name: "Transaction type" });
     expect(transactionTypeGroup).toHaveClass("grid-cols-2");
-    expect(transactionTypeGroup.parentElement).toHaveClass("grid-cols-1");
-    expect(transactionTypeGroup.parentElement).toHaveClass("min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]");
+    expect(transactionTypeGroup.parentElement).toHaveClass("min-[340px]:grid-cols-[minmax(0,1fr)_3.5rem]");
     expect(transactionTypeGroup).toHaveClass("min-h-[3.5rem]");
     expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("bg-rose-600");
     expect(screen.getByRole("button", { name: "Spend" })).toHaveClass("flex-col");
@@ -993,7 +992,12 @@ describe("assistant composer", () => {
     expect(screen.getByRole("button", { name: "Income" })).toHaveClass("flex-col");
     expect(screen.getByRole("button", { name: "Income" }).querySelector(".lucide-wallet")).toBeInTheDocument();
 
-    for (const label of ["Category: Other", "Date", "Merchant", "Note"]) {
+    const categoryButton = screen.getByRole("button", { name: "Category: Other" });
+    expect(categoryButton).toHaveTextContent("");
+    expect(categoryButton.querySelector(".lucide-tag")).toBeInTheDocument();
+    expect(categoryButton.querySelector(".lucide-chevron-down")).toBeInTheDocument();
+
+    for (const label of ["Date", "Merchant", "Note"]) {
       const button = screen.getByRole("button", { name: label });
       expect(button).toHaveClass("flex-col");
       expect(button.querySelector(".truncate")).toBeNull();
@@ -1095,13 +1099,39 @@ describe("assistant composer", () => {
     expect(formData.get("categoryLabel")).toBe("Groceries");
   });
 
+  it("keeps French Manual type row readable with an icon-only category trigger", () => {
+    renderComposerWithLocale("fr", undefined, [], undefined, manualCategoryOptions);
+
+    fireEvent.click(screen.getByRole("button", { name: "Manuel" }));
+
+    const transactionTypeGroup = screen.getByRole("group", { name: "Type de transaction" });
+    expect(transactionTypeGroup.parentElement).toHaveClass("min-[340px]:grid-cols-[minmax(0,1fr)_3.5rem]");
+    expect(screen.getByRole("button", { name: "Dépenses" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Revenus" })).toBeInTheDocument();
+
+    const categoryButton = screen.getByRole("button", { name: "Catégorie: Autre" });
+    expect(categoryButton).toHaveTextContent("");
+    expect(categoryButton.querySelector(".lucide-tag")).toBeInTheDocument();
+    expect(categoryButton.querySelector(".lucide-chevron-down")).toBeInTheDocument();
+
+    fireEvent.click(categoryButton);
+    const picker = screen.getByLabelText("Category picker");
+    expect(within(picker).getByRole("button", { name: "Courses" })).toBeInTheDocument();
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Courses" }));
+    expect(screen.getByRole("button", { name: "Catégorie: Courses" })).toHaveTextContent("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Revenus" }));
+    expect(screen.getByRole("button", { name: "Revenus" })).toHaveClass("bg-emerald-600");
+  });
+
   it("keeps Romanian Manual controls readable on mobile", () => {
     renderComposerWithLocale("ro", undefined, [], undefined, manualCategoryOptions);
 
     fireEvent.click(screen.getByRole("button", { name: "Manual" }));
 
     const transactionTypeGroup = screen.getByRole("group", { name: "Tip tranzacție" });
-    expect(transactionTypeGroup.parentElement).not.toHaveClass("min-[340px]:grid-cols-[minmax(0,1.15fr)_minmax(112px,0.85fr)]");
+    expect(transactionTypeGroup.parentElement).toHaveClass("min-[340px]:grid-cols-[minmax(0,1fr)_3.5rem]");
     expect(screen.getByRole("button", { name: "Cheltuială" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Venit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Magazin" })).toBeInTheDocument();
