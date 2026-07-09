@@ -70,6 +70,23 @@ type RecurringRuleSummary = {
 export type DisplayFxRate = FxRate;
 
 const appDisplayTimeZone = "Europe/Bucharest";
+const shouldLogInsightsTiming = process.env.NODE_ENV !== "production" || process.env.CALM_WALLET_INSIGHTS_TIMING === "1";
+
+function nowMs() {
+  return Date.now();
+}
+
+function logInsightsTiming(label: string, startedAt: number, details: Record<string, boolean | number | string> = {}) {
+  if (!shouldLogInsightsTiming) {
+    return;
+  }
+
+  console.info("[insights:timing]", {
+    label,
+    durationMs: nowMs() - startedAt,
+    ...details,
+  });
+}
 
 export type ControlledCategoryOption = TransactionCategoryOption & {
   slug: string;
@@ -155,7 +172,6 @@ export type InsightsData = {
     expenses: Record<string, InsightsCategorySignal>;
     income: Record<string, InsightsCategorySignal>;
   };
-  clientViews?: Record<string, InsightsClientView>;
 };
 
 export type InsightsLargestEntry = {
@@ -169,8 +185,6 @@ export type InsightsLargestEntry = {
     currency: string;
     isApproximate: boolean;
 };
-
-export type InsightsClientView = Omit<InsightsData, "clientViews">;
 
 export type InsightsCategorySignal = {
   limit?: {
@@ -2216,21 +2230,6 @@ function buildInsightsCategorySignals(args: {
   return Object.fromEntries(Object.entries(signals).filter(([, signal]) => signal.limit || signal.recurring));
 }
 
-function buildInsightsClientViewKey(args: {
-  currency: string;
-  month: string;
-  timeframe: InsightsTimeframePreset;
-}) {
-  return `${args.month}|${args.timeframe}|${args.currency}`;
-}
-
-function withoutClientViews(data: InsightsData): InsightsClientView {
-  const view: InsightsData = { ...data };
-
-  delete view.clientViews;
-  return view;
-}
-
 export function buildSpendingSummaryData(args: {
   transactions: Transaction[];
   filters?: {
@@ -2598,6 +2597,7 @@ export async function loadInsightsPageData(
   requestedTimeframe?: string | null,
   requestedChartMode?: string | null,
 ) {
+  const totalStartedAt = nowMs();
   const service = await createSupabaseTransactionService();
   const budgetService = await createSupabaseBudgetService();
   const now = new Date();
@@ -2633,6 +2633,7 @@ export async function loadInsightsPageData(
       label: category.label,
     }));
 
+  const currentBuildStartedAt = nowMs();
   const data = buildInsightsData(
     transactions,
     categoryLabels,
@@ -2647,49 +2648,22 @@ export async function loadInsightsPageData(
     requestedChartMode,
     recurringRules,
   );
-  const cachedMonths = Array.from(
-    new Set(
-      [
-        data.selectedMonth,
-        data.previousMonth,
-        data.nextMonth,
-        data.latestActivityMonth,
-        ...data.monthPickerYears.flatMap((year) => year.months.map((month) => month.month)),
-      ].filter((month): month is string => Boolean(month)),
-    ),
-  );
-  const clientViews: Record<string, InsightsClientView> = {};
+  logInsightsTiming("loadInsightsPageData.currentBuild", currentBuildStartedAt, {
+    transactionCount: transactions.length,
+    budgetCount: budgets.length,
+    currencyCount: data.availableDisplayCurrencies.length,
+    monthPickerMonthCount: data.monthPickerYears.reduce((count, year) => count + year.months.length, 0),
+  });
+  const clientViewsStartedAt = nowMs();
 
-  cachedMonths.forEach((month) => {
-    data.timeframePresets.forEach((timeframe) => {
-      data.availableDisplayCurrencies.forEach((viewCurrency) => {
-        const view = buildInsightsData(
-          transactions,
-          categoryLabels,
-          currency,
-          now,
-          budgets,
-          budgetCategoryOptions,
-          fxRates,
-          viewCurrency,
-          month,
-          timeframe,
-          data.selectedChartMode,
-          recurringRules,
-        );
-        clientViews[
-          buildInsightsClientViewKey({
-            currency: view.displayCurrency,
-            month: view.selectedMonth,
-            timeframe: view.selectedTimeframe,
-          })
-        ] = withoutClientViews(view);
-      });
-    });
+  logInsightsTiming("loadInsightsPageData.clientViews", clientViewsStartedAt, {
+    generatedViews: 0,
+    strategy: "on-demand-route",
+  });
+  logInsightsTiming("loadInsightsPageData.total", totalStartedAt, {
+    transactionCount: transactions.length,
+    budgetCount: budgets.length,
   });
 
-  return {
-    ...data,
-    clientViews,
-  };
+  return data;
 }

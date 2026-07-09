@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   ChevronLeft,
@@ -263,14 +264,6 @@ function buildInsightsHref(
   }
 
   return `/insights?${params.toString()}`;
-}
-
-function buildClientViewKey(args: {
-  currency: string;
-  month: string;
-  timeframe: InsightsData["selectedTimeframe"];
-}) {
-  return `${args.month}|${args.timeframe}|${args.currency}`;
 }
 
 export function getMonthStatusClass(month: MonthPickerMonth) {
@@ -3067,30 +3060,26 @@ function LargestEntriesCard({ data }: { data: InsightsData }) {
 
 export function InsightsOverview({ data, loadError = false }: InsightsOverviewProps) {
   const { locale } = useLocale();
+  const router = useRouter();
   const [activeData, setActiveData] = useState<InsightsData>(data);
   const hasTrackedData = activeData.trackedTransactionCount > 0;
   const hasCurrentMonthData = activeData.currentMonthTransactionCount > 0;
-  const selectInsightsView = (updates: InsightsSelectionUpdate) => {
-    setActiveData((currentData) => {
-      const nextChart = updates.chart ?? currentData.selectedChartMode;
-      const nextCurrency = updates.currency ?? currentData.displayCurrency;
-      const nextMonth = updates.month ?? currentData.selectedMonth;
-      const nextTimeframe = updates.timeframe ?? currentData.selectedTimeframe;
-      const cachedView =
-        data.clientViews?.[
-          buildClientViewKey({
-            currency: nextCurrency,
-            month: nextMonth,
-            timeframe: nextTimeframe,
-          })
-        ] ?? currentData;
 
-      return {
-        ...cachedView,
-        clientViews: data.clientViews,
-        selectedChartMode: nextChart,
-      };
-    });
+  useEffect(() => {
+    setActiveData(data);
+  }, [data]);
+
+  const selectInsightsView = (updates: InsightsSelectionUpdate) => {
+    const href = buildInsightsHref(activeData, updates);
+
+    if (updates.chart && !updates.currency && !updates.month && !updates.timeframe) {
+      setActiveData((currentData) => ({
+        ...currentData,
+        selectedChartMode: updates.chart ?? currentData.selectedChartMode,
+      }));
+    }
+
+    router.push(href, { scroll: false });
   };
 
   return (

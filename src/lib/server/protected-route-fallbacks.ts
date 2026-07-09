@@ -176,6 +176,5 @@ export function getFallbackInsightsData(now = new Date()): InsightsData {
       expenses: {},
       income: {},
     },
-    clientViews: {},
   };
 }
