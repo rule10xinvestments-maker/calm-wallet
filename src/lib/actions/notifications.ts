@@ -26,6 +26,7 @@ export async function updateNotificationPreferencesAction(
       ...initialNotificationPreferencesActionState,
       status: "error",
       message: "Authenticated user is required.",
+      messageKey: "notifications.authRequired",
     };
   }
 
@@ -43,6 +44,7 @@ export async function updateNotificationPreferencesAction(
     return {
       status: "success",
       message: "Notification preferences updated.",
+      messageKey: "notifications.preferencesUpdated",
       preferences,
     };
   } catch {
@@ -50,6 +52,7 @@ export async function updateNotificationPreferencesAction(
       ...initialNotificationPreferencesActionState,
       status: "error",
       message: "Notification settings could not be saved.",
+      messageKey: "notifications.updateError",
     };
   }
 }
@@ -66,6 +69,7 @@ export async function registerPushSubscriptionAction(
       ...initialNotificationPreferencesActionState,
       status: "error",
       message: "Authenticated user is required.",
+      messageKey: "notifications.authRequired",
     };
   }
 
@@ -82,6 +86,7 @@ export async function registerPushSubscriptionAction(
     return {
       status: "success",
       message: "Notification subscription saved.",
+      messageKey: "notifications.subscriptionSaved",
       preferences,
     };
   } catch {
@@ -89,6 +94,7 @@ export async function registerPushSubscriptionAction(
       ...initialNotificationPreferencesActionState,
       status: "error",
       message: "Notifications are not ready yet.",
+      messageKey: "notifications.notReady",
     };
   }
 }
@@ -108,6 +114,7 @@ export async function sendTestPushNotificationAction(
       ...initialNotificationPreferencesActionState,
       status: "error",
       message: "Authenticated user is required.",
+      messageKey: "notifications.authRequired",
     };
   }
 
@@ -120,6 +127,7 @@ export async function sendTestPushNotificationAction(
         ...initialNotificationPreferencesActionState,
         status: "error",
         message: "Enable notifications first.",
+        messageKey: "notifications.enableFirst",
       };
     }
 
@@ -139,6 +147,7 @@ export async function sendTestPushNotificationAction(
         return {
           status: "success",
           message: "Test notification sent.",
+          messageKey: "notifications.testSent",
           preferences,
         };
       }
@@ -157,12 +166,14 @@ export async function sendTestPushNotificationAction(
       ...initialNotificationPreferencesActionState,
       status: "error",
       message: sawUnconfigured ? "Server notifications are not ready yet." : "Test notification could not be sent.",
+      messageKey: sawUnconfigured ? "notifications.serverNotReady" : "notifications.testCouldNotSend",
     };
   } catch {
     return {
       ...initialNotificationPreferencesActionState,
       status: "error",
       message: "Test notification could not be sent.",
+      messageKey: "notifications.testCouldNotSend",
     };
   }
 }

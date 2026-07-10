@@ -8,6 +8,7 @@ import { useLocale } from "@/components/i18n/locale-provider";
 import {
   initialNotificationPreferencesActionState,
   type NotificationPreferencesActionState,
+  type NotificationPreferencesMessageKey,
 } from "@/lib/actions/notifications-state";
 import { t } from "@/lib/i18n";
 
@@ -24,6 +25,19 @@ type NotificationPreferencesCardProps = {
 };
 
 type BrowserNotificationStatus = "checking" | "unsupported" | "default" | "granted" | "denied";
+type NotificationMessageKey =
+  | NotificationPreferencesMessageKey
+  | "notifications.notReady"
+  | "notifications.permissionNeeded"
+  | "notifications.permissionRequired"
+  | "notifications.ready"
+  | "notifications.testReadyScheduledNotReady"
+  | "notifications.unsupported"
+  | "notifications.updateError";
+
+function getActionMessageKey(state: NotificationPreferencesActionState): NotificationMessageKey | null {
+  return state.messageKey ?? null;
+}
 
 function getBrowserNotificationStatus(): BrowserNotificationStatus {
   if (typeof window === "undefined") {
@@ -99,7 +113,7 @@ export function NotificationPreferencesCard({
   const current = state.preferences ?? preferences;
   const [localPreferences, setLocalPreferences] = useState(current);
   const [browserStatus, setBrowserStatus] = useState<BrowserNotificationStatus>(() => getBrowserNotificationStatus());
-  const [browserMessage, setBrowserMessage] = useState<string | null>(null);
+  const [browserMessageKey, setBrowserMessageKey] = useState<NotificationMessageKey | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isBrowserPending, startBrowserTransition] = useTransition();
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -121,7 +135,7 @@ export function NotificationPreferencesCard({
     }
 
     if (browserStatus === "denied") {
-      return t("notifications.blocked", locale);
+      return t("notifications.permissionRequired", locale);
     }
 
     if (browserStatus === "granted") {
@@ -133,6 +147,9 @@ export function NotificationPreferencesCard({
 
   const notificationStatusLabel = notificationsEnabled ? t("notifications.enabledShort", locale) : t("notifications.disabled", locale);
   const notificationStateCopy = notificationsEnabled ? t("notifications.enabled", locale) : t("notifications.disabledHelper", locale);
+  const browserMessage = browserMessageKey ? t(browserMessageKey, locale) : null;
+  const actionMessageKey = getActionMessageKey(state);
+  const actionMessage = actionMessageKey ? t(actionMessageKey, locale) : null;
 
   function updateLocalPreference(name: keyof Pick<NotificationPreferences, "dailyReminderEnabled" | "monthlyReviewEnabled" | "recurringNotificationsEnabled" | "limitAlertsEnabled">, checked: boolean) {
     setLocalPreferences((value) => ({
@@ -161,7 +178,7 @@ export function NotificationPreferencesCard({
 
   async function registerSubscriptionIfPossible() {
     if (!vapidPublicKey) {
-      setBrowserMessage(t("notifications.testReadyScheduledNotReady", locale));
+      setBrowserMessageKey("notifications.testReadyScheduledNotReady");
       return false;
     }
 
@@ -169,7 +186,7 @@ export function NotificationPreferencesCard({
       const registration = await getReadyServiceWorkerRegistration();
 
       if (!registration || !("pushManager" in registration)) {
-        setBrowserMessage(t("notifications.notReady", locale));
+        setBrowserMessageKey("notifications.notReady");
         return false;
       }
 
@@ -187,21 +204,21 @@ export function NotificationPreferencesCard({
       formData.set("auth", subscriptionJson.keys?.auth ?? "");
       formData.set("userAgent", navigator.userAgent);
       const result = await registerPushSubscriptionAction(initialNotificationPreferencesActionState, formData);
-      setBrowserMessage(result.status === "success" ? t("notifications.ready", locale) : t("notifications.notReady", locale));
+      setBrowserMessageKey(result.status === "success" ? "notifications.ready" : "notifications.notReady");
       return result.status === "success";
     } catch {
-      setBrowserMessage(t("notifications.notReady", locale));
+      setBrowserMessageKey("notifications.notReady");
       return false;
     }
   }
 
   function handleEnableNotifications() {
     startBrowserTransition(async () => {
-      setBrowserMessage(null);
+      setBrowserMessageKey(null);
 
       if (!("Notification" in window)) {
         setBrowserStatus("unsupported");
-        setBrowserMessage(t("notifications.unsupported", locale));
+        setBrowserMessageKey("notifications.unsupported");
         return;
       }
 
@@ -209,12 +226,12 @@ export function NotificationPreferencesCard({
       setBrowserStatus(permission);
 
       if (permission === "denied") {
-        setBrowserMessage(t("notifications.blocked", locale));
+        setBrowserMessageKey("notifications.permissionRequired");
         return;
       }
 
       if (permission !== "granted") {
-        setBrowserMessage(t("notifications.permissionNeeded", locale));
+        setBrowserMessageKey("notifications.permissionNeeded");
         return;
       }
 
@@ -268,6 +285,9 @@ export function NotificationPreferencesCard({
               {browserStatus !== "granted" ? (
                 <div className="space-y-2">
                   <p className="text-xs leading-4 text-slate-500">{permissionCopy}</p>
+                  {browserStatus === "denied" ? (
+                    <p className="text-xs leading-4 text-slate-500">{t("notifications.openBrowserSettings", locale)}</p>
+                  ) : null}
                   <Button
                     className="h-9 px-3 text-xs"
                     disabled={!canUseNotifications || browserStatus === "denied" || isBrowserPending}
@@ -283,8 +303,8 @@ export function NotificationPreferencesCard({
           </div>
 
           <form action={formAction} className="space-y-2.5">
-            {state.message ? (
-              <p className={`text-sm ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{state.message}</p>
+            {actionMessage ? (
+              <p className={`text-sm ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{actionMessage}</p>
             ) : null}
             <ToggleCard
               checked={localPreferences.dailyReminderEnabled}

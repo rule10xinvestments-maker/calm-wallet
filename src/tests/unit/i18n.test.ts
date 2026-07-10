@@ -2,6 +2,8 @@ import en from "@/lib/i18n/locales/en.json";
 import es from "@/lib/i18n/locales/es.json";
 import fr from "@/lib/i18n/locales/fr.json";
 import ro from "@/lib/i18n/locales/ro.json";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeLocale, resolveLocalePreference, t } from "@/lib/i18n";
 
@@ -82,10 +84,18 @@ describe("i18n helper", () => {
     expect(t("assistant.imports.chooseFileFirst", "ro")).toBe("Alege mai întâi o imagine de bon sau un fișier CSV.");
     expect(t("imports.noCandidatesYet", "fr")).toBe("Aucun candidat pour le moment.");
     expect(t("notifications.saveSettings", "es")).toBe("Guardar ajustes de notificaciones");
+    expect(t("notifications.calmHelper", "en")).toBe("Allow Calm Wallet to send helpful reminders.");
+    expect(t("notifications.calmHelper", "ro")).toBe("Permite aplicației Calm Wallet să trimită mementouri utile.");
+    expect(t("notifications.calmHelper", "fr")).toBe("Autorisez Calm Wallet à envoyer des rappels utiles.");
+    expect(t("notifications.calmHelper", "es")).toBe("Permite que Calm Wallet envíe recordatorios útiles.");
     expect(t("notifications.disabledHelper", "en")).toBe("Notifications are disabled.");
     expect(t("notifications.disabledHelper", "ro")).toBe("Notificările sunt dezactivate.");
     expect(t("notifications.disabledHelper", "fr")).toBe("Les notifications sont désactivées.");
     expect(t("notifications.disabledHelper", "es")).toBe("Las notificaciones están desactivadas.");
+    expect(t("notifications.permissionRequired", "ro")).toBe("Este necesară permisiunea");
+    expect(t("notifications.openBrowserSettings", "ro")).toBe("Deschide setările browserului pentru a permite notificările.");
+    expect(t("notifications.unsupported", "ro")).toBe("Notificările nu sunt disponibile pe acest dispozitiv.");
+    expect(t("notifications.updateError", "ro")).toBe("Nu am putut actualiza setările de notificări. Încearcă din nou.");
     expect(t("assistant.actions.owed", "es")).toBe("Pendientes");
     expect(t("assistant.owed.title", "es")).toBe("Pendientes");
     expect(t("assistant.owed.helper", "ro")).toBe("Ține evidența banilor de primit și de plătit.");
@@ -136,6 +146,25 @@ describe("i18n helper", () => {
     expect(t("activity.inspect.viewInActivity", "ro")).toBe("Vezi în Activitate");
     expect(t("activity.inspect.showingCategory", "es", { category: "Inversiones" })).toBe("Mostrando Inversiones");
     expect(t("common.clear", "fr")).toBe("Effacer");
+  });
+
+  it("keeps notification settings component copy behind i18n keys", () => {
+    const source = readFileSync(join(process.cwd(), "src/components/notifications/notification-preferences-card.tsx"), "utf8");
+    const hardcodedCopy = [
+      "Allow Calm Wallet to send helpful reminders.",
+      "Notifications are enabled.",
+      "Notifications are disabled.",
+      "Enable notifications",
+      "Disable notifications",
+      "Open browser settings to allow notifications.",
+      "Notifications are not supported on this device.",
+      "We could not update notification settings. Please try again.",
+    ];
+
+    hardcodedCopy.forEach((copy) => {
+      expect(source).not.toContain(`>${copy}<`);
+      expect(source).not.toContain(`"${copy}"`);
+    });
   });
 
   it.each([

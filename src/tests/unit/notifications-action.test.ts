@@ -101,6 +101,7 @@ describe("notification actions", () => {
     });
     expect(revalidatePath).toHaveBeenCalledWith("/assistant");
     expect(result.status).toBe("success");
+    expect(result.messageKey).toBe("notifications.preferencesUpdated");
     expect(result.preferences?.userId).toBe("user-1");
   });
 
@@ -115,6 +116,7 @@ describe("notification actions", () => {
 
     expect(updateNotificationPreferences).not.toHaveBeenCalled();
     expect(result.status).toBe("error");
+    expect(result.messageKey).toBe("notifications.authRequired");
   });
 
   it("registers a push subscription as owned storage scaffolding only", async () => {
@@ -138,6 +140,7 @@ describe("notification actions", () => {
     });
     expect(getNotificationPreferences).toHaveBeenCalledWith("user-1");
     expect(result.status).toBe("success");
+    expect(result.messageKey).toBe("notifications.subscriptionSaved");
   });
 
   it("uses calm copy when subscription storage fails", async () => {
@@ -156,6 +159,7 @@ describe("notification actions", () => {
     expect(result).toMatchObject({
       status: "error",
       message: "Notifications are not ready yet.",
+      messageKey: "notifications.notReady",
     });
   });
 
@@ -181,6 +185,7 @@ describe("notification actions", () => {
     expect(result).toMatchObject({
       status: "success",
       message: "Test notification sent.",
+      messageKey: "notifications.testSent",
     });
   });
 
@@ -197,6 +202,7 @@ describe("notification actions", () => {
     expect(result).toMatchObject({
       status: "error",
       message: "Enable notifications first.",
+      messageKey: "notifications.enableFirst",
     });
   });
 
@@ -213,6 +219,7 @@ describe("notification actions", () => {
     expect(result).toMatchObject({
       status: "error",
       message: "Test notification could not be sent.",
+      messageKey: "notifications.testCouldNotSend",
     });
   });
 });
