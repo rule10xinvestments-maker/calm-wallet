@@ -701,6 +701,7 @@
       "helper": "Review user support messages.",
       "empty": "No support tickets yet.",
       "selectTicket": "Select a ticket to review.",
+      "backToList": "Back to tickets",
       "ticketDetail": "Ticket detail",
       "userId": "User ID",
       "locale": "Locale",

@@ -36,10 +36,7 @@ export default async function AdminSupportPage({ searchParams }: AdminSupportPag
   const resolvedSearchParams = (await searchParams) ?? {};
   const activeStatus = normalizeStatus(resolvedSearchParams.status);
   const tickets = await service.listTickets(activeStatus);
-  const selectedTicket =
-    (resolvedSearchParams.ticket ? tickets.find((ticket) => ticket.id === resolvedSearchParams.ticket) : null) ??
-    tickets[0] ??
-    null;
+  const selectedTicket = resolvedSearchParams.ticket ? tickets.find((ticket) => ticket.id === resolvedSearchParams.ticket) ?? null : null;
   const locale = normalizeLocale(auth.user.user_metadata?.ui_locale) as SupportedLocale;
 
   return (

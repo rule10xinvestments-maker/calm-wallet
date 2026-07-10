@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
+import { Check, ChevronDown } from "lucide-react";
 import { initialAdminSupportTicketActionState, type AdminSupportTicketActionState } from "@/lib/actions/support-state";
 import type { SupportStatus, SupportTicket } from "@/domain/support/types";
 import { t, type SupportedLocale } from "@/lib/i18n";
@@ -19,15 +20,17 @@ const statusFilters: Array<SupportStatus | "all"> = ["all", "new", "in_progress"
 const editableStatuses: SupportStatus[] = ["new", "in_progress", "resolved", "closed"];
 
 export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, locale, action }: AdminSupportConsoleProps) {
+  const listHref = `/admin/support${activeStatus === "all" ? "" : `?status=${activeStatus}`}`;
+
   return (
     <section className="space-y-4">
-      <header className="space-y-2">
+      <header className={`space-y-2 ${selectedTicket ? "hidden md:block" : ""}`}>
         <p className="text-sm font-medium text-sky-700">{t("admin.support.eyebrow", locale)}</p>
         <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{t("admin.support.title", locale)}</h2>
         <p className="text-sm leading-6 text-slate-500">{t("admin.support.helper", locale)}</p>
       </header>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className={`flex gap-2 overflow-x-auto pb-1 ${selectedTicket ? "hidden md:flex" : ""}`}>
         {statusFilters.map((status) => (
           <Link
             className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
@@ -42,7 +45,7 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
       </div>
 
       <div className="grid gap-3 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="space-y-2">
+        <div className={`space-y-2 ${selectedTicket ? "hidden md:block" : ""}`} data-testid="admin-support-ticket-list">
           {tickets.length === 0 ? (
             <p className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
               {t("admin.support.empty", locale)}
@@ -77,9 +80,12 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
           )}
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+        <div
+          className={`rounded-2xl border border-slate-200 bg-white px-4 py-4 ${selectedTicket ? "" : "hidden md:block"}`}
+          data-testid="admin-support-ticket-detail"
+        >
           {selectedTicket ? (
-            <TicketDetail ticket={selectedTicket} locale={locale} action={action} />
+            <TicketDetail action={action} closeHref={listHref} locale={locale} ticket={selectedTicket} />
           ) : (
             <p className="text-sm text-slate-500">{t("admin.support.selectTicket", locale)}</p>
           )}
@@ -91,17 +97,34 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
 
 function TicketDetail({
   ticket,
+  closeHref,
   locale,
   action,
 }: {
   ticket: SupportTicket;
+  closeHref: string;
   locale: SupportedLocale;
   action: AdminSupportConsoleProps["action"];
 }) {
   const [state, formAction, isPending] = useActionState(action, initialAdminSupportTicketActionState);
+  const [selectedStatus, setSelectedStatus] = useState<SupportStatus>(ticket.status);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedStatus(ticket.status);
+    setIsStatusOpen(false);
+  }, [ticket.id, ticket.status]);
 
   return (
     <div className="space-y-4">
+      <Link
+        aria-label={t("admin.support.backToList", locale)}
+        className="inline-flex min-h-9 items-center rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 md:hidden"
+        href={closeHref}
+      >
+        {t("admin.support.backToList", locale)}
+      </Link>
+
       <div className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{t("admin.support.ticketDetail", locale)}</p>
         <h3 className="text-lg font-semibold text-slate-900">{ticket.subject || t(`settings.support.categories.${ticket.category}`, locale)}</h3>
@@ -123,16 +146,47 @@ function TicketDetail({
 
       <form action={formAction} className="space-y-3">
         <input name="ticketId" type="hidden" value={ticket.id} />
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-slate-700">{t("admin.support.status", locale)}</span>
-          <select className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm" name="status" defaultValue={ticket.status}>
-            {editableStatuses.map((status) => (
-              <option key={status} value={status}>
-                {t(`admin.support.statuses.${status}`, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="space-y-1.5">
+          <input name="status" type="hidden" value={selectedStatus} />
+          <span className="block text-xs font-medium text-slate-700" id={`support-status-label-${ticket.id}`}>
+            {t("admin.support.status", locale)}
+          </span>
+          <button
+            aria-expanded={isStatusOpen}
+            aria-labelledby={`support-status-label-${ticket.id} support-status-value-${ticket.id}`}
+            className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm text-slate-900 transition hover:bg-white focus:border-sky-300 focus:bg-white focus:outline-none"
+            onClick={() => setIsStatusOpen((value) => !value)}
+            type="button"
+          >
+            <span id={`support-status-value-${ticket.id}`}>{t(`admin.support.statuses.${selectedStatus}`, locale)}</span>
+            <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isStatusOpen ? "rotate-180" : ""}`} />
+          </button>
+          {isStatusOpen ? (
+            <div className="grid gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              {editableStatuses.map((status) => {
+                const isSelected = status === selectedStatus;
+
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={`flex min-h-10 items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
+                      isSelected ? "bg-sky-50 text-sky-800" : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                    key={status}
+                    onClick={() => {
+                      setSelectedStatus(status);
+                      setIsStatusOpen(false);
+                    }}
+                    type="button"
+                  >
+                    <span>{t(`admin.support.statuses.${status}`, locale)}</span>
+                    {isSelected ? <Check aria-hidden="true" className="size-4" /> : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-slate-700">{t("admin.support.internalNote", locale)}</span>
           <textarea

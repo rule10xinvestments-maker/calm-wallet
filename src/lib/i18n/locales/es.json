@@ -701,6 +701,7 @@
       "helper": "Revisa los mensajes de soporte.",
       "empty": "Aún no hay tickets de soporte.",
       "selectTicket": "Selecciona un ticket para revisar.",
+      "backToList": "Volver a tickets",
       "ticketDetail": "Detalle del ticket",
       "userId": "ID de usuario",
       "locale": "Idioma",

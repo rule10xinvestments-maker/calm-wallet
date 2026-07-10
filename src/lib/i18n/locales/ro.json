@@ -703,6 +703,7 @@
       "helper": "Revizuiește mesajele de suport.",
       "empty": "Nu există tichete de suport încă.",
       "selectTicket": "Alege un tichet pentru revizuire.",
+      "backToList": "Înapoi la tichete",
       "ticketDetail": "Detalii tichet",
       "userId": "ID utilizator",
       "locale": "Limbă",
