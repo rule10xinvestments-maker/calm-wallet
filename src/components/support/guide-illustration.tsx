@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Coffee, Landmark, NotebookText, Pencil, Repeat2, RotateCcw, StickyNote, Tag, Trash2 } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, Coffee, Landmark, NotebookText, Pencil, ReceiptText, Repeat2, RotateCcw, StickyNote, Tag, Trash2, Utensils } from "lucide-react";
 import { t } from "@/lib/i18n";
 import type { ReactNode } from "react";
 import type { SupportedLocale } from "@/lib/i18n";
@@ -73,12 +73,49 @@ function renderVisual(kind: GuideIllustrationKind, locale: SupportedLocale) {
 
 function QuickAddVisual({ locale }: { locale: SupportedLocale }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 text-center text-[0.64rem] font-semibold text-slate-600">
-      <VisualPill>{t("help.visuals.quickAdd.input", locale)}</VisualPill>
-      <Arrow />
-      <VisualPill>{t("help.visuals.quickAdd.understands", locale)}</VisualPill>
-      <Arrow />
-      <VisualPill>{t("help.visuals.quickAdd.saved", locale)}</VisualPill>
+    <div className="space-y-2 text-[0.62rem] font-semibold text-slate-600" data-testid="guide-quickadd-flow">
+      <div
+        className="ml-1 w-fit max-w-full rounded-2xl rounded-bl-md border border-sky-100 bg-white px-3 py-2 text-[0.76rem] font-semibold text-slate-800 shadow-sm"
+        data-testid="guide-quickadd-message"
+      >
+        {t("help.visuals.quickAdd.input", locale)}
+      </div>
+
+      <Connector />
+
+      <div className="flex flex-wrap items-center justify-center gap-1.5" data-testid="guide-quickadd-interpretation">
+        <InterpretationChip icon={<ReceiptText aria-hidden="true" className="size-3.5" />} label={t("help.visuals.quickAdd.spend", locale)} />
+        <span className="shrink-0 rounded-full border border-slate-100 bg-white px-2.5 py-1 text-[0.68rem] font-bold text-slate-800 shadow-sm">
+          {t("help.visuals.quickAdd.amount", locale)}
+        </span>
+        <InterpretationChip icon={<Utensils aria-hidden="true" className="size-3.5" />} label={t("help.visuals.quickAdd.category", locale)} />
+      </div>
+
+      <Connector />
+
+      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm" data-testid="guide-quickadd-saved-card">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700">
+            <Coffee aria-hidden="true" className="size-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[0.76rem] font-semibold text-slate-800">{t("help.visuals.quickAdd.merchant", locale)}</span>
+            <span className="mt-0.5 inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[0.56rem] font-semibold text-sky-700">
+              {t("help.visuals.quickAdd.category", locale)}
+            </span>
+          </span>
+          <span className="shrink-0 text-[0.72rem] font-bold text-rose-600">{t("help.visuals.quickAdd.savedAmount", locale)}</span>
+        </div>
+      </div>
+
+      <div className="ml-auto flex w-fit max-w-full items-center gap-1.5 rounded-full border border-amber-100 bg-white px-2 py-1 text-[0.56rem] font-semibold text-amber-700" data-testid="guide-quickadd-review-detail">
+        <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />
+        <span className="truncate">{t("help.visuals.quickAdd.reviewExample", locale)}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5">
+          <CheckCircle2 aria-hidden="true" className="size-3" />
+          {t("help.visuals.quickAdd.needsReview", locale)}
+        </span>
+      </div>
     </div>
   );
 }
@@ -263,6 +300,23 @@ function ActionCallout({ icon, label, tone = "neutral" }: { icon: ReactNode; lab
       {icon}
       <span className="max-w-full whitespace-normal break-keep text-[0.55rem] leading-3">{label}</span>
     </span>
+  );
+}
+
+function InterpretationChip({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-sky-100 bg-white px-2 py-1 text-[0.62rem] font-semibold text-sky-700 shadow-sm">
+      {icon}
+      <span>{label}</span>
+    </span>
+  );
+}
+
+function Connector() {
+  return (
+    <div className="flex justify-center text-sky-500" aria-hidden="true">
+      <span className="h-3 border-l border-dashed border-sky-300" />
+    </div>
   );
 }
 

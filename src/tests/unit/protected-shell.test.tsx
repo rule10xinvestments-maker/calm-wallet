@@ -158,7 +158,7 @@ describe("protected shell PWA install affordance", () => {
     expect(within(helpPanel).getByText("Find answers and learn how Calm Wallet works.")).toBeInTheDocument();
     expect(within(helpPanel).getByRole("textbox", { name: "Search Help" })).toBeInTheDocument();
     expect(within(helpPanel).getByTestId("guide-illustration-quickAdd")).toHaveAttribute("aria-hidden", "true");
-    expect(within(helpPanel).getByText("Natural notes become tracked entries.")).toBeInTheDocument();
+    expect(within(helpPanel).getByText("Write naturally. Calm Wallet turns the important details into a tracked entry.")).toBeInTheDocument();
     expect(within(helpPanel).getByTestId("guide-illustration-trackedBalance")).toBeInTheDocument();
     expect(within(helpPanel).queryByTestId("guide-illustration-privacy")).not.toBeInTheDocument();
     expect(within(helpPanel).queryByRole("button", { name: /Help Find answers/ })).not.toBeInTheDocument();
@@ -394,7 +394,7 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByRole("dialog", { name: "Ajutor" })).toBeInTheDocument();
     expect(screen.getByText("Găsește răspunsuri și află cum funcționează Calm Wallet.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Caută în Ajutor" })).toBeInTheDocument();
-    expect(screen.getByText("Notele naturale devin intrări urmărite.")).toBeInTheDocument();
+    expect(screen.getByText("Scrie natural. Calm Wallet transformă detaliile importante într-o intrare urmărită.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ce este Calm Wallet?" }));
     expect(screen.getByText(/caiet inteligent de buget/)).toBeInTheDocument();
     romanianView.unmount();
@@ -402,7 +402,7 @@ describe("protected shell PWA install affordance", () => {
     const frenchView = renderProtectedShellWithLocale("fr");
     fireEvent.click(screen.getByRole("button", { name: "Aide" }));
     expect(screen.getByText("Trouvez des réponses et découvrez comment fonctionne Calm Wallet.")).toBeInTheDocument();
-    expect(screen.getByText("Les notes naturelles deviennent des entrées suivies.")).toBeInTheDocument();
+    expect(screen.getByText("Écrivez naturellement. Calm Wallet transforme les détails importants en une entrée suivie.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Qu'est-ce que Calm Wallet ?" }));
     expect(screen.getByText(/carnet de budget intelligent/)).toBeInTheDocument();
     frenchView.unmount();
@@ -410,7 +410,7 @@ describe("protected shell PWA install affordance", () => {
     const spanishView = renderProtectedShellWithLocale("es");
     fireEvent.click(screen.getByRole("button", { name: "Ayuda" }));
     expect(screen.getByText("Encuentra respuestas y aprende cómo funciona Calm Wallet.")).toBeInTheDocument();
-    expect(screen.getByText("Las notas naturales se convierten en entradas registradas.")).toBeInTheDocument();
+    expect(screen.getByText("Escribe con naturalidad. Calm Wallet convierte los detalles importantes en un registro.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "¿Qué es Calm Wallet?" }));
     expect(screen.getByText(/cuaderno inteligente de presupuesto/)).toBeInTheDocument();
     spanishView.unmount();

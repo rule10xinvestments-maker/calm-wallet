@@ -273,9 +273,14 @@
     "visuals": {
       "quickAdd": {
         "input": "Coffee 12",
-        "understands": "AI understands",
-        "saved": "Saved entry",
-        "caption": "Natural notes become tracked entries."
+        "spend": "Spend",
+        "amount": "12",
+        "category": "Dining",
+        "merchant": "Coffee",
+        "savedAmount": "-RON 12.00",
+        "reviewExample": "Carrefour 150",
+        "needsReview": "Needs review",
+        "caption": "Write naturally. Calm Wallet turns the important details into a tracked entry."
       },
       "needsReview": {
         "saved": "Entry saved",

@@ -273,9 +273,14 @@
     "visuals": {
       "quickAdd": {
         "input": "Café 12",
-        "understands": "La IA entiende",
-        "saved": "Entrada guardada",
-        "caption": "Las notas naturales se convierten en entradas registradas."
+        "spend": "Gasto",
+        "amount": "12",
+        "category": "Comidas",
+        "merchant": "Café",
+        "savedAmount": "-12,00 RON",
+        "reviewExample": "Carrefour 150",
+        "needsReview": "Revisar",
+        "caption": "Escribe con naturalidad. Calm Wallet convierte los detalles importantes en un registro."
       },
       "needsReview": {
         "saved": "Entrada guardada",

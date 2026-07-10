@@ -16,6 +16,38 @@ describe("GuideIllustration", () => {
     expect(screen.getByText("Una meta, no una restricción.")).toBeInTheDocument();
   });
 
+  it("renders Assistant Quick Add as a natural-language workflow without the old three-box AI step", () => {
+    render(<GuideIllustration kind="quickAdd" locale="en" />);
+
+    const quickAdd = screen.getByTestId("guide-illustration-quickAdd");
+    expect(quickAdd).toHaveAttribute("aria-hidden", "true");
+    expect(within(quickAdd).getByTestId("guide-quickadd-flow")).toBeInTheDocument();
+    expect(within(quickAdd).getByTestId("guide-quickadd-message")).toHaveTextContent("Coffee 12");
+    expect(within(quickAdd).getByTestId("guide-quickadd-interpretation")).toHaveTextContent("Spend");
+    expect(within(quickAdd).getByTestId("guide-quickadd-interpretation")).toHaveTextContent("12");
+    expect(within(quickAdd).getByTestId("guide-quickadd-interpretation")).toHaveTextContent("Dining");
+    expect(within(quickAdd).getByTestId("guide-quickadd-saved-card")).toHaveTextContent("Coffee");
+    expect(within(quickAdd).getByTestId("guide-quickadd-saved-card")).toHaveTextContent("-RON 12.00");
+    expect(within(quickAdd).queryByText("AI understands")).not.toBeInTheDocument();
+    expect(quickAdd.querySelector(".grid-cols-\\[1fr_auto_1fr_auto_1fr\\]")).toBeNull();
+
+    const reviewDetail = within(quickAdd).getByTestId("guide-quickadd-review-detail");
+    expect(reviewDetail).toHaveTextContent("Carrefour 150");
+    expect(reviewDetail).toHaveTextContent("Needs review");
+    expect(within(quickAdd).getByText("Write naturally. Calm Wallet turns the important details into a tracked entry.")).toBeInTheDocument();
+  });
+
+  it("renders Assistant Quick Add labels from localization keys", () => {
+    render(<GuideIllustration kind="quickAdd" locale="es" />);
+
+    const quickAdd = screen.getByTestId("guide-illustration-quickAdd");
+    expect(within(quickAdd).getByTestId("guide-quickadd-message")).toHaveTextContent("Café 12");
+    expect(within(quickAdd).getByTestId("guide-quickadd-interpretation")).toHaveTextContent("Gasto");
+    expect(within(quickAdd).getByTestId("guide-quickadd-interpretation")).toHaveTextContent("Comidas");
+    expect(within(quickAdd).getByTestId("guide-quickadd-review-detail")).toHaveTextContent("Revisar");
+    expect(within(quickAdd).getByText("Escribe con naturalidad. Calm Wallet convierte los detalles importantes en un registro.")).toBeInTheDocument();
+  });
+
   it("renders Activity as a transaction card with Restore separated from normal actions", () => {
     render(<GuideIllustration kind="activity" locale="ro" />);
 
@@ -64,7 +96,6 @@ describe("GuideIllustration", () => {
 
   it("keeps the other guide illustration variants rendering with their existing captions", () => {
     const unchangedVariants: Array<[GuideIllustrationKind, string]> = [
-      ["quickAdd", "Natural notes become tracked entries."],
       ["needsReview", "Uncertainty is shown clearly, and corrections update your reports."],
       ["mix", "See where your money goes."],
       ["bars", "Compare different parts of the selected period."],

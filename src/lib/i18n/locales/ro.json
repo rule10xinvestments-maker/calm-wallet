@@ -275,9 +275,14 @@
     "visuals": {
       "quickAdd": {
         "input": "Cafea 12",
-        "understands": "AI înțelege",
-        "saved": "Intrare salvată",
-        "caption": "Notele naturale devin intrări urmărite."
+        "spend": "Cheltuială",
+        "amount": "12",
+        "category": "Mese",
+        "merchant": "Cafea",
+        "savedAmount": "-12,00 RON",
+        "reviewExample": "Carrefour 150",
+        "needsReview": "Verifică",
+        "caption": "Scrie natural. Calm Wallet transformă detaliile importante într-o intrare urmărită."
       },
       "needsReview": {
         "saved": "Intrare salvată",

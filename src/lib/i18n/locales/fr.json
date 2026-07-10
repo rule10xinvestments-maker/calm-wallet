@@ -273,9 +273,14 @@
     "visuals": {
       "quickAdd": {
         "input": "Café 12",
-        "understands": "L'IA comprend",
-        "saved": "Entrée enregistrée",
-        "caption": "Les notes naturelles deviennent des entrées suivies."
+        "spend": "Dépense",
+        "amount": "12",
+        "category": "Restaurants",
+        "merchant": "Café",
+        "savedAmount": "-12,00 RON",
+        "reviewExample": "Carrefour 150",
+        "needsReview": "À vérifier",
+        "caption": "Écrivez naturellement. Calm Wallet transforme les détails importants en une entrée suivie."
       },
       "needsReview": {
         "saved": "Entrée enregistrée",
