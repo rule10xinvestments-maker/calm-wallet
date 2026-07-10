@@ -25,6 +25,19 @@ type AuthFormProps = {
   nextPath?: string | null;
 };
 
+type PasswordFieldProps = {
+  autoComplete: string;
+  label: string;
+  name: string;
+  placeholder: string;
+  visible: boolean;
+  onToggle: () => void;
+  toggleLabels: {
+    show: string;
+    hide: string;
+  };
+};
+
 export function AuthForm({
   title,
   description,
@@ -76,53 +89,6 @@ export function AuthForm({
       event.preventDefault();
       setClientError(t("auth.errors.passwordsDoNotMatch", locale));
     }
-  }
-
-  function PasswordField({
-    autoComplete,
-    label,
-    name,
-    visible,
-    onToggle,
-    toggleLabels,
-  }: {
-    autoComplete: string;
-    label: string;
-    name: string;
-    visible: boolean;
-    onToggle: () => void;
-    toggleLabels: {
-      show: string;
-      hide: string;
-    };
-  }) {
-    const Icon = visible ? EyeOff : Eye;
-    const toggleLabel = visible ? toggleLabels.hide : toggleLabels.show;
-
-    return (
-      <label className="block space-y-2">
-        <span className="text-sm font-medium text-slate-700">{label}</span>
-        <span className="relative block">
-          <input
-            autoComplete={autoComplete}
-            className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white"
-            minLength={8}
-            name={name}
-            placeholder={t("auth.passwordPlaceholder", locale)}
-            required
-            type={visible ? "text" : "password"}
-          />
-          <button
-            aria-label={toggleLabel}
-            className="absolute right-3 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
-            onClick={onToggle}
-            type="button"
-          >
-            <Icon aria-hidden="true" className="size-4" />
-          </button>
-        </span>
-      </label>
-    );
   }
 
   return (
@@ -189,6 +155,7 @@ export function AuthForm({
             label={t("auth.password", locale)}
             name="password"
             onToggle={() => setPasswordVisible((value) => !value)}
+            placeholder={t("auth.passwordPlaceholder", locale)}
             toggleLabels={{ show: t("auth.showPassword", locale), hide: t("auth.hidePassword", locale) }}
             visible={passwordVisible}
           />
@@ -199,6 +166,7 @@ export function AuthForm({
               label={t("auth.confirmPassword", locale)}
               name="confirmPassword"
               onToggle={() => setConfirmPasswordVisible((value) => !value)}
+              placeholder={t("auth.passwordPlaceholder", locale)}
               toggleLabels={{ show: t("auth.showConfirmPassword", locale), hide: t("auth.hideConfirmPassword", locale) }}
               visible={confirmPasswordVisible}
             />
@@ -229,6 +197,45 @@ export function AuthForm({
         <PwaInstallButton />
       </CardContent>
     </Card>
+  );
+}
+
+function PasswordField({
+  autoComplete,
+  label,
+  name,
+  placeholder,
+  visible,
+  onToggle,
+  toggleLabels,
+}: PasswordFieldProps) {
+  const Icon = visible ? EyeOff : Eye;
+  const toggleLabel = visible ? toggleLabels.hide : toggleLabels.show;
+
+  return (
+    <label className="block space-y-2">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <span className="relative block">
+        <input
+          autoComplete={autoComplete}
+          className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white"
+          minLength={8}
+          name={name}
+          placeholder={placeholder}
+          required
+          type={visible ? "text" : "password"}
+        />
+        <button
+          aria-label={toggleLabel}
+          className="absolute right-3 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+          onClick={onToggle}
+          onMouseDown={(event) => event.preventDefault()}
+          type="button"
+        >
+          <Icon aria-hidden="true" className="size-4" />
+        </button>
+      </span>
+    </label>
   );
 }
 

@@ -227,6 +227,36 @@ describe("auth form", () => {
     expect(screen.getByLabelText("Confirm password")).toHaveAttribute("type", "password");
   });
 
+  it("keeps registration password values when visibility toggles are tapped", () => {
+    const action = renderSignUp();
+    const passwordInput = screen.getByLabelText("Password") as HTMLInputElement;
+    const confirmPasswordInput = screen.getByLabelText("Confirm password") as HTMLInputElement;
+
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+    fireEvent.change(confirmPasswordInput, { target: { value: "password123" } });
+
+    expect(passwordInput).toHaveAttribute("type", "password");
+    expect(confirmPasswordInput).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show confirm password" }));
+
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("Password")).toHaveValue("password123");
+    expect(screen.getByLabelText("Confirm password")).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("Confirm password")).toHaveValue("password123");
+    expect(action).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide confirm password" }));
+
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Password")).toHaveValue("password123");
+    expect(screen.getByLabelText("Confirm password")).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Confirm password")).toHaveValue("password123");
+    expect(action).not.toHaveBeenCalled();
+  });
+
   it("shows the PWA install button when the browser install prompt is available", async () => {
     const prompt = vi.fn(async () => undefined);
     const userChoice = Promise.resolve({ outcome: "accepted" as const, platform: "web" });
