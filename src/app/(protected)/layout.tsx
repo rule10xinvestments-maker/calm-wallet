@@ -39,22 +39,27 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   let isSupportAdmin = false;
 
   try {
-    const [notificationService, preferencesService, supportService] = await Promise.all([
+    const [notificationService, preferencesService] = await Promise.all([
       createSupabaseNotificationService(),
       createSupabaseUserPreferencesService(),
-      createSupabaseSupportService(),
     ]);
-    const [loadedNotificationPreferences, loadedUserPreferences, loadedIsSupportAdmin] = await Promise.all([
+    const [loadedNotificationPreferences, loadedUserPreferences] = await Promise.all([
       notificationService.getNotificationPreferences(user.id),
       preferencesService.getUserPreferences(user.id),
-      supportService.isAdmin(user.id),
     ]);
 
     notificationPreferences = loadedNotificationPreferences;
     uiLocale = loadedUserPreferences.uiLocale;
-    isSupportAdmin = loadedIsSupportAdmin;
   } catch (error) {
     logProtectedRouteLoadFailure("assistant", error);
+  }
+
+  try {
+    const supportService = await createSupabaseSupportService();
+    isSupportAdmin = await supportService.isAdmin(user.id);
+  } catch (error) {
+    logProtectedRouteLoadFailure("assistant", error);
+    isSupportAdmin = false;
   }
 
   return (
