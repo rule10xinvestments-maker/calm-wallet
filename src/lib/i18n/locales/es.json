@@ -252,6 +252,7 @@
     },
     "help": {
       "title": "Ayuda",
+      "closeOverlay": "Cerrar panel de ayuda",
       "helper": "Encuentra respuestas y aprende como funciona Calm Wallet."
     },
     "signOutHelper": "Finaliza esta sesión en este dispositivo.",

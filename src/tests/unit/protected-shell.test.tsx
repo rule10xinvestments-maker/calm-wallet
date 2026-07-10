@@ -131,17 +131,40 @@ describe("protected shell PWA install affordance", () => {
     vi.restoreAllMocks();
   });
 
-  it("keeps sign out as an accessible icon-only header button beside settings", () => {
+  it("shows Help and Settings in the header without a header sign-out action", () => {
     renderProtectedShell();
 
     expect(screen.getByRole("button", { name: "Install Calm Wallet" })).toBeInTheDocument();
+    const helpButton = screen.getByRole("button", { name: "Help" });
     const settingsButton = screen.getByRole("button", { name: "Settings" });
-    const signOutButton = screen.getByRole("button", { name: "Sign out" });
 
+    expect(helpButton.compareDocumentPosition(settingsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(helpButton).toHaveAttribute("aria-expanded", "false");
     expect(settingsButton).toHaveAttribute("aria-expanded", "false");
-    expect(signOutButton).toHaveAttribute("title", "Sign out");
-    expect(signOutButton.querySelector("svg")).not.toBeNull();
-    expect(signOutButton).toHaveTextContent("");
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+
+    fireEvent.click(helpButton);
+
+    const helpOverlay = screen.getByTestId("header-help-overlay");
+    const helpPanel = screen.getByTestId("header-help-panel");
+    expect(helpOverlay).toHaveClass("fixed");
+    expect(helpOverlay).toHaveClass("inset-0");
+    expect(helpOverlay).toHaveClass("z-[120]");
+    expect(helpOverlay).toHaveClass("bg-slate-950/25");
+    expect(helpPanel).toHaveClass("max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]");
+    expect(helpPanel).toHaveClass("overflow-y-auto");
+    expect(helpButton).toHaveAttribute("aria-expanded", "true");
+    expect(within(helpPanel).getByRole("button", { name: /Help Find answers/ })).toBeInTheDocument();
+
+    fireEvent.click(within(helpPanel).getByRole("button", { name: /Help Find answers/ }));
+
+    expect(within(helpPanel).getByRole("textbox", { name: "Search Help" })).toBeInTheDocument();
+    expect(within(helpPanel).getByRole("button", { name: /What is Calm Wallet/ })).toBeInTheDocument();
+    expect(within(helpPanel).getByRole("button", { name: "Close" })).toBeInTheDocument();
+
+    fireEvent.click(within(helpPanel).getByRole("button", { name: "Close" }));
+
+    expect(helpButton).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(settingsButton);
 
@@ -156,10 +179,13 @@ describe("protected shell PWA install affordance", () => {
     expect(settingsPanel).toHaveClass("overflow-y-auto");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
     const languageButton = screen.getByRole("button", { name: /Language/ });
+    const reportButton = screen.getByRole("button", { name: /Report a problem/ });
     const notificationsButton = screen.getByRole("button", { name: /Notifications/ });
-    expect(languageButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(languageButton.compareDocumentPosition(reportButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(reportButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(languageButton).toHaveAttribute("aria-expanded", "false");
     expect(notificationsButton).toHaveAttribute("aria-expanded", "false");
+    expect(within(settingsPanel).queryByRole("button", { name: /Help Find answers/ })).not.toBeInTheDocument();
     expect(screen.queryByText("App language")).not.toBeInTheDocument();
     expect(screen.queryByText("Light reminders are optional, calm, and user-controlled.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
@@ -194,14 +220,15 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
   });
 
-  it("adds Help and Report a problem inside Settings and keeps admin support outside normal navigation", () => {
+  it("keeps Report a problem inside Settings while Help stays out of Settings", () => {
     renderProtectedShell();
 
     expect(screen.queryByRole("link", { name: "Admin Support" })).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(3);
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-    expect(screen.getByRole("button", { name: /Help Find answers/ })).toBeInTheDocument();
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    expect(within(settingsPanel).queryByRole("button", { name: /Help Find answers/ })).not.toBeInTheDocument();
     const reportButton = screen.getByRole("button", { name: /Report a problem/ });
     expect(reportButton).toBeInTheDocument();
 
@@ -285,17 +312,6 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.queryByText("raw auth failure")).not.toBeInTheDocument();
   });
 
-  it("opens the same confirmation flow from the header sign-out icon", async () => {
-    const signOut = vi.fn(async () => undefined);
-    renderProtectedShell({ onSignOut: signOut });
-
-    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
-
-    expect(screen.getByRole("dialog", { name: "Sign out?" })).toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole("dialog", { name: "Sign out?" })).getByRole("button", { name: "Cancel" }));
-    expect(signOut).not.toHaveBeenCalled();
-  });
-
   it("renders localized sign-out confirmation copy", () => {
     const romanianView = renderProtectedShellWithLocale("ro");
     fireEvent.click(screen.getByRole("button", { name: "Setări" }));
@@ -321,10 +337,10 @@ describe("protected shell PWA install affordance", () => {
     spanishView.unmount();
   });
 
-  it("shows the admin Support header entry only for admins while bottom nav stays three items", () => {
+  it("shows admin Support in Settings above sign out only for admins while bottom nav stays three items", () => {
     renderAdminProtectedShell();
 
-    expect(screen.getByRole("link", { name: "Admin Support" })).toHaveAttribute("href", "/admin/support");
+    expect(screen.queryByRole("link", { name: "Admin Support" })).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(3);
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
@@ -337,6 +353,32 @@ describe("protected shell PWA install affordance", () => {
         .compareDocumentPosition(screen.getByTestId("settings-sign-out-row")) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(panel.querySelectorAll("button")[panel.querySelectorAll("button").length - 1]).toBe(screen.getByTestId("settings-sign-out-row"));
+  });
+
+  it("keeps Admin Support hidden for normal users", () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(screen.queryByRole("link", { name: /Admin Support/ })).not.toBeInTheDocument();
+  });
+
+  it("renders localized Help header labels", () => {
+    const englishView = renderProtectedShellWithLocale("en");
+    expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
+    englishView.unmount();
+
+    const romanianView = renderProtectedShellWithLocale("ro");
+    expect(screen.getByRole("button", { name: "Ajutor" })).toBeInTheDocument();
+    romanianView.unmount();
+
+    const frenchView = renderProtectedShellWithLocale("fr");
+    expect(screen.getByRole("button", { name: "Aide" })).toBeInTheDocument();
+    frenchView.unmount();
+
+    const spanishView = renderProtectedShellWithLocale("es");
+    expect(screen.getByRole("button", { name: "Ayuda" })).toBeInTheDocument();
+    spanishView.unmount();
   });
 
   it("updates migrated labels when a language is selected", async () => {
@@ -388,8 +430,9 @@ describe("protected shell PWA install affordance", () => {
     expect(heading).toHaveClass("text-[1.05rem]");
     expect(heading).toHaveClass("leading-6");
     expect(heading.querySelectorAll("span")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
   });
 
   it("shows generic install guidance from the authenticated header icon in desktop browser mode", async () => {
@@ -398,8 +441,9 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(screen.getByRole("button", { name: "Install Calm Wallet" }));
 
     expect(await screen.findByText("Use your browser menu to install the app.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
   });
 
   it("opens the native install prompt from the authenticated header icon on Android Chrome", async () => {
@@ -461,7 +505,7 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByText("Use Share \u2192 Add to Home Screen.")).toBeInTheDocument();
   });
 
-  it("hides the authenticated install icon in standalone mode while keeping app settings and sign out", () => {
+  it("hides the authenticated install icon in standalone mode while keeping help and settings", () => {
     setDisplayMode(true);
     setNavigatorValue(
       "userAgent",
@@ -473,8 +517,9 @@ describe("protected shell PWA install affordance", () => {
     renderProtectedShell();
 
     expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
   });
 
   it("hides the authenticated install icon when iOS reports navigator standalone", () => {
@@ -489,8 +534,9 @@ describe("protected shell PWA install affordance", () => {
     renderProtectedShell();
 
     expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
   });
 
   it("hides the authenticated install icon in fullscreen PWA display mode", () => {
@@ -499,7 +545,8 @@ describe("protected shell PWA install affordance", () => {
     renderProtectedShell();
 
     expect(screen.queryByRole("button", { name: "Install Calm Wallet" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
   });
 });

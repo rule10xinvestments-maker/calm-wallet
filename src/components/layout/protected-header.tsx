@@ -1,10 +1,8 @@
 "use client";
 
-import { SignOutButton } from "@/components/auth/sign-out-button";
 import { useLocale } from "@/components/i18n/locale-provider";
-import { HeaderSettingsButton } from "@/components/layout/header-settings-button";
+import { HeaderHelpButton, HeaderSettingsButton } from "@/components/layout/header-settings-button";
 import { PwaInstallHeaderIcon } from "@/components/pwa-install-button";
-import Link from "next/link";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
@@ -64,15 +62,8 @@ export function ProtectedHeader({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {isSupportAdmin ? (
-          <Link
-            className="hidden min-h-10 items-center rounded-full border border-sky-100 bg-sky-50 px-3 text-xs font-semibold text-sky-700 sm:inline-flex"
-            href="/admin/support"
-          >
-            Admin Support
-          </Link>
-        ) : null}
         <PwaInstallHeaderIcon />
+        <HeaderHelpButton />
         <HeaderSettingsButton
           notificationPreferences={notificationPreferences}
           userPreferencesAction={userPreferencesAction}
@@ -83,7 +74,6 @@ export function ProtectedHeader({
           signOut={onSignOut}
           isSupportAdmin={isSupportAdmin}
         />
-        <SignOutButton action={onSignOut} />
       </div>
     </div>
   );

@@ -228,6 +228,7 @@
     },
     "help": {
       "title": "Help",
+      "closeOverlay": "Close help overlay",
       "helper": "Find answers and learn how Calm Wallet works."
     },
     "support": {

@@ -254,6 +254,7 @@
     },
     "help": {
       "title": "Ajutor",
+      "closeOverlay": "Inchide panoul de ajutor",
       "helper": "Gaseste raspunsuri si afla cum functioneaza Calm Wallet."
     },
     "signOutHelper": "Încheie această sesiune pe acest dispozitiv.",
