@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Settings } from "lucide-react";
+import Link from "next/link";
+import { Settings, ShieldCheck } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
 import { LanguageSelector } from "@/components/settings/language-selector";
@@ -34,6 +35,7 @@ type HeaderSettingsButtonProps = {
     state: SupportTicketActionState,
     formData: FormData,
   ) => Promise<SupportTicketActionState>;
+  isSupportAdmin?: boolean;
 };
 
 export function HeaderSettingsButton({
@@ -42,6 +44,7 @@ export function HeaderSettingsButton({
   notificationPreferencesAction,
   registerPushSubscriptionAction,
   supportTicketAction,
+  isSupportAdmin = false,
 }: HeaderSettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { locale } = useLocale();
@@ -82,6 +85,24 @@ export function HeaderSettingsButton({
                 </button>
               </div>
               <LanguageSelector action={userPreferencesAction} />
+              {isSupportAdmin ? (
+                <Link
+                  className="grid w-full grid-cols-[2.25rem_1fr_auto] items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-3 py-3 text-left transition hover:bg-sky-100"
+                  href="/admin/support"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700">
+                    <ShieldCheck aria-hidden="true" className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-slate-900">{t("admin.support.nav", locale)}</span>
+                    <span className="mt-1 block text-xs leading-5 text-slate-600">{t("admin.support.helper", locale)}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wide text-sky-700">
+                    {t("admin.support.eyebrow", locale)}
+                  </span>
+                </Link>
+              ) : null}
               <SupportContactCard action={supportTicketAction} />
               <NotificationPreferencesCard
                 action={notificationPreferencesAction}

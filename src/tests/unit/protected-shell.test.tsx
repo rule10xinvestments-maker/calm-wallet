@@ -207,7 +207,8 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(supportButton);
 
     expect(screen.getByText("Get help, report a problem, or share feedback.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Topic")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Topic Help" })).toBeInTheDocument();
+    expect(document.querySelector('select[name="category"]')).toBeNull();
     expect(screen.getByLabelText("Subject")).toBeInTheDocument();
     expect(screen.getByLabelText("Message")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
@@ -218,6 +219,10 @@ describe("protected shell PWA install affordance", () => {
 
     expect(screen.getByRole("link", { name: "Support" })).toHaveAttribute("href", "/admin/support");
     expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+    expect(screen.getByRole("link", { name: /Support Review user support messages. Admin/ })).toHaveAttribute("href", "/admin/support");
   });
 
   it("updates migrated labels when a language is selected", async () => {

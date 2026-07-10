@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { MessageCircle } from "lucide-react";
+import { Check, ChevronDown, MessageCircle } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { initialSupportTicketActionState, type SupportTicketActionState } from "@/lib/actions/support-state";
@@ -16,6 +16,8 @@ const supportCategoryKeys = ["help", "bug", "feedback", "account", "other"] as c
 
 export function SupportContactCard({ action }: SupportContactCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<(typeof supportCategoryKeys)[number]>("help");
   const [state, formAction, isPending] = useActionState(action, initialSupportTicketActionState);
   const [userAgent, setUserAgent] = useState("");
   const pathname = usePathname();
@@ -29,6 +31,8 @@ export function SupportContactCard({ action }: SupportContactCardProps) {
   useEffect(() => {
     if (state.status === "success") {
       formRef.current?.reset();
+      setSelectedCategory("help");
+      setIsCategoryOpen(false);
     }
   }, [state.status]);
 
@@ -63,19 +67,49 @@ export function SupportContactCard({ action }: SupportContactCardProps) {
             <input name="sourceRoute" type="hidden" value={pathname ?? ""} />
             <input name="userAgent" type="hidden" value={userAgent} />
 
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-slate-700">{t("settings.support.category", locale)}</span>
-              <select
-                className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none focus:border-sky-300 focus:bg-white"
-                name="category"
+            <div className="space-y-1.5">
+              <input name="category" type="hidden" value={selectedCategory} />
+              <span className="block text-xs font-medium text-slate-700" id="support-category-label">
+                {t("settings.support.category", locale)}
+              </span>
+              <button
+                aria-expanded={isCategoryOpen}
+                aria-labelledby="support-category-label support-category-value"
+                className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm text-slate-900 outline-none transition hover:bg-white focus:border-sky-300 focus:bg-white"
+                onClick={() => setIsCategoryOpen((value) => !value)}
+                type="button"
               >
-                {supportCategoryKeys.map((category) => (
-                  <option key={category} value={category}>
-                    {t(`settings.support.categories.${category}`, locale)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <span className="min-w-0 truncate" id="support-category-value">
+                  {t(`settings.support.categories.${selectedCategory}`, locale)}
+                </span>
+                <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isCategoryOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isCategoryOpen ? (
+                <div className="grid gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                  {supportCategoryKeys.map((category) => {
+                    const isSelected = category === selectedCategory;
+
+                    return (
+                      <button
+                        aria-pressed={isSelected}
+                        className={`flex min-h-9 items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
+                          isSelected ? "bg-sky-50 text-sky-800" : "text-slate-700 hover:bg-slate-50"
+                        }`}
+                        key={category}
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setIsCategoryOpen(false);
+                        }}
+                        type="button"
+                      >
+                        <span>{t(`settings.support.categories.${category}`, locale)}</span>
+                        {isSelected ? <Check aria-hidden="true" className="size-4" /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
 
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-slate-700">{t("settings.support.subject", locale)}</span>
