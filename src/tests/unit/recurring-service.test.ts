@@ -123,6 +123,27 @@ describe("recurring service", () => {
     });
   });
 
+  it("copies the recurring rule category into generated occurrences", async () => {
+    const adapter = makeAdapter({
+      listDueRecurringRules: vi.fn(async () => ({
+        data: [makeRule({ category_id: "11111111-1111-4111-8111-111111111111" })],
+        error: null,
+      })),
+    });
+    const transactionService = makeTransactionService();
+    const service = createRecurringService(adapter, transactionService as TransactionService);
+
+    await service.generateDueRecurringTransactions("user-1", new Date("2026-06-26T12:00:00.000Z"));
+
+    expect(transactionService.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        categoryId: "11111111-1111-4111-8111-111111111111",
+      }),
+      { actorType: "system" },
+    );
+  });
+
   it("does not create a duplicate generated transaction on repeated app load", async () => {
     const adapter = makeAdapter({
       getGeneratedTransaction: vi.fn(async () => ({ data: { id: "txn-existing" }, error: null })),
@@ -147,6 +168,7 @@ describe("recurring service", () => {
       endDate: null,
       nextOccurrenceDate: "2026-06-08",
       pausedAt: null,
+      categoryId: "11111111-1111-4111-8111-111111111111",
     });
     await service.pauseRecurringRule("user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "2026-06-26T12:00:00.000Z");
 
@@ -160,6 +182,7 @@ describe("recurring service", () => {
         end_date: null,
         next_occurrence_date: "2026-06-08",
         paused_at: null,
+        category_id: "11111111-1111-4111-8111-111111111111",
       }),
     );
     expect(adapter.updateRecurringRule).toHaveBeenNthCalledWith(2, "user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", {

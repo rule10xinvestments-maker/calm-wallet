@@ -115,6 +115,9 @@ export async function executeRecategorizeTransaction(args: {
   transactionId: string;
   categoryId: string | null;
   transactionService: Pick<TransactionService, "updateTransaction">;
+  recurringService?: Pick<RecurringService, "updateRecurringRule">;
+  recategorizeScope?: "entry" | "future";
+  recurringRuleId?: string | null;
   categoryMemoryService?: Pick<CategoryMemoryService, "recordCategoryCorrectionMemory">;
 }): Promise<TransactionMutationState> {
   const result = await args.transactionService.updateTransaction(
@@ -133,6 +136,16 @@ export async function executeRecategorizeTransaction(args: {
       actorType: "user",
     },
   );
+
+  if (args.recategorizeScope === "future" && args.recurringRuleId) {
+    if (!args.recurringService) {
+      throw new Error("Recurring updates are unavailable.");
+    }
+
+    await args.recurringService.updateRecurringRule(args.userId, args.recurringRuleId, {
+      categoryId: args.categoryId,
+    });
+  }
 
   if (args.categoryId) {
     const categoryMemoryService = args.categoryMemoryService ?? (await createSupabaseCategoryMemoryService());

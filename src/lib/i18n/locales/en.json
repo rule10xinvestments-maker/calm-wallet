@@ -657,6 +657,11 @@
       "delete": "Delete transaction",
       "deleteForever": "Delete forever"
     },
+    "categoryScope": {
+      "label": "Apply category change",
+      "entryOnly": "This entry only",
+      "future": "This and future entries"
+    },
     "empty": {
       "helper": "No transactions found for this signed-in account.",
       "period": "No saved entries in this period.",

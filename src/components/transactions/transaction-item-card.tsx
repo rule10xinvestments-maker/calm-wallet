@@ -52,6 +52,10 @@ const RECURRING_FREQUENCY_OPTIONS = [
   { label: "Monthly", value: "monthly" },
   { label: "Yearly", value: "yearly" },
 ] as const;
+const RECATEGORIZE_SCOPE_OPTIONS = [
+  { labelKey: "activity.categoryScope.entryOnly", value: "entry" },
+  { labelKey: "activity.categoryScope.future", value: "future" },
+] as const;
 
 function formatAmountInput(amountMinor: number) {
   return (amountMinor / 100).toFixed(2);
@@ -196,6 +200,7 @@ export function TransactionItemCard({
   const [submittedUpdateIntent, setSubmittedUpdateIntent] = useState<"details" | "mark-reviewed" | "note" | null>(null);
   const [optimisticItem, setOptimisticItem] = useState<TransactionListItem | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(item.categoryId ?? "");
+  const [recategorizeScope, setRecategorizeScope] = useState<"entry" | "future">("entry");
   const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionListItem["amountTone"]>(item.amountTone);
   const [selectedReviewState, setSelectedReviewState] = useState<TransactionListItem["reviewState"]>(getEditableReviewState(item.reviewState));
   const [uncertaintyNote, setUncertaintyNote] = useState(item.uncertaintyReason ?? "");
@@ -248,6 +253,7 @@ export function TransactionItemCard({
   const actionCategoryIconNeedsAttention =
     actionCategoryAttentionKey.includes("uncategorized") || actionCategoryAttentionKey.includes("needs");
   const categoryPickerOptions = useMemo(() => buildCategoryPickerOptions(categories, displayItem.amountTone), [categories, displayItem.amountTone]);
+  const canScopeRecategorize = Boolean(displayItem.recurringRuleId);
   const currencyOptions = CURRENCY_OPTIONS.includes(displayItem.currency as (typeof CURRENCY_OPTIONS)[number])
     ? CURRENCY_OPTIONS
     : ([displayItem.currency, ...CURRENCY_OPTIONS] as const);
@@ -333,6 +339,7 @@ export function TransactionItemCard({
       setOptimisticItem(null);
       setIsDeleted(false);
       setSelectedCategoryId(item.categoryId ?? "");
+      setRecategorizeScope("entry");
       setSelectedTransactionType(item.amountTone);
       setSelectedReviewState(getEditableReviewState(item.reviewState));
       setUncertaintyNote(item.uncertaintyReason ?? "");
@@ -664,6 +671,9 @@ export function TransactionItemCard({
         <div className="mt-3 grid gap-3 border-t border-slate-200 pt-3">
           <form action={recategorizeFormAction} className="grid gap-2" onSubmit={handleRecategorizeSubmit}>
             <input name="transactionId" type="hidden" value={item.id} />
+            <input name="recategorizeScope" type="hidden" value={canScopeRecategorize ? recategorizeScope : "entry"} />
+            <input name="recurringRuleId" type="hidden" value={displayItem.recurringRuleId ?? ""} />
+            <input name="recurringOccurrenceDate" type="hidden" value={displayItem.recurringOccurrenceDate ?? ""} />
             <div aria-label="Transaction actions" className="grid grid-cols-4 gap-2" role="group">
               <button
                 aria-expanded={isCategoryPickerOpen}
@@ -728,12 +738,42 @@ export function TransactionItemCard({
               </button>
             </div>
             {isCategoryPickerOpen ? (
-              <CategoryIconGridPicker
-                categories={categoryPickerOptions}
-                onSelect={(category) => handleCategoryChange(category.id)}
-                selectedCategoryId={selectedCategoryId}
-                submitOnSelect
-              />
+              <div className="grid gap-2">
+                {canScopeRecategorize ? (
+                  <fieldset className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-2">
+                    <legend className="px-1 text-xs font-medium text-slate-600">{t("activity.categoryScope.label", locale)}</legend>
+                    <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-50 p-1">
+                      {RECATEGORIZE_SCOPE_OPTIONS.map((option) => {
+                        const checked = recategorizeScope === option.value;
+                        return (
+                          <label
+                            className={`flex min-h-10 items-center justify-center rounded-lg px-2 text-center text-xs font-semibold leading-4 transition ${
+                              checked ? "bg-white text-sky-800 shadow-sm ring-1 ring-sky-200" : "text-slate-600 hover:bg-white/70"
+                            }`}
+                            key={option.value}
+                          >
+                            <input
+                              checked={checked}
+                              className="sr-only"
+                              name="recategorizeScopeChoice"
+                              onChange={() => setRecategorizeScope(option.value)}
+                              type="radio"
+                              value={option.value}
+                            />
+                            <span>{t(option.labelKey, locale)}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                ) : null}
+                <CategoryIconGridPicker
+                  categories={categoryPickerOptions}
+                  onSelect={(category) => handleCategoryChange(category.id)}
+                  selectedCategoryId={selectedCategoryId}
+                  submitOnSelect
+                />
+              </div>
             ) : (
               <input name="categoryId" type="hidden" value={selectedCategoryId} />
             )}

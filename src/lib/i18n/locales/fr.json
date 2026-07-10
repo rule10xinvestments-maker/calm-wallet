@@ -657,6 +657,11 @@
       "delete": "Supprimer la transaction",
       "deleteForever": "Supprimer définitivement"
     },
+    "categoryScope": {
+      "label": "Appliquer le changement de catégorie",
+      "entryOnly": "Cette entrée seulement",
+      "future": "Cette entrée et les suivantes"
+    },
     "empty": {
       "helper": "Aucune entrée pour le moment",
       "period": "Aucune entrée enregistrée sur cette période.",

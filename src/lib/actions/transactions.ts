@@ -29,11 +29,18 @@ export async function recategorizeTransactionAction(
 
   try {
     const transactionService = await createSupabaseTransactionService();
+    const recategorizeScope = formData.get("recategorizeScope") === "future" ? "future" : "entry";
+    const recurringRuleId =
+      typeof formData.get("recurringRuleId") === "string" ? String(formData.get("recurringRuleId")).trim() || null : null;
+    const recurringService = recategorizeScope === "future" && recurringRuleId ? await createSupabaseRecurringService() : undefined;
     const result = await executeRecategorizeTransaction({
       userId: user.id,
       transactionId: String(formData.get("transactionId") ?? ""),
       categoryId: typeof formData.get("categoryId") === "string" ? String(formData.get("categoryId")).trim() || null : null,
       transactionService,
+      recurringService,
+      recategorizeScope,
+      recurringRuleId,
     });
 
     revalidatePath("/transactions");

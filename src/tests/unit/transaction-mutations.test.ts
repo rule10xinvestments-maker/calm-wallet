@@ -202,6 +202,62 @@ describe("transaction mutation helpers", () => {
     expect(recordCategoryCorrectionMemory).not.toHaveBeenCalled();
   });
 
+  it("keeps recurring recategorization scoped to the selected entry by default", async () => {
+    const services = makeMutationServices();
+    const recurringService = makeRecurringService();
+    const recordCategoryCorrectionMemory = vi.fn(async () => makeCategoryMemory());
+
+    await executeRecategorizeTransaction({
+      userId: "user-1",
+      transactionId: "txn-1",
+      categoryId: "11111111-1111-4111-8111-111111111111",
+      transactionService: services,
+      recurringService,
+      recategorizeScope: "entry",
+      recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      categoryMemoryService: { recordCategoryCorrectionMemory },
+    });
+
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        categoryId: "11111111-1111-4111-8111-111111111111",
+      }),
+      { actorType: "user" },
+    );
+    expect(recurringService.updateRecurringRule).not.toHaveBeenCalled();
+  });
+
+  it("persists the canonical category id to the recurring rule for this-and-future recategorization", async () => {
+    const services = makeMutationServices();
+    const recurringService = makeRecurringService();
+    const recordCategoryCorrectionMemory = vi.fn(async () => makeCategoryMemory());
+
+    await executeRecategorizeTransaction({
+      userId: "user-1",
+      transactionId: "txn-1",
+      categoryId: "11111111-1111-4111-8111-111111111111",
+      transactionService: services,
+      recurringService,
+      recategorizeScope: "future",
+      recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      categoryMemoryService: { recordCategoryCorrectionMemory },
+    });
+
+    expect(services.updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        categoryId: "11111111-1111-4111-8111-111111111111",
+      }),
+      { actorType: "user" },
+    );
+    expect(recurringService.updateRecurringRule).toHaveBeenCalledWith("user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", {
+      categoryId: "11111111-1111-4111-8111-111111111111",
+    });
+  });
+
   it("uses the transaction service path for soft delete", async () => {
     const services = makeMutationServices();
 

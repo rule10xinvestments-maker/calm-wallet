@@ -5,11 +5,19 @@ const deleteTransaction = vi.fn();
 const permanentlyDeleteTransaction = vi.fn();
 const restoreTransaction = vi.fn();
 const updateTransaction = vi.fn();
+const updateRecurringRule = vi.fn();
+const recordCategoryCorrectionMemory = vi.fn();
 const createSupabaseTransactionService = vi.fn(async () => ({
   deleteTransaction,
   permanentlyDeleteTransaction,
   restoreTransaction,
   updateTransaction,
+}));
+const createSupabaseRecurringService = vi.fn(async () => ({
+  updateRecurringRule,
+}));
+const createSupabaseCategoryMemoryService = vi.fn(async () => ({
+  recordCategoryCorrectionMemory,
 }));
 const revalidatePath = vi.fn();
 
@@ -19,6 +27,14 @@ vi.mock("@/lib/auth/guards", () => ({
 
 vi.mock("@/domain/transactions/service", () => ({
   createSupabaseTransactionService,
+}));
+
+vi.mock("@/domain/recurring/service", () => ({
+  createSupabaseRecurringService,
+}));
+
+vi.mock("@/domain/category-memory/service", () => ({
+  createSupabaseCategoryMemoryService,
 }));
 
 vi.mock("next/cache", () => ({
@@ -47,6 +63,11 @@ describe("transaction actions", () => {
       },
       eventCreated: false,
     });
+    updateRecurringRule.mockResolvedValue({
+      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      categoryId: "11111111-1111-4111-8111-111111111111",
+    });
+    recordCategoryCorrectionMemory.mockResolvedValue({ id: "memory-1" });
     restoreTransaction.mockResolvedValue(undefined);
   });
 
@@ -64,6 +85,53 @@ describe("transaction actions", () => {
       message: "Unable to update category.",
     });
     expect(result.message).not.toContain("relation");
+  });
+
+  it("recategorizes recurring entries as entry-only unless future scope is requested", async () => {
+    const { recategorizeTransactionAction } = await import("@/lib/actions/transactions");
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("categoryId", "11111111-1111-4111-8111-111111111111");
+    formData.set("recategorizeScope", "entry");
+    formData.set("recurringRuleId", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+    const result = await recategorizeTransactionAction({ status: "idle", message: null }, formData);
+
+    expect(result.status).toBe("success");
+    expect(updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        categoryId: "11111111-1111-4111-8111-111111111111",
+      }),
+      { actorType: "user" },
+    );
+    expect(createSupabaseRecurringService).not.toHaveBeenCalled();
+    expect(updateRecurringRule).not.toHaveBeenCalled();
+  });
+
+  it("recategorizes recurring entries and their rule when future scope is requested", async () => {
+    const { recategorizeTransactionAction } = await import("@/lib/actions/transactions");
+    const formData = new FormData();
+    formData.set("transactionId", "txn-1");
+    formData.set("categoryId", "11111111-1111-4111-8111-111111111111");
+    formData.set("recategorizeScope", "future");
+    formData.set("recurringRuleId", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+    const result = await recategorizeTransactionAction({ status: "idle", message: null }, formData);
+
+    expect(result.status).toBe("success");
+    expect(updateTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "txn-1",
+      expect.objectContaining({
+        categoryId: "11111111-1111-4111-8111-111111111111",
+      }),
+      { actorType: "user" },
+    );
+    expect(updateRecurringRule).toHaveBeenCalledWith("user-1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", {
+      categoryId: "11111111-1111-4111-8111-111111111111",
+    });
   });
 
   it("does not leak raw database errors from soft delete", async () => {

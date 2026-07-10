@@ -821,6 +821,65 @@ describe("transaction item card", () => {
     expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
   });
 
+  it("defaults recurring quick recategorization to this entry only", async () => {
+    const recategorizeAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Category saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+      }),
+      recategorizeAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
+
+    expect(screen.getByText("Apply category change")).toBeInTheDocument();
+    expect(screen.getByLabelText("This entry only")).toBeChecked();
+    expect(screen.getByLabelText("This and future entries")).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "Travel" }));
+
+    await waitFor(() => expect(recategorizeAction).toHaveBeenCalledOnce());
+    const [, formData] = recategorizeAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+
+    expect(formData.get("categoryId")).toBe("cat-travel");
+    expect(formData.get("recategorizeScope")).toBe("entry");
+    expect(formData.get("recurringRuleId")).toBe("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    expect(formData.get("recurringOccurrenceDate")).toBe("2026-06-26");
+  });
+
+  it("submits this-and-future scope for recurring quick recategorization when selected", async () => {
+    const recategorizeAction = vi.fn(async () => ({
+      status: "success" as const,
+      message: "Category saved.",
+    }));
+    renderCard({
+      item: makeItem({
+        isRecurring: true,
+        recurringRuleId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        recurringOccurrenceDate: "2026-06-26",
+      }),
+      recategorizeAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /hotdog/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Change category, currently Dining" }));
+    fireEvent.click(screen.getByLabelText("This and future entries"));
+    fireEvent.click(screen.getByRole("button", { name: "Travel" }));
+
+    await waitFor(() => expect(recategorizeAction).toHaveBeenCalledOnce());
+    const [, formData] = recategorizeAction.mock.calls[0] as unknown as [TransactionMutationState, FormData];
+
+    expect(formData.get("categoryId")).toBe("cat-travel");
+    expect(formData.get("recategorizeScope")).toBe("future");
+    expect(formData.get("recurringRuleId")).toBe("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+  });
+
   it("keeps the Activity category grid type-aware for spend and income rows", () => {
     const { rerender } = render(
       <TransactionItemCard

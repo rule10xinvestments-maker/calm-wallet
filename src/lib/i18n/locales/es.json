@@ -657,6 +657,11 @@
       "delete": "Eliminar transacción",
       "deleteForever": "Eliminar definitivamente"
     },
+    "categoryScope": {
+      "label": "Aplicar cambio de categoría",
+      "entryOnly": "Solo este registro",
+      "future": "Este y futuros registros"
+    },
     "empty": {
       "helper": "Aún no hay entradas",
       "period": "No hay entradas guardadas en este periodo.",

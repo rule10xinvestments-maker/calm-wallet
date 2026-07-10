@@ -659,6 +659,11 @@
       "delete": "Șterge tranzacția",
       "deleteForever": "Șterge definitiv"
     },
+    "categoryScope": {
+      "label": "Aplică schimbarea categoriei",
+      "entryOnly": "Doar această intrare",
+      "future": "Aceasta și intrările viitoare"
+    },
     "empty": {
       "helper": "Nu există intrări încă",
       "period": "Nu există intrări salvate în această perioadă.",
