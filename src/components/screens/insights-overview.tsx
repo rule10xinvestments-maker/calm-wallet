@@ -3071,12 +3071,19 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
 
   const selectInsightsView = (updates: InsightsSelectionUpdate) => {
     const href = buildInsightsHref(activeData, updates);
+    const isChartOnlyUpdate = Boolean(updates.chart && !updates.currency && !updates.month && !updates.timeframe);
 
-    if (updates.chart && !updates.currency && !updates.month && !updates.timeframe) {
+    if (isChartOnlyUpdate) {
       setActiveData((currentData) => ({
         ...currentData,
         selectedChartMode: updates.chart ?? currentData.selectedChartMode,
       }));
+
+      if (typeof window !== "undefined" && `${window.location.pathname}${window.location.search}` !== href) {
+        window.history.pushState(null, "", href);
+      }
+
+      return;
     }
 
     router.push(href, { scroll: false });

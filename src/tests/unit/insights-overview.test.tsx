@@ -782,6 +782,7 @@ describe("insights overview", () => {
     expect(mixLink).toHaveAttribute("data-scroll-preserve", "true");
 
     fireEvent.click(barsLink);
+    expect(navigationMocks.push).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Bars" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("img", { name: "Tracked spending by day" })).toBeInTheDocument();
   });
