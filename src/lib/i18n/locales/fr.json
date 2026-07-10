@@ -285,12 +285,16 @@
         "caption": "L'incertitude est visible, et les corrections mettent les rapports à jour."
       },
       "activity": {
+        "merchant": "Café",
+        "amount": "12 RON",
+        "date": "12 mai",
         "category": "Catégorie",
+        "categoryAction": "Catégorie",
         "edit": "Modifier",
         "note": "Note",
         "delete": "Supprimer",
         "restore": "Restaurer",
-        "caption": "Gérez les entrées enregistrées depuis un seul endroit calme."
+        "caption": "Gérez vos entrées enregistrées au même endroit."
       },
       "mix": {
         "caption": "Voyez où va votre argent."
@@ -302,10 +306,21 @@
         "caption": "Voyez comment vos habitudes changent dans le temps."
       },
       "trackedBalance": {
+        "trackedEntries": "Entrées suivies",
+        "bank": "Banque",
         "caption": "Le solde suivi est calculé à partir de vos entrées enregistrées. Ce n'est pas votre solde bancaire."
       },
       "recurring": {
-        "caption": "Des entrées futures automatiques pour les mouvements d'argent prévisibles."
+        "rule": "Salaire",
+        "amount": "2 500 RON",
+        "monthly": "Mensuel",
+        "months": {
+          "one": "Mois 1",
+          "two": "Mois 2",
+          "three": "Mois 3"
+        },
+        "salary": "Salaire",
+        "caption": "Des entrées futures pour les mouvements d'argent prévisibles."
       },
       "limits": {
         "caption": "Un objectif, pas une restriction."

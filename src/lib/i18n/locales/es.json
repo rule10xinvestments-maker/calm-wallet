@@ -285,12 +285,16 @@
         "caption": "La incertidumbre se muestra con claridad, y las correcciones actualizan tus informes."
       },
       "activity": {
+        "merchant": "Café",
+        "amount": "12 RON",
+        "date": "12 may.",
         "category": "Categoría",
+        "categoryAction": "Categoría",
         "edit": "Editar",
         "note": "Nota",
         "delete": "Eliminar",
         "restore": "Restaurar",
-        "caption": "Gestiona las entradas guardadas desde un solo lugar tranquilo."
+        "caption": "Gestiona tus registros guardados en un solo lugar."
       },
       "mix": {
         "caption": "Ve adónde va tu dinero."
@@ -302,10 +306,21 @@
         "caption": "Ve cómo cambian tus hábitos con el tiempo."
       },
       "trackedBalance": {
-        "caption": "El saldo registrado se calcula a partir de tus entradas guardadas. No es tu saldo bancario."
+        "trackedEntries": "Registros guardados",
+        "bank": "Banco",
+        "caption": "El saldo registrado se calcula a partir de tus registros. No es tu saldo bancario."
       },
       "recurring": {
-        "caption": "Entradas futuras automáticas para movimientos de dinero previsibles."
+        "rule": "Salario",
+        "amount": "2.500 RON",
+        "monthly": "Mensual",
+        "months": {
+          "one": "Mes 1",
+          "two": "Mes 2",
+          "three": "Mes 3"
+        },
+        "salary": "Salario",
+        "caption": "Registros futuros para movimientos de dinero previsibles."
       },
       "limits": {
         "caption": "Una meta, no una restricción."

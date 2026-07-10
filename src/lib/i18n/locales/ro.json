@@ -287,12 +287,16 @@
         "caption": "Incertitudinea este vizibilă, iar corecțiile actualizează rapoartele."
       },
       "activity": {
+        "merchant": "Cafea",
+        "amount": "12 RON",
+        "date": "12 mai",
         "category": "Categorie",
+        "categoryAction": "Categorie",
         "edit": "Editează",
         "note": "Notă",
         "delete": "Șterge",
         "restore": "Restaurează",
-        "caption": "Gestionezi intrările salvate dintr-un singur loc calm."
+        "caption": "Gestionezi intrările salvate într-un singur loc."
       },
       "mix": {
         "caption": "Vezi unde se duc banii."
@@ -304,10 +308,21 @@
         "caption": "Vezi cum se schimbă obiceiurile tale în timp."
       },
       "trackedBalance": {
+        "trackedEntries": "Intrări înregistrate",
+        "bank": "Bancă",
         "caption": "Soldul urmărit este calculat din intrările înregistrate. Nu este soldul tău bancar."
       },
       "recurring": {
-        "caption": "Intrări viitoare automate pentru mișcări de bani previzibile."
+        "rule": "Salariu",
+        "amount": "2.500 RON",
+        "monthly": "Lunar",
+        "months": {
+          "one": "Luna 1",
+          "two": "Luna 2",
+          "three": "Luna 3"
+        },
+        "salary": "Salariu",
+        "caption": "Intrări viitoare pentru mișcări de bani previzibile."
       },
       "limits": {
         "caption": "O țintă, nu o restricție."

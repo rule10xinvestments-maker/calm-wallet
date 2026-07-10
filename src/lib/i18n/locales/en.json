@@ -285,12 +285,16 @@
         "caption": "Uncertainty is shown clearly, and corrections update your reports."
       },
       "activity": {
+        "merchant": "Coffee",
+        "amount": "RON 12",
+        "date": "12 May",
         "category": "Category",
+        "categoryAction": "Category",
         "edit": "Edit",
         "note": "Note",
         "delete": "Delete",
         "restore": "Restore",
-        "caption": "Manage saved entries from one calm place."
+        "caption": "Manage saved entries in one calm place."
       },
       "mix": {
         "caption": "See where your money goes."
@@ -302,10 +306,21 @@
         "caption": "See how your habits change over time."
       },
       "trackedBalance": {
-        "caption": "Tracked Balance is calculated from your recorded entries. It is not your bank balance."
+        "trackedEntries": "Tracked entries",
+        "bank": "Bank",
+        "caption": "Tracked balance comes from your recorded entries. It is not your bank balance."
       },
       "recurring": {
-        "caption": "Automatic future entries for predictable money movement."
+        "rule": "Salary",
+        "amount": "RON 2,500",
+        "monthly": "Monthly",
+        "months": {
+          "one": "Month 1",
+          "two": "Month 2",
+          "three": "Month 3"
+        },
+        "salary": "Salary",
+        "caption": "Future tracked entries for predictable money movement."
       },
       "limits": {
         "caption": "A goal, not a restriction."

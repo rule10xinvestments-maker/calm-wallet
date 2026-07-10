@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays, Coffee, Landmark, NotebookText, Pencil, Repeat2, RotateCcw, StickyNote, Tag, Trash2 } from "lucide-react";
 import { t } from "@/lib/i18n";
 import type { ReactNode } from "react";
 import type { SupportedLocale } from "@/lib/i18n";
@@ -27,7 +28,6 @@ const softBlue = "#dbeafe";
 const midBlue = "#7dd3fc";
 const deepBlue = "#0369a1";
 const softSlate = "#e2e8f0";
-const slate = "#64748b";
 const green = "#86efac";
 const rose = "#fecdd3";
 
@@ -63,9 +63,9 @@ function renderVisual(kind: GuideIllustrationKind, locale: SupportedLocale) {
     case "trend":
       return <TrendVisual />;
     case "trackedBalance":
-      return <TrackedBalanceVisual />;
+      return <TrackedBalanceVisual locale={locale} />;
     case "recurring":
-      return <RecurringVisual />;
+      return <RecurringVisual locale={locale} />;
     case "limits":
       return <LimitsVisual />;
   }
@@ -104,19 +104,40 @@ function NeedsReviewVisual({ locale }: { locale: SupportedLocale }) {
 
 function ActivityVisual({ locale }: { locale: SupportedLocale }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 text-[0.64rem] text-slate-500 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="h-2.5 w-20 rounded-full bg-slate-200" />
-          <div className="mt-2 h-2 w-12 rounded-full bg-sky-100" />
+    <div className="space-y-2 text-[0.62rem] font-semibold text-slate-500">
+      <div
+        className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"
+        data-testid="guide-activity-transaction-card"
+      >
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700">
+            <Coffee aria-hidden="true" className="size-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[0.76rem] font-semibold text-slate-800">{t("help.visuals.activity.merchant", locale)}</span>
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.62rem] font-medium text-slate-500">
+              <span>{t("help.visuals.activity.amount", locale)}</span>
+              <span aria-hidden="true">•</span>
+              <span>{t("help.visuals.activity.date", locale)}</span>
+            </span>
+          </span>
+          <span className="rounded-full bg-sky-100 px-2 py-1 text-[0.58rem] font-semibold text-sky-700">{t("help.visuals.activity.category", locale)}</span>
         </div>
-        <span className="rounded-full bg-sky-100 px-2 py-1 font-semibold text-sky-700">{t("help.visuals.activity.category", locale)}</span>
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-1 font-semibold">
-        <span className="min-w-0 break-words rounded-lg bg-slate-50 px-1.5 py-1 text-center">{t("help.visuals.activity.edit", locale)}</span>
-        <span className="min-w-0 break-words rounded-lg bg-slate-50 px-1.5 py-1 text-center">{t("help.visuals.activity.note", locale)}</span>
-        <span className="min-w-0 break-words rounded-lg bg-rose-50 px-1.5 py-1 text-center text-rose-600">{t("help.visuals.activity.delete", locale)}</span>
-        <span className="min-w-0 break-words rounded-lg bg-emerald-50 px-1.5 py-1 text-center text-emerald-700">{t("help.visuals.activity.restore", locale)}</span>
+
+      <div className="grid grid-cols-4 gap-1.5" data-testid="guide-activity-actions">
+        <ActionCallout icon={<Tag aria-hidden="true" className="size-3.5" />} label={t("help.visuals.activity.categoryAction", locale)} />
+        <ActionCallout icon={<Pencil aria-hidden="true" className="size-3.5" />} label={t("help.visuals.activity.edit", locale)} />
+        <ActionCallout icon={<StickyNote aria-hidden="true" className="size-3.5" />} label={t("help.visuals.activity.note", locale)} />
+        <ActionCallout icon={<Trash2 aria-hidden="true" className="size-3.5" />} label={t("help.visuals.activity.delete", locale)} tone="danger" />
+      </div>
+
+      <div
+        className="ml-auto flex w-fit items-center gap-1.5 rounded-full border border-emerald-100 bg-white px-2 py-1 text-[0.58rem] font-semibold text-emerald-700"
+        data-testid="guide-activity-restore-callout"
+      >
+        <RotateCcw aria-hidden="true" className="size-3.5" />
+        <span>{t("help.visuals.activity.restore", locale)}</span>
       </div>
     </div>
   );
@@ -164,30 +185,61 @@ function TrendVisual() {
   );
 }
 
-function TrackedBalanceVisual() {
+function TrackedBalanceVisual({ locale }: { locale: SupportedLocale }) {
+  return <TrackedBalanceCards locale={locale} />;
+}
+
+function TrackedBalanceCards({ locale }: { locale: SupportedLocale }) {
   return (
-    <svg className="h-24 w-full" viewBox="0 0 220 96">
-      <rect x="40" y="22" width="54" height="56" rx="8" fill="white" stroke={midBlue} strokeWidth="3" />
-      <path d="M54 38h26M54 50h20M54 62h24" stroke={softSlate} strokeLinecap="round" strokeWidth="4" />
-      <path d="M107 42l16 16M123 42l-16 16" stroke={slate} strokeLinecap="round" strokeWidth="4" />
-      <rect x="140" y="30" width="48" height="36" rx="8" fill="white" stroke={softSlate} strokeWidth="3" />
-      <rect x="148" y="39" width="32" height="6" rx="3" fill={softSlate} />
-      <rect x="148" y="52" width="20" height="6" rx="3" fill={softBlue} />
-    </svg>
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center text-[0.62rem] font-semibold text-slate-600">
+      <div className="rounded-xl border border-sky-100 bg-white p-2 shadow-sm" data-testid="guide-tracked-notebook">
+        <NotebookText aria-hidden="true" className="mx-auto size-6 text-sky-700" />
+        <div className="mt-1.5 space-y-1">
+          <div className="mx-auto h-1.5 w-12 rounded-full bg-emerald-100" />
+          <div className="mx-auto h-1.5 w-10 rounded-full bg-rose-100" />
+          <div className="mx-auto h-1.5 w-11 rounded-full bg-sky-100" />
+        </div>
+        <p className="mt-2 break-words leading-4">{t("help.visuals.trackedBalance.trackedEntries", locale)}</p>
+      </div>
+      <span className="text-lg font-bold text-slate-500" data-testid="guide-tracked-not-equal">
+        ≠
+      </span>
+      <div className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm" data-testid="guide-tracked-bank">
+        <Landmark aria-hidden="true" className="mx-auto size-6 text-slate-500" />
+        <div className="mt-1.5 space-y-1">
+          <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200" />
+          <div className="mx-auto h-1.5 w-9 rounded-full bg-slate-100" />
+        </div>
+        <p className="mt-2 break-words leading-4">{t("help.visuals.trackedBalance.bank", locale)}</p>
+      </div>
+    </div>
   );
 }
 
-function RecurringVisual() {
+function RecurringVisual({ locale }: { locale: SupportedLocale }) {
   return (
-    <svg className="h-24 w-full" viewBox="0 0 220 96">
-      <rect x="56" y="24" width="108" height="56" rx="10" fill="white" stroke={softSlate} strokeWidth="3" />
-      <rect x="56" y="24" width="108" height="16" rx="10" fill={softBlue} />
-      <circle cx="80" cy="54" r="6" fill={midBlue} />
-      <circle cx="110" cy="54" r="6" fill={softSlate} />
-      <circle cx="140" cy="54" r="6" fill={green} />
-      <path d="M91 70a22 22 0 0 0 38 0" fill="none" stroke={deepBlue} strokeLinecap="round" strokeWidth="4" />
-      <path d="M130 62v10h-10" fill="none" stroke={deepBlue} strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
-    </svg>
+    <div className="space-y-2 text-[0.62rem] font-semibold text-slate-600" data-testid="guide-recurring-timeline">
+      <div className="flex items-center justify-between gap-2 rounded-xl border border-sky-100 bg-white px-3 py-2 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-7 items-center justify-center rounded-full bg-sky-100 text-sky-700">
+            <Repeat2 aria-hidden="true" className="size-4" />
+          </span>
+          <span className="leading-4">{t("help.visuals.recurring.rule", locale)}</span>
+        </div>
+        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.58rem] text-emerald-700">{t("help.visuals.recurring.monthly", locale)}</span>
+      </div>
+
+      <div className="grid grid-cols-3 items-start gap-1.5">
+        {["one", "two", "three"].map((month) => (
+          <div className="relative rounded-xl border border-slate-200 bg-white px-1.5 py-2 text-center shadow-sm" data-testid="guide-recurring-entry" key={month}>
+            <CalendarDays aria-hidden="true" className="mx-auto size-4 text-sky-700" />
+            <p className="mt-1 text-[0.56rem] text-slate-400">{t(`help.visuals.recurring.months.${month}`, locale)}</p>
+            <p className="mt-1 truncate text-[0.66rem] text-slate-800">{t("help.visuals.recurring.salary", locale)}</p>
+            <p className="text-[0.56rem] text-slate-500">{t("help.visuals.recurring.amount", locale)}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -200,6 +252,17 @@ function LimitsVisual() {
       <path d="M70 66h80" stroke={softSlate} strokeLinecap="round" strokeWidth="5" />
       <path d="M70 66h56" stroke={green} strokeLinecap="round" strokeWidth="5" />
     </svg>
+  );
+}
+
+function ActionCallout({ icon, label, tone = "neutral" }: { icon: ReactNode; label: string; tone?: "neutral" | "danger" }) {
+  const toneClass = tone === "danger" ? "bg-rose-50 text-rose-600" : "bg-white text-sky-700";
+
+  return (
+    <span className={`flex min-w-0 flex-col items-center gap-1 rounded-xl border border-slate-100 px-1 py-1.5 text-center leading-3 shadow-sm ${toneClass}`}>
+      {icon}
+      <span className="max-w-full whitespace-normal break-keep text-[0.55rem] leading-3">{label}</span>
+    </span>
   );
 }
 
