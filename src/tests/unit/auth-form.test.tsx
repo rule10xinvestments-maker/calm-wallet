@@ -106,7 +106,7 @@ describe("auth form", () => {
     expect(screen.getByText("OR")).toBeInTheDocument();
     expect(screen.getByText("Calm Wallet account")).toBeInTheDocument();
     expect(screen.getByText("Coming soon")).toBeInTheDocument();
-    expect(screen.getByText("Email and password accounts are coming soon. For now, continue with Google.")).toBeInTheDocument();
+    expect(screen.getByText(/Sign in coming soon\.\s+Continue with Google for now\./)).toBeInTheDocument();
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sign in" })).not.toBeInTheDocument();
@@ -173,7 +173,7 @@ describe("auth form", () => {
     expect(screen.getByRole("button", { name: "Continu\u0103 cu Google" })).toBeInTheDocument();
     expect(screen.getByText("Cont Calm Wallet")).toBeInTheDocument();
     expect(screen.getByText("\u00cen cur\u00e2nd")).toBeInTheDocument();
-    expect(screen.getByText("Conturile cu email \u0219i parol\u0103 vor fi disponibile \u00een cur\u00e2nd. Pentru moment, continu\u0103 cu Google.")).toBeInTheDocument();
+    expect(screen.getByText(/Autentificare \u00een cur\u00e2nd\.\s+Folose\u0219te Google momentan\./)).toBeInTheDocument();
     expect(window.localStorage.getItem("calm-wallet-locale")).toBe("ro");
 
     unmount();
