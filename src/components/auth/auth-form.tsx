@@ -216,15 +216,15 @@ export function AuthForm({
 
 function EmailPasswordComingSoon({ locale }: { locale: SupportedLocale }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3.5 text-slate-700">
-      <div className="flex items-start gap-3">
+    <div className="rounded-2xl border border-sky-100 bg-sky-50/70 px-3.5 py-3.5 text-slate-700 shadow-sm">
+      <div className="flex items-start gap-3.5">
         <div className="flex shrink-0 flex-col items-center gap-2">
           <span
             aria-hidden="true"
-            className="size-6 rounded-md bg-contain bg-center bg-no-repeat"
+            className="size-10 rounded-md bg-contain bg-center bg-no-repeat"
             style={{ backgroundImage: "url('/icons/calm-wallet-icon-192.png')" }}
           />
-          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
+          <span className="rounded-full border border-sky-100 bg-white/85 px-2.5 py-1 text-xs font-semibold text-slate-500">
             {t("auth.emailPasswordComingSoon.status", locale)}
           </span>
         </div>
