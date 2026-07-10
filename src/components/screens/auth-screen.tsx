@@ -7,6 +7,7 @@ type AuthScreenProps = {
   submitLabel: string;
   alternateHref: string;
   alternateLabel: string;
+  copyKeyPrefix?: "signIn" | "signUp";
   action: (state: AuthFormState, formData: FormData) => Promise<AuthFormState>;
   googleAction?: (formData: FormData) => Promise<void>;
   includeFullName?: boolean;
@@ -20,6 +21,7 @@ export function AuthScreen({
   submitLabel,
   alternateHref,
   alternateLabel,
+  copyKeyPrefix,
   action,
   googleAction,
   includeFullName,
@@ -31,6 +33,7 @@ export function AuthScreen({
       action={action}
       alternateHref={alternateHref}
       alternateLabel={alternateLabel}
+      copyKeyPrefix={copyKeyPrefix}
       description={description}
       googleAction={googleAction}
       includeFullName={includeFullName}

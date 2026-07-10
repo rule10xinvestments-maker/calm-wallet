@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { LanguageSelector } from "@/components/settings/language-selector";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
@@ -15,6 +15,10 @@ function renderSelector(
 }
 
 describe("language selector", () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
   it("renders supported language options after expanding", () => {
     renderSelector(vi.fn(async () => ({ status: "success" as const, message: "Language saved.", uiLocale: "en" as const })));
 

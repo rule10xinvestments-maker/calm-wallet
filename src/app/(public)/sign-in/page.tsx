@@ -25,6 +25,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   return (
     <AuthScreen
       action={signInAction}
+      copyKeyPrefix="signIn"
       title="Welcome back"
       description="Review your spending, ask quick budget questions, and keep your plan in view."
       googleAction={signInWithGoogleAction}

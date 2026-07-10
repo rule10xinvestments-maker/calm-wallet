@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthForm } from "@/components/auth/auth-form";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
 import { initialAuthFormState, type AuthFormState } from "@/lib/auth/form-state";
 import { signUpSchema } from "@/lib/auth/validation";
@@ -89,6 +90,7 @@ describe("auth form", () => {
   });
 
   afterEach(() => {
+    window.localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -96,7 +98,7 @@ describe("auth form", () => {
     renderSignIn(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined));
 
     expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
-    expect(screen.getByText("or")).toBeInTheDocument();
+    expect(screen.getByText("OR")).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
@@ -108,6 +110,58 @@ describe("auth form", () => {
     expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
     expect(screen.getByLabelText("Full name")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign up" })).toBeInTheDocument();
+  });
+
+  it("updates auth copy from the public language selector and persists it locally", async () => {
+    const { unmount } = render(
+      <LocaleProvider savedLocale={null}>
+        <PwaInstallProvider>
+          <AuthForm
+            action={vi.fn(async () => initialAuthFormState)}
+            alternateHref="/sign-up"
+            alternateLabel="Create an account"
+            copyKeyPrefix="signIn"
+            description="Review your spending, ask quick budget questions, and keep your plan in view."
+            googleAction={vi.fn(async () => undefined)}
+            submitLabel="Sign in"
+            title="Welcome back"
+          />
+        </PwaInstallProvider>
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Personal budget notebook")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Language" }));
+    fireEvent.click(screen.getByRole("button", { name: "Română" }));
+
+    expect(screen.getByText("Caiet personal de buget")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bine ai revenit" })).toBeInTheDocument();
+    expect(screen.getByText("Verifică-ți cheltuielile, pune întrebări rapide despre buget și păstrează planul la vedere.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continuă cu Google" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Cel puțin 8 caractere")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Autentifică-te" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("calm-wallet-locale")).toBe("ro");
+
+    unmount();
+
+    render(
+      <LocaleProvider savedLocale={null}>
+        <PwaInstallProvider>
+          <AuthForm
+            action={vi.fn(async () => initialAuthFormState)}
+            alternateHref="/sign-up"
+            alternateLabel="Create an account"
+            copyKeyPrefix="signIn"
+            description="Review your spending, ask quick budget questions, and keep your plan in view."
+            googleAction={vi.fn(async () => undefined)}
+            submitLabel="Sign in"
+            title="Welcome back"
+          />
+        </PwaInstallProvider>
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Bine ai revenit" })).toBeInTheDocument();
   });
 
   it("submits the Google form through the provided auth action", async () => {

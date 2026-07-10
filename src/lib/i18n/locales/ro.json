@@ -44,6 +44,47 @@
     "activity": "Activitate",
     "insights": "Perspective"
   },
+  "auth": {
+    "productPill": "Caiet personal de buget",
+    "continueWithGoogle": "Continuă cu Google",
+    "or": "SAU",
+    "email": "Email",
+    "password": "Parolă",
+    "passwordPlaceholder": "Cel puțin 8 caractere",
+    "fullName": "Nume complet",
+    "confirmPassword": "Confirmă parola",
+    "showPassword": "Arată parola",
+    "hidePassword": "Ascunde parola",
+    "showConfirmPassword": "Arată confirmarea parolei",
+    "hideConfirmPassword": "Ascunde confirmarea parolei",
+    "pleaseWait": "Te rugăm să aștepți...",
+    "signIn": {
+      "title": "Bine ai revenit",
+      "description": "Verifică-ți cheltuielile, pune întrebări rapide despre buget și păstrează planul la vedere.",
+      "submit": "Autentifică-te",
+      "alternate": "Creează un cont"
+    },
+    "signUp": {
+      "title": "Creează-ți caietul",
+      "description": "Începe cu un loc simplu pentru cheltuieli și verificări zilnice calme.",
+      "submit": "Creează contul",
+      "alternate": "Ai deja un cont?"
+    },
+    "errors": {
+      "passwordsDoNotMatch": "Parolele nu se potrivesc.",
+      "validEmail": "Introdu o adresă de email validă.",
+      "passwordLength": "Parola trebuie să aibă cel puțin 8 caractere.",
+      "fullNameLength": "Numele complet trebuie să aibă cel puțin 2 caractere.",
+      "validEmailAndPassword": "Introdu un email și o parolă valide.",
+      "completeForm": "Completează formularul.",
+      "generic": "Ceva nu a mers bine. Încearcă din nou.",
+      "signInFailed": "Nu am putut finaliza autentificarea. Încearcă din nou."
+    },
+    "success": {
+      "accountCreatedSignedIn": "Cont creat. Ești autentificat.",
+      "checkEmail": "Cont creat. Verifică emailul pentru confirmare. Dacă nu ajunge, verifică spamul sau încearcă din nou în câteva minute."
+    }
+  },
   "assistant": {
     "brand": "Calm Wallet",
     "heroTitle": "Banii tăi. O privire clară.",

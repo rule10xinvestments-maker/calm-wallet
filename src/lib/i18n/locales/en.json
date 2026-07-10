@@ -44,6 +44,47 @@
     "activity": "Activity",
     "insights": "Insights"
   },
+  "auth": {
+    "productPill": "Personal budget notebook",
+    "continueWithGoogle": "Continue with Google",
+    "or": "OR",
+    "email": "Email",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "fullName": "Full name",
+    "confirmPassword": "Confirm password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "showConfirmPassword": "Show confirm password",
+    "hideConfirmPassword": "Hide confirm password",
+    "pleaseWait": "Please wait...",
+    "signIn": {
+      "title": "Welcome back",
+      "description": "Review your spending, ask quick budget questions, and keep your plan in view.",
+      "submit": "Sign in",
+      "alternate": "Create an account"
+    },
+    "signUp": {
+      "title": "Create your notebook",
+      "description": "Start with a simple spending home designed for calm daily check-ins.",
+      "submit": "Sign up",
+      "alternate": "Already have an account?"
+    },
+    "errors": {
+      "passwordsDoNotMatch": "Passwords do not match.",
+      "validEmail": "Enter a valid email address.",
+      "passwordLength": "Password must be at least 8 characters.",
+      "fullNameLength": "Full name must be at least 2 characters.",
+      "validEmailAndPassword": "Please enter a valid email and password.",
+      "completeForm": "Please complete the form.",
+      "generic": "Something went wrong. Please try again.",
+      "signInFailed": "We couldn't complete your sign-in. Please try again."
+    },
+    "success": {
+      "accountCreatedSignedIn": "Account created. You are signed in.",
+      "checkEmail": "Account created. Check your email to confirm your sign-up. If it does not arrive, check spam or try again in a few minutes."
+    }
+  },
   "assistant": {
     "brand": "Calm Wallet",
     "heroTitle": "Your money. One clear view.",

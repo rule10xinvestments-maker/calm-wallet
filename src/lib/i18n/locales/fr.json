@@ -44,6 +44,47 @@
     "activity": "Activité",
     "insights": "Analyses"
   },
+  "auth": {
+    "productPill": "Carnet de budget personnel",
+    "continueWithGoogle": "Continuer avec Google",
+    "or": "OU",
+    "email": "Email",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Au moins 8 caractères",
+    "fullName": "Nom complet",
+    "confirmPassword": "Confirmer le mot de passe",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "showConfirmPassword": "Afficher la confirmation",
+    "hideConfirmPassword": "Masquer la confirmation",
+    "pleaseWait": "Veuillez patienter...",
+    "signIn": {
+      "title": "Bon retour",
+      "description": "Suivez vos dépenses, posez des questions rapides sur votre budget et gardez votre plan en vue.",
+      "submit": "Se connecter",
+      "alternate": "Créer un compte"
+    },
+    "signUp": {
+      "title": "Créer votre carnet",
+      "description": "Commencez avec un espace simple pour des vérifications quotidiennes calmes.",
+      "submit": "Créer un compte",
+      "alternate": "Vous avez déjà un compte ?"
+    },
+    "errors": {
+      "passwordsDoNotMatch": "Les mots de passe ne correspondent pas.",
+      "validEmail": "Entrez une adresse email valide.",
+      "passwordLength": "Le mot de passe doit contenir au moins 8 caractères.",
+      "fullNameLength": "Le nom complet doit contenir au moins 2 caractères.",
+      "validEmailAndPassword": "Entrez un email et un mot de passe valides.",
+      "completeForm": "Complétez le formulaire.",
+      "generic": "Une erreur est survenue. Réessayez.",
+      "signInFailed": "Nous n’avons pas pu terminer la connexion. Réessayez."
+    },
+    "success": {
+      "accountCreatedSignedIn": "Compte créé. Vous êtes connecté.",
+      "checkEmail": "Compte créé. Consultez votre email pour confirmer l’inscription. S’il n’arrive pas, vérifiez les spams ou réessayez dans quelques minutes."
+    }
+  },
   "assistant": {
     "brand": "Calm Wallet",
     "heroTitle": "Votre argent. Une vue claire.",

@@ -19,6 +19,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   return (
     <AuthScreen
       action={signUpAction}
+      copyKeyPrefix="signUp"
       title="Create your notebook"
       description="Start with a simple spending home designed for calm daily check-ins."
       googleAction={signInWithGoogleAction}

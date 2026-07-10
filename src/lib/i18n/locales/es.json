@@ -44,6 +44,47 @@
     "activity": "Actividad",
     "insights": "Resumen"
   },
+  "auth": {
+    "productPill": "Cuaderno personal de presupuesto",
+    "continueWithGoogle": "Continuar con Google",
+    "or": "O",
+    "email": "Email",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Al menos 8 caracteres",
+    "fullName": "Nombre completo",
+    "confirmPassword": "Confirmar contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "showConfirmPassword": "Mostrar confirmación",
+    "hideConfirmPassword": "Ocultar confirmación",
+    "pleaseWait": "Espera un momento...",
+    "signIn": {
+      "title": "Bienvenido de nuevo",
+      "description": "Revisa tus gastos, haz preguntas rápidas sobre tu presupuesto y mantén tu plan a la vista.",
+      "submit": "Iniciar sesión",
+      "alternate": "Crear una cuenta"
+    },
+    "signUp": {
+      "title": "Crea tu cuaderno",
+      "description": "Empieza con un espacio simple para revisiones diarias tranquilas.",
+      "submit": "Crear cuenta",
+      "alternate": "¿Ya tienes una cuenta?"
+    },
+    "errors": {
+      "passwordsDoNotMatch": "Las contraseñas no coinciden.",
+      "validEmail": "Introduce un email válido.",
+      "passwordLength": "La contraseña debe tener al menos 8 caracteres.",
+      "fullNameLength": "El nombre completo debe tener al menos 2 caracteres.",
+      "validEmailAndPassword": "Introduce un email y una contraseña válidos.",
+      "completeForm": "Completa el formulario.",
+      "generic": "Algo salió mal. Inténtalo de nuevo.",
+      "signInFailed": "No pudimos completar el inicio de sesión. Inténtalo de nuevo."
+    },
+    "success": {
+      "accountCreatedSignedIn": "Cuenta creada. Has iniciado sesión.",
+      "checkEmail": "Cuenta creada. Revisa tu email para confirmar el registro. Si no llega, revisa spam o inténtalo de nuevo en unos minutos."
+    }
+  },
   "assistant": {
     "brand": "Calm Wallet",
     "heroTitle": "Tu dinero. Una vista clara.",

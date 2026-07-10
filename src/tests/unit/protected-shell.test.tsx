@@ -93,6 +93,7 @@ function renderProtectedShellWithLocale(uiLocale: string | null) {
 describe("protected shell PWA install affordance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     setDisplayMode(false);
     setNavigatorValue("standalone", false);
     setNavigatorValue("userAgent", "Mozilla/5.0");
@@ -101,6 +102,7 @@ describe("protected shell PWA install affordance", () => {
   });
 
   afterEach(() => {
+    window.localStorage.clear();
     vi.restoreAllMocks();
   });
 
