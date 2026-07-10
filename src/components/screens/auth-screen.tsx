@@ -13,6 +13,7 @@ type AuthScreenProps = {
   includeFullName?: boolean;
   initialState?: AuthFormState;
   nextPath?: string | null;
+  emailPasswordAuthEnabled?: boolean;
 };
 
 export function AuthScreen({
@@ -27,6 +28,7 @@ export function AuthScreen({
   includeFullName,
   initialState,
   nextPath,
+  emailPasswordAuthEnabled,
 }: AuthScreenProps) {
   return (
     <AuthForm
@@ -37,6 +39,7 @@ export function AuthScreen({
       description={description}
       googleAction={googleAction}
       includeFullName={includeFullName}
+      emailPasswordAuthEnabled={emailPasswordAuthEnabled}
       initialState={initialState}
       nextPath={nextPath}
       submitLabel={submitLabel}

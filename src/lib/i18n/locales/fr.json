@@ -83,6 +83,11 @@
     "success": {
       "accountCreatedSignedIn": "Compte créé. Vous êtes connecté.",
       "checkEmail": "Compte créé. Consultez votre email pour confirmer l’inscription. S’il n’arrive pas, vérifiez les spams ou réessayez dans quelques minutes."
+    },
+    "emailPasswordComingSoon": {
+      "title": "Compte Calm Wallet",
+      "status": "Bientôt disponible",
+      "helper": "Les comptes avec email et mot de passe seront bientôt disponibles. Pour le moment, continuez avec Google."
     }
   },
   "assistant": {

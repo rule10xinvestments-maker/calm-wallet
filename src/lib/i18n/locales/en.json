@@ -83,6 +83,11 @@
     "success": {
       "accountCreatedSignedIn": "Account created. You are signed in.",
       "checkEmail": "Account created. Check your email to confirm your sign-up. If it does not arrive, check spam or try again in a few minutes."
+    },
+    "emailPasswordComingSoon": {
+      "title": "Calm Wallet account",
+      "status": "Coming soon",
+      "helper": "Email and password accounts are coming soon. For now, continue with Google."
     }
   },
   "assistant": {

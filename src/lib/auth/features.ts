@@ -1,0 +1,1 @@
+export const EMAIL_PASSWORD_AUTH_ENABLED = process.env.NEXT_PUBLIC_EMAIL_PASSWORD_AUTH_ENABLED === "true";

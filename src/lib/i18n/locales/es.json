@@ -83,6 +83,11 @@
     "success": {
       "accountCreatedSignedIn": "Cuenta creada. Has iniciado sesión.",
       "checkEmail": "Cuenta creada. Revisa tu email para confirmar el registro. Si no llega, revisa spam o inténtalo de nuevo en unos minutos."
+    },
+    "emailPasswordComingSoon": {
+      "title": "Cuenta Calm Wallet",
+      "status": "Próximamente",
+      "helper": "Las cuentas con correo y contraseña estarán disponibles próximamente. Por ahora, continúa con Google."
     }
   },
   "assistant": {

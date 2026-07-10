@@ -40,6 +40,7 @@ function setNavigatorValue(name: "maxTouchPoints" | "platform" | "standalone" | 
 function renderSignUp(
   action = vi.fn(async () => initialAuthFormState),
   googleAction?: (formData: FormData) => Promise<void>,
+  emailPasswordAuthEnabled = true,
 ) {
   render(
     <PwaInstallProvider>
@@ -48,6 +49,7 @@ function renderSignUp(
         alternateHref="/sign-in"
         alternateLabel="Already have an account?"
         description="Start with a simple spending home designed for calm daily check-ins."
+        emailPasswordAuthEnabled={emailPasswordAuthEnabled}
         googleAction={googleAction}
         includeFullName
         submitLabel="Sign up"
@@ -62,6 +64,7 @@ function renderSignUp(
 function renderSignIn(
   action = vi.fn(async () => initialAuthFormState),
   googleAction?: (formData: FormData) => Promise<void>,
+  emailPasswordAuthEnabled = true,
 ) {
   render(
     <PwaInstallProvider>
@@ -70,6 +73,7 @@ function renderSignIn(
         alternateHref="/sign-up"
         alternateLabel="Create an account"
         description="Review your spending, ask quick budget questions, and keep your plan in view."
+        emailPasswordAuthEnabled={emailPasswordAuthEnabled}
         googleAction={googleAction}
         submitLabel="Sign in"
         title="Welcome back"
@@ -94,8 +98,23 @@ describe("auth form", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders Google sign-in without removing email and password auth", () => {
-    renderSignIn(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined));
+  it("keeps Google sign-in visible and gates email/password auth by default", () => {
+    renderSignIn(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined), false);
+
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
+    expect(document.querySelector('span[style*="google-g.svg"]')).toBeInTheDocument();
+    expect(screen.getByText("OR")).toBeInTheDocument();
+    expect(screen.getByText("Calm Wallet account")).toBeInTheDocument();
+    expect(screen.getByText("Coming soon")).toBeInTheDocument();
+    expect(screen.getByText("Email and password accounts are coming soon. For now, continue with Google.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Create an account" })).not.toBeInTheDocument();
+  });
+
+  it("restores email/password sign-in when the feature flag is enabled", () => {
+    renderSignIn(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined), true);
 
     expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
     expect(screen.getByText("OR")).toBeInTheDocument();
@@ -104,15 +123,26 @@ describe("auth form", () => {
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
-  it("renders Google sign-up as an option", () => {
-    renderSignUp(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined));
+  it("hides registration fields while email/password auth is gated", () => {
+    renderSignUp(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined), false);
+
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
+    expect(screen.getByText("Calm Wallet account")).toBeInTheDocument();
+    expect(screen.getByText("Coming soon")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Full name")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign up" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Already have an account?" })).not.toBeInTheDocument();
+  });
+
+  it("restores Google sign-up and registration fields when the feature flag is enabled", () => {
+    renderSignUp(vi.fn(async () => initialAuthFormState), vi.fn(async () => undefined), true);
 
     expect(screen.getByRole("button", { name: "Continue with Google" })).toBeInTheDocument();
     expect(screen.getByLabelText("Full name")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign up" })).toBeInTheDocument();
   });
 
-  it("updates auth copy from the public language selector and persists it locally", async () => {
+  it("updates gated auth copy from the public language selector and persists it locally", async () => {
     const { unmount } = render(
       <LocaleProvider savedLocale={null}>
         <PwaInstallProvider>
@@ -122,6 +152,7 @@ describe("auth form", () => {
             alternateLabel="Create an account"
             copyKeyPrefix="signIn"
             description="Review your spending, ask quick budget questions, and keep your plan in view."
+            emailPasswordAuthEnabled={false}
             googleAction={vi.fn(async () => undefined)}
             submitLabel="Sign in"
             title="Welcome back"
@@ -132,18 +163,17 @@ describe("auth form", () => {
 
     expect(screen.getByText("Personal budget notebook")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Language" }));
-    expect(screen.getAllByText("🇬🇧").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "English" })).toBeInTheDocument();
-    expect(screen.getAllByText("🇫🇷").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Français" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Română" }));
+    expect(screen.getByRole("button", { name: "Fran\u00e7ais" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Rom\u00e2n\u0103" }));
 
     expect(screen.getByText("Caiet personal de buget")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bine ai revenit" })).toBeInTheDocument();
-    expect(screen.getByText("Urmărește cheltuielile, adaugă venituri și rămâi la zi cu bugetul tău.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continuă cu Google" })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Cel puțin 8 caractere")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Autentifică-te" })).toBeInTheDocument();
+    expect(screen.getByText("Urm\u0103re\u0219te cheltuielile, adaug\u0103 venituri \u0219i r\u0103m\u00e2i la zi cu bugetul t\u0103u.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continu\u0103 cu Google" })).toBeInTheDocument();
+    expect(screen.getByText("Cont Calm Wallet")).toBeInTheDocument();
+    expect(screen.getByText("\u00cen cur\u00e2nd")).toBeInTheDocument();
+    expect(screen.getByText("Conturile cu email \u0219i parol\u0103 vor fi disponibile \u00een cur\u00e2nd. Pentru moment, continu\u0103 cu Google.")).toBeInTheDocument();
     expect(window.localStorage.getItem("calm-wallet-locale")).toBe("ro");
 
     unmount();
@@ -157,6 +187,7 @@ describe("auth form", () => {
             alternateLabel="Create an account"
             copyKeyPrefix="signIn"
             description="Review your spending, ask quick budget questions, and keep your plan in view."
+            emailPasswordAuthEnabled={false}
             googleAction={vi.fn(async () => undefined)}
             submitLabel="Sign in"
             title="Welcome back"
@@ -166,6 +197,7 @@ describe("auth form", () => {
     );
 
     expect(await screen.findByRole("heading", { name: "Bine ai revenit" })).toBeInTheDocument();
+    expect(screen.getByText("Cont Calm Wallet")).toBeInTheDocument();
   });
 
   it("submits the Google form through the provided auth action", async () => {

@@ -8,6 +8,7 @@ import { useLocale } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PwaInstallButton } from "@/components/pwa-install-button";
+import { EMAIL_PASSWORD_AUTH_ENABLED } from "@/lib/auth/features";
 import { type AuthFormState, initialAuthFormState } from "@/lib/auth/form-state";
 import { normalizeLocale, supportedLocales, t, type SupportedLocale } from "@/lib/i18n";
 
@@ -23,6 +24,7 @@ type AuthFormProps = {
   includeFullName?: boolean;
   initialState?: AuthFormState;
   nextPath?: string | null;
+  emailPasswordAuthEnabled?: boolean;
 };
 
 type PasswordFieldProps = {
@@ -50,6 +52,7 @@ export function AuthForm({
   includeFullName = false,
   initialState = initialAuthFormState,
   nextPath = null,
+  emailPasswordAuthEnabled = EMAIL_PASSWORD_AUTH_ENABLED,
 }: AuthFormProps) {
   const router = useRouter();
   const { locale } = useLocale();
@@ -112,7 +115,12 @@ export function AuthForm({
                 className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
                 type="submit"
               >
-                {t("auth.continueWithGoogle", locale)}
+                <span
+                  aria-hidden="true"
+                  className="size-5 shrink-0 bg-contain bg-center bg-no-repeat"
+                  style={{ backgroundImage: "url('/icons/google-g.svg')" }}
+                />
+                <span className="min-w-0 truncate">{t("auth.continueWithGoogle", locale)}</span>
               </Button>
             </form>
             <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
@@ -123,80 +131,107 @@ export function AuthForm({
           </>
         ) : null}
 
-        <form action={formAction} className="space-y-4" onSubmit={handleSubmit}>
-          {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
-          {includeFullName ? (
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">{t("auth.fullName", locale)}</span>
-              <input
-                autoComplete="name"
-                className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white"
-                name="fullName"
-                placeholder="Jordan Lee"
-                required
+        {emailPasswordAuthEnabled ? (
+          <>
+            <form action={formAction} className="space-y-4" onSubmit={handleSubmit}>
+              {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
+              {includeFullName ? (
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-slate-700">{t("auth.fullName", locale)}</span>
+                  <input
+                    autoComplete="name"
+                    className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white"
+                    name="fullName"
+                    placeholder="Jordan Lee"
+                    required
+                  />
+                </label>
+              ) : null}
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-700">{t("auth.email", locale)}</span>
+                <input
+                  autoComplete="email"
+                  className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white"
+                  name="email"
+                  placeholder="you@example.com"
+                  required
+                  type="email"
+                />
+              </label>
+
+              <PasswordField
+                autoComplete={includeFullName ? "new-password" : "current-password"}
+                label={t("auth.password", locale)}
+                name="password"
+                onToggle={() => setPasswordVisible((value) => !value)}
+                placeholder={t("auth.passwordPlaceholder", locale)}
+                toggleLabels={{ show: t("auth.showPassword", locale), hide: t("auth.hidePassword", locale) }}
+                visible={passwordVisible}
               />
-            </label>
-          ) : null}
 
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">{t("auth.email", locale)}</span>
-            <input
-              autoComplete="email"
-              className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:bg-white"
-              name="email"
-              placeholder="you@example.com"
-              required
-              type="email"
-            />
-          </label>
+              {includeFullName ? (
+                <PasswordField
+                  autoComplete="new-password"
+                  label={t("auth.confirmPassword", locale)}
+                  name="confirmPassword"
+                  onToggle={() => setConfirmPasswordVisible((value) => !value)}
+                  placeholder={t("auth.passwordPlaceholder", locale)}
+                  toggleLabels={{ show: t("auth.showConfirmPassword", locale), hide: t("auth.hideConfirmPassword", locale) }}
+                  visible={confirmPasswordVisible}
+                />
+              ) : null}
 
-          <PasswordField
-            autoComplete={includeFullName ? "new-password" : "current-password"}
-            label={t("auth.password", locale)}
-            name="password"
-            onToggle={() => setPasswordVisible((value) => !value)}
-            placeholder={t("auth.passwordPlaceholder", locale)}
-            toggleLabels={{ show: t("auth.showPassword", locale), hide: t("auth.hidePassword", locale) }}
-            visible={passwordVisible}
-          />
+              {clientError || state.error ? (
+                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {translateAuthMessage(clientError ?? state.error, locale)}
+                </p>
+              ) : null}
 
-          {includeFullName ? (
-            <PasswordField
-              autoComplete="new-password"
-              label={t("auth.confirmPassword", locale)}
-              name="confirmPassword"
-              onToggle={() => setConfirmPasswordVisible((value) => !value)}
-              placeholder={t("auth.passwordPlaceholder", locale)}
-              toggleLabels={{ show: t("auth.showConfirmPassword", locale), hide: t("auth.hideConfirmPassword", locale) }}
-              visible={confirmPasswordVisible}
-            />
-          ) : null}
+              {state.success ? (
+                <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {translateAuthMessage(state.success, locale)}
+                </p>
+              ) : null}
 
-          {clientError || state.error ? (
-            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {translateAuthMessage(clientError ?? state.error, locale)}
+              <Button className="w-full" disabled={isPending} type="submit">
+                {isPending ? t("auth.pleaseWait", locale) : resolvedSubmitLabel}
+              </Button>
+            </form>
+
+            <p className="mt-4 text-center text-sm text-slate-500">
+              <Link className="font-medium text-sky-700" href={alternateHref}>
+                {resolvedAlternateLabel}
+              </Link>
             </p>
-          ) : null}
-
-          {state.success ? (
-            <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {translateAuthMessage(state.success, locale)}
-            </p>
-          ) : null}
-
-          <Button className="w-full" disabled={isPending} type="submit">
-            {isPending ? t("auth.pleaseWait", locale) : resolvedSubmitLabel}
-          </Button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-slate-500">
-          <Link className="font-medium text-sky-700" href={alternateHref}>
-            {resolvedAlternateLabel}
-          </Link>
-        </p>
+          </>
+        ) : (
+          <EmailPasswordComingSoon locale={locale} />
+        )}
         <PwaInstallButton />
       </CardContent>
     </Card>
+  );
+}
+
+function EmailPasswordComingSoon({ locale }: { locale: SupportedLocale }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3.5 text-slate-700">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="size-6 shrink-0 rounded-md bg-contain bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/icons/calm-wallet-icon-192.png')" }}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-5 text-slate-800">{t("auth.emailPasswordComingSoon.title", locale)}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{t("auth.emailPasswordComingSoon.helper", locale)}</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500">
+          {t("auth.emailPasswordComingSoon.status", locale)}
+        </span>
+      </div>
+    </div>
   );
 }
 

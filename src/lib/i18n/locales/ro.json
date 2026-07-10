@@ -83,6 +83,11 @@
     "success": {
       "accountCreatedSignedIn": "Cont creat. Ești autentificat.",
       "checkEmail": "Cont creat. Verifică emailul pentru confirmare. Dacă nu ajunge, verifică spamul sau încearcă din nou în câteva minute."
+    },
+    "emailPasswordComingSoon": {
+      "title": "Cont Calm Wallet",
+      "status": "În curând",
+      "helper": "Conturile cu email și parolă vor fi disponibile în curând. Pentru moment, continuă cu Google."
     }
   },
   "assistant": {
