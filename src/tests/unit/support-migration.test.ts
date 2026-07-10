@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync("src/supabase/migrations/20260710170000_support_tickets.sql", "utf8");
+const helpMigration = readFileSync("src/supabase/migrations/20260710190000_support_help_attachments_lifecycle.sql", "utf8");
 
 describe("support migration", () => {
   it("uses a dedicated admin_users table keyed by auth user id", () => {
@@ -24,5 +25,22 @@ describe("support migration", () => {
   it("bootstraps only the confirmed stable admin uuid without guessing email", () => {
     expect(migration).toContain("where users.id = '0fed2138-b066-4697-8b8d-e6b79ee8a7f1'");
     expect(migration).toContain("on conflict (user_id) do nothing");
+  });
+
+  it("migrates support tickets to problem categories and archived lifecycle", () => {
+    expect(helpMigration).toContain("when 'bug' then 'app_bug'");
+    expect(helpMigration).toContain("when 'feedback' then 'other_problem'");
+    expect(helpMigration).toContain("archived_at timestamptz");
+    expect(helpMigration).toContain("'archived'");
+    expect(helpMigration).toContain("new.status = 'in_progress' and old.status in ('resolved', 'closed', 'archived')");
+  });
+
+  it("creates private support attachment storage with table and object policies", () => {
+    expect(helpMigration).toContain("create table if not exists public.support_ticket_attachments");
+    expect(helpMigration).toContain("'support-attachments'");
+    expect(helpMigration).toContain("public = false");
+    expect(helpMigration).toContain('create policy "support_ticket_attachments_insert_own"');
+    expect(helpMigration).toContain('create policy "support_attachments_insert_own_path"');
+    expect(helpMigration).toContain("storage_path like auth.uid()::text");
   });
 });

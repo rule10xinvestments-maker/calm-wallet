@@ -134,6 +134,30 @@ export const REQUIRED_SCHEMA: RequiredSchemaEntry[] = [
     column: "admin_note",
     type: "column",
   },
+  {
+    table: "support_tickets",
+    column: "archived_at",
+    type: "column",
+  },
+  {
+    table: "support_ticket_attachments",
+    type: "table",
+  },
+  {
+    table: "support_ticket_attachments",
+    column: "storage_path",
+    type: "column",
+  },
+  {
+    table: "support_ticket_attachments",
+    column: "content_type",
+    type: "column",
+  },
+  {
+    table: "support_ticket_attachments",
+    column: "byte_size",
+    type: "column",
+  },
 ];
 
 function normalizeSupabaseUrl(value: string) {

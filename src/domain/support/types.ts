@@ -1,8 +1,34 @@
-export const supportCategories = ["help", "bug", "feedback", "account", "other"] as const;
-export const supportStatuses = ["new", "in_progress", "resolved", "closed"] as const;
+export const supportCategories = ["app_bug", "account_issue", "data_issue", "notification_issue", "other_problem"] as const;
+export const supportStatuses = ["new", "in_progress", "resolved", "closed", "archived"] as const;
 
 export type SupportCategory = (typeof supportCategories)[number];
 export type SupportStatus = (typeof supportStatuses)[number];
+
+export type SupportAttachmentRow = {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  storage_path: string;
+  original_filename: string | null;
+  content_type: string;
+  byte_size: number;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+};
+
+export type SupportAttachment = {
+  id: string;
+  ticketId: string;
+  userId: string;
+  storagePath: string;
+  originalFilename: string | null;
+  contentType: string;
+  byteSize: number;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
+};
 
 export type SupportTicketRow = {
   id: string;
@@ -22,6 +48,8 @@ export type SupportTicketRow = {
   updated_at: string;
   resolved_at: string | null;
   closed_at: string | null;
+  archived_at: string | null;
+  support_ticket_attachments?: SupportAttachmentRow[];
 };
 
 export type SupportTicket = {
@@ -42,4 +70,6 @@ export type SupportTicket = {
   updatedAt: string;
   resolvedAt: string | null;
   closedAt: string | null;
+  archivedAt: string | null;
+  attachments: SupportAttachment[];
 };

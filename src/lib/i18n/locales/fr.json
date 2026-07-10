@@ -218,29 +218,41 @@
     "languageSaveError": "La langue n’a pas pu être enregistrée.",
     "signOut": "Se déconnecter",
     "support": {
-      "title": "Contacter le support",
-      "helper": "Obtenez de l’aide, signalez un problème ou partagez votre avis.",
-      "category": "Sujet",
+      "title": "Signaler un probleme",
+      "helper": "Dites-nous quand quelque chose ne fonctionne pas correctement.",
+      "category": "Type de probleme",
       "subject": "Objet",
       "subjectPlaceholder": "Optionnel",
-      "message": "Message",
-      "messagePlaceholder": "Comment Calm Wallet Support peut-il aider ?",
-      "send": "Envoyer",
+      "message": "Description",
+      "messagePlaceholder": "Qu est-ce qui ne fonctionne pas correctement ?",
+      "messageHelper": "Decrivez ce qui s est passe et ce que vous attendiez.",
+      "attachments": "Captures d ecran",
+      "addScreenshot": "Ajouter une capture",
+      "removeScreenshot": "Retirer la capture",
+      "send": "Envoyer le rapport",
       "sending": "Envoi...",
-      "successTitle": "Message envoyé",
-      "successBody": "Merci. Calm Wallet Support l’examinera dès que possible.",
+      "successTitle": "Probleme signale",
+      "successBody": "Merci. Nous l examinerons des que possible.",
       "categories": {
-        "help": "Aide",
-        "bug": "Bug",
-        "feedback": "Avis",
-        "account": "Compte",
-        "other": "Autre"
+        "app_bug": "Probleme dans l application",
+        "account_issue": "Compte ou connexion",
+        "data_issue": "Donnees manquantes ou incorrectes",
+        "notification_issue": "Probleme de notification",
+        "other_problem": "Autre probleme"
       },
       "errors": {
-        "generic": "Le message n’a pas pu être envoyé. Réessayez.",
-        "rateLimited": "Veuillez patienter avant d’envoyer un autre message.",
-        "signInRequired": "La connexion est requise."
+        "generic": "Nous n avons pas pu envoyer votre rapport. Reessayez.",
+        "rateLimited": "Veuillez patienter avant d envoyer un autre message.",
+        "signInRequired": "La connexion est requise.",
+        "invalidImage": "Ce fichier n est pas une capture prise en charge.",
+        "tooLarge": "Cette capture est trop grande. Choisissez une image de moins de 5 MB.",
+        "tooMany": "Vous pouvez joindre jusqu a 3 captures.",
+        "uploadFailed": "Votre rapport a ete enregistre, mais une capture n a pas pu etre televersee."
       }
+    },
+    "help": {
+      "title": "Aide",
+      "helper": "Trouvez des reponses et decouvrez comment fonctionne Calm Wallet."
     }
   },
   "transactions": {

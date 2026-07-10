@@ -217,29 +217,41 @@
     "languageSaved": "Language saved.",
     "languageSaveError": "Language could not be saved.",
     "signOut": "Sign out",
+    "help": {
+      "title": "Help",
+      "helper": "Find answers and learn how Calm Wallet works."
+    },
     "support": {
-      "title": "Contact support",
-      "helper": "Get help, report a problem, or share feedback.",
-      "category": "Topic",
+      "title": "Report a problem",
+      "helper": "Tell us when something is not working correctly.",
+      "category": "Problem type",
       "subject": "Subject",
       "subjectPlaceholder": "Optional",
-      "message": "Message",
-      "messagePlaceholder": "How can Calm Wallet Support help?",
-      "send": "Send",
+      "message": "Description",
+      "messagePlaceholder": "What is not working correctly?",
+      "messageHelper": "Describe what happened and what you expected.",
+      "attachments": "Screenshot attachments",
+      "addScreenshot": "Add screenshot",
+      "removeScreenshot": "Remove screenshot",
+      "send": "Send report",
       "sending": "Sending...",
-      "successTitle": "Message sent",
-      "successBody": "Thanks. Calm Wallet Support will review it as soon as possible.",
+      "successTitle": "Problem reported",
+      "successBody": "Thanks. We'll review it as soon as possible.",
       "categories": {
-        "help": "Help",
-        "bug": "Bug",
-        "feedback": "Feedback",
-        "account": "Account",
-        "other": "Other"
+        "app_bug": "App problem",
+        "account_issue": "Account or sign-in",
+        "data_issue": "Missing or incorrect data",
+        "notification_issue": "Notification problem",
+        "other_problem": "Other problem"
       },
       "errors": {
-        "generic": "Support message could not be sent. Please try again.",
+        "generic": "We could not send your report. Please try again.",
         "rateLimited": "Please wait a moment before sending another message.",
-        "signInRequired": "Sign in is required."
+        "signInRequired": "Sign in is required.",
+        "invalidImage": "This file is not a supported screenshot.",
+        "tooLarge": "This screenshot is too large. Choose an image under 5 MB.",
+        "tooMany": "You can attach up to 3 screenshots.",
+        "uploadFailed": "Your report was saved, but one screenshot could not be uploaded."
       }
     }
   },

@@ -7,7 +7,7 @@ function makeTicket(overrides: Partial<SupportTicketRow> = {}): SupportTicketRow
     id: "11111111-1111-1111-1111-111111111111",
     user_id: "user-1",
     user_email: "user@example.com",
-    category: "bug",
+    category: "app_bug",
     subject: null,
     message: "Something is not working.",
     status: "new",
@@ -21,6 +21,8 @@ function makeTicket(overrides: Partial<SupportTicketRow> = {}): SupportTicketRow
     updated_at: "2026-07-10T10:00:00.000Z",
     resolved_at: null,
     closed_at: null,
+    archived_at: null,
+    support_ticket_attachments: [],
     ...overrides,
   };
 }
@@ -33,6 +35,22 @@ function makeAdapter(overrides = {}) {
     listTickets: vi.fn(async () => ({ data: [makeTicket()], error: null })),
     getTicket: vi.fn(async () => ({ data: makeTicket(), error: null })),
     updateTicket: vi.fn(async (_ticketId, row) => ({ data: makeTicket(row), error: null })),
+    createAttachment: vi.fn(async (row) => ({ data: { created_at: "2026-07-10T10:00:00.000Z", ...row }, error: null })),
+    getAttachment: vi.fn(async () => ({
+      data: {
+        id: "22222222-2222-2222-2222-222222222222",
+        ticket_id: "11111111-1111-1111-1111-111111111111",
+        user_id: "user-1",
+        storage_path: "user-1/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222.png",
+        original_filename: "screen.png",
+        content_type: "image/png",
+        byte_size: 123,
+        width: 100,
+        height: 100,
+        created_at: "2026-07-10T10:00:00.000Z",
+      },
+      error: null,
+    })),
     ...overrides,
   };
 }
@@ -45,7 +63,7 @@ describe("support service", () => {
     await service.createTicket(
       { id: "user-1", email: "user@example.com" },
       {
-        category: "bug",
+        category: "app_bug",
         subject: "Bug",
         message: "The form is stuck.",
         status: "closed",
@@ -60,7 +78,7 @@ describe("support service", () => {
     expect(adapter.createTicket).toHaveBeenCalledWith({
       user_id: "user-1",
       user_email: "user@example.com",
-      category: "bug",
+      category: "app_bug",
       subject: "Bug",
       message: "The form is stuck.",
       locale: "ro",
@@ -74,7 +92,7 @@ describe("support service", () => {
     const adapter = makeAdapter();
     const service = createSupportService(adapter);
 
-    await expect(service.createTicket({ id: "user-1", email: "user@example.com" }, { category: "help", message: "" })).rejects.toThrow();
+    await expect(service.createTicket({ id: "user-1", email: "user@example.com" }, { category: "other_problem", message: "" })).rejects.toThrow();
     expect(adapter.createTicket).not.toHaveBeenCalled();
   });
 
@@ -87,7 +105,7 @@ describe("support service", () => {
     await expect(
       service.createTicket(
         { id: "user-1", email: "user@example.com" },
-        { category: "help", message: "Hello" },
+        { category: "other_problem", message: "Hello" },
         { now: new Date("2026-07-10T10:00:10.000Z") },
       ),
     ).rejects.toThrow("support_rate_limited");

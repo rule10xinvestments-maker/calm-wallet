@@ -1,5 +1,5 @@
 import { createSupportTicketSchema, updateSupportTicketSchema } from "@/domain/support/schemas";
-import type { SupportStatus, SupportTicket, SupportTicketRow } from "@/domain/support/types";
+import type { SupportAttachment, SupportAttachmentRow, SupportStatus, SupportTicket, SupportTicketRow } from "@/domain/support/types";
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
 
 type QueryResult<T> = Promise<{ data: T | null; error: unknown }>;
@@ -22,14 +22,43 @@ type SupportTicketUpdateRow = {
   assigned_admin_id?: string;
 };
 
+type SupportAttachmentInsertRow = {
+  id?: string;
+  ticket_id: string;
+  user_id: string;
+  storage_path: string;
+  original_filename: string | null;
+  content_type: string;
+  byte_size: number;
+  width: number | null;
+  height: number | null;
+};
+
 type SupportServiceAdapter = {
   isAdmin(userId: string): Promise<{ data: { user_id: string } | null; error: unknown }>;
   getLatestTicket(userId: string): QueryResult<Pick<SupportTicketRow, "created_at">>;
   createTicket(row: SupportTicketInsertRow): QueryResult<SupportTicketRow>;
-  listTickets(status: SupportStatus | "all"): Promise<{ data: SupportTicketRow[] | null; error: unknown }>;
+  listTickets(status: SupportStatus | "active" | "all"): Promise<{ data: SupportTicketRow[] | null; error: unknown }>;
   getTicket(ticketId: string): QueryResult<SupportTicketRow>;
   updateTicket(ticketId: string, row: SupportTicketUpdateRow): QueryResult<SupportTicketRow>;
+  createAttachment(row: SupportAttachmentInsertRow): QueryResult<SupportAttachmentRow>;
+  getAttachment(attachmentId: string): QueryResult<SupportAttachmentRow>;
 };
+
+function mapAttachment(row: SupportAttachmentRow): SupportAttachment {
+  return {
+    id: row.id,
+    ticketId: row.ticket_id,
+    userId: row.user_id,
+    storagePath: row.storage_path,
+    originalFilename: row.original_filename,
+    contentType: row.content_type,
+    byteSize: row.byte_size,
+    width: row.width,
+    height: row.height,
+    createdAt: row.created_at,
+  };
+}
 
 function mapTicket(row: SupportTicketRow): SupportTicket {
   return {
@@ -50,6 +79,8 @@ function mapTicket(row: SupportTicketRow): SupportTicket {
     updatedAt: row.updated_at,
     resolvedAt: row.resolved_at,
     closedAt: row.closed_at,
+    archivedAt: row.archived_at,
+    attachments: (row.support_ticket_attachments ?? []).map(mapAttachment),
   };
 }
 
@@ -108,7 +139,7 @@ export function createSupportService(adapter: SupportServiceAdapter) {
       return mapTicket(row);
     },
 
-    async listTickets(status: SupportStatus | "all" = "all") {
+    async listTickets(status: SupportStatus | "active" | "all" = "all") {
       const result = await adapter.listTickets(status);
 
       if (result.error) {
@@ -135,6 +166,14 @@ export function createSupportService(adapter: SupportServiceAdapter) {
       );
       return mapTicket(row);
     },
+
+    async createAttachment(row: SupportAttachmentInsertRow) {
+      return mapAttachment(assertResult(await adapter.createAttachment(row), "Unable to save attachment metadata."));
+    },
+
+    async getAttachment(attachmentId: string) {
+      return mapAttachment(assertResult(await adapter.getAttachment(attachmentId), "Unable to load attachment."));
+    },
   };
 }
 
@@ -158,17 +197,33 @@ export async function createSupabaseSupportService() {
       return supabase.from("support_tickets").insert(row).select("*").single();
     },
     async listTickets(status) {
-      let query = supabase.from("support_tickets").select("*").order("created_at", { ascending: false });
-      if (status !== "all") {
+      let query = supabase
+        .from("support_tickets")
+        .select("*, support_ticket_attachments(*)")
+        .order("created_at", { ascending: false })
+        .order("created_at", { referencedTable: "support_ticket_attachments", ascending: true });
+      if (status === "active") {
+        query = query.in("status", ["new", "in_progress"]);
+      } else if (status !== "all") {
         query = query.eq("status", status);
       }
       return query;
     },
     async getTicket(ticketId) {
-      return supabase.from("support_tickets").select("*").eq("id", ticketId).single();
+      return supabase
+        .from("support_tickets")
+        .select("*, support_ticket_attachments(*)")
+        .eq("id", ticketId)
+        .single();
     },
     async updateTicket(ticketId, row) {
       return supabase.from("support_tickets").update(row).eq("id", ticketId).select("*").single();
+    },
+    async createAttachment(row) {
+      return supabase.from("support_ticket_attachments").insert(row).select("*").single();
+    },
+    async getAttachment(attachmentId) {
+      return supabase.from("support_ticket_attachments").select("*").eq("id", attachmentId).single();
     },
   });
 }

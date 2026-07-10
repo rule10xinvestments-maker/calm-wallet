@@ -18,8 +18,8 @@ export type OwedNoteDirection = "owed_to_me" | "i_owe";
 export type OwedNoteStatus = "open" | "settled";
 export type NotificationEventType = "daily_reminder" | "monthly_report";
 export type NotificationEventStatus = "claimed" | "sent" | "failed" | "skipped";
-export type SupportCategory = "help" | "bug" | "feedback" | "account" | "other";
-export type SupportStatus = "new" | "in_progress" | "resolved" | "closed";
+export type SupportCategory = "app_bug" | "account_issue" | "data_issue" | "notification_issue" | "other_problem";
+export type SupportStatus = "new" | "in_progress" | "resolved" | "closed" | "archived";
 
 export type Database = {
   public: {
@@ -159,6 +159,7 @@ export type Database = {
           updated_at: string;
           resolved_at: string | null;
           closed_at: string | null;
+          archived_at: string | null;
         };
         Insert: {
           id?: string;
@@ -178,6 +179,7 @@ export type Database = {
           updated_at?: string;
           resolved_at?: string | null;
           closed_at?: string | null;
+          archived_at?: string | null;
         };
         Update: {
           id?: string;
@@ -197,6 +199,45 @@ export type Database = {
           updated_at?: string;
           resolved_at?: string | null;
           closed_at?: string | null;
+          archived_at?: string | null;
+        };
+      };
+      support_ticket_attachments: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          user_id: string;
+          storage_path: string;
+          original_filename: string | null;
+          content_type: string;
+          byte_size: number;
+          width: number | null;
+          height: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          ticket_id: string;
+          user_id: string;
+          storage_path: string;
+          original_filename?: string | null;
+          content_type: string;
+          byte_size: number;
+          width?: number | null;
+          height?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          ticket_id?: string;
+          user_id?: string;
+          storage_path?: string;
+          original_filename?: string | null;
+          content_type?: string;
+          byte_size?: number;
+          width?: number | null;
+          height?: number | null;
+          created_at?: string;
         };
       };
       recurring_rules: {

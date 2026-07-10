@@ -218,29 +218,41 @@
     "languageSaveError": "No se pudo guardar el idioma.",
     "signOut": "Cerrar sesión",
     "support": {
-      "title": "Contactar con soporte",
-      "helper": "Obtén ayuda, informa de un problema o comparte tus comentarios.",
-      "category": "Tema",
+      "title": "Informar de un problema",
+      "helper": "Dinos cuando algo no funciona correctamente.",
+      "category": "Tipo de problema",
       "subject": "Asunto",
       "subjectPlaceholder": "Opcional",
-      "message": "Mensaje",
-      "messagePlaceholder": "¿Cómo puede ayudarte Calm Wallet Support?",
-      "send": "Enviar",
+      "message": "Descripcion",
+      "messagePlaceholder": "Que no funciona correctamente?",
+      "messageHelper": "Describe que ocurrio y que esperabas que pasara.",
+      "attachments": "Capturas de pantalla",
+      "addScreenshot": "Anadir captura",
+      "removeScreenshot": "Quitar captura",
+      "send": "Enviar informe",
       "sending": "Enviando...",
-      "successTitle": "Mensaje enviado",
-      "successBody": "Gracias. Calm Wallet Support lo revisará lo antes posible.",
+      "successTitle": "Problema informado",
+      "successBody": "Gracias. Lo revisaremos lo antes posible.",
       "categories": {
-        "help": "Ayuda",
-        "bug": "Error",
-        "feedback": "Comentarios",
-        "account": "Cuenta",
-        "other": "Otro"
+        "app_bug": "Problema en la aplicacion",
+        "account_issue": "Cuenta o inicio de sesion",
+        "data_issue": "Datos ausentes o incorrectos",
+        "notification_issue": "Problema con las notificaciones",
+        "other_problem": "Otro problema"
       },
       "errors": {
-        "generic": "No se pudo enviar el mensaje. Inténtalo de nuevo.",
+        "generic": "No pudimos enviar tu informe. Intentalo de nuevo.",
         "rateLimited": "Espera un momento antes de enviar otro mensaje.",
-        "signInRequired": "Debes iniciar sesión."
+        "signInRequired": "Debes iniciar sesion.",
+        "invalidImage": "Este archivo no es una captura compatible.",
+        "tooLarge": "Esta captura es demasiado grande. Elige una imagen de menos de 5 MB.",
+        "tooMany": "Puedes adjuntar hasta 3 capturas.",
+        "uploadFailed": "Tu informe se guardo, pero no se pudo subir una captura."
       }
+    },
+    "help": {
+      "title": "Ayuda",
+      "helper": "Encuentra respuestas y aprende como funciona Calm Wallet."
     }
   },
   "transactions": {

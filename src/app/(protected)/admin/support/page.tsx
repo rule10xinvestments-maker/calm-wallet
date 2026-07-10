@@ -4,7 +4,6 @@ import { createSupabaseSupportService } from "@/domain/support/service";
 import type { SupportStatus } from "@/domain/support/types";
 import { updateSupportTicketAdminAction } from "@/lib/actions/support";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
-import { normalizeLocale, type SupportedLocale } from "@/lib/i18n";
 
 type AdminSupportPageProps = {
   searchParams?: Promise<{
@@ -13,10 +12,10 @@ type AdminSupportPageProps = {
   }>;
 };
 
-const supportStatuses = ["new", "in_progress", "resolved", "closed"] as const;
+const supportFilters = ["active", "new", "in_progress", "resolved", "closed", "archived", "all"] as const;
 
-function normalizeStatus(status: string | undefined): SupportStatus | "all" {
-  return supportStatuses.includes(status as SupportStatus) ? (status as SupportStatus) : "all";
+function normalizeStatus(status: string | undefined): SupportStatus | "active" | "all" {
+  return supportFilters.includes(status as SupportStatus | "active" | "all") ? (status as SupportStatus | "active" | "all") : "active";
 }
 
 export default async function AdminSupportPage({ searchParams }: AdminSupportPageProps) {
@@ -37,13 +36,11 @@ export default async function AdminSupportPage({ searchParams }: AdminSupportPag
   const activeStatus = normalizeStatus(resolvedSearchParams.status);
   const tickets = await service.listTickets(activeStatus);
   const selectedTicket = resolvedSearchParams.ticket ? tickets.find((ticket) => ticket.id === resolvedSearchParams.ticket) ?? null : null;
-  const locale = normalizeLocale(auth.user.user_metadata?.ui_locale) as SupportedLocale;
 
   return (
     <AdminSupportConsole
       action={updateSupportTicketAdminAction}
       activeStatus={activeStatus}
-      locale={locale}
       selectedTicket={selectedTicket}
       tickets={tickets}
     />

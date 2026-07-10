@@ -10,7 +10,7 @@ const tickets: SupportTicket[] = [
     id: "ticket-1",
     userId: "user-1",
     userEmail: "user@example.com",
-    category: "bug",
+    category: "app_bug",
     subject: "Mobile issue",
     message: "The support console needs a calmer mobile flow.",
     status: "new",
@@ -24,12 +24,14 @@ const tickets: SupportTicket[] = [
     updatedAt: "2026-07-10T10:00:00.000Z",
     resolvedAt: null,
     closedAt: null,
+    archivedAt: null,
+    attachments: [],
   },
   {
     id: "ticket-2",
     userId: "user-2",
     userEmail: "other@example.com",
-    category: "feedback",
+    category: "other_problem",
     subject: null,
     message: "A second ticket.",
     status: "in_progress",
@@ -43,6 +45,21 @@ const tickets: SupportTicket[] = [
     updatedAt: "2026-07-10T11:00:00.000Z",
     resolvedAt: null,
     closedAt: null,
+    archivedAt: null,
+    attachments: [
+      {
+        id: "attachment-1",
+        ticketId: "ticket-2",
+        userId: "user-2",
+        storagePath: "user-2/ticket-2/attachment-1.png",
+        originalFilename: "screen.png",
+        contentType: "image/png",
+        byteSize: 123,
+        width: 100,
+        height: 100,
+        createdAt: "2026-07-10T11:00:00.000Z",
+      },
+    ],
   },
 ];
 
@@ -56,8 +73,7 @@ function renderConsole(props: Partial<ComponentProps<typeof AdminSupportConsole>
   render(
     <AdminSupportConsole
       action={action}
-      activeStatus="all"
-      locale="en"
+      activeStatus="active"
       selectedTicket={null}
       tickets={tickets}
       {...props}

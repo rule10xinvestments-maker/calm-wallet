@@ -69,7 +69,7 @@ export function ProtectedHeader({
             className="hidden min-h-10 items-center rounded-full border border-sky-100 bg-sky-50 px-3 text-xs font-semibold text-sky-700 sm:inline-flex"
             href="/admin/support"
           >
-            {t("admin.support.nav", locale)}
+            Admin Support
           </Link>
         ) : null}
         <PwaInstallHeaderIcon />

@@ -194,35 +194,36 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
   });
 
-  it("adds Contact support inside Settings and keeps admin support outside normal navigation", () => {
+  it("adds Help and Report a problem inside Settings and keeps admin support outside normal navigation", () => {
     renderProtectedShell();
 
-    expect(screen.queryByRole("link", { name: "Support" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Admin Support" })).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(3);
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-    const supportButton = screen.getByRole("button", { name: /Contact support/ });
-    expect(supportButton).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Help Find answers/ })).toBeInTheDocument();
+    const reportButton = screen.getByRole("button", { name: /Report a problem/ });
+    expect(reportButton).toBeInTheDocument();
 
-    fireEvent.click(supportButton);
+    fireEvent.click(reportButton);
 
-    expect(screen.getByText("Get help, report a problem, or share feedback.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Topic Help" })).toBeInTheDocument();
+    expect(screen.getByText("Tell us when something is not working correctly.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Problem type App problem" })).toBeInTheDocument();
     expect(document.querySelector('select[name="category"]')).toBeNull();
     expect(screen.getByLabelText("Subject")).toBeInTheDocument();
-    expect(screen.getByLabelText("Message")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("What is not working correctly?")).toBeRequired();
+    expect(screen.getByRole("button", { name: "Send report" })).toBeInTheDocument();
   });
 
   it("shows the admin Support header entry only for admins while bottom nav stays three items", () => {
     renderAdminProtectedShell();
 
-    expect(screen.getByRole("link", { name: "Support" })).toHaveAttribute("href", "/admin/support");
+    expect(screen.getByRole("link", { name: "Admin Support" })).toHaveAttribute("href", "/admin/support");
     expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(3);
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 
-    expect(screen.getByRole("link", { name: /Support Review user support messages. Admin/ })).toHaveAttribute("href", "/admin/support");
+    expect(screen.getByRole("link", { name: /Admin Support Review and manage user reports. Admin/ })).toHaveAttribute("href", "/admin/support");
   });
 
   it("updates migrated labels when a language is selected", async () => {

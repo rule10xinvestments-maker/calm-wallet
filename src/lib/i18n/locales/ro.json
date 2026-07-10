@@ -220,29 +220,41 @@
     "languageSaveError": "Limba nu a putut fi salvată.",
     "signOut": "Deconectare",
     "support": {
-      "title": "Contactează suportul",
-      "helper": "Primește ajutor, raportează o problemă sau trimite feedback.",
-      "category": "Subiect",
+      "title": "Raporteaza o problema",
+      "helper": "Spune-ne cand ceva nu functioneaza corect.",
+      "category": "Tipul problemei",
       "subject": "Titlu",
-      "subjectPlaceholder": "Opțional",
-      "message": "Mesaj",
-      "messagePlaceholder": "Cum te poate ajuta Calm Wallet Support?",
-      "send": "Trimite",
+      "subjectPlaceholder": "Optional",
+      "message": "Descriere",
+      "messagePlaceholder": "Ce nu functioneaza corect?",
+      "messageHelper": "Descrie ce s-a intamplat si la ce te asteptai.",
+      "attachments": "Capturi de ecran",
+      "addScreenshot": "Adauga captura",
+      "removeScreenshot": "Elimina captura",
+      "send": "Trimite raportul",
       "sending": "Se trimite...",
-      "successTitle": "Mesaj trimis",
-      "successBody": "Mulțumim. Calm Wallet Support îl va analiza cât mai curând.",
+      "successTitle": "Problema raportata",
+      "successBody": "Multumim. O vom verifica cat mai curand.",
       "categories": {
-        "help": "Ajutor",
-        "bug": "Problemă",
-        "feedback": "Feedback",
-        "account": "Cont",
-        "other": "Altele"
+        "app_bug": "Problema in aplicatie",
+        "account_issue": "Cont sau autentificare",
+        "data_issue": "Date lipsa sau incorecte",
+        "notification_issue": "Problema cu notificarile",
+        "other_problem": "Alta problema"
       },
       "errors": {
-        "generic": "Mesajul nu a putut fi trimis. Încearcă din nou.",
-        "rateLimited": "Așteaptă puțin înainte să trimiți alt mesaj.",
-        "signInRequired": "Autentificarea este necesară."
+        "generic": "Nu am putut trimite raportul. Incearca din nou.",
+        "rateLimited": "Asteapta putin inainte sa trimiti alt mesaj.",
+        "signInRequired": "Autentificarea este necesara.",
+        "invalidImage": "Acest fisier nu este o captura acceptata.",
+        "tooLarge": "Aceasta captura este prea mare. Alege o imagine sub 5 MB.",
+        "tooMany": "Poti atasa pana la 3 capturi.",
+        "uploadFailed": "Raportul a fost salvat, dar o captura nu a putut fi incarcata."
       }
+    },
+    "help": {
+      "title": "Ajutor",
+      "helper": "Gaseste raspunsuri si afla cum functioneaza Calm Wallet."
     }
   },
   "transactions": {

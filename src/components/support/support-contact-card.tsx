@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Check, ChevronDown, MessageCircle } from "lucide-react";
+import { Check, ChevronDown, ImagePlus, XCircle, Bug } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { initialSupportTicketActionState, type SupportTicketActionState } from "@/lib/actions/support-state";
@@ -12,29 +12,101 @@ type SupportContactCardProps = {
   action: (state: SupportTicketActionState, formData: FormData) => Promise<SupportTicketActionState>;
 };
 
-const supportCategoryKeys = ["help", "bug", "feedback", "account", "other"] as const;
+const supportCategoryKeys = ["app_bug", "account_issue", "data_issue", "notification_issue", "other_problem"] as const;
+const acceptedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const maxScreenshots = 3;
+const maxScreenshotBytes = 5 * 1024 * 1024;
+
+type ScreenshotItem = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
 
 export function SupportContactCard({ action }: SupportContactCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<(typeof supportCategoryKeys)[number]>("help");
+  const [selectedCategory, setSelectedCategory] = useState<(typeof supportCategoryKeys)[number]>("app_bug");
   const [state, formAction, isPending] = useActionState(action, initialSupportTicketActionState);
   const [userAgent, setUserAgent] = useState("");
+  const [screenshots, setScreenshots] = useState<ScreenshotItem[]>([]);
+  const [localError, setLocalError] = useState<string | null>(null);
   const pathname = usePathname();
   const { locale } = useLocale();
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     setUserAgent(navigator.userAgent);
+    const openReport = () => setIsOpen(true);
+    window.addEventListener("calm-wallet:open-report-problem", openReport);
+    return () => window.removeEventListener("calm-wallet:open-report-problem", openReport);
   }, []);
 
   useEffect(() => {
     if (state.status === "success") {
       formRef.current?.reset();
-      setSelectedCategory("help");
+      setSelectedCategory("app_bug");
       setIsCategoryOpen(false);
+      clearScreenshots();
     }
   }, [state.status]);
+
+  useEffect(() => () => clearScreenshots(), []);
+
+  function clearScreenshots() {
+    setScreenshots((items) => {
+      items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      return [];
+    });
+    setLocalError(null);
+  }
+
+  async function handleFileChange(files: FileList | null) {
+    setLocalError(null);
+    if (!files) return;
+
+    const nextFiles = Array.from(files);
+    if (screenshots.length + nextFiles.length > maxScreenshots) {
+      setLocalError("tooMany");
+      return;
+    }
+
+    const prepared: ScreenshotItem[] = [];
+
+    for (const file of nextFiles) {
+      if (!acceptedImageTypes.has(file.type)) {
+        setLocalError("invalidImage");
+        continue;
+      }
+      if (file.size > maxScreenshotBytes) {
+        setLocalError("tooLarge");
+        continue;
+      }
+
+      const resizedFile = await resizeScreenshot(file);
+      prepared.push({
+        id: crypto.randomUUID(),
+        file: resizedFile,
+        previewUrl: URL.createObjectURL(resizedFile),
+      });
+    }
+
+    setScreenshots((items) => [...items, ...prepared].slice(0, maxScreenshots));
+  }
+
+  function removeScreenshot(id: string) {
+    setScreenshots((items) => {
+      const removed = items.find((item) => item.id === id);
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return items.filter((item) => item.id !== id);
+    });
+  }
+
+  async function submitReport(formData: FormData) {
+    formData.delete("screenshots");
+    screenshots.forEach((item) => formData.append("screenshots", item.file, item.file.name));
+    formAction(formData);
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white">
@@ -45,7 +117,7 @@ export function SupportContactCard({ action }: SupportContactCardProps) {
         type="button"
       >
         <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
-          <MessageCircle aria-hidden="true" className="size-4" />
+          <Bug aria-hidden="true" className="size-4" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium text-slate-900">{t("settings.support.title", locale)}</span>
@@ -59,10 +131,13 @@ export function SupportContactCard({ action }: SupportContactCardProps) {
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
               <p className="font-semibold">{t("settings.support.successTitle", locale)}</p>
               <p className="mt-1 leading-5">{t("settings.support.successBody", locale)}</p>
+              {state.message === "Report saved but one screenshot could not be uploaded." ? (
+                <p className="mt-2 leading-5">{t("settings.support.errors.uploadFailed", locale)}</p>
+              ) : null}
             </div>
           ) : null}
 
-          <form ref={formRef} action={formAction} className="mt-3 space-y-3">
+          <form ref={formRef} action={submitReport} className="mt-3 space-y-3">
             <input name="locale" type="hidden" value={locale} />
             <input name="sourceRoute" type="hidden" value={pathname ?? ""} />
             <input name="userAgent" type="hidden" value={userAgent} />
@@ -130,7 +205,51 @@ export function SupportContactCard({ action }: SupportContactCardProps) {
                 placeholder={t("settings.support.messagePlaceholder", locale)}
                 required
               />
+              <span className="block text-xs leading-5 text-slate-500">{t("settings.support.messageHelper", locale)}</span>
             </label>
+
+            <div className="space-y-2">
+              <span className="block text-xs font-medium text-slate-700">{t("settings.support.attachments", locale)}</span>
+              <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-medium text-slate-700 transition hover:bg-white">
+                <ImagePlus aria-hidden="true" className="size-4" />
+                {t("settings.support.addScreenshot", locale)}
+                <input
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={isPending || screenshots.length >= maxScreenshots}
+                  multiple
+                  onChange={(event) => {
+                    void handleFileChange(event.currentTarget.files);
+                    event.currentTarget.value = "";
+                  }}
+                  type="file"
+                />
+              </label>
+              {screenshots.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {screenshots.map((item) => (
+                    <div className="relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50" key={item.id}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img alt="" className="h-full w-full object-cover" src={item.previewUrl} />
+                      <button
+                        aria-label={t("settings.support.removeScreenshot", locale)}
+                        className="absolute right-1 top-1 inline-flex size-7 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm"
+                        disabled={isPending}
+                        onClick={() => removeScreenshot(item.id)}
+                        type="button"
+                      >
+                        <XCircle aria-hidden="true" className="size-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {localError ? (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  {t(`settings.support.errors.${localError}`, locale)}
+                </p>
+              ) : null}
+            </div>
 
             {state.status === "error" && state.message ? (
               <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
@@ -146,6 +265,40 @@ export function SupportContactCard({ action }: SupportContactCardProps) {
       ) : null}
     </div>
   );
+}
+
+async function resizeScreenshot(file: File) {
+  if (typeof document === "undefined" || typeof createImageBitmap === "undefined") {
+    return file;
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longestEdge = Math.max(bitmap.width, bitmap.height);
+    if (longestEdge <= 1800) {
+      bitmap.close();
+      return file;
+    }
+
+    const scale = 1800 / longestEdge;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const context = canvas.getContext("2d");
+    if (!context) {
+      bitmap.close();
+      return file;
+    }
+
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, file.type, 0.82));
+    if (!blob) return file;
+    return new File([blob], file.name, { type: file.type, lastModified: Date.now() });
+  } catch {
+    return file;
+  }
 }
 
 function translateSupportActionMessage(message: string, locale: string) {

@@ -6,6 +6,7 @@ import { Settings, ShieldCheck } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
 import { LanguageSelector } from "@/components/settings/language-selector";
+import { HelpCenterCard } from "@/components/support/help-center-card";
 import { SupportContactCard } from "@/components/support/support-contact-card";
 import { t } from "@/lib/i18n";
 import type { NotificationPreferences } from "@/domain/notifications/types";
@@ -95,14 +96,15 @@ export function HeaderSettingsButton({
                     <ShieldCheck aria-hidden="true" className="size-4" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-medium text-slate-900">{t("admin.support.nav", locale)}</span>
-                    <span className="mt-1 block text-xs leading-5 text-slate-600">{t("admin.support.helper", locale)}</span>
+                    <span className="block text-sm font-medium text-slate-900">Admin Support</span>
+                    <span className="mt-1 block text-xs leading-5 text-slate-600">Review and manage user reports.</span>
                   </span>
                   <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-wide text-sky-700">
-                    {t("admin.support.eyebrow", locale)}
+                    Admin
                   </span>
                 </Link>
               ) : null}
+              <HelpCenterCard />
               <SupportContactCard action={supportTicketAction} />
               <NotificationPreferencesCard
                 action={notificationPreferencesAction}

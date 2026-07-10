@@ -42,7 +42,7 @@ describe("support actions", () => {
   it("creates support tickets for the authenticated user with safe metadata", async () => {
     const { createSupportTicketAction } = await import("@/lib/actions/support");
     const formData = new FormData();
-    formData.set("category", "bug");
+    formData.set("category", "app_bug");
     formData.set("subject", "Small bug");
     formData.set("message", "The support form works.");
     formData.set("locale", "ro");
@@ -54,7 +54,7 @@ describe("support actions", () => {
     expect(createTicket).toHaveBeenCalledWith(
       { id: "user-1", email: "user@example.com" },
       expect.objectContaining({
-        category: "bug",
+        category: "app_bug",
         subject: "Small bug",
         message: "The support form works.",
         locale: "ro",
@@ -63,14 +63,14 @@ describe("support actions", () => {
       }),
     );
     expect(revalidatePath).toHaveBeenCalledWith("/admin/support");
-    expect(result).toEqual({ status: "success", message: "Message sent" });
+    expect(result).toEqual({ status: "success", message: "Problem reported" });
   });
 
   it("returns calm error copy when support submission fails", async () => {
     createTicket.mockRejectedValueOnce(new Error("raw supabase stack"));
     const { createSupportTicketAction } = await import("@/lib/actions/support");
     const formData = new FormData();
-    formData.set("category", "help");
+    formData.set("category", "other_problem");
     formData.set("message", "Help");
 
     const result = await createSupportTicketAction({ status: "idle", message: null }, formData);
@@ -83,7 +83,7 @@ describe("support actions", () => {
     createTicket.mockRejectedValueOnce(new Error("support_rate_limited"));
     const { createSupportTicketAction } = await import("@/lib/actions/support");
     const formData = new FormData();
-    formData.set("category", "help");
+    formData.set("category", "other_problem");
     formData.set("message", "Help");
 
     const result = await createSupportTicketAction({ status: "idle", message: null }, formData);

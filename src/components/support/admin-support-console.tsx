@@ -2,32 +2,46 @@
 
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Image as ImageIcon } from "lucide-react";
 import { initialAdminSupportTicketActionState, type AdminSupportTicketActionState } from "@/lib/actions/support-state";
 import type { SupportStatus, SupportTicket } from "@/domain/support/types";
-import { t, type SupportedLocale } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 
 type AdminSupportConsoleProps = {
   tickets: SupportTicket[];
   selectedTicket: SupportTicket | null;
-  activeStatus: SupportStatus | "all";
-  locale: SupportedLocale;
+  activeStatus: SupportStatus | "active" | "all";
   action: (state: AdminSupportTicketActionState, formData: FormData) => Promise<AdminSupportTicketActionState>;
 };
 
-const statusFilters: Array<SupportStatus | "all"> = ["all", "new", "in_progress", "resolved", "closed"];
-const editableStatuses: SupportStatus[] = ["new", "in_progress", "resolved", "closed"];
+const statusFilters: Array<SupportStatus | "active" | "all"> = ["active", "new", "in_progress", "resolved", "closed", "archived", "all"];
+const editableStatuses: SupportStatus[] = ["new", "in_progress", "resolved"];
+const categoryLabels: Record<string, string> = {
+  app_bug: "App problem",
+  account_issue: "Account or sign-in",
+  data_issue: "Missing or incorrect data",
+  notification_issue: "Notification problem",
+  other_problem: "Other problem",
+};
+const statusLabels: Record<SupportStatus | "active" | "all", string> = {
+  active: "Active",
+  all: "All",
+  new: "New",
+  in_progress: "In progress",
+  resolved: "Resolved",
+  closed: "Closed",
+  archived: "Archived",
+};
 
-export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, locale, action }: AdminSupportConsoleProps) {
-  const listHref = `/admin/support${activeStatus === "all" ? "" : `?status=${activeStatus}`}`;
+export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, action }: AdminSupportConsoleProps) {
+  const listHref = `/admin/support${activeStatus === "active" ? "" : `?status=${activeStatus}`}`;
 
   return (
     <section className="space-y-4">
       <header className={`space-y-2 ${selectedTicket ? "hidden md:block" : ""}`}>
-        <p className="text-sm font-medium text-sky-700">{t("admin.support.eyebrow", locale)}</p>
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{t("admin.support.title", locale)}</h2>
-        <p className="text-sm leading-6 text-slate-500">{t("admin.support.helper", locale)}</p>
+        <p className="text-sm font-medium text-sky-700">Admin</p>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Support</h2>
+        <p className="text-sm leading-6 text-slate-500">Review and manage user reports.</p>
       </header>
 
       <div className={`flex gap-2 overflow-x-auto pb-1 ${selectedTicket ? "hidden md:flex" : ""}`}>
@@ -36,10 +50,10 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
             className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
               activeStatus === status ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600"
             }`}
-            href={`/admin/support${status === "all" ? "" : `?status=${status}`}`}
+            href={`/admin/support${status === "active" ? "" : `?status=${status}`}`}
             key={status}
           >
-            {t(`admin.support.statusFilters.${status}`, locale)}
+            {statusLabels[status]}
           </Link>
         ))}
       </div>
@@ -48,7 +62,7 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
         <div className={`space-y-2 ${selectedTicket ? "hidden md:block" : ""}`} data-testid="admin-support-ticket-list">
           {tickets.length === 0 ? (
             <p className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
-              {t("admin.support.empty", locale)}
+              No support tickets in this view.
             </p>
           ) : (
             tickets.map((ticket) => (
@@ -57,24 +71,30 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
                   selectedTicket?.id === ticket.id ? "border-sky-200 shadow-calm" : "border-slate-200"
                 }`}
                 href={`/admin/support?${new URLSearchParams({
-                  ...(activeStatus !== "all" ? { status: activeStatus } : {}),
+                  ...(activeStatus !== "active" ? { status: activeStatus } : {}),
                   ticket: ticket.id,
                 }).toString()}`}
                 key={ticket.id}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">{ticket.subject || t(`settings.support.categories.${ticket.category}`, locale)}</p>
+                    <p className="truncate text-sm font-semibold text-slate-900">{ticket.subject || categoryLabels[ticket.category]}</p>
                     <p className="mt-1 truncate text-xs text-slate-500">{ticket.userEmail}</p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${getStatusClass(ticket.status)}`}>
-                    {t(`admin.support.statuses.${ticket.status}`, locale)}
+                    {statusLabels[ticket.status]}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
-                  <span>{t(`settings.support.categories.${ticket.category}`, locale)}</span>
+                  <span>{categoryLabels[ticket.category]}</span>
                   <time dateTime={ticket.createdAt}>{formatDate(ticket.createdAt)}</time>
                 </div>
+                {ticket.attachments.length > 0 ? (
+                  <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+                    <ImageIcon aria-hidden="true" className="size-3.5" />
+                    {ticket.attachments.length} screenshot{ticket.attachments.length === 1 ? "" : "s"}
+                  </p>
+                ) : null}
               </Link>
             ))
           )}
@@ -85,9 +105,9 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
           data-testid="admin-support-ticket-detail"
         >
           {selectedTicket ? (
-            <TicketDetail action={action} closeHref={listHref} locale={locale} ticket={selectedTicket} />
+            <TicketDetail action={action} closeHref={listHref} ticket={selectedTicket} />
           ) : (
-            <p className="text-sm text-slate-500">{t("admin.support.selectTicket", locale)}</p>
+            <p className="text-sm text-slate-500">Select a ticket to review.</p>
           )}
         </div>
       </div>
@@ -98,12 +118,10 @@ export function AdminSupportConsole({ tickets, selectedTicket, activeStatus, loc
 function TicketDetail({
   ticket,
   closeHref,
-  locale,
   action,
 }: {
   ticket: SupportTicket;
   closeHref: string;
-  locale: SupportedLocale;
   action: AdminSupportConsoleProps["action"];
 }) {
   const [state, formAction, isPending] = useActionState(action, initialAdminSupportTicketActionState);
@@ -118,16 +136,16 @@ function TicketDetail({
   return (
     <div className="space-y-4">
       <Link
-        aria-label={t("admin.support.backToList", locale)}
+        aria-label="Back to tickets"
         className="inline-flex min-h-9 items-center rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 md:hidden"
         href={closeHref}
       >
-        {t("admin.support.backToList", locale)}
+        Back to tickets
       </Link>
 
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{t("admin.support.ticketDetail", locale)}</p>
-        <h3 className="text-lg font-semibold text-slate-900">{ticket.subject || t(`settings.support.categories.${ticket.category}`, locale)}</h3>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Ticket detail</p>
+        <h3 className="text-lg font-semibold text-slate-900">{ticket.subject || categoryLabels[ticket.category]}</h3>
         <p className="text-xs text-slate-500">{ticket.userEmail}</p>
       </div>
 
@@ -136,20 +154,49 @@ function TicketDetail({
       </div>
 
       <dl className="grid gap-2 text-xs text-slate-600">
-        <MetaRow label={t("admin.support.userId", locale)} value={ticket.userId} />
-        <MetaRow label={t("admin.support.locale", locale)} value={ticket.locale ?? "-"} />
-        <MetaRow label={t("admin.support.route", locale)} value={ticket.sourceRoute ?? "-"} />
-        <MetaRow label={t("admin.support.userAgent", locale)} value={ticket.userAgent ?? "-"} />
-        <MetaRow label={t("admin.support.created", locale)} value={formatDate(ticket.createdAt)} />
-        <MetaRow label={t("admin.support.updated", locale)} value={formatDate(ticket.updatedAt)} />
+        <MetaRow label="User ID" value={ticket.userId} />
+        <MetaRow label="User email" value={ticket.userEmail} />
+        <MetaRow label="Category" value={categoryLabels[ticket.category]} />
+        <MetaRow label="Locale" value={ticket.locale ?? "-"} />
+        <MetaRow label="Route" value={ticket.sourceRoute ?? "-"} />
+        <MetaRow label="User agent" value={ticket.userAgent ?? "-"} />
+        <MetaRow label="Created" value={formatDate(ticket.createdAt)} />
+        <MetaRow label="Updated" value={formatDate(ticket.updatedAt)} />
+        <MetaRow label="Resolved" value={ticket.resolvedAt ? formatDate(ticket.resolvedAt) : "-"} />
+        <MetaRow label="Closed" value={ticket.closedAt ? formatDate(ticket.closedAt) : "-"} />
+        <MetaRow label="Archived" value={ticket.archivedAt ? formatDate(ticket.archivedAt) : "-"} />
       </dl>
+
+      {ticket.attachments.length > 0 ? (
+        <section className="space-y-2">
+          <p className="text-xs font-medium text-slate-700">Screenshots</p>
+          <div className="grid grid-cols-3 gap-2">
+            {ticket.attachments.map((attachment) => (
+              <a
+                className="group block aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                href={`/api/admin/support-attachments/${attachment.id}`}
+                key={attachment.id}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt="Support screenshot preview"
+                  className="h-full w-full object-cover transition group-hover:scale-105"
+                  src={`/api/admin/support-attachments/${attachment.id}`}
+                />
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <form action={formAction} className="space-y-3">
         <input name="ticketId" type="hidden" value={ticket.id} />
         <div className="space-y-1.5">
           <input name="status" type="hidden" value={selectedStatus} />
           <span className="block text-xs font-medium text-slate-700" id={`support-status-label-${ticket.id}`}>
-            {t("admin.support.status", locale)}
+            Status
           </span>
           <button
             aria-expanded={isStatusOpen}
@@ -158,7 +205,7 @@ function TicketDetail({
             onClick={() => setIsStatusOpen((value) => !value)}
             type="button"
           >
-            <span id={`support-status-value-${ticket.id}`}>{t(`admin.support.statuses.${selectedStatus}`, locale)}</span>
+            <span id={`support-status-value-${ticket.id}`}>{statusLabels[selectedStatus]}</span>
             <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isStatusOpen ? "rotate-180" : ""}`} />
           </button>
           {isStatusOpen ? (
@@ -179,7 +226,7 @@ function TicketDetail({
                     }}
                     type="button"
                   >
-                    <span>{t(`admin.support.statuses.${status}`, locale)}</span>
+                    <span>{statusLabels[status]}</span>
                     {isSelected ? <Check aria-hidden="true" className="size-4" /> : null}
                   </button>
                 );
@@ -188,7 +235,7 @@ function TicketDetail({
           ) : null}
         </div>
         <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-slate-700">{t("admin.support.internalNote", locale)}</span>
+          <span className="text-xs font-medium text-slate-700">Internal note</span>
           <textarea
             className="min-h-24 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
             maxLength={2000}
@@ -202,7 +249,7 @@ function TicketDetail({
           </p>
         ) : null}
         <Button className="w-full" disabled={isPending} type="submit">
-          {isPending ? t("common.saving", locale) : t("admin.support.save", locale)}
+          {isPending ? "Saving..." : "Save support update"}
         </Button>
       </form>
     </div>
