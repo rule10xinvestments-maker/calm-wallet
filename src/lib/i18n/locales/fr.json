@@ -270,6 +270,47 @@
     "noResults": "Aucune réponse trouvée.",
     "still": "Encore besoin d'aide ?",
     "report": "Signaler un problème",
+    "visuals": {
+      "quickAdd": {
+        "input": "Café 12",
+        "understands": "L'IA comprend",
+        "saved": "Entrée enregistrée",
+        "caption": "Les notes naturelles deviennent des entrées suivies."
+      },
+      "needsReview": {
+        "saved": "Entrée enregistrée",
+        "badge": "À vérifier",
+        "edit": "Modifier la catégorie",
+        "update": "Insights se met à jour",
+        "caption": "L'incertitude est visible, et les corrections mettent les rapports à jour."
+      },
+      "activity": {
+        "category": "Catégorie",
+        "edit": "Modifier",
+        "note": "Note",
+        "delete": "Supprimer",
+        "restore": "Restaurer",
+        "caption": "Gérez les entrées enregistrées depuis un seul endroit calme."
+      },
+      "mix": {
+        "caption": "Voyez où va votre argent."
+      },
+      "bars": {
+        "caption": "Comparez différentes parties de la période sélectionnée."
+      },
+      "trend": {
+        "caption": "Voyez comment vos habitudes changent dans le temps."
+      },
+      "trackedBalance": {
+        "caption": "Le solde suivi est calculé à partir de vos entrées enregistrées. Ce n'est pas votre solde bancaire."
+      },
+      "recurring": {
+        "caption": "Des entrées futures automatiques pour les mouvements d'argent prévisibles."
+      },
+      "limits": {
+        "caption": "Un objectif, pas une restriction."
+      }
+    },
     "sections": {
       "started": {
         "title": "Premiers pas",

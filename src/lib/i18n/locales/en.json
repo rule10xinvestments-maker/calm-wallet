@@ -270,6 +270,47 @@
     "noResults": "No answers found.",
     "still": "Still need help?",
     "report": "Report a problem",
+    "visuals": {
+      "quickAdd": {
+        "input": "Coffee 12",
+        "understands": "AI understands",
+        "saved": "Saved entry",
+        "caption": "Natural notes become tracked entries."
+      },
+      "needsReview": {
+        "saved": "Entry saved",
+        "badge": "Needs review",
+        "edit": "Edit category",
+        "update": "Insights update",
+        "caption": "Uncertainty is shown clearly, and corrections update your reports."
+      },
+      "activity": {
+        "category": "Category",
+        "edit": "Edit",
+        "note": "Note",
+        "delete": "Delete",
+        "restore": "Restore",
+        "caption": "Manage saved entries from one calm place."
+      },
+      "mix": {
+        "caption": "See where your money goes."
+      },
+      "bars": {
+        "caption": "Compare different parts of the selected period."
+      },
+      "trend": {
+        "caption": "See how your habits change over time."
+      },
+      "trackedBalance": {
+        "caption": "Tracked Balance is calculated from your recorded entries. It is not your bank balance."
+      },
+      "recurring": {
+        "caption": "Automatic future entries for predictable money movement."
+      },
+      "limits": {
+        "caption": "A goal, not a restriction."
+      }
+    },
     "sections": {
       "started": {
         "title": "Getting Started",

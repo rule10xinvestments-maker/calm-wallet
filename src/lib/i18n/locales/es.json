@@ -270,6 +270,47 @@
     "noResults": "No se encontraron respuestas.",
     "still": "¿Sigues necesitando ayuda?",
     "report": "Informar de un problema",
+    "visuals": {
+      "quickAdd": {
+        "input": "Café 12",
+        "understands": "La IA entiende",
+        "saved": "Entrada guardada",
+        "caption": "Las notas naturales se convierten en entradas registradas."
+      },
+      "needsReview": {
+        "saved": "Entrada guardada",
+        "badge": "Necesita revisión",
+        "edit": "Editar categoría",
+        "update": "Insights se actualiza",
+        "caption": "La incertidumbre se muestra con claridad, y las correcciones actualizan tus informes."
+      },
+      "activity": {
+        "category": "Categoría",
+        "edit": "Editar",
+        "note": "Nota",
+        "delete": "Eliminar",
+        "restore": "Restaurar",
+        "caption": "Gestiona las entradas guardadas desde un solo lugar tranquilo."
+      },
+      "mix": {
+        "caption": "Ve adónde va tu dinero."
+      },
+      "bars": {
+        "caption": "Compara distintas partes del período seleccionado."
+      },
+      "trend": {
+        "caption": "Ve cómo cambian tus hábitos con el tiempo."
+      },
+      "trackedBalance": {
+        "caption": "El saldo registrado se calcula a partir de tus entradas guardadas. No es tu saldo bancario."
+      },
+      "recurring": {
+        "caption": "Entradas futuras automáticas para movimientos de dinero previsibles."
+      },
+      "limits": {
+        "caption": "Una meta, no una restricción."
+      }
+    },
     "sections": {
       "started": {
         "title": "Primeros pasos",

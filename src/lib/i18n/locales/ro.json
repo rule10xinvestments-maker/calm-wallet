@@ -272,6 +272,47 @@
     "noResults": "Nu am găsit răspunsuri.",
     "still": "Încă ai nevoie de ajutor?",
     "report": "Raportează o problemă",
+    "visuals": {
+      "quickAdd": {
+        "input": "Cafea 12",
+        "understands": "AI înțelege",
+        "saved": "Intrare salvată",
+        "caption": "Notele naturale devin intrări urmărite."
+      },
+      "needsReview": {
+        "saved": "Intrare salvată",
+        "badge": "Necesită verificare",
+        "edit": "Editezi categoria",
+        "update": "Perspectivele se actualizează",
+        "caption": "Incertitudinea este vizibilă, iar corecțiile actualizează rapoartele."
+      },
+      "activity": {
+        "category": "Categorie",
+        "edit": "Editează",
+        "note": "Notă",
+        "delete": "Șterge",
+        "restore": "Restaurează",
+        "caption": "Gestionezi intrările salvate dintr-un singur loc calm."
+      },
+      "mix": {
+        "caption": "Vezi unde se duc banii."
+      },
+      "bars": {
+        "caption": "Compară părți diferite ale perioadei selectate."
+      },
+      "trend": {
+        "caption": "Vezi cum se schimbă obiceiurile tale în timp."
+      },
+      "trackedBalance": {
+        "caption": "Soldul urmărit este calculat din intrările înregistrate. Nu este soldul tău bancar."
+      },
+      "recurring": {
+        "caption": "Intrări viitoare automate pentru mișcări de bani previzibile."
+      },
+      "limits": {
+        "caption": "O țintă, nu o restricție."
+      }
+    },
     "sections": {
       "started": {
         "title": "Primii pași",

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
+import { GuideIllustration, type GuideIllustrationKind } from "@/components/support/guide-illustration";
 import { t } from "@/lib/i18n";
 
 type HelpQuestion = {
@@ -14,6 +15,7 @@ type HelpQuestion = {
 type HelpSection = {
   id: string;
   titleKey: string;
+  visual?: GuideIllustrationKind;
   questions: HelpQuestion[];
 };
 
@@ -23,27 +25,28 @@ type HelpCenterCardProps = {
 
 const helpSections: HelpSection[] = [
   section("started", 3),
-  section("assistant", 4),
+  section("assistant", 4, "quickAdd"),
   section("manual", 2),
-  section("review", 3),
-  section("activity", 5),
+  section("review", 3, "needsReview"),
+  section("activity", 5, "activity"),
   section("trash", 2),
-  section("recurring", 3),
-  section("insights", 5),
-  section("mix", 3),
-  section("bars", 3),
-  section("trend", 3),
-  section("planning", 4),
+  section("recurring", 3, "recurring"),
+  section("insights", 5, "trackedBalance"),
+  section("mix", 3, "mix"),
+  section("bars", 3, "bars"),
+  section("trend", 3, "trend"),
+  section("planning", 4, "limits"),
   section("currencies", 2),
   section("habits", 4),
   section("privacy", 3),
   section("troubleshooting", 2),
 ];
 
-function section(id: string, questionCount: number): HelpSection {
+function section(id: string, questionCount: number, visual?: GuideIllustrationKind): HelpSection {
   return {
     id,
     titleKey: `help.sections.${id}.title`,
+    visual,
     questions: Array.from({ length: questionCount }, (_, index) => {
       const questionNumber = index + 1;
       return {
@@ -137,6 +140,7 @@ export function HelpCenterCard({ onClose }: HelpCenterCardProps) {
           {filteredSections.map((helpSection) => (
             <section className="space-y-1" key={helpSection.id}>
               <h3 className="px-1 text-xs font-semibold uppercase text-slate-400">{t(helpSection.titleKey, locale)}</h3>
+              <GuideIllustration kind={helpSection.visual} locale={locale} />
               {helpSection.questions.map((item) => {
                 const isExpanded = expanded === item.id;
 
