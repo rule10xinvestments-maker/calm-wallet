@@ -255,6 +255,15 @@
     "help": {
       "title": "Ajutor",
       "helper": "Gaseste raspunsuri si afla cum functioneaza Calm Wallet."
+    },
+    "signOutHelper": "Încheie această sesiune pe acest dispozitiv.",
+    "signOutConfirm": {
+      "title": "Te deconectezi?",
+      "body": "Sigur vrei să te deconectezi?",
+      "confirm": "Deconectează-te",
+      "cancel": "Anulează",
+      "signingOut": "Se deconectează...",
+      "error": "Nu te-am putut deconecta. Încearcă din nou."
     }
   },
   "transactions": {

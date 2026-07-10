@@ -253,6 +253,15 @@
     "help": {
       "title": "Ayuda",
       "helper": "Encuentra respuestas y aprende como funciona Calm Wallet."
+    },
+    "signOutHelper": "Finaliza esta sesión en este dispositivo.",
+    "signOutConfirm": {
+      "title": "¿Cerrar sesión?",
+      "body": "¿Seguro que quieres cerrar sesión?",
+      "confirm": "Cerrar sesión",
+      "cancel": "Cancelar",
+      "signingOut": "Cerrando sesión...",
+      "error": "No pudimos cerrar tu sesión. Inténtalo de nuevo."
     }
   },
   "transactions": {

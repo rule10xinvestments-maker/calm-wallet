@@ -80,6 +80,7 @@ export function ProtectedHeader({
           registerPushSubscriptionAction={registerPushSubscriptionAction}
           sendTestPushNotificationAction={sendTestPushNotificationAction}
           supportTicketAction={supportTicketAction}
+          signOut={onSignOut}
           isSupportAdmin={isSupportAdmin}
         />
         <SignOutButton action={onSignOut} />

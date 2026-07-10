@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Settings, ShieldCheck } from "lucide-react";
+import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
 import { LanguageSelector } from "@/components/settings/language-selector";
@@ -13,6 +14,7 @@ import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 import type { SupportTicketActionState } from "@/lib/actions/support-state";
+import type { signOutAction } from "@/lib/auth/actions";
 
 type HeaderSettingsButtonProps = {
   notificationPreferences: NotificationPreferences;
@@ -36,6 +38,7 @@ type HeaderSettingsButtonProps = {
     state: SupportTicketActionState,
     formData: FormData,
   ) => Promise<SupportTicketActionState>;
+  signOut: typeof signOutAction;
   isSupportAdmin?: boolean;
 };
 
@@ -45,6 +48,7 @@ export function HeaderSettingsButton({
   notificationPreferencesAction,
   registerPushSubscriptionAction,
   supportTicketAction,
+  signOut,
   isSupportAdmin = false,
 }: HeaderSettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -111,6 +115,7 @@ export function HeaderSettingsButton({
                 preferences={notificationPreferences}
                 registerPushSubscriptionAction={registerPushSubscriptionAction}
               />
+              <SettingsSignOutRow action={signOut} />
             </div>
           </div>
         </div>

@@ -253,6 +253,15 @@
     "help": {
       "title": "Aide",
       "helper": "Trouvez des reponses et decouvrez comment fonctionne Calm Wallet."
+    },
+    "signOutHelper": "Terminez cette session sur cet appareil.",
+    "signOutConfirm": {
+      "title": "Se déconnecter ?",
+      "body": "Voulez-vous vraiment vous déconnecter ?",
+      "confirm": "Se déconnecter",
+      "cancel": "Annuler",
+      "signingOut": "Déconnexion...",
+      "error": "Nous n’avons pas pu vous déconnecter. Réessayez."
     }
   },
   "transactions": {

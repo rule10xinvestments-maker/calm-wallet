@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedShell } from "@/components/layout/protected-shell";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
@@ -54,7 +54,7 @@ function setNavigatorValue(name: "maxTouchPoints" | "platform" | "standalone" | 
   });
 }
 
-function renderProtectedShell() {
+function renderProtectedShell(options: { onSignOut?: () => Promise<void> } = {}) {
   return render(
     <PwaInstallProvider>
       <ProtectedShell
@@ -66,7 +66,7 @@ function renderProtectedShell() {
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
         supportTicketAction={supportTicketAction}
-        onSignOut={vi.fn(async () => undefined)}
+        onSignOut={options.onSignOut ?? vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
       </ProtectedShell>
@@ -74,7 +74,7 @@ function renderProtectedShell() {
   );
 }
 
-function renderProtectedShellWithLocale(uiLocale: string | null) {
+function renderProtectedShellWithLocale(uiLocale: string | null, options: { onSignOut?: () => Promise<void> } = {}) {
   return render(
     <PwaInstallProvider>
       <ProtectedShell
@@ -86,7 +86,7 @@ function renderProtectedShellWithLocale(uiLocale: string | null) {
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
         supportTicketAction={supportTicketAction}
-        onSignOut={vi.fn(async () => undefined)}
+        onSignOut={options.onSignOut ?? vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
       </ProtectedShell>
@@ -94,7 +94,7 @@ function renderProtectedShellWithLocale(uiLocale: string | null) {
   );
 }
 
-function renderAdminProtectedShell() {
+function renderAdminProtectedShell(options: { onSignOut?: () => Promise<void> } = {}) {
   return render(
     <PwaInstallProvider>
       <ProtectedShell
@@ -107,7 +107,7 @@ function renderAdminProtectedShell() {
         sendTestPushNotificationAction={sendTestPushNotificationAction}
         supportTicketAction={supportTicketAction}
         isSupportAdmin
-        onSignOut={vi.fn(async () => undefined)}
+        onSignOut={options.onSignOut ?? vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
       </ProtectedShell>
@@ -215,6 +215,112 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByRole("button", { name: "Send report" })).toBeInTheDocument();
   });
 
+  it("renders Sign out as the final destructive Settings row and confirms before calling the action", async () => {
+    const signOut = vi.fn(async () => undefined);
+    const confirmSpy = vi.spyOn(window, "confirm");
+    renderProtectedShell({ onSignOut: signOut });
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    const buttons = settingsPanel.querySelectorAll("button");
+    const signOutRow = screen.getByTestId("settings-sign-out-row");
+
+    expect(buttons[buttons.length - 1]).toBe(signOutRow);
+    expect(signOutRow).toHaveClass("border-rose-100");
+    expect(signOutRow).toHaveClass("bg-rose-50");
+
+    fireEvent.click(signOutRow);
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Sign out?" })).toBeInTheDocument();
+    expect(screen.getByText("Are you sure you want to sign out?")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog", { name: "Sign out?" })).not.toBeInTheDocument();
+    expect(signOut).not.toHaveBeenCalled();
+
+    fireEvent.click(signOutRow);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Sign out?" })).getByRole("button", { name: "Sign out" }));
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledOnce());
+  });
+
+  it("prevents duplicate sign-out requests while confirmation is running", async () => {
+    let resolveSignOut: (() => void) | null = null;
+    const signOut = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSignOut = resolve;
+        }),
+    );
+    renderProtectedShell({ onSignOut: signOut });
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByTestId("settings-sign-out-row"));
+    const confirmButton = within(screen.getByRole("dialog", { name: "Sign out?" })).getByRole("button", { name: "Sign out" });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Signing out..." })).toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Signing out..." }));
+
+    expect(signOut).toHaveBeenCalledOnce();
+    await act(async () => {
+      resolveSignOut?.();
+    });
+  });
+
+  it("shows safe local copy when sign-out fails", async () => {
+    const signOut = vi.fn(async () => {
+      throw new Error("raw auth failure");
+    });
+    renderProtectedShell({ onSignOut: signOut });
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByTestId("settings-sign-out-row"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Sign out?" })).getByRole("button", { name: "Sign out" }));
+
+    expect(await screen.findByText("We could not sign you out. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByText("raw auth failure")).not.toBeInTheDocument();
+  });
+
+  it("opens the same confirmation flow from the header sign-out icon", async () => {
+    const signOut = vi.fn(async () => undefined);
+    renderProtectedShell({ onSignOut: signOut });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(screen.getByRole("dialog", { name: "Sign out?" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Sign out?" })).getByRole("button", { name: "Cancel" }));
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("renders localized sign-out confirmation copy", () => {
+    const romanianView = renderProtectedShellWithLocale("ro");
+    fireEvent.click(screen.getByRole("button", { name: "Setări" }));
+    fireEvent.click(screen.getByTestId("settings-sign-out-row"));
+    expect(screen.getByRole("dialog", { name: "Te deconectezi?" })).toBeInTheDocument();
+    expect(screen.getByText("Sigur vrei să te deconectezi?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Deconectează-te" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Anulează" })).toBeInTheDocument();
+    romanianView.unmount();
+
+    const frenchView = renderProtectedShellWithLocale("fr");
+    fireEvent.click(screen.getByRole("button", { name: "Paramètres" }));
+    fireEvent.click(screen.getByTestId("settings-sign-out-row"));
+    expect(screen.getByRole("dialog", { name: "Se déconnecter ?" })).toBeInTheDocument();
+    expect(screen.getByText("Voulez-vous vraiment vous déconnecter ?")).toBeInTheDocument();
+    frenchView.unmount();
+
+    const spanishView = renderProtectedShellWithLocale("es");
+    fireEvent.click(screen.getByRole("button", { name: "Ajustes" }));
+    fireEvent.click(screen.getByTestId("settings-sign-out-row"));
+    expect(screen.getByRole("dialog", { name: "¿Cerrar sesión?" })).toBeInTheDocument();
+    expect(screen.getByText("¿Seguro que quieres cerrar sesión?")).toBeInTheDocument();
+    spanishView.unmount();
+  });
+
   it("shows the admin Support header entry only for admins while bottom nav stays three items", () => {
     renderAdminProtectedShell();
 
@@ -224,6 +330,13 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 
     expect(screen.getByRole("link", { name: /Admin Support Review and manage user reports. Admin/ })).toHaveAttribute("href", "/admin/support");
+    const panel = screen.getByTestId("header-settings-panel");
+    expect(
+      screen
+        .getByRole("link", { name: /Admin Support Review and manage user reports. Admin/ })
+        .compareDocumentPosition(screen.getByTestId("settings-sign-out-row")) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(panel.querySelectorAll("button")[panel.querySelectorAll("button").length - 1]).toBe(screen.getByTestId("settings-sign-out-row"));
   });
 
   it("updates migrated labels when a language is selected", async () => {

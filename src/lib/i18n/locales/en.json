@@ -217,6 +217,15 @@
     "languageSaved": "Language saved.",
     "languageSaveError": "Language could not be saved.",
     "signOut": "Sign out",
+    "signOutHelper": "End this session on this device.",
+    "signOutConfirm": {
+      "title": "Sign out?",
+      "body": "Are you sure you want to sign out?",
+      "confirm": "Sign out",
+      "cancel": "Cancel",
+      "signingOut": "Signing out...",
+      "error": "We could not sign you out. Please try again."
+    },
     "help": {
       "title": "Help",
       "helper": "Find answers and learn how Calm Wallet works."
