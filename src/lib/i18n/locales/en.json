@@ -216,7 +216,32 @@
     "savingLanguage": "Saving language...",
     "languageSaved": "Language saved.",
     "languageSaveError": "Language could not be saved.",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "support": {
+      "title": "Contact support",
+      "helper": "Get help, report a problem, or share feedback.",
+      "category": "Topic",
+      "subject": "Subject",
+      "subjectPlaceholder": "Optional",
+      "message": "Message",
+      "messagePlaceholder": "How can Calm Wallet Support help?",
+      "send": "Send",
+      "sending": "Sending...",
+      "successTitle": "Message sent",
+      "successBody": "Thanks. Calm Wallet Support will review it as soon as possible.",
+      "categories": {
+        "help": "Help",
+        "bug": "Bug",
+        "feedback": "Feedback",
+        "account": "Account",
+        "other": "Other"
+      },
+      "errors": {
+        "generic": "Support message could not be sent. Please try again.",
+        "rateLimited": "Please wait a moment before sending another message.",
+        "signInRequired": "Sign in is required."
+      }
+    }
   },
   "transactions": {
     "transaction": "Transaction",
@@ -667,5 +692,38 @@
     "other": "Other",
     "uncategorized": "Uncategorized",
     "needsCategory": "Needs category"
+  },
+  "admin": {
+    "support": {
+      "nav": "Support",
+      "eyebrow": "Admin",
+      "title": "Support",
+      "helper": "Review user support messages.",
+      "empty": "No support tickets yet.",
+      "selectTicket": "Select a ticket to review.",
+      "ticketDetail": "Ticket detail",
+      "userId": "User ID",
+      "locale": "Locale",
+      "route": "Route",
+      "userAgent": "User agent",
+      "created": "Created",
+      "updated": "Updated",
+      "status": "Status",
+      "internalNote": "Internal note",
+      "save": "Save support update",
+      "statuses": {
+        "new": "New",
+        "in_progress": "In progress",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      },
+      "statusFilters": {
+        "all": "All",
+        "new": "New",
+        "in_progress": "In progress",
+        "resolved": "Resolved",
+        "closed": "Closed"
+      }
+    }
   }
 }

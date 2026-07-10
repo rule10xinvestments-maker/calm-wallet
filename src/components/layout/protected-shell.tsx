@@ -5,6 +5,7 @@ import type { signOutAction } from "@/lib/auth/actions";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
+import type { SupportTicketActionState } from "@/lib/actions/support-state";
 import type { SupportedLocale } from "@/lib/i18n";
 
 type ProtectedShellProps = {
@@ -29,6 +30,11 @@ type ProtectedShellProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  supportTicketAction: (
+    state: SupportTicketActionState,
+    formData: FormData,
+  ) => Promise<SupportTicketActionState>;
+  isSupportAdmin?: boolean;
 };
 
 export function ProtectedShell({
@@ -41,6 +47,8 @@ export function ProtectedShell({
   notificationPreferencesAction,
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
+  supportTicketAction,
+  isSupportAdmin = false,
 }: ProtectedShellProps) {
   return (
     <LocaleProvider savedLocale={uiLocale}>
@@ -52,6 +60,8 @@ export function ProtectedShell({
           notificationPreferencesAction={notificationPreferencesAction}
           registerPushSubscriptionAction={registerPushSubscriptionAction}
           sendTestPushNotificationAction={sendTestPushNotificationAction}
+          supportTicketAction={supportTicketAction}
+          isSupportAdmin={isSupportAdmin}
           onSignOut={onSignOut}
         />
         <main className="flex-1">{children}</main>

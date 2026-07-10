@@ -216,7 +216,32 @@
     "savingLanguage": "Enregistrement de la langue...",
     "languageSaved": "Langue enregistrée.",
     "languageSaveError": "La langue n’a pas pu être enregistrée.",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "support": {
+      "title": "Contacter le support",
+      "helper": "Obtenez de l’aide, signalez un problème ou partagez votre avis.",
+      "category": "Sujet",
+      "subject": "Objet",
+      "subjectPlaceholder": "Optionnel",
+      "message": "Message",
+      "messagePlaceholder": "Comment Calm Wallet Support peut-il aider ?",
+      "send": "Envoyer",
+      "sending": "Envoi...",
+      "successTitle": "Message envoyé",
+      "successBody": "Merci. Calm Wallet Support l’examinera dès que possible.",
+      "categories": {
+        "help": "Aide",
+        "bug": "Bug",
+        "feedback": "Avis",
+        "account": "Compte",
+        "other": "Autre"
+      },
+      "errors": {
+        "generic": "Le message n’a pas pu être envoyé. Réessayez.",
+        "rateLimited": "Veuillez patienter avant d’envoyer un autre message.",
+        "signInRequired": "La connexion est requise."
+      }
+    }
   },
   "transactions": {
     "transaction": "Transaction",
@@ -649,23 +674,56 @@
     "dining": "Restaurants",
     "transport": "Transport",
     "utilities": "Services",
-    "health": "Sant\u00e9",
+    "health": "Santé",
     "shopping": "Achats",
     "personal": "Personnel",
     "entertainment": "Loisirs",
     "travel": "Voyages",
-    "education": "\u00c9ducation",
+    "education": "Éducation",
     "salary": "Salaire",
-    "selfEmployment": "Ind\u00e9pendant",
+    "selfEmployment": "Indépendant",
     "refunds": "Remboursements",
     "gifts": "Cadeaux",
     "transfers": "Transferts",
     "investments": "Investissements",
     "sales": "Ventes",
     "rentalIncome": "Revenus locatifs",
-    "sideIncome": "Revenu compl\u00e9mentaire",
+    "sideIncome": "Revenu complémentaire",
     "other": "Autre",
-    "uncategorized": "Non cat\u00e9goris\u00e9",
-    "needsCategory": "Cat\u00e9gorie requise"
+    "uncategorized": "Non catégorisé",
+    "needsCategory": "Catégorie requise"
+  },
+  "admin": {
+    "support": {
+      "nav": "Support",
+      "eyebrow": "Admin",
+      "title": "Support",
+      "helper": "Consultez les messages de support.",
+      "empty": "Aucun ticket de support pour le moment.",
+      "selectTicket": "Sélectionnez un ticket à examiner.",
+      "ticketDetail": "Détail du ticket",
+      "userId": "ID utilisateur",
+      "locale": "Langue",
+      "route": "Route",
+      "userAgent": "User agent",
+      "created": "Créé",
+      "updated": "Mis à jour",
+      "status": "Statut",
+      "internalNote": "Note interne",
+      "save": "Enregistrer",
+      "statuses": {
+        "new": "Nouveau",
+        "in_progress": "En cours",
+        "resolved": "Résolu",
+        "closed": "Fermé"
+      },
+      "statusFilters": {
+        "all": "Tous",
+        "new": "Nouveau",
+        "in_progress": "En cours",
+        "resolved": "Résolu",
+        "closed": "Fermé"
+      }
+    }
   }
 }

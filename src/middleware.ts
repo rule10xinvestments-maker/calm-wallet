@@ -100,6 +100,8 @@ export const config = {
     "/transactions/:path*",
     "/insights",
     "/insights/:path*",
+    "/admin",
+    "/admin/:path*",
     "/sign-in",
     "/sign-up",
   ],

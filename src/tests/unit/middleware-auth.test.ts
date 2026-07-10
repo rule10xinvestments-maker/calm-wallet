@@ -93,6 +93,8 @@ describe("auth middleware", () => {
         "/transactions/:path*",
         "/insights",
         "/insights/:path*",
+        "/admin",
+        "/admin/:path*",
       ]),
     );
   });

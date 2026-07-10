@@ -5,10 +5,12 @@ import { Settings } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
 import { LanguageSelector } from "@/components/settings/language-selector";
+import { SupportContactCard } from "@/components/support/support-contact-card";
 import { t } from "@/lib/i18n";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
+import type { SupportTicketActionState } from "@/lib/actions/support-state";
 
 type HeaderSettingsButtonProps = {
   notificationPreferences: NotificationPreferences;
@@ -28,6 +30,10 @@ type HeaderSettingsButtonProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  supportTicketAction: (
+    state: SupportTicketActionState,
+    formData: FormData,
+  ) => Promise<SupportTicketActionState>;
 };
 
 export function HeaderSettingsButton({
@@ -35,6 +41,7 @@ export function HeaderSettingsButton({
   userPreferencesAction,
   notificationPreferencesAction,
   registerPushSubscriptionAction,
+  supportTicketAction,
 }: HeaderSettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { locale } = useLocale();
@@ -75,6 +82,7 @@ export function HeaderSettingsButton({
                 </button>
               </div>
               <LanguageSelector action={userPreferencesAction} />
+              <SupportContactCard action={supportTicketAction} />
               <NotificationPreferencesCard
                 action={notificationPreferencesAction}
                 preferences={notificationPreferences}

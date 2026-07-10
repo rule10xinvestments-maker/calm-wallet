@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedShell } from "@/components/layout/protected-shell";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
 import { initialNotificationPreferencesActionState } from "@/lib/actions/notifications-state";
+import { initialSupportTicketActionState } from "@/lib/actions/support-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 
 const notificationPreferences = {
@@ -21,6 +22,7 @@ const notificationPreferences = {
 const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const sendTestPushNotificationAction = vi.fn(async () => initialNotificationPreferencesActionState);
+const supportTicketAction = vi.fn(async () => initialSupportTicketActionState);
 const updateUserPreferencesAction = vi.fn(async (_state: UserPreferencesActionState, formData: FormData) => ({
   status: "success" as const,
   message: "Language saved.",
@@ -63,6 +65,7 @@ function renderProtectedShell() {
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
+        supportTicketAction={supportTicketAction}
         onSignOut={vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
@@ -82,6 +85,28 @@ function renderProtectedShellWithLocale(uiLocale: string | null) {
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
+        supportTicketAction={supportTicketAction}
+        onSignOut={vi.fn(async () => undefined)}
+      >
+        <div>Assistant content</div>
+      </ProtectedShell>
+    </PwaInstallProvider>,
+  );
+}
+
+function renderAdminProtectedShell() {
+  return render(
+    <PwaInstallProvider>
+      <ProtectedShell
+        accountHint="admin@example.com"
+        notificationPreferences={notificationPreferences}
+        uiLocale={null}
+        userPreferencesAction={updateUserPreferencesAction}
+        notificationPreferencesAction={updateNotificationPreferencesAction}
+        registerPushSubscriptionAction={registerPushSubscriptionAction}
+        sendTestPushNotificationAction={sendTestPushNotificationAction}
+        supportTicketAction={supportTicketAction}
+        isSupportAdmin
         onSignOut={vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
@@ -167,6 +192,32 @@ describe("protected shell PWA install affordance", () => {
 
     expect(settingsButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
+  });
+
+  it("adds Contact support inside Settings and keeps admin support outside normal navigation", () => {
+    renderProtectedShell();
+
+    expect(screen.queryByRole("link", { name: "Support" })).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const supportButton = screen.getByRole("button", { name: /Contact support/ });
+    expect(supportButton).toBeInTheDocument();
+
+    fireEvent.click(supportButton);
+
+    expect(screen.getByText("Get help, report a problem, or share feedback.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Topic")).toBeInTheDocument();
+    expect(screen.getByLabelText("Subject")).toBeInTheDocument();
+    expect(screen.getByLabelText("Message")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
+  });
+
+  it("shows the admin Support header entry only for admins while bottom nav stays three items", () => {
+    renderAdminProtectedShell();
+
+    expect(screen.getByRole("link", { name: "Support" })).toHaveAttribute("href", "/admin/support");
+    expect(screen.getByRole("navigation", { name: "Primary" }).querySelectorAll("a")).toHaveLength(3);
   });
 
   it("updates migrated labels when a language is selected", async () => {

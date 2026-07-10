@@ -216,7 +216,32 @@
     "savingLanguage": "Guardando idioma...",
     "languageSaved": "Idioma guardado.",
     "languageSaveError": "No se pudo guardar el idioma.",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "support": {
+      "title": "Contactar con soporte",
+      "helper": "Obtén ayuda, informa de un problema o comparte tus comentarios.",
+      "category": "Tema",
+      "subject": "Asunto",
+      "subjectPlaceholder": "Opcional",
+      "message": "Mensaje",
+      "messagePlaceholder": "¿Cómo puede ayudarte Calm Wallet Support?",
+      "send": "Enviar",
+      "sending": "Enviando...",
+      "successTitle": "Mensaje enviado",
+      "successBody": "Gracias. Calm Wallet Support lo revisará lo antes posible.",
+      "categories": {
+        "help": "Ayuda",
+        "bug": "Error",
+        "feedback": "Comentarios",
+        "account": "Cuenta",
+        "other": "Otro"
+      },
+      "errors": {
+        "generic": "No se pudo enviar el mensaje. Inténtalo de nuevo.",
+        "rateLimited": "Espera un momento antes de enviar otro mensaje.",
+        "signInRequired": "Debes iniciar sesión."
+      }
+    }
   },
   "transactions": {
     "transaction": "Transacción",
@@ -654,7 +679,7 @@
     "personal": "Personal",
     "entertainment": "Entretenimiento",
     "travel": "Viajes",
-    "education": "Educaci\u00f3n",
+    "education": "Educación",
     "salary": "Salario",
     "selfEmployment": "Trabajo independiente",
     "refunds": "Reembolsos",
@@ -665,7 +690,40 @@
     "rentalIncome": "Ingresos por alquiler",
     "sideIncome": "Ingresos extra",
     "other": "Otro",
-    "uncategorized": "Sin categor\u00eda",
-    "needsCategory": "Necesita categor\u00eda"
+    "uncategorized": "Sin categoría",
+    "needsCategory": "Necesita categoría"
+  },
+  "admin": {
+    "support": {
+      "nav": "Soporte",
+      "eyebrow": "Admin",
+      "title": "Soporte",
+      "helper": "Revisa los mensajes de soporte.",
+      "empty": "Aún no hay tickets de soporte.",
+      "selectTicket": "Selecciona un ticket para revisar.",
+      "ticketDetail": "Detalle del ticket",
+      "userId": "ID de usuario",
+      "locale": "Idioma",
+      "route": "Ruta",
+      "userAgent": "User agent",
+      "created": "Creado",
+      "updated": "Actualizado",
+      "status": "Estado",
+      "internalNote": "Nota interna",
+      "save": "Guardar",
+      "statuses": {
+        "new": "Nuevo",
+        "in_progress": "En curso",
+        "resolved": "Resuelto",
+        "closed": "Cerrado"
+      },
+      "statusFilters": {
+        "all": "Todos",
+        "new": "Nuevo",
+        "in_progress": "En curso",
+        "resolved": "Resuelto",
+        "closed": "Cerrado"
+      }
+    }
   }
 }

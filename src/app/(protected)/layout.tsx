@@ -6,10 +6,12 @@ import {
   updateNotificationPreferencesAction,
 } from "@/lib/actions/notifications";
 import { updateUserPreferencesAction } from "@/lib/actions/preferences";
+import { createSupportTicketAction } from "@/lib/actions/support";
 import { getAccountHint } from "@/lib/auth/account-hint";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { createSupabaseNotificationService } from "@/domain/notifications/service";
 import { createSupabaseUserPreferencesService } from "@/domain/preferences/service";
+import { createSupabaseSupportService } from "@/domain/support/service";
 import {
   getFallbackNotificationPreferences,
   logProtectedRouteLoadFailure,
@@ -34,19 +36,23 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   const accountHint = getAccountHint(user);
   let notificationPreferences = getFallbackNotificationPreferences(user.id);
   let uiLocale: SupportedLocale | null = null;
+  let isSupportAdmin = false;
 
   try {
-    const [notificationService, preferencesService] = await Promise.all([
+    const [notificationService, preferencesService, supportService] = await Promise.all([
       createSupabaseNotificationService(),
       createSupabaseUserPreferencesService(),
+      createSupabaseSupportService(),
     ]);
-    const [loadedNotificationPreferences, loadedUserPreferences] = await Promise.all([
+    const [loadedNotificationPreferences, loadedUserPreferences, loadedIsSupportAdmin] = await Promise.all([
       notificationService.getNotificationPreferences(user.id),
       preferencesService.getUserPreferences(user.id),
+      supportService.isAdmin(user.id),
     ]);
 
     notificationPreferences = loadedNotificationPreferences;
     uiLocale = loadedUserPreferences.uiLocale;
+    isSupportAdmin = loadedIsSupportAdmin;
   } catch (error) {
     logProtectedRouteLoadFailure("assistant", error);
   }
@@ -60,6 +66,8 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
       notificationPreferencesAction={updateNotificationPreferencesAction}
       registerPushSubscriptionAction={registerPushSubscriptionAction}
       sendTestPushNotificationAction={sendTestPushNotificationAction}
+      supportTicketAction={createSupportTicketAction}
+      isSupportAdmin={isSupportAdmin}
       onSignOut={signOutAction}
     >
       {children}

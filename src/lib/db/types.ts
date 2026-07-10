@@ -18,10 +18,26 @@ export type OwedNoteDirection = "owed_to_me" | "i_owe";
 export type OwedNoteStatus = "open" | "settled";
 export type NotificationEventType = "daily_reminder" | "monthly_report";
 export type NotificationEventStatus = "claimed" | "sent" | "failed" | "skipped";
+export type SupportCategory = "help" | "bug" | "feedback" | "account" | "other";
+export type SupportStatus = "new" | "in_progress" | "resolved" | "closed";
 
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          created_at?: string;
+        };
+      };
       profiles: {
         Row: {
           id: string;
@@ -122,6 +138,65 @@ export type Database = {
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      support_tickets: {
+        Row: {
+          id: string;
+          user_id: string;
+          user_email: string;
+          category: SupportCategory;
+          subject: string | null;
+          message: string;
+          status: SupportStatus;
+          locale: string | null;
+          source_route: string | null;
+          user_agent: string | null;
+          app_version: string | null;
+          admin_note: string | null;
+          assigned_admin_id: string | null;
+          created_at: string;
+          updated_at: string;
+          resolved_at: string | null;
+          closed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          user_email: string;
+          category: SupportCategory;
+          subject?: string | null;
+          message: string;
+          status?: SupportStatus;
+          locale?: string | null;
+          source_route?: string | null;
+          user_agent?: string | null;
+          app_version?: string | null;
+          admin_note?: string | null;
+          assigned_admin_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+          closed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          user_email?: string;
+          category?: SupportCategory;
+          subject?: string | null;
+          message?: string;
+          status?: SupportStatus;
+          locale?: string | null;
+          source_route?: string | null;
+          user_agent?: string | null;
+          app_version?: string | null;
+          admin_note?: string | null;
+          assigned_admin_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          resolved_at?: string | null;
+          closed_at?: string | null;
         };
       };
       recurring_rules: {

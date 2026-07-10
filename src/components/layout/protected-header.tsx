@@ -4,9 +4,11 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { HeaderSettingsButton } from "@/components/layout/header-settings-button";
 import { PwaInstallHeaderIcon } from "@/components/pwa-install-button";
+import Link from "next/link";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
+import type { SupportTicketActionState } from "@/lib/actions/support-state";
 import type { signOutAction } from "@/lib/auth/actions";
 import { t } from "@/lib/i18n";
 
@@ -30,6 +32,11 @@ type ProtectedHeaderProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  supportTicketAction: (
+    state: SupportTicketActionState,
+    formData: FormData,
+  ) => Promise<SupportTicketActionState>;
+  isSupportAdmin?: boolean;
 };
 
 export function ProtectedHeader({
@@ -40,6 +47,8 @@ export function ProtectedHeader({
   notificationPreferencesAction,
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
+  supportTicketAction,
+  isSupportAdmin = false,
 }: ProtectedHeaderProps) {
   const { locale } = useLocale();
 
@@ -55,6 +64,14 @@ export function ProtectedHeader({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {isSupportAdmin ? (
+          <Link
+            className="hidden min-h-10 items-center rounded-full border border-sky-100 bg-sky-50 px-3 text-xs font-semibold text-sky-700 sm:inline-flex"
+            href="/admin/support"
+          >
+            {t("admin.support.nav", locale)}
+          </Link>
+        ) : null}
         <PwaInstallHeaderIcon />
         <HeaderSettingsButton
           notificationPreferences={notificationPreferences}
@@ -62,6 +79,7 @@ export function ProtectedHeader({
           notificationPreferencesAction={notificationPreferencesAction}
           registerPushSubscriptionAction={registerPushSubscriptionAction}
           sendTestPushNotificationAction={sendTestPushNotificationAction}
+          supportTicketAction={supportTicketAction}
         />
         <SignOutButton action={onSignOut} />
       </div>

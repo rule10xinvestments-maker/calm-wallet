@@ -110,6 +110,30 @@ export const REQUIRED_SCHEMA: RequiredSchemaEntry[] = [
     column: "sent_at",
     type: "column",
   },
+  {
+    table: "admin_users",
+    column: "user_id",
+    type: "column",
+  },
+  {
+    table: "support_tickets",
+    type: "table",
+  },
+  {
+    table: "support_tickets",
+    column: "user_id",
+    type: "column",
+  },
+  {
+    table: "support_tickets",
+    column: "status",
+    type: "column",
+  },
+  {
+    table: "support_tickets",
+    column: "admin_note",
+    type: "column",
+  },
 ];
 
 function normalizeSupabaseUrl(value: string) {

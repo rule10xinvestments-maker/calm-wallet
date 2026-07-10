@@ -218,7 +218,32 @@
     "savingLanguage": "Se salvează limba...",
     "languageSaved": "Limba a fost salvată.",
     "languageSaveError": "Limba nu a putut fi salvată.",
-    "signOut": "Deconectare"
+    "signOut": "Deconectare",
+    "support": {
+      "title": "Contactează suportul",
+      "helper": "Primește ajutor, raportează o problemă sau trimite feedback.",
+      "category": "Subiect",
+      "subject": "Titlu",
+      "subjectPlaceholder": "Opțional",
+      "message": "Mesaj",
+      "messagePlaceholder": "Cum te poate ajuta Calm Wallet Support?",
+      "send": "Trimite",
+      "sending": "Se trimite...",
+      "successTitle": "Mesaj trimis",
+      "successBody": "Mulțumim. Calm Wallet Support îl va analiza cât mai curând.",
+      "categories": {
+        "help": "Ajutor",
+        "bug": "Problemă",
+        "feedback": "Feedback",
+        "account": "Cont",
+        "other": "Altele"
+      },
+      "errors": {
+        "generic": "Mesajul nu a putut fi trimis. Încearcă din nou.",
+        "rateLimited": "Așteaptă puțin înainte să trimiți alt mesaj.",
+        "signInRequired": "Autentificarea este necesară."
+      }
+    }
   },
   "transactions": {
     "transaction": "Tranzacție",
@@ -646,28 +671,61 @@
     "noCandidatesYet": "Nu există candidați încă."
   },
   "categories": {
-    "housing": "Locuin\u021b\u0103",
+    "housing": "Locuință",
     "groceries": "Alimente",
-    "dining": "Mese \u00een ora\u0219",
+    "dining": "Mese în oraș",
     "transport": "Transport",
-    "utilities": "Utilit\u0103\u021bi",
-    "health": "S\u0103n\u0103tate",
-    "shopping": "Cump\u0103r\u0103turi",
+    "utilities": "Utilități",
+    "health": "Sănătate",
+    "shopping": "Cumpărături",
     "personal": "Personal",
     "entertainment": "Divertisment",
-    "travel": "C\u0103l\u0103torii",
-    "education": "Educa\u021bie",
+    "travel": "Călătorii",
+    "education": "Educație",
     "salary": "Salariu",
     "selfEmployment": "Venit independent",
-    "refunds": "Ramburs\u0103ri",
+    "refunds": "Rambursări",
     "gifts": "Cadouri",
     "transfers": "Transferuri",
-    "investments": "Investi\u021bii",
-    "sales": "V\u00e2nz\u0103ri",
+    "investments": "Investiții",
+    "sales": "Vânzări",
     "rentalIncome": "Venit din chirii",
     "sideIncome": "Venit suplimentar",
     "other": "Altele",
     "uncategorized": "Necategorizat",
-    "needsCategory": "Necesit\u0103 categorie"
+    "needsCategory": "Necesită categorie"
+  },
+  "admin": {
+    "support": {
+      "nav": "Suport",
+      "eyebrow": "Admin",
+      "title": "Suport",
+      "helper": "Revizuiește mesajele de suport.",
+      "empty": "Nu există tichete de suport încă.",
+      "selectTicket": "Alege un tichet pentru revizuire.",
+      "ticketDetail": "Detalii tichet",
+      "userId": "ID utilizator",
+      "locale": "Limbă",
+      "route": "Rută",
+      "userAgent": "User agent",
+      "created": "Creat",
+      "updated": "Actualizat",
+      "status": "Stare",
+      "internalNote": "Notă internă",
+      "save": "Salvează actualizarea",
+      "statuses": {
+        "new": "Nou",
+        "in_progress": "În lucru",
+        "resolved": "Rezolvat",
+        "closed": "Închis"
+      },
+      "statusFilters": {
+        "all": "Toate",
+        "new": "Nou",
+        "in_progress": "În lucru",
+        "resolved": "Rezolvat",
+        "closed": "Închis"
+      }
+    }
   }
 }
