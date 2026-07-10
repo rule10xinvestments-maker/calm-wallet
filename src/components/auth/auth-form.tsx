@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, ChevronDown, Eye, EyeOff, Globe2 } from "lucide-react";
+import { Check, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { useLocale } from "@/components/i18n/locale-provider";
@@ -232,16 +232,17 @@ export function AuthForm({
   );
 }
 
-const languageDisplayLabels: Record<SupportedLocale, string> = {
-  en: "English",
-  ro: "Română",
-  fr: "Français",
-  es: "Español",
+const languageDisplayLabels: Record<SupportedLocale, { code: string; flag: string; name: string }> = {
+  en: { code: "EN", flag: "🇬🇧", name: "English" },
+  ro: { code: "RO", flag: "🇷🇴", name: "Română" },
+  fr: { code: "FR", flag: "🇫🇷", name: "Français" },
+  es: { code: "ES", flag: "🇪🇸", name: "Español" },
 };
 
 function AuthLanguageSelector() {
   const { locale, setLocale } = useLocale();
   const [isExpanded, setIsExpanded] = useState(false);
+  const selectedLanguage = languageDisplayLabels[locale];
 
   return (
     <div className="relative shrink-0">
@@ -252,8 +253,8 @@ function AuthLanguageSelector() {
         onClick={() => setIsExpanded((value) => !value)}
         type="button"
       >
-        <Globe2 aria-hidden="true" className="size-3.5 text-sky-700" />
-        <span>{locale.toUpperCase()}</span>
+        <span aria-hidden="true">{selectedLanguage.flag}</span>
+        <span>{selectedLanguage.code}</span>
         <ChevronDown aria-hidden="true" className={`size-3.5 text-slate-400 transition ${isExpanded ? "rotate-180" : ""}`} />
       </button>
       {isExpanded ? (
@@ -261,6 +262,7 @@ function AuthLanguageSelector() {
           {supportedLocales.map((option) => {
             const normalizedOption = normalizeLocale(option);
             const isSelected = normalizedOption === locale;
+            const language = languageDisplayLabels[normalizedOption];
 
             return (
               <button
@@ -275,7 +277,10 @@ function AuthLanguageSelector() {
                 }}
                 type="button"
               >
-                <span>{languageDisplayLabels[normalizedOption]}</span>
+                <span className="inline-flex items-center gap-2">
+                  <span aria-hidden="true">{language.flag}</span>
+                  <span>{language.name}</span>
+                </span>
                 {isSelected ? <Check aria-hidden="true" className="size-4" /> : null}
               </button>
             );

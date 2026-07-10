@@ -132,11 +132,15 @@ describe("auth form", () => {
 
     expect(screen.getByText("Personal budget notebook")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Language" }));
+    expect(screen.getAllByText("🇬🇧").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "English" })).toBeInTheDocument();
+    expect(screen.getAllByText("🇫🇷").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Français" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Română" }));
 
     expect(screen.getByText("Caiet personal de buget")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bine ai revenit" })).toBeInTheDocument();
-    expect(screen.getByText("Verifică-ți cheltuielile, pune întrebări rapide despre buget și păstrează planul la vedere.")).toBeInTheDocument();
+    expect(screen.getByText("Urmărește cheltuielile, adaugă venituri și rămâi la zi cu bugetul tău.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continuă cu Google" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Cel puțin 8 caractere")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Autentifică-te" })).toBeInTheDocument();
