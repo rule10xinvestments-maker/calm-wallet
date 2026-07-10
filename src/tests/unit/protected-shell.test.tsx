@@ -158,12 +158,12 @@ describe("protected shell PWA install affordance", () => {
     expect(within(helpPanel).getByText("Find answers and learn how Calm Wallet works.")).toBeInTheDocument();
     expect(within(helpPanel).getByRole("textbox", { name: "Search Help" })).toBeInTheDocument();
     expect(within(helpPanel).queryByRole("button", { name: /Help Find answers/ })).not.toBeInTheDocument();
-    expect(within(helpPanel).getByRole("button", { name: /What is Calm Wallet/ })).toBeInTheDocument();
+    expect(within(helpPanel).getByRole("button", { name: "What is Calm Wallet?" })).toBeInTheDocument();
     expect(within(helpPanel).getByRole("button", { name: "Close" })).toBeInTheDocument();
     expect(document.activeElement).toBe(within(helpPanel).getByRole("button", { name: "Close" }));
 
-    fireEvent.click(within(helpPanel).getByRole("button", { name: /What is Calm Wallet/ }));
-    expect(within(helpPanel).getByText("Calm Wallet helps you track money in and money out in one quiet place.")).toBeInTheDocument();
+    fireEvent.click(within(helpPanel).getByRole("button", { name: "What is Calm Wallet?" }));
+    expect(within(helpPanel).getByText(/smart budget notebook/)).toBeInTheDocument();
 
     fireEvent.click(within(helpPanel).getByRole("button", { name: "Close" }));
 
@@ -391,21 +391,21 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByText("Găsește răspunsuri și află cum funcționează Calm Wallet.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Caută în Ajutor" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ce este Calm Wallet?" }));
-    expect(screen.getByText("Calm Wallet te ajută să urmărești banii intrați și ieșiți într-un loc liniștit.")).toBeInTheDocument();
+    expect(screen.getByText(/caiet inteligent de buget/)).toBeInTheDocument();
     romanianView.unmount();
 
     const frenchView = renderProtectedShellWithLocale("fr");
     fireEvent.click(screen.getByRole("button", { name: "Aide" }));
     expect(screen.getByText("Trouvez des réponses et découvrez comment fonctionne Calm Wallet.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Qu'est-ce que Calm Wallet ?" }));
-    expect(screen.getByText("Calm Wallet vous aide à suivre l'argent qui entre et qui sort dans un espace calme.")).toBeInTheDocument();
+    expect(screen.getByText(/carnet de budget intelligent/)).toBeInTheDocument();
     frenchView.unmount();
 
     const spanishView = renderProtectedShellWithLocale("es");
     fireEvent.click(screen.getByRole("button", { name: "Ayuda" }));
     expect(screen.getByText("Encuentra respuestas y aprende cómo funciona Calm Wallet.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "¿Qué es Calm Wallet?" }));
-    expect(screen.getByText("Calm Wallet te ayuda a seguir el dinero que entra y sale en un espacio tranquilo.")).toBeInTheDocument();
+    expect(screen.getByText(/cuaderno inteligente de presupuesto/)).toBeInTheDocument();
     spanishView.unmount();
   });
 
@@ -418,13 +418,13 @@ describe("protected shell PWA install affordance", () => {
 
     fireEvent.change(searchInput, { target: { value: "Perspective" } });
     expect(screen.getByRole("heading", { name: "Perspective" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ce arată Mix?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ce arată Perspective?" })).toBeInTheDocument();
 
-    fireEvent.change(searchInput, { target: { value: "cheltuielile" } });
-    expect(screen.getByRole("button", { name: "Ce arată Mix?" })).toBeInTheDocument();
+    fireEvent.change(searchInput, { target: { value: "cheltuieli" } });
+    expect(screen.getByRole("button", { name: "Ce mă ajută Mix să înțeleg?" })).toBeInTheDocument();
 
-    fireEvent.change(searchInput, { target: { value: "autentificat" } });
-    expect(screen.getByRole("button", { name: "Cum sunt separate datele mele de ale altor utilizatori?" })).toBeInTheDocument();
+    fireEvent.change(searchInput, { target: { value: "banca" } });
+    expect(screen.getByRole("button", { name: "Calm Wallet se conectează la banca mea?" })).toBeInTheDocument();
 
     fireEvent.change(searchInput, { target: { value: "zzzzzz" } });
     expect(screen.getByText("Nu am găsit răspunsuri.")).toBeInTheDocument();

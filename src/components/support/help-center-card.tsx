@@ -22,12 +22,22 @@ type HelpCenterCardProps = {
 };
 
 const helpSections: HelpSection[] = [
-  section("started", 5),
+  section("started", 3),
   section("assistant", 4),
+  section("manual", 2),
+  section("review", 3),
   section("activity", 5),
+  section("trash", 2),
+  section("recurring", 3),
   section("insights", 5),
-  section("limits", 3),
-  section("privacy", 4),
+  section("mix", 3),
+  section("bars", 3),
+  section("trend", 3),
+  section("planning", 4),
+  section("currencies", 2),
+  section("habits", 4),
+  section("privacy", 3),
+  section("troubleshooting", 2),
 ];
 
 function section(id: string, questionCount: number): HelpSection {

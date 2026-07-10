@@ -268,31 +268,23 @@
   "help": {
     "search": "Search Help",
     "noResults": "No answers found.",
-    "still": "Still having a problem?",
+    "still": "Still need help?",
     "report": "Report a problem",
     "sections": {
       "started": {
-        "title": "Getting started",
+        "title": "Getting Started",
         "questions": {
           "1": {
             "question": "What is Calm Wallet?",
-            "answer": "Calm Wallet helps you track money in and money out in one quiet place."
+            "answer": "Calm Wallet is a smart budget notebook for the money you choose to track. It helps you record spending, income, recurring entries, limits, and money reminders without turning daily life into accounting."
           },
           "2": {
-            "question": "How do I add spending?",
-            "answer": "Use Assistant Quick Add or Manual Add, then review the entry in Activity."
+            "question": "What is Calm Wallet not?",
+            "answer": "Calm Wallet is not connected to your bank or card. It does not verify payments, know your real bank balance, or replace official bank records. Every total comes from entries saved in Calm Wallet."
           },
           "3": {
-            "question": "How do I add income?",
-            "answer": "Choose an income category in Manual Add or describe it to the Assistant."
-          },
-          "4": {
-            "question": "What does tracked balance mean?",
-            "answer": "It is the money Calm Wallet can see from entries you have added."
-          },
-          "5": {
-            "question": "What does period net mean?",
-            "answer": "It shows money in minus money out for the selected period."
+            "question": "Where should I start?",
+            "answer": "Use Assistant to record money quickly, Activity to check and correct what was saved, and Insights when you want the bigger picture. Capture, review, understand."
           }
         }
       },
@@ -300,20 +292,50 @@
         "title": "Assistant",
         "questions": {
           "1": {
-            "question": "How does Quick Add work?",
-            "answer": "Type a short note like coffee 12 and Calm Wallet drafts the entry."
+            "question": "How does Assistant understand what I type?",
+            "answer": "Write naturally, like a note to yourself: Coffee 12, Lidl 185, Salary 2500, or Sold bike 300. Calm Wallet looks for the amount, money direction, and useful details around it."
           },
           "2": {
-            "question": "How does Manual Add work?",
-            "answer": "Manual Add lets you choose the amount, date, category, and note yourself."
+            "question": "Do I need complete sentences?",
+            "answer": "No. Short phrases are enough when they include an amount. Add a currency, date, merchant, or note only when that detail changes the meaning."
           },
           "3": {
-            "question": "Why might an entry need review?",
-            "answer": "Calm Wallet asks for review when a detail looks uncertain or incomplete."
+            "question": "What happens if my message has no amount?",
+            "answer": "Calm Wallet should not invent money. If your message has no numeric amount, it should not save a financial transaction."
           },
           "4": {
-            "question": "Which languages are supported?",
-            "answer": "The app supports English, Romanian, French, and Spanish."
+            "question": "What if some details are missing?",
+            "answer": "Calm Wallet can still save a useful entry when the amount and basic meaning are clear. You can fix the merchant, note, category, or date later in Activity."
+          }
+        }
+      },
+      "manual": {
+        "title": "Manual Entry",
+        "questions": {
+          "1": {
+            "question": "When should I use Manual Add?",
+            "answer": "Use Manual Add when precision matters more than speed. It is best when you already know the amount, currency, type, category, date, merchant, note, or recurring schedule you want."
+          },
+          "2": {
+            "question": "Why does Manual Add exist if Assistant is faster?",
+            "answer": "Assistant is for quick capture. Manual Add is for direct control, especially when the transaction happened on another date, needs a specific category, or should become recurring."
+          }
+        }
+      },
+      "review": {
+        "title": "Review",
+        "questions": {
+          "1": {
+            "question": "What does Needs review mean?",
+            "answer": "Needs review is not an error. It means Calm Wallet saved the useful part but was not fully certain about one or more details."
+          },
+          "2": {
+            "question": "Why would an entry need review?",
+            "answer": "A shop may sell many kinds of products, a transfer may be ambiguous, or a short message may not reveal the best category. Calm Wallet shows uncertainty instead of pretending."
+          },
+          "3": {
+            "question": "Can I fix reviewed entries later?",
+            "answer": "Yes. Open the entry in Activity, correct the details, and Calm Wallet updates the stored record. Insights reflects those corrections automatically."
           }
         }
       },
@@ -321,24 +343,54 @@
         "title": "Activity",
         "questions": {
           "1": {
-            "question": "How do I edit an entry?",
-            "answer": "Open Activity, tap the entry, then update the details."
+            "question": "What is Activity for?",
+            "answer": "Activity is the trust surface. It shows what was saved and lets you search, filter, inspect, edit, categorize, add notes, delete, restore, and manage recurring entries."
           },
           "2": {
-            "question": "How do I change a category?",
-            "answer": "Open the entry and choose a different category from the picker."
+            "question": "How do I find an entry?",
+            "answer": "Use filters, search, and time controls. If something seems missing, check the signed-in account, selected period, active filter, and search text first."
           },
           "3": {
-            "question": "How do I add a note?",
-            "answer": "Open the entry and add a short note in its details."
+            "question": "What can I edit?",
+            "answer": "You can change categories, add notes, open full details, and update structural fields such as amount, type, date, merchant, or recurring information."
           },
           "4": {
-            "question": "How do Bin and Restore work?",
-            "answer": "Bin hides an entry from normal views. Restore brings it back."
+            "question": "Why do categories matter?",
+            "answer": "Categories help Insights group related entries. They do not need to be perfect, but consistent choices make reports clearer over time."
           },
           "5": {
-            "question": "How do recurring entries work?",
-            "answer": "Recurring entries repeat on the schedule you set."
+            "question": "When should I use notes?",
+            "answer": "Use notes for context future you may care about: shared expenses, reimbursements, unusual purchases, or details that do not belong in the title."
+          }
+        }
+      },
+      "trash": {
+        "title": "Trash & Restore",
+        "questions": {
+          "1": {
+            "question": "What happens when I delete an entry?",
+            "answer": "Deleting first moves the entry to the Bin. While it is there, it is excluded from normal Activity and Insights totals."
+          },
+          "2": {
+            "question": "What is Delete forever?",
+            "answer": "Delete forever is permanent and asks for confirmation. Use it only when you are sure the record should not return."
+          }
+        }
+      },
+      "recurring": {
+        "title": "Recurring Entries",
+        "questions": {
+          "1": {
+            "question": "What are recurring entries?",
+            "answer": "Recurring entries are repeated notebook entries for predictable money movement such as salary, rent, subscriptions, utilities, or memberships."
+          },
+          "2": {
+            "question": "Does recurring move real money?",
+            "answer": "No. Recurring does not charge a card, move money, or connect to a bank. It only creates tracked entries inside Calm Wallet."
+          },
+          "3": {
+            "question": "Where do I manage recurring rules?",
+            "answer": "Use the Recurring view in Activity to see whether a rule is active or paused, change the schedule, resume it, or stop it."
           }
         }
       },
@@ -346,62 +398,160 @@
         "title": "Insights",
         "questions": {
           "1": {
-            "question": "What does Mix show?",
-            "answer": "Mix shows how your spending is split across categories."
+            "question": "What does Insights show?",
+            "answer": "Insights turns tracked entries into summaries, category views, time reports, and trends. It explains the selected period, not your whole financial life unless you choose that view."
           },
           "2": {
-            "question": "What does Bars show?",
-            "answer": "Bars compares category totals for the selected period."
+            "question": "What is period net?",
+            "answer": "Period net answers a simple question: during the selected period, was more tracked money recorded as income or as spending?"
           },
           "3": {
-            "question": "What does Trend show?",
-            "answer": "Trend shows how totals change over time."
+            "question": "What is tracked balance?",
+            "answer": "Tracked balance is calculated from entries stored in Calm Wallet. It is a notebook balance, not a verified bank balance."
           },
           "4": {
-            "question": "Why do converted totals use estimates?",
-            "answer": "Converted totals use recent rates, so they are helpful estimates."
+            "question": "Why can Insights differ from my bank?",
+            "answer": "Calm Wallet reports what you recorded. If a purchase, income payment, or correction is missing, the totals will differ from your bank."
           },
           "5": {
-            "question": "Why is Calm Wallet not a bank statement?",
-            "answer": "Calm Wallet shows your tracked entries, not official bank records."
+            "question": "What are Largest entries for?",
+            "answer": "Largest entries highlights the transactions that had the biggest effect on the selected period. Use it when a total looks surprising and you want the main reason quickly."
           }
         }
       },
-      "limits": {
-        "title": "Limits and reminders",
+      "mix": {
+        "title": "Mix",
         "questions": {
           "1": {
-            "question": "How do category limits work?",
-            "answer": "Limits compare your tracked category spending with the amount you set."
+            "question": "What does Mix help me understand?",
+            "answer": "Mix shows where money is going or coming from by grouping the selected period by category. Each segment reflects that category's share of expense or income."
           },
           "2": {
-            "question": "How do owed reminders work?",
-            "answer": "Owed reminders help you remember money to collect or repay."
+            "question": "How should I use Mix?",
+            "answer": "Switch between Expenses and Income, select a category to focus on it, and expand the category when you want to inspect the entries behind the total."
           },
           "3": {
-            "question": "Why do owed reminders not affect Insights?",
-            "answer": "They are reminders, not income or spending entries."
+            "question": "Is a large category bad?",
+            "answer": "Not automatically. A large category simply shows where a larger share of tracked money belongs. Use it as context, not judgment."
+          }
+        }
+      },
+      "bars": {
+        "title": "Bars",
+        "questions": {
+          "1": {
+            "question": "What does Bars show?",
+            "answer": "Bars shows when money moved during the selected period. Calm Wallet divides the range into readable time blocks so the chart stays useful instead of crowded."
+          },
+          "2": {
+            "question": "Why are monthly bars grouped by weeks?",
+            "answer": "For a monthly view, bars are typically weekly parts of the month. Longer ranges use broader intervals so patterns remain readable."
+          },
+          "3": {
+            "question": "How do I read a bar?",
+            "answer": "Each bar represents the total recorded in that time block. The categories inside it show what contributed to the total, and opening a block gives you a focused report."
+          }
+        }
+      },
+      "trend": {
+        "title": "Trend",
+        "questions": {
+          "1": {
+            "question": "What does Trend answer?",
+            "answer": "Trend helps answer whether your financial behavior is changing. It keeps income and spending together so you can compare both across time."
+          },
+          "2": {
+            "question": "When is Trend useful?",
+            "answer": "Use Trend to notice rising or falling spending, more consistent income, unusual periods, or longer patterns across 3 months, 6 months, or 1 year."
+          },
+          "3": {
+            "question": "Is Trend for judging one purchase?",
+            "answer": "No. Trend is not designed to judge a single transaction. It is designed to reveal direction."
+          }
+        }
+      },
+      "planning": {
+        "title": "Limits & Reminders",
+        "questions": {
+          "1": {
+            "question": "What is a category limit?",
+            "answer": "A category limit is an optional planning target for spending. It helps you stay aware, but it never blocks you from recording a transaction."
+          },
+          "2": {
+            "question": "How should I choose limits?",
+            "answer": "Set limits for categories you actually care about, such as Dining or Entertainment. You do not need a limit for every category."
+          },
+          "3": {
+            "question": "What are owed reminders?",
+            "answer": "Owed reminders help you remember money another person owes you or money you need to pay. They are reminders, not transactions."
+          },
+          "4": {
+            "question": "How are recurring entries, owed reminders, and notifications different?",
+            "answer": "Recurring entries create repeated financial records. Owed reminders track obligations without changing totals. Notifications alert you at useful moments when you enable them."
+          }
+        }
+      },
+      "currencies": {
+        "title": "Currencies",
+        "questions": {
+          "1": {
+            "question": "What happens to the original currency?",
+            "answer": "Every transaction keeps its original amount and currency. Calm Wallet does not rewrite a EUR, USD, GBP, or RON entry when you view reports in another currency."
+          },
+          "2": {
+            "question": "Why do converted totals use ≈?",
+            "answer": "Insights may convert values so mixed-currency reports can be read together. These converted totals are estimates, so Calm Wallet marks them with ≈."
+          }
+        }
+      },
+      "habits": {
+        "title": "Better Tracking Habits",
+        "questions": {
+          "1": {
+            "question": "Should I wait until I have every detail?",
+            "answer": "No. A short entry while the memory is fresh is usually more useful than a perfect entry later. You can improve categories or notes during review."
+          },
+          "2": {
+            "question": "How detailed should my categories be?",
+            "answer": "A smaller set of categories used consistently is often more useful than a detailed system you cannot maintain."
+          },
+          "3": {
+            "question": "How often should I review?",
+            "answer": "Review when you have time, especially entries marked Needs review. A quick review improves category consistency and makes Insights more accurate."
+          },
+          "4": {
+            "question": "Which view should I use?",
+            "answer": "Use Assistant to record, Activity to verify, Mix to see where money goes, Bars to see when it moved, Trend to spot direction, and Limits to compare against your plan."
           }
         }
       },
       "privacy": {
-        "title": "Account and privacy",
+        "title": "Privacy & Security",
         "questions": {
           "1": {
-            "question": "How does Google sign-in work?",
-            "answer": "Google confirms your identity, then Calm Wallet opens your account."
+            "question": "How private are my totals?",
+            "answer": "Your totals come from entries in your Calm Wallet account. They are tracked notebook totals, not official bank balances."
           },
           "2": {
-            "question": "How is my data separated from other users?",
-            "answer": "You only see entries connected to your signed-in account."
+            "question": "Does Calm Wallet connect to my bank?",
+            "answer": "No. The current product is not connected to your bank or card and does not verify whether real payments happened."
           },
           "3": {
-            "question": "How do I sign out?",
-            "answer": "Open Settings and use Sign out at the bottom."
+            "question": "What should I avoid putting in reports?",
+            "answer": "If you report a problem, avoid including passwords, authentication codes, or private information that is not needed to explain the issue."
+          }
+        }
+      },
+      "troubleshooting": {
+        "title": "Troubleshooting",
+        "questions": {
+          "1": {
+            "question": "Why does an entry look missing?",
+            "answer": "First check the active account, selected month or range, filters, and search text. Many missing-entry issues come from looking at the wrong account, period, or filter."
           },
-          "4": {
-            "question": "How do I report a problem?",
-            "answer": "Open Settings, choose Report a problem, and describe what is not working."
+          "2": {
+            "question": "What if a total looks wrong?",
+            "answer": "Check whether the relevant purchase, income payment, deleted entry, or correction exists in Calm Wallet. Insights can only include what was recorded and not excluded."
           }
         }
       }

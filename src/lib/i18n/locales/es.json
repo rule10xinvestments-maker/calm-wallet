@@ -268,7 +268,7 @@
   "help": {
     "search": "Buscar en Ayuda",
     "noResults": "No se encontraron respuestas.",
-    "still": "¿Sigues teniendo un problema?",
+    "still": "¿Sigues necesitando ayuda?",
     "report": "Informar de un problema",
     "sections": {
       "started": {
@@ -276,23 +276,15 @@
         "questions": {
           "1": {
             "question": "¿Qué es Calm Wallet?",
-            "answer": "Calm Wallet te ayuda a seguir el dinero que entra y sale en un espacio tranquilo."
+            "answer": "Calm Wallet es un cuaderno inteligente de presupuesto para el dinero que decides registrar. Ayuda a anotar gastos, ingresos, entradas recurrentes, límites y recordatorios sin convertir el día a día en contabilidad."
           },
           "2": {
-            "question": "¿Cómo añado un gasto?",
-            "answer": "Usa Añadir rápido en Asistente o Añadir manualmente, y luego revisa la entrada en Actividad."
+            "question": "¿Qué no es Calm Wallet?",
+            "answer": "No está conectado a tu banco ni a tu tarjeta. No verifica pagos, no conoce tu saldo bancario real y no sustituye documentos bancarios oficiales."
           },
           "3": {
-            "question": "¿Cómo añado un ingreso?",
-            "answer": "Elige una categoría de ingreso en Añadir manualmente o descríbelo al Asistente."
-          },
-          "4": {
-            "question": "¿Qué significa saldo registrado?",
-            "answer": "Es el dinero que Calm Wallet puede calcular a partir de las entradas que añadiste."
-          },
-          "5": {
-            "question": "¿Qué significa neto del período?",
-            "answer": "Muestra el dinero entrante menos el dinero saliente del período seleccionado."
+            "question": "¿Por dónde empiezo?",
+            "answer": "Usa Asistente para registrar rápido, Actividad para revisar y corregir, y Resumen para ver la imagen general. Capturar, revisar, entender."
           }
         }
       },
@@ -300,20 +292,50 @@
         "title": "Asistente",
         "questions": {
           "1": {
-            "question": "¿Cómo funciona Añadir rápido?",
-            "answer": "Escribe una nota corta, como café 12, y Calm Wallet prepara la entrada."
+            "question": "¿Cómo entiende el Asistente lo que escribo?",
+            "answer": "Escribe de forma natural: Café 12, Lidl 185, Salario 2500 o Vendí bici 300. Calm Wallet busca el importe, la dirección del dinero y los detalles útiles."
           },
           "2": {
-            "question": "¿Cómo funciona Añadir manualmente?",
-            "answer": "Añadir manualmente te permite elegir el importe, la fecha, la categoría y la nota."
+            "question": "¿Necesito frases completas?",
+            "answer": "No. Las frases cortas bastan si incluyen un importe. Añade moneda, fecha, comercio o nota solo si cambia el significado."
           },
           "3": {
-            "question": "¿Por qué una entrada puede necesitar revisión?",
-            "answer": "Calm Wallet pide revisión cuando un detalle parece incierto o incompleto."
+            "question": "¿Qué pasa si no escribo un importe?",
+            "answer": "Calm Wallet no debería inventar dinero. Sin importe numérico, no debería guardar una transacción financiera."
           },
           "4": {
-            "question": "¿Qué idiomas están disponibles?",
-            "answer": "La app está disponible en inglés, rumano, francés y español."
+            "question": "¿Y si faltan detalles?",
+            "answer": "Puede guardar una entrada útil si el importe y el sentido básico están claros. Puedes corregir comercio, nota, categoría o fecha en Actividad."
+          }
+        }
+      },
+      "manual": {
+        "title": "Entrada manual",
+        "questions": {
+          "1": {
+            "question": "¿Cuándo uso Entrada manual?",
+            "answer": "Cuando la precisión importa más que la rapidez: importe, moneda, tipo, categoría, fecha, comercio, nota o recurrencia."
+          },
+          "2": {
+            "question": "¿Por qué existe si el Asistente es más rápido?",
+            "answer": "El Asistente captura rápido. Entrada manual da control directo, sobre todo para otra fecha, una categoría concreta o una entrada recurrente."
+          }
+        }
+      },
+      "review": {
+        "title": "Revisión",
+        "questions": {
+          "1": {
+            "question": "¿Qué significa Necesita revisión?",
+            "answer": "No es un error. Calm Wallet guardó la parte útil, pero no está totalmente seguro de uno o más detalles."
+          },
+          "2": {
+            "question": "¿Por qué una entrada puede necesitar revisión?",
+            "answer": "Una tienda puede vender muchos productos, una transferencia puede ser ambigua o un mensaje corto puede no mostrar la mejor categoría. Calm Wallet muestra la duda."
+          },
+          "3": {
+            "question": "¿Puedo corregir más tarde?",
+            "answer": "Sí. Abre la entrada en Actividad, corrige los detalles y Resumen se actualiza automáticamente."
           }
         }
       },
@@ -321,24 +343,54 @@
         "title": "Actividad",
         "questions": {
           "1": {
-            "question": "¿Cómo edito una entrada?",
-            "answer": "Abre Actividad, toca la entrada y actualiza los detalles."
+            "question": "¿Para qué sirve Actividad?",
+            "answer": "Actividad es el lugar de confianza. Muestra lo guardado y permite buscar, filtrar, revisar, editar, categorizar, añadir notas, eliminar, restaurar y gestionar recurrencias."
           },
           "2": {
-            "question": "¿Cómo cambio la categoría?",
-            "answer": "Abre la entrada y elige otra categoría en el selector."
+            "question": "¿Cómo encuentro una entrada?",
+            "answer": "Usa filtros, búsqueda y controles de tiempo. Si algo parece faltar, revisa cuenta, período, filtro y texto de búsqueda."
           },
           "3": {
-            "question": "¿Cómo añado una nota?",
-            "answer": "Abre la entrada y añade una nota corta en sus detalles."
+            "question": "¿Qué puedo editar?",
+            "answer": "Puedes cambiar categorías, añadir notas, abrir detalles y actualizar importe, tipo, fecha, comercio o información recurrente."
           },
           "4": {
-            "question": "¿Cómo funcionan Papelera y Restaurar?",
-            "answer": "Papelera oculta una entrada de las vistas normales. Restaurar la devuelve."
+            "question": "¿Por qué importan las categorías?",
+            "answer": "Ayudan a Resumen a agrupar entradas relacionadas. No tienen que ser perfectas, pero la constancia aclara los informes."
           },
           "5": {
-            "question": "¿Cómo funcionan las entradas recurrentes?",
-            "answer": "Las entradas recurrentes se repiten según el calendario que elijas."
+            "question": "¿Cuándo uso notas?",
+            "answer": "Para contexto útil después: gastos compartidos, reembolsos, compras inusuales o detalles que no pertenecen al título."
+          }
+        }
+      },
+      "trash": {
+        "title": "Papelera y restaurar",
+        "questions": {
+          "1": {
+            "question": "¿Qué pasa cuando elimino una entrada?",
+            "answer": "Primero va a Papelera. Mientras esté allí, queda fuera de la Actividad normal y de los totales de Resumen."
+          },
+          "2": {
+            "question": "¿Qué significa Eliminar definitivamente?",
+            "answer": "Es permanente y pide confirmación. Úsalo solo si el registro no debe volver."
+          }
+        }
+      },
+      "recurring": {
+        "title": "Entradas recurrentes",
+        "questions": {
+          "1": {
+            "question": "¿Qué son las entradas recurrentes?",
+            "answer": "Entradas repetidas para movimientos previsibles: salario, alquiler, suscripciones, servicios o membresías."
+          },
+          "2": {
+            "question": "¿La recurrencia mueve dinero real?",
+            "answer": "No. No cobra tarjeta, no mueve dinero y no se conecta a un banco. Solo crea entradas registradas."
+          },
+          "3": {
+            "question": "¿Dónde gestiono reglas recurrentes?",
+            "answer": "En la vista Recurrentes de Actividad: activa o pausada, calendario, reanudar o detener."
           }
         }
       },
@@ -346,62 +398,160 @@
         "title": "Resumen",
         "questions": {
           "1": {
-            "question": "¿Qué muestra Mix?",
-            "answer": "Mix muestra cómo se reparten tus gastos por categoría."
+            "question": "¿Qué muestra Resumen?",
+            "answer": "Convierte tus entradas registradas en resúmenes, categorías, informes de tiempo y tendencias para el período elegido."
           },
           "2": {
-            "question": "¿Qué muestran las barras?",
-            "answer": "Las barras comparan los totales por categoría del período seleccionado."
+            "question": "¿Qué es el neto del período?",
+            "answer": "Responde: en el período elegido, ¿se registró más dinero como ingreso o como gasto?"
           },
           "3": {
-            "question": "¿Qué muestra Tendencia?",
-            "answer": "Tendencia muestra cómo cambian los totales con el tiempo."
+            "question": "¿Qué es el saldo registrado?",
+            "answer": "Un saldo calculado desde entradas guardadas en Calm Wallet. Es saldo de cuaderno, no bancario verificado."
           },
           "4": {
-            "question": "¿Por qué los totales convertidos son estimaciones?",
-            "answer": "Los totales convertidos usan tasas recientes, así que son estimaciones útiles."
+            "question": "¿Por qué puede diferir del banco?",
+            "answer": "Calm Wallet informa lo que registraste. Si falta una compra, ingreso o corrección, los totales diferirán."
           },
           "5": {
-            "question": "¿Por qué Calm Wallet no es un extracto bancario?",
-            "answer": "Calm Wallet muestra tus entradas registradas, no documentos bancarios oficiales."
+            "question": "¿Para qué sirven las entradas más grandes?",
+            "answer": "Muestran las transacciones con mayor efecto en el período, útil cuando un total sorprende."
           }
         }
       },
-      "limits": {
+      "mix": {
+        "title": "Mix",
+        "questions": {
+          "1": {
+            "question": "¿Qué me ayuda a entender Mix?",
+            "answer": "Muestra a dónde va el dinero o de dónde viene, agrupando el período por categoría."
+          },
+          "2": {
+            "question": "¿Cómo uso Mix?",
+            "answer": "Cambia entre Gastos e Ingresos, selecciona una categoría y expándela para ver las entradas detrás del total."
+          },
+          "3": {
+            "question": "¿Una categoría grande es mala?",
+            "answer": "No necesariamente. Solo indica que una parte mayor del dinero registrado pertenece a esa categoría."
+          }
+        }
+      },
+      "bars": {
+        "title": "Barras",
+        "questions": {
+          "1": {
+            "question": "¿Qué muestran las Barras?",
+            "answer": "Muestran cuándo se movió el dinero durante el período elegido, con bloques de tiempo legibles."
+          },
+          "2": {
+            "question": "¿Por qué el mes se agrupa por semanas?",
+            "answer": "En vista mensual, las barras suelen ser partes semanales. Los períodos más largos usan intervalos más amplios."
+          },
+          "3": {
+            "question": "¿Cómo leo una barra?",
+            "answer": "Cada barra representa el total de un bloque de tiempo. Las categorías muestran qué contribuyó al total."
+          }
+        }
+      },
+      "trend": {
+        "title": "Tendencia",
+        "questions": {
+          "1": {
+            "question": "¿Qué responde Tendencia?",
+            "answer": "Ayuda a ver si tu comportamiento financiero cambia, manteniendo ingresos y gastos juntos."
+          },
+          "2": {
+            "question": "¿Cuándo usar Tendencia?",
+            "answer": "Para detectar gastos que suben o bajan, ingresos más constantes, períodos inusuales o patrones de varios meses."
+          },
+          "3": {
+            "question": "¿Tendencia juzga una compra?",
+            "answer": "No. Sirve para ver dirección, no para juzgar una transacción."
+          }
+        }
+      },
+      "planning": {
         "title": "Límites y recordatorios",
         "questions": {
           "1": {
-            "question": "¿Cómo funcionan los límites por categoría?",
-            "answer": "Los límites comparan tus gastos registrados en una categoría con el importe que definiste."
+            "question": "¿Qué es un límite por categoría?",
+            "answer": "Un objetivo opcional para gastos. Ayuda a estar atento, pero nunca bloquea el registro."
           },
           "2": {
-            "question": "¿Cómo funcionan los recordatorios de dinero?",
-            "answer": "Los recordatorios te ayudan a recordar dinero por cobrar o por pagar."
+            "question": "¿Cómo elijo límites?",
+            "answer": "Pon límites en categorías que realmente te importan. No necesitas un límite en todas."
           },
           "3": {
-            "question": "¿Por qué los recordatorios no cambian Resumen?",
-            "answer": "Son recordatorios, no entradas de ingreso o gasto."
+            "question": "¿Qué son los recordatorios de dinero?",
+            "answer": "Ayudan a recordar dinero que alguien te debe o que debes pagar. Son recordatorios, no transacciones."
+          },
+          "4": {
+            "question": "¿Qué diferencia hay con recurrencias y notificaciones?",
+            "answer": "Las recurrencias crean entradas repetidas. Los recordatorios siguen obligaciones. Las notificaciones avisan si las activas."
+          }
+        }
+      },
+      "currencies": {
+        "title": "Monedas",
+        "questions": {
+          "1": {
+            "question": "¿Qué pasa con la moneda original?",
+            "answer": "Cada transacción conserva su importe y moneda original. Calm Wallet no reescribe una entrada cuando cambias la moneda del informe."
+          },
+          "2": {
+            "question": "¿Por qué los totales convertidos usan ≈?",
+            "answer": "Resumen puede convertir valores para leer varias monedas juntas. Esos totales son estimaciones."
+          }
+        }
+      },
+      "habits": {
+        "title": "Mejores hábitos",
+        "questions": {
+          "1": {
+            "question": "¿Debo esperar todos los detalles?",
+            "answer": "No. Una entrada corta mientras lo recuerdas suele ser más útil que una perfecta después."
+          },
+          "2": {
+            "question": "¿Qué tan detalladas deben ser las categorías?",
+            "answer": "Un conjunto pequeño usado con constancia suele ser más útil que un sistema demasiado detallado."
+          },
+          "3": {
+            "question": "¿Cada cuánto revisar?",
+            "answer": "Cuando tengas tiempo, sobre todo entradas con Necesita revisión. Una revisión rápida hace Resumen más preciso."
+          },
+          "4": {
+            "question": "¿Qué vista uso?",
+            "answer": "Asistente para capturar, Actividad para verificar, Mix para dónde va el dinero, Barras para cuándo, Tendencia para dirección y Límites para el plan."
           }
         }
       },
       "privacy": {
-        "title": "Cuenta y privacidad",
+        "title": "Privacidad y seguridad",
         "questions": {
           "1": {
-            "question": "¿Cómo funciona el inicio de sesión con Google?",
-            "answer": "Google confirma tu identidad y luego Calm Wallet abre tu cuenta."
+            "question": "¿Qué tan privados son mis totales?",
+            "answer": "Vienen de las entradas de tu cuenta de Calm Wallet. Son totales de cuaderno, no saldos bancarios oficiales."
           },
           "2": {
-            "question": "¿Cómo se separan mis datos de los de otros usuarios?",
-            "answer": "Solo ves las entradas conectadas a tu cuenta iniciada."
+            "question": "¿Calm Wallet se conecta a mi banco?",
+            "answer": "No. El producto actual no está conectado a tu banco o tarjeta y no verifica pagos reales."
           },
           "3": {
-            "question": "¿Cómo cierro sesión?",
-            "answer": "Abre Ajustes y usa Cerrar sesión en la parte inferior."
+            "question": "¿Qué evito en un informe?",
+            "answer": "Evita contraseñas, códigos de autenticación o información privada innecesaria."
+          }
+        }
+      },
+      "troubleshooting": {
+        "title": "Solución de problemas",
+        "questions": {
+          "1": {
+            "question": "¿Por qué parece faltar una entrada?",
+            "answer": "Revisa cuenta activa, período, filtros y texto de búsqueda. Muchos casos vienen de ahí."
           },
-          "4": {
-            "question": "¿Cómo informo de un problema?",
-            "answer": "Abre Ajustes, elige Informar de un problema y describe qué no funciona."
+          "2": {
+            "question": "¿Qué hago si un total parece incorrecto?",
+            "answer": "Comprueba si la compra, ingreso, entrada eliminada o corrección existe en Calm Wallet."
           }
         }
       }

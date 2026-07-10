@@ -270,7 +270,7 @@
   "help": {
     "search": "Caută în Ajutor",
     "noResults": "Nu am găsit răspunsuri.",
-    "still": "Încă ai o problemă?",
+    "still": "Încă ai nevoie de ajutor?",
     "report": "Raportează o problemă",
     "sections": {
       "started": {
@@ -278,23 +278,15 @@
         "questions": {
           "1": {
             "question": "Ce este Calm Wallet?",
-            "answer": "Calm Wallet te ajută să urmărești banii intrați și ieșiți într-un loc liniștit."
+            "answer": "Calm Wallet este un caiet inteligent de buget pentru banii pe care alegi să îi urmărești. Te ajută să înregistrezi cheltuieli, venituri, intrări recurente, limite și remindere fără să transformi ziua în contabilitate."
           },
           "2": {
-            "question": "Cum adaug o cheltuială?",
-            "answer": "Folosește adăugarea rapidă din Asistent sau adăugarea manuală, apoi verifică intrarea în Activitate."
+            "question": "Ce nu este Calm Wallet?",
+            "answer": "Calm Wallet nu este conectat la banca sau cardul tău. Nu verifică plăți, nu știe soldul real din bancă și nu înlocuiește documentele bancare oficiale. Fiecare total vine din intrările salvate."
           },
           "3": {
-            "question": "Cum adaug un venit?",
-            "answer": "Alege o categorie de venit în adăugarea manuală sau descrie venitul Asistentului."
-          },
-          "4": {
-            "question": "Ce înseamnă sold urmărit?",
-            "answer": "Este suma pe care Calm Wallet o poate calcula din intrările adăugate de tine."
-          },
-          "5": {
-            "question": "Ce înseamnă net pe perioadă?",
-            "answer": "Arată banii intrați minus banii ieșiți pentru perioada selectată."
+            "question": "De unde încep?",
+            "answer": "Folosește Asistent pentru înregistrare rapidă, Activitate pentru verificare și corectare, iar Perspective pentru imaginea de ansamblu. Notezi, verifici, înțelegi."
           }
         }
       },
@@ -302,20 +294,50 @@
         "title": "Asistent",
         "questions": {
           "1": {
-            "question": "Cum funcționează adăugarea rapidă?",
-            "answer": "Scrie o notă scurtă, de exemplu cafea 12, iar Calm Wallet pregătește intrarea."
+            "question": "Cum înțelege Asistentul ce scriu?",
+            "answer": "Scrie natural, ca o notă pentru tine: Cafea 12, Lidl 185, Salariu 2500 sau Am vândut bicicleta 300. Calm Wallet caută suma, direcția banilor și detaliile utile."
           },
           "2": {
-            "question": "Cum funcționează adăugarea manuală?",
-            "answer": "Adăugarea manuală îți permite să alegi suma, data, categoria și nota."
+            "question": "Am nevoie de propoziții complete?",
+            "answer": "Nu. Frazele scurte sunt suficiente dacă includ o sumă. Adaugă monedă, dată, comerciant sau notă doar când detaliul schimbă sensul."
           },
           "3": {
-            "question": "De ce poate avea o intrare nevoie de verificare?",
-            "answer": "Calm Wallet cere verificare când un detaliu pare neclar sau incomplet."
+            "question": "Ce se întâmplă dacă nu scriu o sumă?",
+            "answer": "Calm Wallet nu ar trebui să inventeze bani. Dacă mesajul nu are o sumă numerică, nu ar trebui să salveze o tranzacție financiară."
           },
           "4": {
-            "question": "Ce limbi sunt disponibile?",
-            "answer": "Aplicația este disponibilă în engleză, română, franceză și spaniolă."
+            "question": "Ce se întâmplă când lipsesc detalii?",
+            "answer": "Calm Wallet poate salva o intrare utilă când suma și sensul de bază sunt clare. Poți corecta comerciantul, nota, categoria sau data mai târziu în Activitate."
+          }
+        }
+      },
+      "manual": {
+        "title": "Introducere manuală",
+        "questions": {
+          "1": {
+            "question": "Când folosesc Introducere manuală?",
+            "answer": "Folosește Introducere manuală când precizia contează mai mult decât viteza. Este utilă când știi suma, moneda, tipul, categoria, data, comerciantul, nota sau programul recurent."
+          },
+          "2": {
+            "question": "De ce există dacă Asistentul e mai rapid?",
+            "answer": "Asistentul este pentru captură rapidă. Introducerea manuală este pentru control direct, mai ales când tranzacția a fost în altă zi, are nevoie de categorie exactă sau trebuie să devină recurentă."
+          }
+        }
+      },
+      "review": {
+        "title": "Verificare",
+        "questions": {
+          "1": {
+            "question": "Ce înseamnă Necesită verificare?",
+            "answer": "Nu este o eroare. Înseamnă că Calm Wallet a salvat partea utilă, dar nu este complet sigur de unul sau mai multe detalii."
+          },
+          "2": {
+            "question": "De ce ar avea o intrare nevoie de verificare?",
+            "answer": "Un magazin poate vinde multe tipuri de produse, un transfer poate fi ambiguu, iar un mesaj scurt poate să nu arate categoria potrivită. Calm Wallet arată incertitudinea."
+          },
+          "3": {
+            "question": "Pot corecta intrările mai târziu?",
+            "answer": "Da. Deschide intrarea în Activitate, corectează detaliile, iar Calm Wallet actualizează înregistrarea. Perspectivele se actualizează automat."
           }
         }
       },
@@ -323,24 +345,54 @@
         "title": "Activitate",
         "questions": {
           "1": {
-            "question": "Cum editez o intrare?",
-            "answer": "Deschide Activitate, atinge intrarea, apoi actualizează detaliile."
+            "question": "La ce folosește Activitate?",
+            "answer": "Activitate este zona de încredere. Arată ce s-a salvat și îți permite să cauți, filtrezi, verifici, editezi, categorizezi, adaugi note, ștergi, restaurezi și gestionezi intrări recurente."
           },
           "2": {
-            "question": "Cum schimb categoria?",
-            "answer": "Deschide intrarea și alege o altă categorie din selector."
+            "question": "Cum găsesc o intrare?",
+            "answer": "Folosește filtrele, căutarea și controalele de timp. Dacă ceva pare lipsă, verifică mai întâi contul conectat, perioada selectată, filtrul activ și textul căutat."
           },
           "3": {
-            "question": "Cum adaug o notă?",
-            "answer": "Deschide intrarea și adaugă o notă scurtă în detalii."
+            "question": "Ce pot edita?",
+            "answer": "Poți schimba categorii, adăuga note, deschide detaliile complete și actualiza suma, tipul, data, comerciantul sau informațiile recurente."
           },
           "4": {
-            "question": "Cum funcționează Coșul și restaurarea?",
-            "answer": "Coșul ascunde o intrare din vizualizările normale. Restaurarea o aduce înapoi."
+            "question": "De ce contează categoriile?",
+            "answer": "Categoriile ajută Perspectivele să grupeze intrări similare. Nu trebuie să fie perfecte, dar alegerile consecvente fac rapoartele mai clare."
           },
           "5": {
-            "question": "Cum funcționează intrările recurente?",
-            "answer": "Intrările recurente se repetă după programul ales de tine."
+            "question": "Când folosesc note?",
+            "answer": "Folosește note pentru context care poate conta mai târziu: cheltuieli împărțite, rambursări, cumpărături neobișnuite sau detalii care nu aparțin titlului."
+          }
+        }
+      },
+      "trash": {
+        "title": "Coș și restaurare",
+        "questions": {
+          "1": {
+            "question": "Ce se întâmplă când șterg o intrare?",
+            "answer": "Ștergerea mută mai întâi intrarea în Coș. Cât timp este acolo, este exclusă din Activitatea normală și din totalurile din Perspective."
+          },
+          "2": {
+            "question": "Ce înseamnă Șterge definitiv?",
+            "answer": "Șterge definitiv este permanent și cere confirmare. Folosește-l doar când ești sigur că înregistrarea nu trebuie să revină."
+          }
+        }
+      },
+      "recurring": {
+        "title": "Intrări recurente",
+        "questions": {
+          "1": {
+            "question": "Ce sunt intrările recurente?",
+            "answer": "Sunt intrări repetate pentru mișcări previzibile de bani: salariu, chirie, abonamente, utilități sau cotizații."
+          },
+          "2": {
+            "question": "Recurența mută bani reali?",
+            "answer": "Nu. Nu debitează cardul, nu mută bani și nu se conectează la bancă. Creează doar intrări urmărite în Calm Wallet."
+          },
+          "3": {
+            "question": "Unde gestionez regulile recurente?",
+            "answer": "Folosește vizualizarea Recurente din Activitate ca să vezi dacă o regulă este activă sau pauzată, să schimbi programul, să o reiei sau să o oprești."
           }
         }
       },
@@ -348,62 +400,160 @@
         "title": "Perspective",
         "questions": {
           "1": {
-            "question": "Ce arată Mix?",
-            "answer": "Mix arată cum se împart cheltuielile tale pe categorii."
+            "question": "Ce arată Perspective?",
+            "answer": "Perspective transformă intrările urmărite în rezumate, categorii, rapoarte pe timp și tendințe. Explică perioada selectată, nu toată viața financiară, decât dacă alegi asta."
           },
           "2": {
-            "question": "Ce arată Bare?",
-            "answer": "Bare compară totalurile pe categorii pentru perioada selectată."
+            "question": "Ce este netul pe perioadă?",
+            "answer": "Răspunde simplu: în perioada selectată, ai înregistrat mai mulți bani ca venit sau ca cheltuială?"
           },
           "3": {
-            "question": "Ce arată Trend?",
-            "answer": "Trend arată cum se schimbă totalurile în timp."
+            "question": "Ce este soldul urmărit?",
+            "answer": "Soldul urmărit este calculat din intrările stocate în Calm Wallet. Este sold de caiet, nu sold bancar verificat."
           },
           "4": {
-            "question": "De ce totalurile convertite sunt estimări?",
-            "answer": "Totalurile convertite folosesc cursuri recente, deci sunt estimări utile."
+            "question": "De ce pot fi diferite Perspectivele de bancă?",
+            "answer": "Calm Wallet raportează ce ai înregistrat. Dacă lipsește o plată, un venit sau o corecție, totalurile vor fi diferite de bancă."
           },
           "5": {
-            "question": "De ce Calm Wallet nu este extras bancar?",
-            "answer": "Calm Wallet arată intrările urmărite de tine, nu documente bancare oficiale."
+            "question": "La ce folosesc Cele mai mari intrări?",
+            "answer": "Arată tranzacțiile cu cel mai mare impact în perioada selectată. Folosește-le când un total te surprinde și vrei cauza principală rapid."
           }
         }
       },
-      "limits": {
+      "mix": {
+        "title": "Mix",
+        "questions": {
+          "1": {
+            "question": "Ce mă ajută Mix să înțeleg?",
+            "answer": "Mix arată unde se duc sau de unde vin banii, grupând perioada selectată pe categorii. Fiecare segment arată ponderea categoriei în cheltuieli sau venituri."
+          },
+          "2": {
+            "question": "Cum folosesc Mix?",
+            "answer": "Comută între Cheltuieli și Venituri, selectează o categorie pentru focus și extinde categoria când vrei să vezi intrările din spatele totalului."
+          },
+          "3": {
+            "question": "O categorie mare este rea?",
+            "answer": "Nu automat. Arată doar unde se află o parte mai mare din banii urmăriți. Folosește informația ca context, nu ca judecată."
+          }
+        }
+      },
+      "bars": {
+        "title": "Bare",
+        "questions": {
+          "1": {
+            "question": "Ce arată Bare?",
+            "answer": "Bare arată când s-au mișcat banii în perioada selectată. Calm Wallet împarte intervalul în blocuri de timp ușor de citit."
+          },
+          "2": {
+            "question": "De ce luna este grupată pe săptămâni?",
+            "answer": "În vizualizarea lunară, barele sunt de obicei părți săptămânale ale lunii. Intervalele mai lungi folosesc grupări mai mari pentru lizibilitate."
+          },
+          "3": {
+            "question": "Cum citesc o bară?",
+            "answer": "Fiecare bară reprezintă totalul înregistrat în acel bloc de timp. Categoriile din ea arată ce a contribuit, iar deschiderea blocului oferă un raport focalizat."
+          }
+        }
+      },
+      "trend": {
+        "title": "Trend",
+        "questions": {
+          "1": {
+            "question": "La ce răspunde Trend?",
+            "answer": "Trend te ajută să vezi dacă obiceiurile financiare se schimbă. Păstrează veniturile și cheltuielile împreună ca să le compari în timp."
+          },
+          "2": {
+            "question": "Când este util Trend?",
+            "answer": "Folosește-l pentru cheltuieli în creștere sau scădere, venituri mai constante, perioade neobișnuite sau tipare pe 3 luni, 6 luni ori 1 an."
+          },
+          "3": {
+            "question": "Trend judecă o singură cumpărătură?",
+            "answer": "Nu. Trend nu este pentru evaluarea unei tranzacții. Este pentru a vedea direcția."
+          }
+        }
+      },
+      "planning": {
         "title": "Limite și remindere",
         "questions": {
           "1": {
-            "question": "Cum funcționează limitele pe categorii?",
-            "answer": "Limitele compară cheltuielile urmărite dintr-o categorie cu suma setată de tine."
+            "question": "Ce este o limită pe categorie?",
+            "answer": "Este o țintă opțională de planificare pentru cheltuieli. Te ajută să fii atent, dar nu blochează înregistrarea unei tranzacții."
           },
           "2": {
-            "question": "Cum funcționează reminderele de bani?",
-            "answer": "Reminderele te ajută să nu uiți banii de primit sau de plătit."
+            "question": "Cum aleg limitele?",
+            "answer": "Setează limite pentru categoriile care chiar contează pentru tine. Nu ai nevoie de limită pentru fiecare categorie."
           },
           "3": {
-            "question": "De ce reminderele nu schimbă Perspectivele?",
-            "answer": "Sunt doar remindere, nu intrări de venit sau cheltuială."
+            "question": "Ce sunt reminderele de bani?",
+            "answer": "Te ajută să ții minte banii pe care cineva ți-i datorează sau banii pe care trebuie să îi plătești. Sunt remindere, nu tranzacții."
+          },
+          "4": {
+            "question": "Cum diferă recurențele, reminderele și notificările?",
+            "answer": "Intrările recurente creează înregistrări repetate. Reminderele urmăresc obligații fără să schimbe totalurile. Notificările te anunță când le activezi."
+          }
+        }
+      },
+      "currencies": {
+        "title": "Monede",
+        "questions": {
+          "1": {
+            "question": "Ce se întâmplă cu moneda originală?",
+            "answer": "Fiecare tranzacție își păstrează suma și moneda originală. Calm Wallet nu rescrie o intrare EUR, USD, GBP sau RON când vezi rapoarte în altă monedă."
+          },
+          "2": {
+            "question": "De ce totalurile convertite folosesc ≈?",
+            "answer": "Perspective poate converti valori ca rapoartele cu monede mixte să poată fi citite împreună. Aceste totaluri sunt estimări, deci sunt marcate cu ≈."
+          }
+        }
+      },
+      "habits": {
+        "title": "Obiceiuri mai bune",
+        "questions": {
+          "1": {
+            "question": "Ar trebui să aștept toate detaliile?",
+            "answer": "Nu. O intrare scurtă cât memoria e proaspătă este de obicei mai utilă decât una perfectă mai târziu. Poți îmbunătăți categoria sau nota la verificare."
+          },
+          "2": {
+            "question": "Cât de detaliate ar trebui să fie categoriile?",
+            "answer": "Un set mai mic de categorii folosit consecvent este adesea mai util decât un sistem detaliat pe care nu îl poți menține."
+          },
+          "3": {
+            "question": "Cât de des ar trebui să verific?",
+            "answer": "Verifică atunci când ai timp, mai ales intrările marcate Necesită verificare. O verificare rapidă face Perspectivele mai exacte."
+          },
+          "4": {
+            "question": "Ce vizualizare folosesc?",
+            "answer": "Asistent pentru înregistrare, Activitate pentru verificare, Mix pentru unde se duc banii, Bare pentru când s-au mișcat, Trend pentru direcție și Limite pentru plan."
           }
         }
       },
       "privacy": {
-        "title": "Cont și confidențialitate",
+        "title": "Confidențialitate și siguranță",
         "questions": {
           "1": {
-            "question": "Cum funcționează conectarea cu Google?",
-            "answer": "Google îți confirmă identitatea, apoi Calm Wallet îți deschide contul."
+            "question": "Cât de private sunt totalurile mele?",
+            "answer": "Totalurile vin din intrările din contul tău Calm Wallet. Sunt totaluri de caiet urmărit, nu solduri bancare oficiale."
           },
           "2": {
-            "question": "Cum sunt separate datele mele de ale altor utilizatori?",
-            "answer": "Vezi doar intrările conectate la contul tău autentificat."
+            "question": "Calm Wallet se conectează la banca mea?",
+            "answer": "Nu. Produsul actual nu este conectat la bancă sau card și nu verifică dacă plățile reale au avut loc."
           },
           "3": {
-            "question": "Cum mă deconectez?",
-            "answer": "Deschide Setări și folosește Deconectare din partea de jos."
+            "question": "Ce ar trebui să evit în rapoarte?",
+            "answer": "Dacă raportezi o problemă, evită parolele, codurile de autentificare sau informațiile private care nu sunt necesare."
+          }
+        }
+      },
+      "troubleshooting": {
+        "title": "Depanare",
+        "questions": {
+          "1": {
+            "question": "De ce pare că lipsește o intrare?",
+            "answer": "Verifică mai întâi contul activ, luna sau intervalul selectat, filtrele și textul căutat. Multe probleme vin din cont, perioadă sau filtru greșit."
           },
-          "4": {
-            "question": "Cum raportez o problemă?",
-            "answer": "Deschide Setări, alege Raportează o problemă și descrie ce nu funcționează."
+          "2": {
+            "question": "Ce fac dacă un total pare greșit?",
+            "answer": "Verifică dacă plata, venitul, intrarea ștearsă sau corecția există în Calm Wallet. Perspective poate include doar ce este înregistrat și nu exclus."
           }
         }
       }
