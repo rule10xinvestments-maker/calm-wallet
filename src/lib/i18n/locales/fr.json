@@ -253,7 +253,7 @@
     "help": {
       "title": "Aide",
       "closeOverlay": "Fermer le panneau d'aide",
-      "helper": "Trouvez des reponses et decouvrez comment fonctionne Calm Wallet."
+      "helper": "Trouvez des réponses et découvrez comment fonctionne Calm Wallet."
     },
     "signOutHelper": "Terminez cette session sur cet appareil.",
     "signOutConfirm": {
@@ -263,6 +263,148 @@
       "cancel": "Annuler",
       "signingOut": "Déconnexion...",
       "error": "Nous n’avons pas pu vous déconnecter. Réessayez."
+    }
+  },
+  "help": {
+    "search": "Rechercher dans l'aide",
+    "noResults": "Aucune réponse trouvée.",
+    "still": "Vous avez toujours un problème ?",
+    "report": "Signaler un problème",
+    "sections": {
+      "started": {
+        "title": "Premiers pas",
+        "questions": {
+          "1": {
+            "question": "Qu'est-ce que Calm Wallet ?",
+            "answer": "Calm Wallet vous aide à suivre l'argent qui entre et qui sort dans un espace calme."
+          },
+          "2": {
+            "question": "Comment ajouter une dépense ?",
+            "answer": "Utilisez l'ajout rapide de l'Assistant ou l'ajout manuel, puis vérifiez l'entrée dans Activité."
+          },
+          "3": {
+            "question": "Comment ajouter un revenu ?",
+            "answer": "Choisissez une catégorie de revenu dans l'ajout manuel ou décrivez-le à l'Assistant."
+          },
+          "4": {
+            "question": "Que signifie solde suivi ?",
+            "answer": "C'est l'argent que Calm Wallet peut calculer à partir des entrées que vous avez ajoutées."
+          },
+          "5": {
+            "question": "Que signifie net de la période ?",
+            "answer": "Cela montre l'argent entrant moins l'argent sortant pour la période choisie."
+          }
+        }
+      },
+      "assistant": {
+        "title": "Assistant",
+        "questions": {
+          "1": {
+            "question": "Comment fonctionne l'ajout rapide ?",
+            "answer": "Écrivez une note courte, comme café 12, et Calm Wallet prépare l'entrée."
+          },
+          "2": {
+            "question": "Comment fonctionne l'ajout manuel ?",
+            "answer": "L'ajout manuel vous permet de choisir le montant, la date, la catégorie et la note."
+          },
+          "3": {
+            "question": "Pourquoi une entrée peut-elle demander une vérification ?",
+            "answer": "Calm Wallet demande une vérification quand un détail semble incertain ou incomplet."
+          },
+          "4": {
+            "question": "Quelles langues sont disponibles ?",
+            "answer": "L'application est disponible en anglais, roumain, français et espagnol."
+          }
+        }
+      },
+      "activity": {
+        "title": "Activité",
+        "questions": {
+          "1": {
+            "question": "Comment modifier une entrée ?",
+            "answer": "Ouvrez Activité, touchez l'entrée, puis mettez les détails à jour."
+          },
+          "2": {
+            "question": "Comment changer la catégorie ?",
+            "answer": "Ouvrez l'entrée et choisissez une autre catégorie dans le sélecteur."
+          },
+          "3": {
+            "question": "Comment ajouter une note ?",
+            "answer": "Ouvrez l'entrée et ajoutez une courte note dans ses détails."
+          },
+          "4": {
+            "question": "Comment fonctionnent la corbeille et la restauration ?",
+            "answer": "La corbeille masque une entrée des vues normales. Restaurer la remet en place."
+          },
+          "5": {
+            "question": "Comment fonctionnent les entrées récurrentes ?",
+            "answer": "Les entrées récurrentes se répètent selon le calendrier que vous choisissez."
+          }
+        }
+      },
+      "insights": {
+        "title": "Analyses",
+        "questions": {
+          "1": {
+            "question": "Que montre Mix ?",
+            "answer": "Mix montre comment vos dépenses se répartissent par catégorie."
+          },
+          "2": {
+            "question": "Que montrent les barres ?",
+            "answer": "Les barres comparent les totaux par catégorie pour la période choisie."
+          },
+          "3": {
+            "question": "Que montre la tendance ?",
+            "answer": "La tendance montre comment les totaux changent au fil du temps."
+          },
+          "4": {
+            "question": "Pourquoi les totaux convertis sont-ils des estimations ?",
+            "answer": "Les totaux convertis utilisent des taux récents, ce sont donc des estimations utiles."
+          },
+          "5": {
+            "question": "Pourquoi Calm Wallet n'est-il pas un relevé bancaire ?",
+            "answer": "Calm Wallet montre vos entrées suivies, pas des documents bancaires officiels."
+          }
+        }
+      },
+      "limits": {
+        "title": "Limites et rappels",
+        "questions": {
+          "1": {
+            "question": "Comment fonctionnent les limites par catégorie ?",
+            "answer": "Les limites comparent vos dépenses suivies dans une catégorie au montant que vous avez fixé."
+          },
+          "2": {
+            "question": "Comment fonctionnent les rappels d'argent ?",
+            "answer": "Les rappels vous aident à vous souvenir de l'argent à recevoir ou à rembourser."
+          },
+          "3": {
+            "question": "Pourquoi les rappels ne changent-ils pas les Analyses ?",
+            "answer": "Ce sont des rappels, pas des entrées de revenu ou de dépense."
+          }
+        }
+      },
+      "privacy": {
+        "title": "Compte et confidentialité",
+        "questions": {
+          "1": {
+            "question": "Comment fonctionne la connexion Google ?",
+            "answer": "Google confirme votre identité, puis Calm Wallet ouvre votre compte."
+          },
+          "2": {
+            "question": "Comment mes données sont-elles séparées de celles des autres ?",
+            "answer": "Vous voyez seulement les entrées liées à votre compte connecté."
+          },
+          "3": {
+            "question": "Comment me déconnecter ?",
+            "answer": "Ouvrez Paramètres et utilisez Se déconnecter en bas."
+          },
+          "4": {
+            "question": "Comment signaler un problème ?",
+            "answer": "Ouvrez Paramètres, choisissez Signaler un problème et décrivez ce qui ne fonctionne pas."
+          }
+        }
+      }
     }
   },
   "transactions": {

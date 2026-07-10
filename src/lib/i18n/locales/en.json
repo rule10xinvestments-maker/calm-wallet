@@ -265,6 +265,148 @@
       }
     }
   },
+  "help": {
+    "search": "Search Help",
+    "noResults": "No answers found.",
+    "still": "Still having a problem?",
+    "report": "Report a problem",
+    "sections": {
+      "started": {
+        "title": "Getting started",
+        "questions": {
+          "1": {
+            "question": "What is Calm Wallet?",
+            "answer": "Calm Wallet helps you track money in and money out in one quiet place."
+          },
+          "2": {
+            "question": "How do I add spending?",
+            "answer": "Use Assistant Quick Add or Manual Add, then review the entry in Activity."
+          },
+          "3": {
+            "question": "How do I add income?",
+            "answer": "Choose an income category in Manual Add or describe it to the Assistant."
+          },
+          "4": {
+            "question": "What does tracked balance mean?",
+            "answer": "It is the money Calm Wallet can see from entries you have added."
+          },
+          "5": {
+            "question": "What does period net mean?",
+            "answer": "It shows money in minus money out for the selected period."
+          }
+        }
+      },
+      "assistant": {
+        "title": "Assistant",
+        "questions": {
+          "1": {
+            "question": "How does Quick Add work?",
+            "answer": "Type a short note like coffee 12 and Calm Wallet drafts the entry."
+          },
+          "2": {
+            "question": "How does Manual Add work?",
+            "answer": "Manual Add lets you choose the amount, date, category, and note yourself."
+          },
+          "3": {
+            "question": "Why might an entry need review?",
+            "answer": "Calm Wallet asks for review when a detail looks uncertain or incomplete."
+          },
+          "4": {
+            "question": "Which languages are supported?",
+            "answer": "The app supports English, Romanian, French, and Spanish."
+          }
+        }
+      },
+      "activity": {
+        "title": "Activity",
+        "questions": {
+          "1": {
+            "question": "How do I edit an entry?",
+            "answer": "Open Activity, tap the entry, then update the details."
+          },
+          "2": {
+            "question": "How do I change a category?",
+            "answer": "Open the entry and choose a different category from the picker."
+          },
+          "3": {
+            "question": "How do I add a note?",
+            "answer": "Open the entry and add a short note in its details."
+          },
+          "4": {
+            "question": "How do Bin and Restore work?",
+            "answer": "Bin hides an entry from normal views. Restore brings it back."
+          },
+          "5": {
+            "question": "How do recurring entries work?",
+            "answer": "Recurring entries repeat on the schedule you set."
+          }
+        }
+      },
+      "insights": {
+        "title": "Insights",
+        "questions": {
+          "1": {
+            "question": "What does Mix show?",
+            "answer": "Mix shows how your spending is split across categories."
+          },
+          "2": {
+            "question": "What does Bars show?",
+            "answer": "Bars compares category totals for the selected period."
+          },
+          "3": {
+            "question": "What does Trend show?",
+            "answer": "Trend shows how totals change over time."
+          },
+          "4": {
+            "question": "Why do converted totals use estimates?",
+            "answer": "Converted totals use recent rates, so they are helpful estimates."
+          },
+          "5": {
+            "question": "Why is Calm Wallet not a bank statement?",
+            "answer": "Calm Wallet shows your tracked entries, not official bank records."
+          }
+        }
+      },
+      "limits": {
+        "title": "Limits and reminders",
+        "questions": {
+          "1": {
+            "question": "How do category limits work?",
+            "answer": "Limits compare your tracked category spending with the amount you set."
+          },
+          "2": {
+            "question": "How do owed reminders work?",
+            "answer": "Owed reminders help you remember money to collect or repay."
+          },
+          "3": {
+            "question": "Why do owed reminders not affect Insights?",
+            "answer": "They are reminders, not income or spending entries."
+          }
+        }
+      },
+      "privacy": {
+        "title": "Account and privacy",
+        "questions": {
+          "1": {
+            "question": "How does Google sign-in work?",
+            "answer": "Google confirms your identity, then Calm Wallet opens your account."
+          },
+          "2": {
+            "question": "How is my data separated from other users?",
+            "answer": "You only see entries connected to your signed-in account."
+          },
+          "3": {
+            "question": "How do I sign out?",
+            "answer": "Open Settings and use Sign out at the bottom."
+          },
+          "4": {
+            "question": "How do I report a problem?",
+            "answer": "Open Settings, choose Report a problem, and describe what is not working."
+          }
+        }
+      }
+    }
+  },
   "transactions": {
     "transaction": "Transaction",
     "transactions": "Transactions",

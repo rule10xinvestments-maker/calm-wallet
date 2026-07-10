@@ -253,7 +253,7 @@
     "help": {
       "title": "Ayuda",
       "closeOverlay": "Cerrar panel de ayuda",
-      "helper": "Encuentra respuestas y aprende como funciona Calm Wallet."
+      "helper": "Encuentra respuestas y aprende cómo funciona Calm Wallet."
     },
     "signOutHelper": "Finaliza esta sesión en este dispositivo.",
     "signOutConfirm": {
@@ -263,6 +263,148 @@
       "cancel": "Cancelar",
       "signingOut": "Cerrando sesión...",
       "error": "No pudimos cerrar tu sesión. Inténtalo de nuevo."
+    }
+  },
+  "help": {
+    "search": "Buscar en Ayuda",
+    "noResults": "No se encontraron respuestas.",
+    "still": "¿Sigues teniendo un problema?",
+    "report": "Informar de un problema",
+    "sections": {
+      "started": {
+        "title": "Primeros pasos",
+        "questions": {
+          "1": {
+            "question": "¿Qué es Calm Wallet?",
+            "answer": "Calm Wallet te ayuda a seguir el dinero que entra y sale en un espacio tranquilo."
+          },
+          "2": {
+            "question": "¿Cómo añado un gasto?",
+            "answer": "Usa Añadir rápido en Asistente o Añadir manualmente, y luego revisa la entrada en Actividad."
+          },
+          "3": {
+            "question": "¿Cómo añado un ingreso?",
+            "answer": "Elige una categoría de ingreso en Añadir manualmente o descríbelo al Asistente."
+          },
+          "4": {
+            "question": "¿Qué significa saldo registrado?",
+            "answer": "Es el dinero que Calm Wallet puede calcular a partir de las entradas que añadiste."
+          },
+          "5": {
+            "question": "¿Qué significa neto del período?",
+            "answer": "Muestra el dinero entrante menos el dinero saliente del período seleccionado."
+          }
+        }
+      },
+      "assistant": {
+        "title": "Asistente",
+        "questions": {
+          "1": {
+            "question": "¿Cómo funciona Añadir rápido?",
+            "answer": "Escribe una nota corta, como café 12, y Calm Wallet prepara la entrada."
+          },
+          "2": {
+            "question": "¿Cómo funciona Añadir manualmente?",
+            "answer": "Añadir manualmente te permite elegir el importe, la fecha, la categoría y la nota."
+          },
+          "3": {
+            "question": "¿Por qué una entrada puede necesitar revisión?",
+            "answer": "Calm Wallet pide revisión cuando un detalle parece incierto o incompleto."
+          },
+          "4": {
+            "question": "¿Qué idiomas están disponibles?",
+            "answer": "La app está disponible en inglés, rumano, francés y español."
+          }
+        }
+      },
+      "activity": {
+        "title": "Actividad",
+        "questions": {
+          "1": {
+            "question": "¿Cómo edito una entrada?",
+            "answer": "Abre Actividad, toca la entrada y actualiza los detalles."
+          },
+          "2": {
+            "question": "¿Cómo cambio la categoría?",
+            "answer": "Abre la entrada y elige otra categoría en el selector."
+          },
+          "3": {
+            "question": "¿Cómo añado una nota?",
+            "answer": "Abre la entrada y añade una nota corta en sus detalles."
+          },
+          "4": {
+            "question": "¿Cómo funcionan Papelera y Restaurar?",
+            "answer": "Papelera oculta una entrada de las vistas normales. Restaurar la devuelve."
+          },
+          "5": {
+            "question": "¿Cómo funcionan las entradas recurrentes?",
+            "answer": "Las entradas recurrentes se repiten según el calendario que elijas."
+          }
+        }
+      },
+      "insights": {
+        "title": "Resumen",
+        "questions": {
+          "1": {
+            "question": "¿Qué muestra Mix?",
+            "answer": "Mix muestra cómo se reparten tus gastos por categoría."
+          },
+          "2": {
+            "question": "¿Qué muestran las barras?",
+            "answer": "Las barras comparan los totales por categoría del período seleccionado."
+          },
+          "3": {
+            "question": "¿Qué muestra Tendencia?",
+            "answer": "Tendencia muestra cómo cambian los totales con el tiempo."
+          },
+          "4": {
+            "question": "¿Por qué los totales convertidos son estimaciones?",
+            "answer": "Los totales convertidos usan tasas recientes, así que son estimaciones útiles."
+          },
+          "5": {
+            "question": "¿Por qué Calm Wallet no es un extracto bancario?",
+            "answer": "Calm Wallet muestra tus entradas registradas, no documentos bancarios oficiales."
+          }
+        }
+      },
+      "limits": {
+        "title": "Límites y recordatorios",
+        "questions": {
+          "1": {
+            "question": "¿Cómo funcionan los límites por categoría?",
+            "answer": "Los límites comparan tus gastos registrados en una categoría con el importe que definiste."
+          },
+          "2": {
+            "question": "¿Cómo funcionan los recordatorios de dinero?",
+            "answer": "Los recordatorios te ayudan a recordar dinero por cobrar o por pagar."
+          },
+          "3": {
+            "question": "¿Por qué los recordatorios no cambian Resumen?",
+            "answer": "Son recordatorios, no entradas de ingreso o gasto."
+          }
+        }
+      },
+      "privacy": {
+        "title": "Cuenta y privacidad",
+        "questions": {
+          "1": {
+            "question": "¿Cómo funciona el inicio de sesión con Google?",
+            "answer": "Google confirma tu identidad y luego Calm Wallet abre tu cuenta."
+          },
+          "2": {
+            "question": "¿Cómo se separan mis datos de los de otros usuarios?",
+            "answer": "Solo ves las entradas conectadas a tu cuenta iniciada."
+          },
+          "3": {
+            "question": "¿Cómo cierro sesión?",
+            "answer": "Abre Ajustes y usa Cerrar sesión en la parte inferior."
+          },
+          "4": {
+            "question": "¿Cómo informo de un problema?",
+            "answer": "Abre Ajustes, elige Informar de un problema y describe qué no funciona."
+          }
+        }
+      }
     }
   },
   "transactions": {

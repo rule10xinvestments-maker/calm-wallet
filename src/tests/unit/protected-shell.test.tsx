@@ -152,15 +152,18 @@ describe("protected shell PWA install affordance", () => {
     expect(helpOverlay).toHaveClass("z-[120]");
     expect(helpOverlay).toHaveClass("bg-slate-950/25");
     expect(helpPanel).toHaveClass("max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]");
-    expect(helpPanel).toHaveClass("overflow-y-auto");
+    expect(helpPanel).toHaveClass("overflow-hidden");
     expect(helpButton).toHaveAttribute("aria-expanded", "true");
-    expect(within(helpPanel).getByRole("button", { name: /Help Find answers/ })).toBeInTheDocument();
-
-    fireEvent.click(within(helpPanel).getByRole("button", { name: /Help Find answers/ }));
-
+    expect(within(helpPanel).getByTestId("help-sticky-header")).toBeInTheDocument();
+    expect(within(helpPanel).getByText("Find answers and learn how Calm Wallet works.")).toBeInTheDocument();
     expect(within(helpPanel).getByRole("textbox", { name: "Search Help" })).toBeInTheDocument();
+    expect(within(helpPanel).queryByRole("button", { name: /Help Find answers/ })).not.toBeInTheDocument();
     expect(within(helpPanel).getByRole("button", { name: /What is Calm Wallet/ })).toBeInTheDocument();
     expect(within(helpPanel).getByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(document.activeElement).toBe(within(helpPanel).getByRole("button", { name: "Close" }));
+
+    fireEvent.click(within(helpPanel).getByRole("button", { name: /What is Calm Wallet/ }));
+    expect(within(helpPanel).getByText("Calm Wallet helps you track money in and money out in one quiet place.")).toBeInTheDocument();
 
     fireEvent.click(within(helpPanel).getByRole("button", { name: "Close" }));
 
@@ -185,7 +188,7 @@ describe("protected shell PWA install affordance", () => {
     expect(reportButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(languageButton).toHaveAttribute("aria-expanded", "false");
     expect(notificationsButton).toHaveAttribute("aria-expanded", "false");
-    expect(within(settingsPanel).queryByRole("button", { name: /Help Find answers/ })).not.toBeInTheDocument();
+    expect(within(settingsPanel).queryByText("Search Help")).not.toBeInTheDocument();
     expect(screen.queryByText("App language")).not.toBeInTheDocument();
     expect(screen.queryByText("Light reminders are optional, calm, and user-controlled.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
@@ -379,6 +382,84 @@ describe("protected shell PWA install affordance", () => {
     const spanishView = renderProtectedShellWithLocale("es");
     expect(screen.getByRole("button", { name: "Ayuda" })).toBeInTheDocument();
     spanishView.unmount();
+  });
+
+  it("renders localized Help questions and answers in Romanian, French, and Spanish", () => {
+    const romanianView = renderProtectedShellWithLocale("ro");
+    fireEvent.click(screen.getByRole("button", { name: "Ajutor" }));
+    expect(screen.getByRole("dialog", { name: "Ajutor" })).toBeInTheDocument();
+    expect(screen.getByText("Găsește răspunsuri și află cum funcționează Calm Wallet.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Caută în Ajutor" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ce este Calm Wallet?" }));
+    expect(screen.getByText("Calm Wallet te ajută să urmărești banii intrați și ieșiți într-un loc liniștit.")).toBeInTheDocument();
+    romanianView.unmount();
+
+    const frenchView = renderProtectedShellWithLocale("fr");
+    fireEvent.click(screen.getByRole("button", { name: "Aide" }));
+    expect(screen.getByText("Trouvez des réponses et découvrez comment fonctionne Calm Wallet.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Qu'est-ce que Calm Wallet ?" }));
+    expect(screen.getByText("Calm Wallet vous aide à suivre l'argent qui entre et qui sort dans un espace calme.")).toBeInTheDocument();
+    frenchView.unmount();
+
+    const spanishView = renderProtectedShellWithLocale("es");
+    fireEvent.click(screen.getByRole("button", { name: "Ayuda" }));
+    expect(screen.getByText("Encuentra respuestas y aprende cómo funciona Calm Wallet.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "¿Qué es Calm Wallet?" }));
+    expect(screen.getByText("Calm Wallet te ayuda a seguir el dinero que entra y sale en un espacio tranquilo.")).toBeInTheDocument();
+    spanishView.unmount();
+  });
+
+  it("filters Help locally against localized section, question, and answer text without changing route", () => {
+    window.history.pushState({}, "", "/assistant");
+    renderProtectedShellWithLocale("ro");
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajutor" }));
+    const searchInput = screen.getByRole("textbox", { name: "Caută în Ajutor" });
+
+    fireEvent.change(searchInput, { target: { value: "Perspective" } });
+    expect(screen.getByRole("heading", { name: "Perspective" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ce arată Mix?" })).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "cheltuielile" } });
+    expect(screen.getByRole("button", { name: "Ce arată Mix?" })).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "autentificat" } });
+    expect(screen.getByRole("button", { name: "Cum sunt separate datele mele de ale altor utilizatori?" })).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "zzzzzz" } });
+    expect(screen.getByText("Nu am găsit răspunsuri.")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/assistant");
+
+    fireEvent.change(searchInput, { target: { value: "" } });
+    expect(screen.getByRole("button", { name: "Ce este Calm Wallet?" })).toBeInTheDocument();
+  });
+
+  it("updates Help content after switching the app language", async () => {
+    renderProtectedShellWithLocale("en");
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Language/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Rom/ }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ajutor" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Închide" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ajutor" }));
+
+    expect(screen.getByRole("button", { name: "Ce este Calm Wallet?" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "What is Calm Wallet?" })).not.toBeInTheDocument();
+  });
+
+  it("opens the existing Report a problem flow from Help", async () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+    fireEvent.click(screen.getByRole("button", { name: "Report a problem" }));
+
+    await waitFor(() => expect(screen.queryByTestId("header-help-overlay")).not.toBeInTheDocument());
+    expect(screen.getByTestId("header-settings-panel")).toBeInTheDocument();
+    expect(screen.getByText("Tell us when something is not working correctly.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Problem type App problem" })).toBeInTheDocument();
+    expect(document.querySelector("select")).toBeNull();
   });
 
   it("updates migrated labels when a language is selected", async () => {

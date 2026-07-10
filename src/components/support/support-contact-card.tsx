@@ -10,6 +10,7 @@ import { t } from "@/lib/i18n";
 
 type SupportContactCardProps = {
   action: (state: SupportTicketActionState, formData: FormData) => Promise<SupportTicketActionState>;
+  openToken?: number;
 };
 
 const supportCategoryKeys = ["app_bug", "account_issue", "data_issue", "notification_issue", "other_problem"] as const;
@@ -23,7 +24,7 @@ type ScreenshotItem = {
   previewUrl: string;
 };
 
-export function SupportContactCard({ action }: SupportContactCardProps) {
+export function SupportContactCard({ action, openToken = 0 }: SupportContactCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<(typeof supportCategoryKeys)[number]>("app_bug");
@@ -41,6 +42,12 @@ export function SupportContactCard({ action }: SupportContactCardProps) {
     window.addEventListener("calm-wallet:open-report-problem", openReport);
     return () => window.removeEventListener("calm-wallet:open-report-problem", openReport);
   }, []);
+
+  useEffect(() => {
+    if (openToken > 0) {
+      setIsOpen(true);
+    }
+  }, [openToken]);
 
   useEffect(() => {
     if (state.status === "success") {

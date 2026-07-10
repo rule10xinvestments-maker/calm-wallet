@@ -255,7 +255,7 @@
     "help": {
       "title": "Ajutor",
       "closeOverlay": "Inchide panoul de ajutor",
-      "helper": "Gaseste raspunsuri si afla cum functioneaza Calm Wallet."
+      "helper": "Găsește răspunsuri și află cum funcționează Calm Wallet."
     },
     "signOutHelper": "Încheie această sesiune pe acest dispozitiv.",
     "signOutConfirm": {
@@ -265,6 +265,148 @@
       "cancel": "Anulează",
       "signingOut": "Se deconectează...",
       "error": "Nu te-am putut deconecta. Încearcă din nou."
+    }
+  },
+  "help": {
+    "search": "Caută în Ajutor",
+    "noResults": "Nu am găsit răspunsuri.",
+    "still": "Încă ai o problemă?",
+    "report": "Raportează o problemă",
+    "sections": {
+      "started": {
+        "title": "Primii pași",
+        "questions": {
+          "1": {
+            "question": "Ce este Calm Wallet?",
+            "answer": "Calm Wallet te ajută să urmărești banii intrați și ieșiți într-un loc liniștit."
+          },
+          "2": {
+            "question": "Cum adaug o cheltuială?",
+            "answer": "Folosește adăugarea rapidă din Asistent sau adăugarea manuală, apoi verifică intrarea în Activitate."
+          },
+          "3": {
+            "question": "Cum adaug un venit?",
+            "answer": "Alege o categorie de venit în adăugarea manuală sau descrie venitul Asistentului."
+          },
+          "4": {
+            "question": "Ce înseamnă sold urmărit?",
+            "answer": "Este suma pe care Calm Wallet o poate calcula din intrările adăugate de tine."
+          },
+          "5": {
+            "question": "Ce înseamnă net pe perioadă?",
+            "answer": "Arată banii intrați minus banii ieșiți pentru perioada selectată."
+          }
+        }
+      },
+      "assistant": {
+        "title": "Asistent",
+        "questions": {
+          "1": {
+            "question": "Cum funcționează adăugarea rapidă?",
+            "answer": "Scrie o notă scurtă, de exemplu cafea 12, iar Calm Wallet pregătește intrarea."
+          },
+          "2": {
+            "question": "Cum funcționează adăugarea manuală?",
+            "answer": "Adăugarea manuală îți permite să alegi suma, data, categoria și nota."
+          },
+          "3": {
+            "question": "De ce poate avea o intrare nevoie de verificare?",
+            "answer": "Calm Wallet cere verificare când un detaliu pare neclar sau incomplet."
+          },
+          "4": {
+            "question": "Ce limbi sunt disponibile?",
+            "answer": "Aplicația este disponibilă în engleză, română, franceză și spaniolă."
+          }
+        }
+      },
+      "activity": {
+        "title": "Activitate",
+        "questions": {
+          "1": {
+            "question": "Cum editez o intrare?",
+            "answer": "Deschide Activitate, atinge intrarea, apoi actualizează detaliile."
+          },
+          "2": {
+            "question": "Cum schimb categoria?",
+            "answer": "Deschide intrarea și alege o altă categorie din selector."
+          },
+          "3": {
+            "question": "Cum adaug o notă?",
+            "answer": "Deschide intrarea și adaugă o notă scurtă în detalii."
+          },
+          "4": {
+            "question": "Cum funcționează Coșul și restaurarea?",
+            "answer": "Coșul ascunde o intrare din vizualizările normale. Restaurarea o aduce înapoi."
+          },
+          "5": {
+            "question": "Cum funcționează intrările recurente?",
+            "answer": "Intrările recurente se repetă după programul ales de tine."
+          }
+        }
+      },
+      "insights": {
+        "title": "Perspective",
+        "questions": {
+          "1": {
+            "question": "Ce arată Mix?",
+            "answer": "Mix arată cum se împart cheltuielile tale pe categorii."
+          },
+          "2": {
+            "question": "Ce arată Bare?",
+            "answer": "Bare compară totalurile pe categorii pentru perioada selectată."
+          },
+          "3": {
+            "question": "Ce arată Trend?",
+            "answer": "Trend arată cum se schimbă totalurile în timp."
+          },
+          "4": {
+            "question": "De ce totalurile convertite sunt estimări?",
+            "answer": "Totalurile convertite folosesc cursuri recente, deci sunt estimări utile."
+          },
+          "5": {
+            "question": "De ce Calm Wallet nu este extras bancar?",
+            "answer": "Calm Wallet arată intrările urmărite de tine, nu documente bancare oficiale."
+          }
+        }
+      },
+      "limits": {
+        "title": "Limite și remindere",
+        "questions": {
+          "1": {
+            "question": "Cum funcționează limitele pe categorii?",
+            "answer": "Limitele compară cheltuielile urmărite dintr-o categorie cu suma setată de tine."
+          },
+          "2": {
+            "question": "Cum funcționează reminderele de bani?",
+            "answer": "Reminderele te ajută să nu uiți banii de primit sau de plătit."
+          },
+          "3": {
+            "question": "De ce reminderele nu schimbă Perspectivele?",
+            "answer": "Sunt doar remindere, nu intrări de venit sau cheltuială."
+          }
+        }
+      },
+      "privacy": {
+        "title": "Cont și confidențialitate",
+        "questions": {
+          "1": {
+            "question": "Cum funcționează conectarea cu Google?",
+            "answer": "Google îți confirmă identitatea, apoi Calm Wallet îți deschide contul."
+          },
+          "2": {
+            "question": "Cum sunt separate datele mele de ale altor utilizatori?",
+            "answer": "Vezi doar intrările conectate la contul tău autentificat."
+          },
+          "3": {
+            "question": "Cum mă deconectez?",
+            "answer": "Deschide Setări și folosește Deconectare din partea de jos."
+          },
+          "4": {
+            "question": "Cum raportez o problemă?",
+            "answer": "Deschide Setări, alege Raportează o problemă și descrie ce nu funcționează."
+          }
+        }
+      }
     }
   },
   "transactions": {

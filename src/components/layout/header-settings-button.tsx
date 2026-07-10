@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookOpen, Settings, ShieldCheck } from "lucide-react";
 import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
@@ -66,20 +66,12 @@ export function HeaderHelpButton() {
           <button aria-label={t("settings.help.closeOverlay", locale)} className="absolute inset-0 h-full w-full cursor-default" onClick={() => setIsOpen(false)} type="button" />
           <div className="relative z-10 mx-auto w-full max-w-md">
             <div
-              className="ml-auto max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl sm:w-80"
+              aria-labelledby="header-help-title"
+              className="ml-auto flex max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:w-80"
               data-testid="header-help-panel"
+              role="dialog"
             >
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-medium text-slate-900">{t("settings.help.title", locale)}</p>
-                <button
-                  className="rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
-                  onClick={() => setIsOpen(false)}
-                  type="button"
-                >
-                  {t("common.close", locale)}
-                </button>
-              </div>
-              <HelpCenterCard />
+              <HelpCenterCard onClose={() => setIsOpen(false)} />
             </div>
           </div>
         </div>
@@ -98,7 +90,18 @@ export function HeaderSettingsButton({
   isSupportAdmin = false,
 }: HeaderSettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [reportOpenToken, setReportOpenToken] = useState(0);
   const { locale } = useLocale();
+
+  useEffect(() => {
+    const openReport = () => {
+      setIsOpen(true);
+      setReportOpenToken((value) => value + 1);
+    };
+
+    window.addEventListener("calm-wallet:open-report-problem", openReport);
+    return () => window.removeEventListener("calm-wallet:open-report-problem", openReport);
+  }, []);
 
   return (
     <div className="relative">
@@ -136,7 +139,7 @@ export function HeaderSettingsButton({
                 </button>
               </div>
               <LanguageSelector action={userPreferencesAction} />
-              <SupportContactCard action={supportTicketAction} />
+              <SupportContactCard action={supportTicketAction} openToken={reportOpenToken} />
               <NotificationPreferencesCard
                 action={notificationPreferencesAction}
                 preferences={notificationPreferences}
