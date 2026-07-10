@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProtectedShell } from "@/components/layout/protected-shell";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
@@ -91,6 +92,45 @@ function renderProtectedShellWithLocale(uiLocale: string | null, options: { onSi
         <div>Assistant content</div>
       </ProtectedShell>
     </PwaInstallProvider>,
+  );
+}
+
+function ControlledLocaleShell({ initialLocale = "fr" }: { initialLocale?: "en" | "ro" | "fr" | "es" }) {
+  const [uiLocale, setUiLocale] = useState<"en" | "ro" | "fr" | "es">(initialLocale);
+  const action = vi.fn(async (_state: UserPreferencesActionState, formData: FormData) => {
+    const nextLocale = formData.get("uiLocale") as "en" | "ro" | "fr" | "es";
+    setUiLocale(nextLocale);
+    return {
+      status: "success" as const,
+      message: "Language saved.",
+      uiLocale: nextLocale,
+    };
+  });
+
+  return (
+    <PwaInstallProvider>
+      <ProtectedShell
+        accountHint="paul@example.com"
+        notificationPreferences={notificationPreferences}
+        uiLocale={uiLocale}
+        userPreferencesAction={action}
+        notificationPreferencesAction={updateNotificationPreferencesAction}
+        registerPushSubscriptionAction={registerPushSubscriptionAction}
+        sendTestPushNotificationAction={sendTestPushNotificationAction}
+        supportTicketAction={supportTicketAction}
+        onSignOut={vi.fn(async () => undefined)}
+      >
+        <div>
+          <button onClick={() => setUiLocale("ro")} type="button">
+            Force Romanian
+          </button>
+          <button onClick={() => setUiLocale("fr")} type="button">
+            Force French
+          </button>
+          <div>Assistant content</div>
+        </div>
+      </ProtectedShell>
+    </PwaInstallProvider>
   );
 }
 
@@ -454,6 +494,80 @@ describe("protected shell PWA install affordance", () => {
 
     expect(screen.getByRole("button", { name: "Ce este Calm Wallet?" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "What is Calm Wallet?" })).not.toBeInTheDocument();
+  });
+
+  it("switches French to Romanian without crashing while Settings stays open", async () => {
+    render(<ControlledLocaleShell initialLocale="fr" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Param/ }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Langue/ }));
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Rom/ }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ajutor" })).toBeInTheDocument());
+    expect(settingsPanel).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Limb/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
+  });
+
+  it("switches Romanian back to French without crashing while Settings stays open", async () => {
+    render(<ControlledLocaleShell initialLocale="ro" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Set/ }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Limb/ }));
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Fran/ }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Aide" })).toBeInTheDocument());
+    expect(settingsPanel).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Langue/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
+  });
+
+  it("switches Spanish to Romanian without crashing while Settings stays open", async () => {
+    render(<ControlledLocaleShell initialLocale="es" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Ajustes/ }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Idioma/ }));
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Rom/ }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ajutor" })).toBeInTheDocument());
+    expect(settingsPanel).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Limb/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps the Guide stable when locale changes with search text and an FAQ expanded", async () => {
+    render(<ControlledLocaleShell initialLocale="fr" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Aide" }));
+    const searchInput = screen.getByRole("textbox", { name: "Rechercher dans l'aide" });
+    fireEvent.change(searchInput, { target: { value: "Calm Wallet" } });
+    fireEvent.click(screen.getByRole("button", { name: "Qu'est-ce que Calm Wallet ?" }));
+
+    expect(screen.getByText(/carnet de budget intelligent/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Force Romanian" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Ajutor" })).toBeInTheDocument());
+    expect(screen.getByRole("textbox", { name: /Ajutor/ })).toHaveValue("Calm Wallet");
+    expect(screen.getByRole("button", { name: "Ce este Calm Wallet?" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/caiet inteligent de buget/)).toBeInTheDocument();
+    expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps the Guide stable when switching Romanian to French while open", async () => {
+    render(<ControlledLocaleShell initialLocale="ro" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajutor" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ce este Calm Wallet?" }));
+    fireEvent.click(screen.getByRole("button", { name: "Force French" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "Aide" })).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Qu'est-ce que Calm Wallet ?" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/carnet de budget intelligent/)).toBeInTheDocument();
+    expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
   });
 
   it("opens the existing Report a problem flow from Help", async () => {

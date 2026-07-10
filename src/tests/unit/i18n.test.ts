@@ -1,5 +1,30 @@
+import en from "@/lib/i18n/locales/en.json";
+import es from "@/lib/i18n/locales/es.json";
+import fr from "@/lib/i18n/locales/fr.json";
+import ro from "@/lib/i18n/locales/ro.json";
 import { describe, expect, it } from "vitest";
 import { normalizeLocale, resolveLocalePreference, t } from "@/lib/i18n";
+
+function flattenShape(dictionary: Record<string, unknown>, prefix = "", output: Record<string, string> = {}) {
+  Object.entries(dictionary).forEach(([key, value]) => {
+    const nextKey = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof value === "string") {
+      output[nextKey] = "string";
+      return;
+    }
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      output[nextKey] = "object";
+      flattenShape(value as Record<string, unknown>, nextKey, output);
+      return;
+    }
+
+    output[nextKey] = Array.isArray(value) ? "array" : typeof value;
+  });
+
+  return output;
+}
 
 describe("i18n helper", () => {
   it("returns English translations by default", () => {
@@ -20,6 +45,24 @@ describe("i18n helper", () => {
 
   it("falls back safely for missing keys", () => {
     expect(t("common.notARealKey", "ro")).toBe("common.notARealKey");
+  });
+
+  it("keeps locale dictionary shapes compatible for live switching", () => {
+    const dictionaries = { en, ro, fr, es };
+    const englishShape = flattenShape(en);
+    const englishKeys = Object.keys(englishShape).sort();
+
+    for (const [locale, dictionary] of Object.entries(dictionaries)) {
+      const shape = flattenShape(dictionary);
+      const keys = Object.keys(shape).sort();
+
+      expect(keys.filter((key) => !englishKeys.includes(key)), `${locale} has extra translation keys`).toEqual([]);
+      expect(englishKeys.filter((key) => !keys.includes(key)), `${locale} has missing translation keys`).toEqual([]);
+      expect(
+        englishKeys.filter((key) => shape[key] !== englishShape[key]),
+        `${locale} has mismatched translation value shapes`,
+      ).toEqual([]);
+    }
   });
 
   it("falls back safely for malformed runtime inputs", () => {

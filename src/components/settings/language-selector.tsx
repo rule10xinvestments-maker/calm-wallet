@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { Check, ChevronDown, Globe2 } from "lucide-react";
 import { getBrowserResolvedLocale, useLocale } from "@/components/i18n/locale-provider";
 import {
@@ -32,6 +32,16 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const selectedLabel = languageDisplayLabels[locale];
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const submittedLocale =
+      submitter instanceof HTMLButtonElement && submitter.name === "uiLocale"
+        ? submitter.value
+        : String(new FormData(event.currentTarget).get("uiLocale") ?? "");
+
+    setLocale(getBrowserResolvedLocale(submittedLocale));
+  }
+
   useEffect(() => {
     if (state.status === "success" && state.uiLocale) {
       setLocale(state.uiLocale);
@@ -43,7 +53,7 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
   }, [savedLocale, setLocale, state.status, state.uiLocale]);
 
   return (
-    <form action={formAction} className="rounded-2xl border border-slate-200 bg-white">
+    <form action={formAction} className="rounded-2xl border border-slate-200 bg-white" onSubmit={handleSubmit}>
       <button
         aria-expanded={isExpanded}
         className="grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-3 py-3 text-left"
@@ -74,7 +84,6 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
                   }`}
                   key={option}
                   name="uiLocale"
-                  onClick={() => setLocale(getBrowserResolvedLocale(option))}
                   type="submit"
                   value={option}
                 >
