@@ -874,6 +874,13 @@
     "calmInsight": {
       "eyebrow": "Observație calmă",
       "genericCategoryLabel": "o categorie",
+      "actions": {
+        "category": "Vezi categoria",
+        "bars": "Vezi perioada",
+        "trend": "Vezi evoluția",
+        "snapshot": "Vezi sumarul",
+        "activity": "Vezi activitatea"
+      },
       "rules": {
         "category_dominance": { "title": "Categoria principală a fost {categoryLabel}", "body": "Această categorie a reprezentat {percent}% din cheltuielile urmărite." },
         "balanced_spending": { "title": "Nicio categorie nu a dominat", "body": "Cheltuielile au fost împărțite între mai multe categorii." },

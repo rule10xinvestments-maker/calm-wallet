@@ -225,6 +225,8 @@ describe("Calm Insight rule engine", () => {
       iconKey: "Groceries",
       colorKey: "Groceries",
     });
+    expect(insight?.actionType).toBe("category");
+    expect(insight?.actionTarget).toBe("groceries");
   });
 
   it("surfaces the largest useful income category without using the category id as display text", () => {
@@ -257,6 +259,7 @@ describe("Calm Insight rule engine", () => {
 
     expect(insight?.id).toBe("comparison_spending_lower");
     expect(insight?.variables).toEqual({ percent: 30 });
+    expect(insight?.actionType).toBe("snapshot");
   });
 
   it("detects materially higher spending against a comparable previous period", () => {
@@ -272,6 +275,7 @@ describe("Calm Insight rule engine", () => {
 
     expect(insight?.id).toBe("comparison_spending_higher");
     expect(insight?.variables).toEqual({ percent: 25 });
+    expect(insight?.actionType).toBe("snapshot");
   });
 
   it("lets discovery insights beat snapshot summary rules", () => {
@@ -356,6 +360,8 @@ describe("Calm Insight rule engine", () => {
 
     expect(insight?.id).toBe("bars_period_stood_out");
     expect(insight?.variables).toMatchObject({ bucketLabel: "15", percent: 70 });
+    expect(insight?.actionType).toBe("bars");
+    expect(insight?.actionTarget).toBe("2026-04-15");
   });
 
   it("detects spending concentrated early in existing Bars buckets", () => {
@@ -376,6 +382,7 @@ describe("Calm Insight rule engine", () => {
 
     expect(insight?.id).toBe("bars_early_spending");
     expect(insight?.variables).toEqual({ percent: 70 });
+    expect(insight?.actionType).toBe("bars");
   });
 
   it("detects meaningful trend decreases", () => {
@@ -388,16 +395,17 @@ describe("Calm Insight rule engine", () => {
       makeTrendDay({ key: "2026-04-22", expenseMinor: 500, transactionCount: 1 }),
     ];
 
-    expect(
-      selectCalmInsight(
-        makeInsightsData({
-          selectedPeriodTransactionCount: 6,
-          selectedPeriodExpenseDisplayMinor: 10500,
-          selectedMonthTrendDays: days,
-          categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
-        }),
-      )?.id,
-    ).toBe("trend_spending_decreased");
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 6,
+        selectedPeriodExpenseDisplayMinor: 10500,
+        selectedMonthTrendDays: days,
+        categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
+      }),
+    );
+
+    expect(insight?.id).toBe("trend_spending_decreased");
+    expect(insight?.actionType).toBe("trend");
   });
 
   it("detects meaningful trend increases", () => {
@@ -410,16 +418,17 @@ describe("Calm Insight rule engine", () => {
       makeTrendDay({ key: "2026-04-22", expenseMinor: 3000, transactionCount: 1 }),
     ];
 
-    expect(
-      selectCalmInsight(
-        makeInsightsData({
-          selectedPeriodTransactionCount: 6,
-          selectedPeriodExpenseDisplayMinor: 10500,
-          selectedMonthTrendDays: days,
-          categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
-        }),
-      )?.id,
-    ).toBe("trend_spending_increased");
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 6,
+        selectedPeriodExpenseDisplayMinor: 10500,
+        selectedMonthTrendDays: days,
+        categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
+      }),
+    );
+
+    expect(insight?.id).toBe("trend_spending_increased");
+    expect(insight?.actionType).toBe("trend");
   });
 
   it("detects when the leading category changes from the comparable month", () => {
@@ -446,6 +455,8 @@ describe("Calm Insight rule engine", () => {
     expect(insight?.id).toBe("category_largest_changed");
     expect(insight?.variables).toEqual({ categoryLabel: "Food", previousCategoryLabel: "shopping" });
     expect(insight?.categoryMeta?.canonicalCategory).toBe("food");
+    expect(insight?.actionType).toBe("category");
+    expect(insight?.actionTarget).toBe("food");
   });
 
   it("detects recurring spending share when already present in Insights data", () => {
@@ -523,6 +534,8 @@ describe("Calm Insight rule engine", () => {
 
     expect(insight?.id).toBe("largest_single_expense");
     expect(insight?.variables).toEqual({ percent: 60 });
+    expect(insight?.actionType).toBe("activity");
+    expect(insight?.actionTarget).toBe("large");
   });
 
   it("uses discovery score, then confidence, then priority, then stable id as selection tie-breakers", () => {

@@ -22,9 +22,10 @@ import { getCategoryVisualsByName } from "@/lib/category-icons";
 import { getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import { t } from "@/lib/i18n";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
-import { formatTransactionTitleForDisplay } from "@/lib/utils";
+import { cn, formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type SpendingMixSegment = "expenses" | "income";
+type CalmInsightHighlightTarget = "snapshot" | "chart" | null;
 
 type SpendingMixCategoryItem = InsightsData["categoryBreakdown"][number];
 type TrendCategoryItem = SpendingMixCategoryItem & {
@@ -161,6 +162,25 @@ function buildActivityInspectHref({
 
   const query = params.toString();
   return query ? `/transactions?${query}` : "/transactions";
+}
+
+function getCalmInsightScrollBehavior(): ScrollBehavior {
+  if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    return "auto";
+  }
+
+  return "smooth";
+}
+
+function scrollCalmInsightTargetIntoView(testId: string) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.querySelector(`[data-testid='${testId}']`)?.scrollIntoView({
+    behavior: getCalmInsightScrollBehavior(),
+    block: "start",
+  });
 }
 
 function InspectActivityLink({ href, locale }: { href: string; locale: string }) {
@@ -2244,14 +2264,21 @@ function getSnapshotHero(data: InsightsData) {
   };
 }
 
-function MonthlySnapshotCard({ data }: { data: InsightsData }) {
+function MonthlySnapshotCard({ data, isHighlighted = false }: { data: InsightsData; isHighlighted?: boolean }) {
   const { locale } = useLocale();
   const [isConversionDetailsOpen, setIsConversionDetailsOpen] = useState(false);
   const conversionDetails = getMonthlySnapshotConversionDetails(data);
   const hero = getSnapshotHero(data);
 
   return (
-    <Card className="rounded-lg" data-testid="monthly-snapshot-card">
+    <Card
+      className={cn(
+        "rounded-lg transition-shadow motion-reduce:transition-none",
+        isHighlighted ? "ring-2 ring-sky-200 ring-offset-2 ring-offset-white" : null,
+      )}
+      data-calm-insight-highlight={isHighlighted ? "true" : undefined}
+      data-testid="monthly-snapshot-card"
+    >
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -2388,7 +2415,25 @@ function isCategoryCalmInsight(insight: NonNullable<InsightsData["calmInsight"]>
   return Boolean(insight.categoryMeta);
 }
 
-function CalmInsightCard({ data }: { data: InsightsData }) {
+function getCalmInsightActionLabel(insight: NonNullable<InsightsData["calmInsight"]>, locale: string) {
+  if (!insight.actionType || insight.actionType === "none") {
+    return null;
+  }
+
+  if (insight.actionType === "activity" && !insight.actionTarget) {
+    return null;
+  }
+
+  return t(`insights.calmInsight.actions.${insight.actionType}`, locale);
+}
+
+function CalmInsightCard({
+  data,
+  onAction,
+}: {
+  data: InsightsData;
+  onAction?: (insight: NonNullable<InsightsData["calmInsight"]>) => void;
+}) {
   const { locale } = useLocale();
   const insight = data.calmInsight;
 
@@ -2401,6 +2446,7 @@ function CalmInsightCard({ data }: { data: InsightsData }) {
     ? getCategoryVisualsByName(insight.categoryMeta?.iconKey ?? insight.categoryMeta?.displayLabel ?? insight.categoryMeta?.canonicalCategory)
     : null;
   const CategoryIcon = categoryVisuals?.icon;
+  const actionLabel = getCalmInsightActionLabel(insight, locale);
 
   return (
     <Card className="rounded-lg border-sky-100 bg-sky-50/45" data-testid="calm-insight-card">
@@ -2426,6 +2472,19 @@ function CalmInsightCard({ data }: { data: InsightsData }) {
           <div className="min-w-0 space-y-1">
             <p className="text-base font-semibold leading-6 text-slate-900">{t(insight.titleKey, locale, params)}</p>
             <p className="text-sm leading-5 text-slate-600">{t(insight.bodyKey, locale, params)}</p>
+            {actionLabel ? (
+              <button
+                aria-label={actionLabel}
+                className="inline-flex items-center rounded-md text-sm font-medium text-sky-700 underline-offset-4 transition hover:text-sky-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                onClick={() => onAction?.(insight)}
+                type="button"
+              >
+                <span>{actionLabel}</span>
+                <span aria-hidden="true" className="ml-1">
+                  -&gt;
+                </span>
+              </button>
+            ) : null}
           </div>
         </div>
       </CardContent>
@@ -2433,7 +2492,15 @@ function CalmInsightCard({ data }: { data: InsightsData }) {
   );
 }
 
-function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
+function TimeframeInsightsCard({
+  data,
+  isHighlighted = false,
+  onSelect,
+}: {
+  data: InsightsData;
+  isHighlighted?: boolean;
+  onSelect: (updates: InsightsSelectionUpdate) => void;
+}) {
   const { locale } = useLocale();
   const [mixSegment, setMixSegment] = useState<SpendingMixSegment>("expenses");
   const [barsSegment, setBarsSegment] = useState<SpendingMixSegment>("expenses");
@@ -2461,7 +2528,14 @@ function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelec
   }, [data.selectedChartMode, data.selectedMonth, data.selectedTimeframe, data.displayCurrency]);
 
   return (
-    <Card className="rounded-lg" data-testid="timeframe-insights-card">
+    <Card
+      className={cn(
+        "rounded-lg transition-shadow motion-reduce:transition-none",
+        isHighlighted ? "ring-2 ring-sky-200 ring-offset-2 ring-offset-white" : null,
+      )}
+      data-calm-insight-highlight={isHighlighted ? "true" : undefined}
+      data-testid="timeframe-insights-card"
+    >
       <CardHeader className="p-4 pb-1">
         <div className="flex items-start justify-between gap-3" data-testid="tracked-view-header-row">
           <div className="space-y-1">
@@ -3159,12 +3233,22 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
   const { locale } = useLocale();
   const router = useRouter();
   const [activeData, setActiveData] = useState<InsightsData>(data);
+  const [calmInsightHighlightTarget, setCalmInsightHighlightTarget] = useState<CalmInsightHighlightTarget>(null);
+  const calmInsightHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasTrackedData = activeData.trackedTransactionCount > 0;
   const hasCurrentMonthData = activeData.currentMonthTransactionCount > 0;
 
   useEffect(() => {
     setActiveData(data);
   }, [data]);
+
+  useEffect(() => {
+    return () => {
+      if (calmInsightHighlightTimeoutRef.current) {
+        clearTimeout(calmInsightHighlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const selectInsightsView = (updates: InsightsSelectionUpdate) => {
     const href = buildInsightsHref(activeData, updates);
@@ -3184,6 +3268,54 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
     }
 
     router.push(href, { scroll: false });
+  };
+
+  const highlightCalmInsightTarget = (target: CalmInsightHighlightTarget) => {
+    if (calmInsightHighlightTimeoutRef.current) {
+      clearTimeout(calmInsightHighlightTimeoutRef.current);
+    }
+
+    setCalmInsightHighlightTarget(target);
+
+    if (!target) {
+      return;
+    }
+
+    calmInsightHighlightTimeoutRef.current = setTimeout(() => {
+      setCalmInsightHighlightTarget((current) => (current === target ? null : current));
+      calmInsightHighlightTimeoutRef.current = null;
+    }, 700);
+  };
+
+  const handleCalmInsightAction = (insight: NonNullable<InsightsData["calmInsight"]>) => {
+    switch (insight.actionType) {
+      case "category":
+        selectInsightsView({ chart: "mix" });
+        scrollCalmInsightTargetIntoView("timeframe-insights-card");
+        highlightCalmInsightTarget("chart");
+        return;
+      case "bars":
+        selectInsightsView({ chart: "bars" });
+        scrollCalmInsightTargetIntoView("timeframe-insights-card");
+        highlightCalmInsightTarget("chart");
+        return;
+      case "trend":
+        selectInsightsView({ chart: "trend" });
+        scrollCalmInsightTargetIntoView("timeframe-insights-card");
+        highlightCalmInsightTarget("chart");
+        return;
+      case "snapshot":
+        scrollCalmInsightTargetIntoView("monthly-snapshot-card");
+        highlightCalmInsightTarget("snapshot");
+        return;
+      case "activity":
+        if (insight.actionTarget) {
+          router.push(buildActivityInspectHref({ focusTransaction: insight.actionTarget, month: activeData.selectedMonth }), { scroll: false });
+        }
+        return;
+      default:
+        return;
+    }
   };
 
   return (
@@ -3214,9 +3346,9 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
         </Card>
       ) : null}
 
-      <MonthlySnapshotCard data={activeData} />
-      <CalmInsightCard data={activeData} />
-      <TimeframeInsightsCard data={activeData} onSelect={selectInsightsView} />
+      <MonthlySnapshotCard data={activeData} isHighlighted={calmInsightHighlightTarget === "snapshot"} />
+      <CalmInsightCard data={activeData} onAction={handleCalmInsightAction} />
+      <TimeframeInsightsCard data={activeData} isHighlighted={calmInsightHighlightTarget === "chart"} onSelect={selectInsightsView} />
 
       {activeData.hasMissingRates ? (
         <p className="text-xs leading-5 text-slate-500">

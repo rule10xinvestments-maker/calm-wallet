@@ -27,6 +27,8 @@ export type CalmInsightCandidate = {
   priority: number;
   confidence: number;
   discoveryScore: number;
+  actionType?: CalmInsightActionType;
+  actionTarget?: string;
   titleKey: string;
   bodyKey: string;
   categoryMeta?: CalmInsightCategoryMeta;
@@ -34,6 +36,7 @@ export type CalmInsightCandidate = {
 };
 
 export type CalmInsightResult = CalmInsightCandidate;
+export type CalmInsightActionType = "category" | "bars" | "trend" | "snapshot" | "activity" | "none";
 
 export type CalmInsightCategoryMeta = {
   canonicalCategory: string | null;
@@ -87,12 +90,16 @@ function candidate(
   discoveryScore: number,
   variables?: Record<string, string | number>,
   categoryMeta?: CalmInsightCategoryMeta,
+  actionType?: CalmInsightActionType,
+  actionTarget?: string,
 ): CalmInsightCandidate {
   return {
     id,
     priority,
     confidence,
     discoveryScore,
+    actionType,
+    actionTarget,
     titleKey: `insights.calmInsight.rules.${id}.title`,
     bodyKey: `insights.calmInsight.rules.${id}.body`,
     categoryMeta,
@@ -130,6 +137,8 @@ function categoryCandidate(
       categoryLabel: categoryMeta.displayLabel,
     },
     categoryMeta,
+    "category",
+    categoryMeta.canonicalCategory ?? undefined,
   );
 }
 
@@ -265,7 +274,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("largest_single_expense", 76, share, Math.min(93, 60 + share), { percent: share });
+    return candidate("largest_single_expense", 76, share, Math.min(93, 60 + share), { percent: share }, undefined, "activity", largest.id);
   },
   function recurringShare({ data }: CalmInsightContext) {
     const recurringExpenseDisplayMinor = data.recurringExpenseDisplayMinor ?? 0;
@@ -294,7 +303,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("bars_early_spending", 72, share, 88, { percent: share });
+    return candidate("bars_early_spending", 72, share, 88, { percent: share }, undefined, "bars");
   },
   function concentratedSpendingPeriod({ data }: CalmInsightContext) {
     if (!isMeaningfulPeriod(data) || data.timeframeExpenseDisplayMinor < calmInsightThresholds.meaningfulAmountMinor) {
@@ -314,7 +323,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("bars_period_stood_out", 70, share, 86, getBarPositionVariables(data, leading, share));
+    return candidate("bars_period_stood_out", 70, share, 86, getBarPositionVariables(data, leading, share), undefined, "bars", leading.key);
   },
   function trendSpendingDecreased({ data }: CalmInsightContext) {
     const halves = splitTrendHalves(data.selectedMonthTrendDays);
@@ -327,7 +336,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("trend_spending_decreased", 68, decrease, 84, { percent: decrease });
+    return candidate("trend_spending_decreased", 68, decrease, 84, { percent: decrease }, undefined, "trend");
   },
   function trendSpendingIncreased({ data }: CalmInsightContext) {
     const halves = splitTrendHalves(data.selectedMonthTrendDays);
@@ -340,7 +349,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("trend_spending_increased", 67, increase, 83, { percent: increase });
+    return candidate("trend_spending_increased", 67, increase, 83, { percent: increase }, undefined, "trend");
   },
   function spendingLowerThanPrevious({ data, previousComparablePeriod }: CalmInsightContext) {
     if (!previousComparablePeriod?.comparable || !isMeaningfulPeriod(data) || previousComparablePeriod.transactionCount < calmInsightThresholds.meaningfulTransactions) {
@@ -358,6 +367,8 @@ export const calmInsightRules = [
       Math.min(99, difference.percent),
       difference.percent >= calmInsightThresholds.largeComparisonPercent ? 82 : 72,
       { percent: difference.percent },
+      undefined,
+      "snapshot",
     );
   },
   function spendingHigherThanPrevious({ data, previousComparablePeriod }: CalmInsightContext) {
@@ -376,6 +387,8 @@ export const calmInsightRules = [
       Math.min(99, difference.percent),
       difference.percent >= calmInsightThresholds.largeComparisonPercent ? 81 : 71,
       { percent: difference.percent },
+      undefined,
+      "snapshot",
     );
   },
   function consistentTracking({ data }: CalmInsightContext) {

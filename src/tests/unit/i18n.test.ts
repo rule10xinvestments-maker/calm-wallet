@@ -173,6 +173,11 @@ describe("i18n helper", () => {
     expect(t("insights.calmInsight.eyebrow", "fr")).toBe("Observation calme");
     expect(t("insights.calmInsight.eyebrow", "es")).toBe("Observación tranquila");
     expect(t("insights.calmInsight.genericCategoryLabel", "ro")).toBe("o categorie");
+    expect(t("insights.calmInsight.actions.category", "en")).toBe("View category");
+    expect(t("insights.calmInsight.actions.trend", "ro")).toBe("Vezi evoluția");
+    expect(t("insights.calmInsight.actions.bars", "fr")).toBe("Voir la période");
+    expect(t("insights.calmInsight.actions.snapshot", "es")).toBe("Ver resumen");
+    expect(t("insights.calmInsight.actions.activity", "es")).toBe("Ver actividad");
     expect(t("insights.calmInsight.rules.comparison_spending_lower.body", "ro", { percent: 30 })).toBe(
       "Cheltuielile urmărite au fost cu 30% mai mici decât în perioada comparabilă anterioară.",
     );

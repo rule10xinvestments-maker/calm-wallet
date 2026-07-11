@@ -874,6 +874,13 @@
     "calmInsight": {
       "eyebrow": "Calm Insight",
       "genericCategoryLabel": "a category",
+      "actions": {
+        "category": "View category",
+        "bars": "View timeline",
+        "trend": "View trend",
+        "snapshot": "View snapshot",
+        "activity": "View activity"
+      },
       "rules": {
         "category_dominance": { "title": "This period was led by {categoryLabel}", "body": "This category represented {percent}% of tracked spending." },
         "balanced_spending": { "title": "No category dominated", "body": "Your spending was spread across several categories." },

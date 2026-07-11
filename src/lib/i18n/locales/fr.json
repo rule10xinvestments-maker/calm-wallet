@@ -874,6 +874,13 @@
     "calmInsight": {
       "eyebrow": "Observation calme",
       "genericCategoryLabel": "une catégorie",
+      "actions": {
+        "category": "Voir la catégorie",
+        "bars": "Voir la période",
+        "trend": "Voir la tendance",
+        "snapshot": "Voir le résumé",
+        "activity": "Voir l'activité"
+      },
       "rules": {
         "category_dominance": { "title": "La catégorie principale était {categoryLabel}", "body": "Cette catégorie a représenté {percent}% des dépenses suivies." },
         "balanced_spending": { "title": "Aucune catégorie n’a dominé", "body": "Vos dépenses étaient réparties entre plusieurs catégories." },

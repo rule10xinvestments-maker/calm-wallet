@@ -15,6 +15,7 @@ import type { SupportedLocale } from "@/lib/i18n";
 const navigationMocks = vi.hoisted(() => ({
   push: vi.fn(),
 }));
+const scrollIntoViewMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -383,6 +384,21 @@ describe("insights overview", () => {
 
   beforeEach(() => {
     navigationMocks.push.mockClear();
+    scrollIntoViewMock.mockClear();
+    Element.prototype.scrollIntoView = scrollIntoViewMock;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: false,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    });
     setViewportScroll({ width: 1024, y: 0 });
   });
 
@@ -800,6 +816,209 @@ describe("insights overview", () => {
     renderInsights(makeInsightsData({ calmInsight: null }));
 
     expect(screen.queryByTestId("calm-insight-card")).not.toBeInTheDocument();
+  });
+
+  it("uses a category Calm Insight action to scroll to Mix inside Insights", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "bars",
+        calmInsight: {
+          id: "category_dominance",
+          priority: 78,
+          confidence: 47,
+          discoveryScore: 95,
+          actionType: "category",
+          actionTarget: "groceries",
+          titleKey: "insights.calmInsight.rules.category_dominance.title",
+          bodyKey: "insights.calmInsight.rules.category_dominance.body",
+          variables: { categoryLabel: "Groceries", percent: 47 },
+          categoryMeta: {
+            canonicalCategory: "groceries",
+            categoryId: "groceries",
+            displayLabel: "Groceries",
+            iconKey: "Groceries",
+            colorKey: "Groceries",
+          },
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View category" }));
+
+    expect(screen.getByRole("button", { name: "Mix" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("timeframe-insights-card")).toHaveAttribute("data-calm-insight-highlight", "true");
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(navigationMocks.push).not.toHaveBeenCalled();
+  });
+
+  it("uses Bars, Trend, and Snapshot Calm Insight actions as local Insights guide links", () => {
+    const { rerender } = renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        calmInsight: {
+          id: "bars_period_stood_out",
+          priority: 84,
+          confidence: 70,
+          discoveryScore: 90,
+          actionType: "bars",
+          actionTarget: "2026-04-10",
+          titleKey: "insights.calmInsight.rules.bars_period_stood_out.title",
+          bodyKey: "insights.calmInsight.rules.bars_period_stood_out.body",
+          variables: { bucketLabel: "10", percent: 70 },
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View timeline" }));
+
+    expect(screen.getByRole("button", { name: "Bars" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("timeframe-insights-card")).toHaveAttribute("data-calm-insight-highlight", "true");
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+
+    rerender(
+      <LocaleProvider savedLocale="en">
+        <InsightsOverview
+          data={makeInsightsData({
+            selectedChartMode: "mix",
+            calmInsight: {
+              id: "trend_spending_decreased",
+              priority: 83,
+              confidence: 60,
+              discoveryScore: 88,
+              actionType: "trend",
+              titleKey: "insights.calmInsight.rules.trend_spending_decreased.title",
+              bodyKey: "insights.calmInsight.rules.trend_spending_decreased.body",
+            },
+          })}
+          deleteBudgetAction={noopBudgetAction}
+          upsertBudgetAction={noopBudgetAction}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View trend" }));
+
+    expect(screen.getByRole("button", { name: "Trend" })).toHaveAttribute("aria-pressed", "true");
+
+    rerender(
+      <LocaleProvider savedLocale="en">
+        <InsightsOverview
+          data={makeInsightsData({
+            calmInsight: {
+              id: "comparison_spending_lower",
+              priority: 82,
+              confidence: 30,
+              discoveryScore: 72,
+              actionType: "snapshot",
+              titleKey: "insights.calmInsight.rules.comparison_spending_lower.title",
+              bodyKey: "insights.calmInsight.rules.comparison_spending_lower.body",
+              variables: { percent: 30 },
+            },
+          })}
+          deleteBudgetAction={noopBudgetAction}
+          upsertBudgetAction={noopBudgetAction}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View snapshot" }));
+
+    expect(screen.getByTestId("monthly-snapshot-card")).toHaveAttribute("data-calm-insight-highlight", "true");
+  });
+
+  it("respects reduced motion for Calm Insight guide scrolling", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    });
+
+    renderInsights(
+      makeInsightsData({
+        calmInsight: {
+          id: "bars_early_spending",
+          priority: 83,
+          confidence: 70,
+          discoveryScore: 88,
+          actionType: "bars",
+          titleKey: "insights.calmInsight.rules.bars_early_spending.title",
+          bodyKey: "insights.calmInsight.rules.bars_early_spending.body",
+          variables: { percent: 70 },
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View timeline" }));
+
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "auto", block: "start" });
+  });
+
+  it("localizes Calm Insight action labels and omits the CTA for actionType none", () => {
+    renderInsights(
+      makeInsightsData({
+        calmInsight: {
+          id: "trend_spending_increased",
+          priority: 82,
+          confidence: 60,
+          discoveryScore: 88,
+          actionType: "trend",
+          titleKey: "insights.calmInsight.rules.trend_spending_increased.title",
+          bodyKey: "insights.calmInsight.rules.trend_spending_increased.body",
+        },
+      }),
+      { locale: "ro" },
+    );
+
+    expect(screen.getByRole("button", { name: "Vezi evoluția" })).toBeInTheDocument();
+
+    renderInsights(
+      makeInsightsData({
+        calmInsight: {
+          id: "consistent_tracking",
+          priority: 70,
+          confidence: 80,
+          discoveryScore: 86,
+          actionType: "none",
+          titleKey: "insights.calmInsight.rules.consistent_tracking.title",
+          bodyKey: "insights.calmInsight.rules.consistent_tracking.body",
+          variables: { days: 10 },
+        },
+      }),
+    );
+
+    expect(screen.queryByRole("button", { name: "View category" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View timeline" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View trend" })).not.toBeInTheDocument();
+  });
+
+  it("navigates a Calm Insight activity action only when a concrete transaction target exists", () => {
+    renderInsights(
+      makeInsightsData({
+        calmInsight: {
+          id: "largest_single_expense",
+          priority: 76,
+          confidence: 60,
+          discoveryScore: 90,
+          actionType: "activity",
+          actionTarget: "txn-large",
+          titleKey: "insights.calmInsight.rules.largest_single_expense.title",
+          bodyKey: "insights.calmInsight.rules.largest_single_expense.body",
+          variables: { percent: 60 },
+        },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "View activity" }));
+
+    expect(navigationMocks.push).toHaveBeenCalledWith("/transactions?month=2026-04&focusTransaction=txn-large", { scroll: false });
   });
 
   it.each([

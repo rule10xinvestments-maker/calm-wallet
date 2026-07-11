@@ -874,6 +874,13 @@
     "calmInsight": {
       "eyebrow": "Observación tranquila",
       "genericCategoryLabel": "una categoría",
+      "actions": {
+        "category": "Ver categoría",
+        "bars": "Ver periodo",
+        "trend": "Ver tendencia",
+        "snapshot": "Ver resumen",
+        "activity": "Ver actividad"
+      },
       "rules": {
         "category_dominance": { "title": "La categoría principal fue {categoryLabel}", "body": "Esta categoría representó el {percent}% de los gastos registrados." },
         "balanced_spending": { "title": "Ninguna categoría dominó", "body": "Tus gastos se repartieron entre varias categorías." },
