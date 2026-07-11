@@ -2341,7 +2341,7 @@ function getCalmInsightParams(insight: NonNullable<InsightsData["calmInsight"]>,
   const params: Record<string, string | number> = {};
 
   Object.entries(insight.variables ?? {}).forEach(([key, value]) => {
-    params[key] = key === "categoryLabel" ? getCategoryLabel(value, locale) : value;
+    params[key] = key === "categoryLabel" || key === "previousCategoryLabel" ? getCategoryLabel(value, locale) : value;
   });
 
   return params;

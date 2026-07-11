@@ -874,6 +874,15 @@
     "calmInsight": {
       "eyebrow": "Observație calmă",
       "rules": {
+        "category_dominance": { "title": "{categoryLabel} a conturat perioada", "body": "{categoryLabel} a reprezentat {percent}% din cheltuielile urmărite." },
+        "balanced_spending": { "title": "Nicio categorie nu a dominat", "body": "Cheltuielile au fost împărțite între mai multe categorii." },
+        "bars_period_stood_out": { "title": "{bucketLabel} a ieșit în evidență", "body": "Acea perioadă din Bare a conținut {percent}% din cheltuielile urmărite." },
+        "bars_early_spending": { "title": "Cele mai multe cheltuieli au fost la început", "body": "Prima parte a perioadei a conținut {percent}% din cheltuielile urmărite." },
+        "trend_spending_decreased": { "title": "Perioada a devenit mai liniștită", "body": "Cheltuielile urmărite au scăzut spre finalul perioadei." },
+        "trend_spending_increased": { "title": "Activitatea a crescut spre final", "body": "Cheltuielile urmărite au fost mai mari spre finalul perioadei." },
+        "category_largest_changed": { "title": "{categoryLabel} a trecut în față", "body": "{categoryLabel} a devenit cea mai mare categorie de cheltuieli urmărite." },
+        "recurring_share": { "title": "Cheltuielile recurente au rămas vizibile", "body": "Intrările recurente au reprezentat aproximativ {percent}% din cheltuielile urmărite." },
+        "balanced_month": { "title": "Nicio achiziție nu a dominat", "body": "Cele mai multe cheltuieli au fost împărțite între mai multe achiziții." },
         "first_entries": { "title": "Imaginea ta începe să se contureze", "body": "Fiecare intrare adăugată face această perioadă mai ușor de înțeles." },
         "not_enough_data": { "title": "Încă se conturează", "body": "Adaugă câteva intrări pentru o imagine mai clară a acestei perioade." },
         "income_covered_spending": { "title": "Veniturile au acoperit cheltuielile", "body": "Veniturile urmărite au fost mai mari decât cheltuielile urmărite în această perioadă." },
@@ -882,9 +891,9 @@
         "largest_income_category": { "title": "{categoryLabel} a condus veniturile", "body": "{categoryLabel} a fost cea mai mare categorie de venituri urmărite." },
         "comparison_spending_lower": { "title": "O perioadă mai liniștită", "body": "Cheltuielile urmărite au fost cu {percent}% mai mici decât în perioada comparabilă anterioară." },
         "comparison_spending_higher": { "title": "Mai multă activitate de cheltuire", "body": "Cheltuielile urmărite au fost cu {percent}% mai mari decât în perioada comparabilă anterioară." },
-        "consistent_tracking": { "title": "O imagine mai clară", "body": "Ai înregistrat bani în {days} zile diferite din această perioadă." },
+        "consistent_tracking": { "title": "Urmărirea a rămas constantă", "body": "Ai înregistrat bani în {days} zile diferite din această perioadă." },
         "concentrated_spending_period": { "title": "Cele mai multe cheltuieli au fost într-o parte a perioadei", "body": "Un bloc de timp a conținut cea mai mare parte a cheltuielilor urmărite." },
-        "largest_single_expense": { "title": "O intrare a influențat perioada", "body": "Cea mai mare cheltuială urmărită a reprezentat {percent}% din cheltuielile perioadei." }
+        "largest_single_expense": { "title": "O achiziție a ieșit în evidență", "body": "Cea mai mare cheltuială a reprezentat {percent}% din cheltuielile perioadei." }
       }
     },
     "converted": {

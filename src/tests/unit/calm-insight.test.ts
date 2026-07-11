@@ -137,6 +137,7 @@ function makeCandidate(overrides: Partial<CalmInsightCandidate>): CalmInsightCan
     id: "first_entries",
     priority: 1,
     confidence: 1,
+    discoveryScore: 1,
     titleKey: "title",
     bodyKey: "body",
     ...overrides,
@@ -145,7 +146,7 @@ function makeCandidate(overrides: Partial<CalmInsightCandidate>): CalmInsightCan
 
 describe("Calm Insight rule engine", () => {
   it("keeps the v1 rule registry focused and deterministic", () => {
-    expect(calmInsightRules).toHaveLength(11);
+    expect(calmInsightRules).toHaveLength(19);
 
     const data = makeInsightsData({ selectedPeriodTransactionCount: 0 });
 
@@ -203,7 +204,7 @@ describe("Calm Insight rule engine", () => {
     ).toBe("spending_exceeded_income");
   });
 
-  it("surfaces the largest useful expense category by canonical category id", () => {
+  it("surfaces category dominance by canonical category id", () => {
     const insight = selectCalmInsight(
       makeInsightsData({
         selectedPeriodTransactionCount: 4,
@@ -215,8 +216,8 @@ describe("Calm Insight rule engine", () => {
       }),
     );
 
-    expect(insight?.id).toBe("largest_expense_category");
-    expect(insight?.variables).toEqual({ categoryLabel: "groceries" });
+    expect(insight?.id).toBe("category_dominance");
+    expect(insight?.variables).toEqual({ categoryLabel: "groceries", percent: 42 });
   });
 
   it("surfaces the largest useful income category", () => {
@@ -264,6 +265,19 @@ describe("Calm Insight rule engine", () => {
     expect(insight?.variables).toEqual({ percent: 25 });
   });
 
+  it("lets discovery insights beat snapshot summary rules", () => {
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 5,
+        selectedPeriodIncomeDisplayMinor: 10000,
+        selectedPeriodExpenseDisplayMinor: 6000,
+        categoryBreakdown: [makeCategory({ key: "food", label: "Food", amountMinor: 3600, transactionCount: 3 })],
+      }),
+    );
+
+    expect(insight?.id).toBe("category_dominance");
+  });
+
   it("skips comparison rules when periods are not comparable or differences are small", () => {
     const data = makeInsightsData({
       selectedPeriodTransactionCount: 3,
@@ -299,6 +313,22 @@ describe("Calm Insight rule engine", () => {
     expect(insight?.variables).toEqual({ days: 10 });
   });
 
+  it("detects balanced spending across categories", () => {
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 6,
+        selectedPeriodExpenseDisplayMinor: 9000,
+        categoryBreakdown: [
+          makeCategory({ key: "food", label: "Food", amountMinor: 3000, transactionCount: 2 }),
+          makeCategory({ key: "shopping", label: "Shopping", amountMinor: 3000, transactionCount: 2 }),
+          makeCategory({ key: "transport", label: "Transport", amountMinor: 3000, transactionCount: 2 }),
+        ],
+      }),
+    );
+
+    expect(insight?.id).toBe("balanced_spending");
+  });
+
   it("detects one concentrated Bars time block using existing bar data", () => {
     const insight = selectCalmInsight(
       makeInsightsData({
@@ -306,14 +336,152 @@ describe("Calm Insight rule engine", () => {
         selectedPeriodExpenseDisplayMinor: 10000,
         timeframeExpenseDisplayMinor: 10000,
         timeframeBars: [
-          makeBar({ key: "2026-04-01", amountMinor: 7000, transactionCount: 2 }),
-          makeBar({ key: "2026-04-08", amountMinor: 3000, transactionCount: 2 }),
+          makeBar({ key: "2026-04-01", label: "1", amountMinor: 1000, transactionCount: 1 }),
+          makeBar({ key: "2026-04-08", label: "8", amountMinor: 1000, transactionCount: 1 }),
+          makeBar({ key: "2026-04-15", label: "15", amountMinor: 7000, transactionCount: 2 }),
+          makeBar({ key: "2026-04-22", label: "22", amountMinor: 1000, transactionCount: 1 }),
         ],
         categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
       }),
     );
 
-    expect(insight?.id).toBe("concentrated_spending_period");
+    expect(insight?.id).toBe("bars_period_stood_out");
+    expect(insight?.variables).toMatchObject({ bucketLabel: "15", percent: 70 });
+  });
+
+  it("detects spending concentrated early in existing Bars buckets", () => {
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 5,
+        selectedPeriodExpenseDisplayMinor: 10000,
+        timeframeExpenseDisplayMinor: 10000,
+        timeframeBars: [
+          makeBar({ key: "2026-04-01", amountMinor: 3500, transactionCount: 2 }),
+          makeBar({ key: "2026-04-08", amountMinor: 3500, transactionCount: 2 }),
+          makeBar({ key: "2026-04-15", amountMinor: 1500, transactionCount: 1 }),
+          makeBar({ key: "2026-04-22", amountMinor: 1500, transactionCount: 1 }),
+        ],
+        categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
+      }),
+    );
+
+    expect(insight?.id).toBe("bars_early_spending");
+    expect(insight?.variables).toEqual({ percent: 70 });
+  });
+
+  it("detects meaningful trend decreases", () => {
+    const days = [
+      makeTrendDay({ key: "2026-04-01", expenseMinor: 3000, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-02", expenseMinor: 3000, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-03", expenseMinor: 3000, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-20", expenseMinor: 500, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-21", expenseMinor: 500, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-22", expenseMinor: 500, transactionCount: 1 }),
+    ];
+
+    expect(
+      selectCalmInsight(
+        makeInsightsData({
+          selectedPeriodTransactionCount: 6,
+          selectedPeriodExpenseDisplayMinor: 10500,
+          selectedMonthTrendDays: days,
+          categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
+        }),
+      )?.id,
+    ).toBe("trend_spending_decreased");
+  });
+
+  it("detects meaningful trend increases", () => {
+    const days = [
+      makeTrendDay({ key: "2026-04-01", expenseMinor: 500, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-02", expenseMinor: 500, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-03", expenseMinor: 500, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-20", expenseMinor: 3000, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-21", expenseMinor: 3000, transactionCount: 1 }),
+      makeTrendDay({ key: "2026-04-22", expenseMinor: 3000, transactionCount: 1 }),
+    ];
+
+    expect(
+      selectCalmInsight(
+        makeInsightsData({
+          selectedPeriodTransactionCount: 6,
+          selectedPeriodExpenseDisplayMinor: 10500,
+          selectedMonthTrendDays: days,
+          categoryBreakdown: [makeCategory({ amountMinor: 9000, transactionCount: 1 })],
+        }),
+      )?.id,
+    ).toBe("trend_spending_increased");
+  });
+
+  it("detects when the leading category changes from the comparable month", () => {
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 6,
+        selectedPeriodExpenseDisplayMinor: 10000,
+        categoryBreakdown: [
+          makeCategory({ key: "food", label: "Food", amountMinor: 5000, transactionCount: 3 }),
+          makeCategory({ key: "shopping", label: "Shopping", amountMinor: 4000, transactionCount: 2 }),
+        ],
+      }),
+      {
+        comparable: true,
+        transactionCount: 6,
+        expenseDisplayMinor: 10000,
+        categoryBreakdown: [
+          makeCategory({ key: "shopping", label: "Shopping", amountMinor: 5000, transactionCount: 3 }),
+          makeCategory({ key: "food", label: "Food", amountMinor: 2500, transactionCount: 2 }),
+        ],
+      },
+    );
+
+    expect(insight?.id).toBe("category_largest_changed");
+    expect(insight?.variables).toEqual({ categoryLabel: "food", previousCategoryLabel: "shopping" });
+  });
+
+  it("detects recurring spending share when already present in Insights data", () => {
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 5,
+        selectedPeriodExpenseDisplayMinor: 10000,
+        recurringExpenseDisplayMinor: 3000,
+        categoryBreakdown: [
+          makeCategory({ key: "food", label: "Food", amountMinor: 3000, transactionCount: 2 }),
+          makeCategory({ key: "shopping", label: "Shopping", amountMinor: 3000, transactionCount: 2 }),
+          makeCategory({ key: "transport", label: "Transport", amountMinor: 2000, transactionCount: 1 }),
+        ],
+      }),
+    );
+
+    expect(insight?.id).toBe("recurring_share");
+    expect(insight?.variables).toEqual({ percent: 30 });
+  });
+
+  it("detects a balanced month when no single purchase dominates", () => {
+    const insight = selectCalmInsight(
+      makeInsightsData({
+        selectedPeriodTransactionCount: 5,
+        selectedPeriodExpenseDisplayMinor: 10000,
+        categoryBreakdown: [
+          makeCategory({ key: "food", label: "Food", amountMinor: 7000, transactionCount: 1 }),
+          makeCategory({ key: "shopping", label: "Shopping", amountMinor: 3000, transactionCount: 1 }),
+        ],
+        largestRecentExpenses: [
+          {
+            id: "largest",
+            title: "Entry",
+            amountMinor: 2400,
+            amountDisplay: "$25",
+            occurredAt: "2026-04-12T00:00:00.000Z",
+            occurredLabel: "Apr 12",
+            categoryLabel: "Food",
+            currency: "USD",
+            isApproximate: false,
+          },
+        ],
+      }),
+    );
+
+    expect(insight?.id).toBe("balanced_month");
   });
 
   it("detects a genuinely large single expense when higher-priority rules do not qualify", () => {
@@ -347,25 +515,32 @@ describe("Calm Insight rule engine", () => {
     expect(insight?.variables).toEqual({ percent: 60 });
   });
 
-  it("uses priority, then confidence, then stable id as selection tie-breakers", () => {
+  it("uses discovery score, then confidence, then priority, then stable id as selection tie-breakers", () => {
     expect(
       selectCalmInsightCandidate([
-        makeCandidate({ id: "first_entries", priority: 1, confidence: 99 }),
-        makeCandidate({ id: "income_covered_spending", priority: 2, confidence: 10 }),
+        makeCandidate({ id: "first_entries", priority: 99, confidence: 99, discoveryScore: 1 }),
+        makeCandidate({ id: "income_covered_spending", priority: 2, confidence: 10, discoveryScore: 2 }),
       ])?.id,
     ).toBe("income_covered_spending");
 
     expect(
       selectCalmInsightCandidate([
-        makeCandidate({ id: "first_entries", priority: 2, confidence: 30 }),
-        makeCandidate({ id: "not_enough_data", priority: 2, confidence: 40 }),
+        makeCandidate({ id: "first_entries", priority: 2, confidence: 30, discoveryScore: 2 }),
+        makeCandidate({ id: "not_enough_data", priority: 2, confidence: 40, discoveryScore: 2 }),
       ])?.id,
     ).toBe("not_enough_data");
 
     expect(
       selectCalmInsightCandidate([
-        makeCandidate({ id: "not_enough_data", priority: 2, confidence: 40 }),
-        makeCandidate({ id: "first_entries", priority: 2, confidence: 40 }),
+        makeCandidate({ id: "not_enough_data", priority: 1, confidence: 40, discoveryScore: 2 }),
+        makeCandidate({ id: "first_entries", priority: 2, confidence: 40, discoveryScore: 2 }),
+      ])?.id,
+    ).toBe("first_entries");
+
+    expect(
+      selectCalmInsightCandidate([
+        makeCandidate({ id: "not_enough_data", priority: 2, confidence: 40, discoveryScore: 2 }),
+        makeCandidate({ id: "first_entries", priority: 2, confidence: 40, discoveryScore: 2 }),
       ])?.id,
     ).toBe("first_entries");
   });

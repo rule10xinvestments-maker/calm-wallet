@@ -874,6 +874,15 @@
     "calmInsight": {
       "eyebrow": "Calm Insight",
       "rules": {
+        "category_dominance": { "title": "{categoryLabel} shaped this period", "body": "{categoryLabel} represented {percent}% of tracked spending." },
+        "balanced_spending": { "title": "No category dominated", "body": "Your spending was spread across several categories." },
+        "bars_period_stood_out": { "title": "{bucketLabel} stood out", "body": "That Bars period contained {percent}% of tracked spending." },
+        "bars_early_spending": { "title": "Most spending happened early", "body": "The first part of the period contained {percent}% of tracked spending." },
+        "trend_spending_decreased": { "title": "The period became quieter", "body": "Tracked spending decreased toward the end of the period." },
+        "trend_spending_increased": { "title": "Activity increased later", "body": "Tracked spending was higher toward the end of the period." },
+        "category_largest_changed": { "title": "{categoryLabel} moved to the front", "body": "{categoryLabel} became your largest tracked expense category." },
+        "recurring_share": { "title": "Recurring spending stayed visible", "body": "Recurring entries represented about {percent}% of tracked spending." },
+        "balanced_month": { "title": "No single purchase dominated", "body": "Most spending was spread across multiple purchases." },
         "first_entries": { "title": "Your picture is taking shape", "body": "Every entry you add makes this period easier to understand." },
         "not_enough_data": { "title": "Still taking shape", "body": "Add a few more entries to reveal a clearer picture of this period." },
         "income_covered_spending": { "title": "Income covered your spending", "body": "Tracked income was higher than tracked spending in this period." },
@@ -882,9 +891,9 @@
         "largest_income_category": { "title": "{categoryLabel} led your income", "body": "{categoryLabel} was your largest tracked income category." },
         "comparison_spending_lower": { "title": "A quieter period", "body": "Tracked spending was {percent}% lower than the previous comparable period." },
         "comparison_spending_higher": { "title": "More spending activity", "body": "Tracked spending was {percent}% higher than the previous comparable period." },
-        "consistent_tracking": { "title": "A clearer picture", "body": "You recorded money on {days} different days in this period." },
+        "consistent_tracking": { "title": "Tracking stayed consistent", "body": "You recorded money on {days} different days in this period." },
         "concentrated_spending_period": { "title": "Most spending happened in one part of the period", "body": "One time block contained the largest share of your tracked spending." },
-        "largest_single_expense": { "title": "One entry shaped the period", "body": "Your largest tracked expense made up {percent}% of spending in this period." }
+        "largest_single_expense": { "title": "One purchase stood out", "body": "Your largest expense represented {percent}% of this period's spending." }
       }
     },
     "converted": {

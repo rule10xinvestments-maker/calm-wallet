@@ -173,6 +173,7 @@ export type InsightsData = {
     expenses: Record<string, InsightsCategorySignal>;
     income: Record<string, InsightsCategorySignal>;
   };
+  recurringExpenseDisplayMinor?: number;
   calmInsight?: CalmInsightResult | null;
 };
 
@@ -1942,6 +1943,22 @@ export function buildInsightsData(
     rateLookup,
     recentEntryLimit: null,
   });
+  const previousComparableCategoryBreakdown = previousComparableTransactions.length
+    ? buildInsightsCategoryBreakdown({
+        transactions: previousComparableTransactions,
+        transactionType: "expense",
+        categoryLabels,
+        displayCurrency,
+        rateLookup,
+        recentEntryLimit: null,
+      })
+    : [];
+  const recurringExpenseDisplayMinor = selectedPeriodTransactions
+    .filter((transaction) => transaction.transactionType === "expense" && Boolean(transaction.recurringRuleId))
+    .reduce((sum, transaction) => {
+      const conversionRate = getConversionRate(normalizeCurrency(transaction.currency), displayCurrency, rateLookup);
+      return sum + (conversionRate === null ? 0 : convertMinor(transaction.amountMinor, conversionRate));
+    }, 0);
   const timeframeMonths = buildInsightsTimeframeMonths({
     transactions: timeframeTransactions,
     startMonth: timeframeStartMonthDate,
@@ -2109,6 +2126,7 @@ export function buildInsightsData(
       expenses: expenseCategorySignals,
       income: incomeCategorySignals,
     },
+    recurringExpenseDisplayMinor,
     calmInsight: null,
   };
 
@@ -2122,6 +2140,7 @@ export function buildInsightsData(
             comparable: true,
             transactionCount: previousComparableTransactions.length,
             expenseDisplayMinor: previousComparableExpenseDisplayMinor,
+            categoryBreakdown: previousComparableCategoryBreakdown,
           }
         : null,
     );

@@ -874,6 +874,15 @@
     "calmInsight": {
       "eyebrow": "Observación tranquila",
       "rules": {
+        "category_dominance": { "title": "{categoryLabel} marcó este periodo", "body": "{categoryLabel} representó el {percent}% de los gastos registrados." },
+        "balanced_spending": { "title": "Ninguna categoría dominó", "body": "Tus gastos se repartieron entre varias categorías." },
+        "bars_period_stood_out": { "title": "{bucketLabel} destacó", "body": "Ese periodo en Barras concentró el {percent}% de los gastos registrados." },
+        "bars_early_spending": { "title": "La mayoría de los gastos ocurrió al principio", "body": "La primera parte del periodo concentró el {percent}% de los gastos registrados." },
+        "trend_spending_decreased": { "title": "El periodo se volvió más tranquilo", "body": "Los gastos registrados bajaron hacia el final del periodo." },
+        "trend_spending_increased": { "title": "La actividad aumentó después", "body": "Los gastos registrados fueron más altos hacia el final del periodo." },
+        "category_largest_changed": { "title": "{categoryLabel} pasó al frente", "body": "{categoryLabel} se convirtió en tu mayor categoría de gastos registrados." },
+        "recurring_share": { "title": "Los gastos recurrentes se mantuvieron visibles", "body": "Los registros recurrentes representaron cerca del {percent}% de los gastos registrados." },
+        "balanced_month": { "title": "Ninguna compra dominó", "body": "La mayoría de los gastos se repartió entre varias compras." },
         "first_entries": { "title": "Tu imagen empieza a tomar forma", "body": "Cada registro que añades hace que este periodo sea más fácil de entender." },
         "not_enough_data": { "title": "Aún está tomando forma", "body": "Añade algunos registros más para ver una imagen más clara de este periodo." },
         "income_covered_spending": { "title": "Los ingresos cubrieron los gastos", "body": "Los ingresos registrados fueron mayores que los gastos registrados en este periodo." },
@@ -882,9 +891,9 @@
         "largest_income_category": { "title": "{categoryLabel} lideró tus ingresos", "body": "{categoryLabel} fue tu mayor categoría de ingresos registrados." },
         "comparison_spending_lower": { "title": "Un periodo más tranquilo", "body": "Los gastos registrados fueron un {percent}% menores que en el periodo comparable anterior." },
         "comparison_spending_higher": { "title": "Más actividad de gasto", "body": "Los gastos registrados fueron un {percent}% mayores que en el periodo comparable anterior." },
-        "consistent_tracking": { "title": "Una imagen más clara", "body": "Registraste dinero en {days} días distintos de este periodo." },
+        "consistent_tracking": { "title": "El registro se mantuvo constante", "body": "Registraste dinero en {days} días distintos de este periodo." },
         "concentrated_spending_period": { "title": "La mayoría de los gastos ocurrió en una parte del periodo", "body": "Un bloque de tiempo concentró la mayor parte de tus gastos registrados." },
-        "largest_single_expense": { "title": "Un registro marcó el periodo", "body": "Tu mayor gasto registrado representó el {percent}% de los gastos de este periodo." }
+        "largest_single_expense": { "title": "Una compra destacó", "body": "Tu mayor gasto representó el {percent}% de los gastos de este periodo." }
       }
     },
     "converted": {
