@@ -320,6 +320,7 @@ function makeInsightsData(overrides: Partial<InsightsData> = {}): InsightsData {
       },
     ],
     budgetProgress: [],
+    calmInsight: null,
     ...overrides,
   };
 }
@@ -764,6 +765,70 @@ describe("insights overview", () => {
 
     expect(cards).toEqual([snapshot, chart]);
   });
+
+  it("renders one calm insight card between the snapshot and chart when a candidate qualifies", () => {
+    const { container } = renderInsights(
+      makeInsightsData({
+        calmInsight: {
+          id: "income_covered_spending",
+          priority: 82,
+          confidence: 80,
+          titleKey: "insights.calmInsight.rules.income_covered_spending.title",
+          bodyKey: "insights.calmInsight.rules.income_covered_spending.body",
+        },
+      }),
+    );
+
+    const snapshot = screen.getByTestId("monthly-snapshot-card");
+    const insight = screen.getByTestId("calm-insight-card");
+    const chart = screen.getByTestId("timeframe-insights-card");
+    const cards = Array.from(
+      container.querySelectorAll("[data-testid='monthly-snapshot-card'], [data-testid='calm-insight-card'], [data-testid='timeframe-insights-card']"),
+    );
+
+    expect(cards).toEqual([snapshot, insight, chart]);
+    expect(within(insight).getByText("Calm Insight")).toBeInTheDocument();
+    expect(within(insight).getByText("Income covered your spending")).toBeInTheDocument();
+    expect(within(insight).getByText("Tracked income was higher than tracked spending in this period.")).toBeInTheDocument();
+    expect(within(insight).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(insight).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("keeps the calm insight card hidden when no candidate qualifies", () => {
+    renderInsights(makeInsightsData({ calmInsight: null }));
+
+    expect(screen.queryByTestId("calm-insight-card")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["en", "Calm Insight", "Groceries led this period", "Groceries was your largest tracked expense category."],
+    ["ro", "Observație calmă", "Alimente a condus perioada", "Alimente a fost cea mai mare categorie de cheltuieli urmărite."],
+    ["fr", "Observation calme", "Courses a dominé cette période", "Courses était votre plus grande catégorie de dépenses suivies."],
+    ["es", "Observación tranquila", "Supermercado lideró este periodo", "Supermercado fue tu mayor categoría de gastos registrados."],
+  ] satisfies Array<[SupportedLocale, string, string, string]>)(
+    "renders localized Calm Insight copy for %s",
+    (locale, eyebrow, title, body) => {
+      renderInsights(
+        makeInsightsData({
+          calmInsight: {
+            id: "largest_expense_category",
+            priority: 72,
+            confidence: 62,
+            titleKey: "insights.calmInsight.rules.largest_expense_category.title",
+            bodyKey: "insights.calmInsight.rules.largest_expense_category.body",
+            variables: { categoryLabel: "groceries" },
+          },
+        }),
+        { locale },
+      );
+
+      const insight = screen.getByTestId("calm-insight-card");
+
+      expect(within(insight).getByText(eyebrow)).toBeInTheDocument();
+      expect(within(insight).getByText(title)).toBeInTheDocument();
+      expect(within(insight).getByText(body)).toBeInTheDocument();
+    },
+  );
 
   it("renders chart mode links and preserves timeframe and currency", () => {
     renderInsights(makeInsightsData({ selectedTimeframe: "6M", displayCurrency: "EUR", availableDisplayCurrencies: ["EUR", "RON"] }));

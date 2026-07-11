@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import { createSupabaseTransactionService } from "@/domain/transactions/service";
 import { canReadUserTransactionSummaries, isReviewStateNeedingReview } from "@/domain/transactions/policy";
 import { createSupabaseBudgetService } from "@/domain/budgets/service";
+import { selectCalmInsight, type CalmInsightResult } from "@/domain/insights/calm-insight";
 import { loadFxRatesForDisplay, type FxRate } from "@/lib/server/fx-rates";
 import type { Budget } from "@/domain/budgets/types";
 import type { ReviewState, Transaction } from "@/domain/transactions/types";
@@ -172,6 +173,7 @@ export type InsightsData = {
     expenses: Record<string, InsightsCategorySignal>;
     income: Record<string, InsightsCategorySignal>;
   };
+  calmInsight?: CalmInsightResult | null;
 };
 
 export type InsightsLargestEntry = {
@@ -1843,6 +1845,22 @@ export function buildInsightsData(
     selectedPeriodConvertedCurrencyBreakdowns.reduce((sum, breakdown) => sum + (breakdown.incomeDisplayMinor ?? 0), 0) || 0;
   const selectedPeriodExpenseDisplayMinor =
     selectedPeriodConvertedCurrencyBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0) || 0;
+  const previousMonthStart = shiftMonth(monthStart, -1);
+  const previousMonthEnd = monthStart;
+  const previousComparableTransactions =
+    selectedTimeframe === "1M" && selectedMonthKey !== currentMonthKey
+      ? activeTransactions.filter((transaction) => {
+          const occurredAt = new Date(transaction.occurredAt);
+          return occurredAt >= previousMonthStart && occurredAt < previousMonthEnd;
+        })
+      : [];
+  const previousComparableBreakdowns = buildConvertedBreakdowns({
+    originalCurrencyBreakdowns: sumBreakdowns(previousComparableTransactions),
+    displayCurrency,
+    rateLookup,
+  });
+  const previousComparableExpenseDisplayMinor =
+    previousComparableBreakdowns.reduce((sum, breakdown) => sum + (breakdown.expenseDisplayMinor ?? 0), 0) || 0;
 
   const categoryTotals = new Map<
     string,
@@ -2028,8 +2046,7 @@ export function buildInsightsData(
     recurringRules,
     selectedPeriodTransactions: selectedPeriodTransactions.filter((transaction) => transaction.transactionType === "income"),
   });
-
-  return {
+  const baseInsightsData: InsightsData = {
     trackedBalanceMinor,
     incomeMinor,
     expenseMinor,
@@ -2092,6 +2109,29 @@ export function buildInsightsData(
       expenses: expenseCategorySignals,
       income: incomeCategorySignals,
     },
+    calmInsight: null,
+  };
+
+  let calmInsight: CalmInsightResult | null = null;
+
+  try {
+    calmInsight = selectCalmInsight(
+      baseInsightsData,
+      selectedTimeframe === "1M" && selectedMonthKey !== currentMonthKey
+        ? {
+            comparable: true,
+            transactionCount: previousComparableTransactions.length,
+            expenseDisplayMinor: previousComparableExpenseDisplayMinor,
+          }
+        : null,
+    );
+  } catch (error) {
+    logCalmInsightFailure(error);
+  }
+
+  return {
+    ...baseInsightsData,
+    calmInsight,
   };
 }
 
@@ -2502,6 +2542,14 @@ async function loadActivityCategoryLimits(userId: string, transactions: Transact
 function logInsightsSupportingDataFailure(source: "categories" | "controlled_categories" | "default_currency" | "budgets" | "fx_rates", error: unknown) {
   console.warn("[insights-supporting-data-fallback]", {
     source,
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    hasMessage: error instanceof Error && Boolean(error.message),
+  });
+}
+
+function logCalmInsightFailure(error: unknown) {
+  console.warn("[insights-calm-insight-fallback]", {
+    source: "calm_insight",
     errorName: error instanceof Error ? error.name : "UnknownError",
     hasMessage: error instanceof Error && Boolean(error.message),
   });

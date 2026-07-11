@@ -10,6 +10,7 @@ import {
   CircleGauge,
   Eye,
   Info,
+  Lightbulb,
   Repeat2,
   X,
 } from "lucide-react";
@@ -2336,6 +2337,44 @@ function MonthlySnapshotCard({ data }: { data: InsightsData }) {
   );
 }
 
+function getCalmInsightParams(insight: NonNullable<InsightsData["calmInsight"]>, locale: string) {
+  const params: Record<string, string | number> = {};
+
+  Object.entries(insight.variables ?? {}).forEach(([key, value]) => {
+    params[key] = key === "categoryLabel" ? getCategoryLabel(value, locale) : value;
+  });
+
+  return params;
+}
+
+function CalmInsightCard({ data }: { data: InsightsData }) {
+  const { locale } = useLocale();
+  const insight = data.calmInsight;
+
+  if (!insight) {
+    return null;
+  }
+
+  const params = getCalmInsightParams(insight, locale);
+
+  return (
+    <Card className="rounded-lg border-sky-100 bg-sky-50/45" data-testid="calm-insight-card">
+      <CardContent className="space-y-2 p-4">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-sky-700">
+          <span className="inline-flex size-7 items-center justify-center rounded-full bg-white text-sky-700 shadow-sm">
+            <Lightbulb aria-hidden="true" className="size-3.5" />
+          </span>
+          <span>{t("insights.calmInsight.eyebrow", locale)}</span>
+        </div>
+        <div className="space-y-1">
+          <p className="text-base font-semibold leading-6 text-slate-900">{t(insight.titleKey, locale, params)}</p>
+          <p className="text-sm leading-5 text-slate-600">{t(insight.bodyKey, locale, params)}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TimeframeInsightsCard({ data, onSelect }: { data: InsightsData; onSelect: (updates: InsightsSelectionUpdate) => void }) {
   const { locale } = useLocale();
   const [mixSegment, setMixSegment] = useState<SpendingMixSegment>("expenses");
@@ -3118,6 +3157,7 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
       ) : null}
 
       <MonthlySnapshotCard data={activeData} />
+      <CalmInsightCard data={activeData} />
       <TimeframeInsightsCard data={activeData} onSelect={selectInsightsView} />
 
       {activeData.hasMissingRates ? (

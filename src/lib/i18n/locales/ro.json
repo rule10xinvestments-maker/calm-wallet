@@ -871,6 +871,22 @@
       "title": "Rezumat lunar",
       "trackedTransactionCount": "{count} {entry} urmărite"
     },
+    "calmInsight": {
+      "eyebrow": "Observație calmă",
+      "rules": {
+        "first_entries": { "title": "Imaginea ta începe să se contureze", "body": "Fiecare intrare adăugată face această perioadă mai ușor de înțeles." },
+        "not_enough_data": { "title": "Încă se conturează", "body": "Adaugă câteva intrări pentru o imagine mai clară a acestei perioade." },
+        "income_covered_spending": { "title": "Veniturile au acoperit cheltuielile", "body": "Veniturile urmărite au fost mai mari decât cheltuielile urmărite în această perioadă." },
+        "spending_exceeded_income": { "title": "Cheltuielile au fost mai mari", "body": "Cheltuielile urmărite au fost mai mari decât veniturile urmărite în această perioadă." },
+        "largest_expense_category": { "title": "{categoryLabel} a condus perioada", "body": "{categoryLabel} a fost cea mai mare categorie de cheltuieli urmărite." },
+        "largest_income_category": { "title": "{categoryLabel} a condus veniturile", "body": "{categoryLabel} a fost cea mai mare categorie de venituri urmărite." },
+        "comparison_spending_lower": { "title": "O perioadă mai liniștită", "body": "Cheltuielile urmărite au fost cu {percent}% mai mici decât în perioada comparabilă anterioară." },
+        "comparison_spending_higher": { "title": "Mai multă activitate de cheltuire", "body": "Cheltuielile urmărite au fost cu {percent}% mai mari decât în perioada comparabilă anterioară." },
+        "consistent_tracking": { "title": "O imagine mai clară", "body": "Ai înregistrat bani în {days} zile diferite din această perioadă." },
+        "concentrated_spending_period": { "title": "Cele mai multe cheltuieli au fost într-o parte a perioadei", "body": "Un bloc de timp a conținut cea mai mare parte a cheltuielilor urmărite." },
+        "largest_single_expense": { "title": "O intrare a influențat perioada", "body": "Cea mai mare cheltuială urmărită a reprezentat {percent}% din cheltuielile perioadei." }
+      }
+    },
     "converted": {
       "contains": "Conține monedă convertită",
       "included": "Monedă convertită inclusă",

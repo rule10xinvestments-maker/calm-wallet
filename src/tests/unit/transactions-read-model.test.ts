@@ -1698,6 +1698,59 @@ describe("transactions read model", () => {
     expect(data.categoryBreakdown).toEqual([]);
     expect(data.largestRecentExpenses).toEqual([]);
     expect(data.budgetProgress).toEqual([]);
+    expect(data.calmInsight).toBeNull();
+  });
+
+  it("keeps deleted transactions out of Calm Insight calculations", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "deleted-food-1", amountMinor: 5000, categoryId: "food", deletedAt: "2026-04-21T00:00:00.000Z" }),
+        makeTransaction({ id: "deleted-food-2", amountMinor: 5000, categoryId: "food", deletedForeverAt: "2026-04-21T00:00:00.000Z" }),
+      ],
+      { food: "Groceries" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.trackedTransactionCount).toBe(0);
+    expect(data.calmInsight).toBeNull();
+  });
+
+  it("includes generated recurring transactions as normal tracked data for Calm Insight", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          id: "rent-1",
+          amountMinor: 5000,
+          categoryId: "housing",
+          recurringRuleId: "rule-rent",
+          recurringOccurrenceDate: "2026-04-01",
+        }),
+        makeTransaction({
+          id: "rent-2",
+          amountMinor: 5000,
+          categoryId: "housing",
+          occurredAt: "2026-04-08T00:00:00.000Z",
+          recurringRuleId: "rule-rent",
+          recurringOccurrenceDate: "2026-04-08",
+        }),
+        makeTransaction({
+          id: "rent-3",
+          amountMinor: 5000,
+          categoryId: "housing",
+          occurredAt: "2026-04-15T00:00:00.000Z",
+          recurringRuleId: "rule-rent",
+          recurringOccurrenceDate: "2026-04-15",
+        }),
+      ],
+      { housing: "Housing" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.trackedTransactionCount).toBe(3);
+    expect(data.calmInsight?.id).toBe("largest_expense_category");
+    expect(data.calmInsight?.variables).toEqual({ categoryLabel: "housing" });
   });
 
   it("builds budget progress math for monthly category budgets", () => {

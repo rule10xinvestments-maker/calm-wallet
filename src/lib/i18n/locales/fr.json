@@ -871,6 +871,22 @@
       "title": "Aperçu mensuel",
       "trackedTransactionCount": "{count} {entry} suivies"
     },
+    "calmInsight": {
+      "eyebrow": "Observation calme",
+      "rules": {
+        "first_entries": { "title": "Votre image prend forme", "body": "Chaque entrée ajoutée rend cette période plus facile à comprendre." },
+        "not_enough_data": { "title": "Cela prend encore forme", "body": "Ajoutez quelques entrées pour faire apparaître une image plus claire de cette période." },
+        "income_covered_spending": { "title": "Les revenus ont couvert les dépenses", "body": "Les revenus suivis étaient plus élevés que les dépenses suivies sur cette période." },
+        "spending_exceeded_income": { "title": "Les dépenses étaient plus élevées", "body": "Les dépenses suivies étaient plus élevées que les revenus suivis sur cette période." },
+        "largest_expense_category": { "title": "{categoryLabel} a dominé cette période", "body": "{categoryLabel} était votre plus grande catégorie de dépenses suivies." },
+        "largest_income_category": { "title": "{categoryLabel} a dominé vos revenus", "body": "{categoryLabel} était votre plus grande catégorie de revenus suivis." },
+        "comparison_spending_lower": { "title": "Une période plus calme", "body": "Les dépenses suivies étaient {percent}% plus basses que sur la période comparable précédente." },
+        "comparison_spending_higher": { "title": "Plus d'activité de dépense", "body": "Les dépenses suivies étaient {percent}% plus élevées que sur la période comparable précédente." },
+        "consistent_tracking": { "title": "Une image plus claire", "body": "Vous avez enregistré de l'argent sur {days} jours différents pendant cette période." },
+        "concentrated_spending_period": { "title": "La plupart des dépenses ont eu lieu sur une partie de la période", "body": "Un bloc de temps contenait la plus grande part de vos dépenses suivies." },
+        "largest_single_expense": { "title": "Une entrée a marqué la période", "body": "Votre plus grande dépense suivie représentait {percent}% des dépenses de cette période." }
+      }
+    },
     "converted": {
       "contains": "Contient une devise convertie",
       "included": "Devise convertie incluse",
