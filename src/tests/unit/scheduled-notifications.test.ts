@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getDailyReminderCopy } from "@/domain/notifications/copy";
 import type { PushSubscriptionRow } from "@/domain/notifications/types";
 import type { NotificationEventStatus, NotificationEventType } from "@/lib/db/types";
 import type { ScheduledNotificationCandidate, ScheduledNotificationsAdapter } from "@/lib/server/scheduled-notifications";
@@ -45,6 +46,7 @@ function makeCandidate(overrides: Partial<ScheduledNotificationCandidate> = {}):
   return {
     userId: "user-1",
     timezone: "Europe/Bucharest",
+    uiLocale: "en",
     dailyReminderEnabled: true,
     monthlyReviewEnabled: true,
     subscriptions: [makeSubscription()],
@@ -110,12 +112,13 @@ describe("scheduled notification runner", () => {
     ]);
 
     await runScheduledNotifications(adapter, { now });
+    const expectedDailyCopy = getDailyReminderCopy(now, { locale: "en", userId: "user-1", dayKey: "2026-05-01" });
 
     expect(sendWebPushNotification).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        title: "Quick money check-in",
-        body: "Add anything you spent or earned today.",
+        title: expectedDailyCopy.title,
+        body: expectedDailyCopy.body,
         url: "/assistant",
         notificationType: "daily_reminder",
       }),
@@ -127,6 +130,30 @@ describe("scheduled notification runner", () => {
         body: "Review your income, spending, and trends.",
         url: "/insights",
         notificationType: "monthly_report",
+      }),
+    );
+  });
+
+  it("uses the candidate saved locale for daily reminder payloads", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter([
+      makeCandidate({
+        uiLocale: "ro",
+        monthlyReviewEnabled: false,
+      }),
+    ]);
+
+    await runScheduledNotifications(adapter, { now });
+    const expectedCopy = getDailyReminderCopy(now, { locale: "ro", userId: "user-1", dayKey: "2026-05-01" });
+
+    expect(sendWebPushNotification).toHaveBeenCalledOnce();
+    expect(sendWebPushNotification).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        title: expectedCopy.title,
+        body: expectedCopy.body,
+        url: "/assistant",
+        notificationType: "daily_reminder",
       }),
     );
   });

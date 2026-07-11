@@ -31,6 +31,7 @@ type PreferenceRecord = {
 type ProfileRecord = {
   id: string;
   timezone: string | null;
+  ui_locale: string | null;
 };
 type SupabaseSelectQuery<T> = PromiseLike<SupabaseQueryResult<T>> & {
   or(filter: string): PromiseLike<SupabaseQueryResult<T>>;
@@ -52,6 +53,7 @@ type SupabaseAdminQueryClient = {
 export type ScheduledNotificationCandidate = {
   userId: string;
   timezone?: string | null;
+  uiLocale?: string | null;
   dailyReminderEnabled: boolean;
   monthlyReviewEnabled: boolean;
   subscriptions: PushSubscriptionRow[];
@@ -277,7 +279,10 @@ async function runKind(
       continue;
     }
 
-    const copy = kind === "daily" ? getDailyReminderCopy(now) : getMonthlyReportCopy(now);
+    const copy =
+      kind === "daily"
+        ? getDailyReminderCopy(now, { locale: candidate.uiLocale, userId: candidate.userId, dayKey: schedule.dayKey })
+        : getMonthlyReportCopy(now);
     const sendResult = await sendToSubscriptions(
       candidate,
       (subscription) =>
@@ -391,7 +396,7 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
 
       const [{ data: profiles, error: profilesError }, { data: subscriptions, error: subscriptionsError }] =
         await Promise.all([
-          supabase.from("profiles").select<ProfileRecord[]>("id,timezone").in("id", userIds),
+          supabase.from("profiles").select<ProfileRecord[]>("id,timezone,ui_locale").in("id", userIds),
           supabase.from("push_subscriptions").select<PushSubscriptionRow[]>("*").in("user_id", userIds).is("disabled_at", null),
         ]);
 
@@ -417,6 +422,7 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
       return (preferences ?? []).map((preference) => ({
         userId: preference.user_id,
         timezone: profileByUserId.get(preference.user_id)?.timezone ?? null,
+        uiLocale: profileByUserId.get(preference.user_id)?.ui_locale ?? null,
         dailyReminderEnabled: preference.daily_reminder_enabled,
         monthlyReviewEnabled: preference.monthly_review_enabled,
         subscriptions: subscriptionsByUserId.get(preference.user_id) ?? [],

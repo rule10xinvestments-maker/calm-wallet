@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   assertCalmNotificationCopy,
+  dailyReminderNotificationRegistry,
   getDailyReminderCopy,
   getLimitAlertCopy,
   getMonthlyReportCopy,
@@ -208,7 +209,7 @@ describe("notification domain", () => {
   it("keeps notification copy calm and non-judgmental", () => {
     for (const copy of [
       notificationCopyTemplates.test,
-      ...notificationCopyTemplates.dailyReminder,
+      ...Object.values(dailyReminderNotificationRegistry).flat(),
       ...notificationCopyTemplates.monthlyReport,
       getRecurringEntryAddedCopy("Rent"),
       getRecurringEntryAddedCopy(null),
@@ -218,13 +219,54 @@ describe("notification domain", () => {
       expect(() => assertCalmNotificationCopy(copy)).not.toThrow();
     }
 
-    const copy = `${notificationCopyTemplates.dailyReminder.map((item) => `${item.title} ${item.body}`).join(" ")} ${notificationCopyTemplates.monthlyReport.map((item) => `${item.title} ${item.body}`).join(" ")}`;
-    expect(copy).not.toMatch(/urgent|hurry|warning|shame|failed|bad|must|now!/i);
+    const copy = `${Object.values(dailyReminderNotificationRegistry).flat().map((item) => `${item.title} ${item.body}`).join(" ")} ${notificationCopyTemplates.monthlyReport.map((item) => `${item.title} ${item.body}`).join(" ")}`;
+    expect(copy).not.toMatch(/urgent|hurry|warning|shame|failed|bad|must|now!|come back|we miss you|log now|stay on track|you haven't/i);
   });
 
-  it("rotates daily reminders and monthly reports deterministically", () => {
-    expect(getDailyReminderCopy(new Date("2026-01-01T12:00:00.000Z"))).toEqual(notificationCopyTemplates.dailyReminder[1]);
-    expect(getDailyReminderCopy(new Date("2026-01-02T12:00:00.000Z"))).toEqual(notificationCopyTemplates.dailyReminder[2]);
+  it("keeps daily reminder translations available in every supported locale", () => {
+    const englishCount = dailyReminderNotificationRegistry.en.length;
+
+    expect(englishCount).toBe(24);
+    expect(dailyReminderNotificationRegistry.ro).toHaveLength(englishCount);
+    expect(dailyReminderNotificationRegistry.fr).toHaveLength(englishCount);
+    expect(dailyReminderNotificationRegistry.es).toHaveLength(englishCount);
+
+    for (const variants of Object.values(dailyReminderNotificationRegistry)) {
+      const uniqueVariants = new Set(variants.map((item) => `${item.title}|${item.body}`));
+
+      expect(uniqueVariants.size).toBe(englishCount);
+      variants.forEach((item) => {
+        expect(item.title.trim()).toBeTruthy();
+        expect(item.body.trim()).toBeTruthy();
+      });
+    }
+  });
+
+  it("selects daily reminders by locale with English fallback", () => {
+    const date = new Date("2026-01-01T12:00:00.000Z");
+
+    expect(dailyReminderNotificationRegistry.ro).toContainEqual(
+      getDailyReminderCopy(date, { locale: "ro", userId: "user-1", dayKey: "2026-01-01" }),
+    );
+    expect(dailyReminderNotificationRegistry.fr).toContainEqual(
+      getDailyReminderCopy(date, { locale: "fr", userId: "user-1", dayKey: "2026-01-01" }),
+    );
+    expect(dailyReminderNotificationRegistry.es).toContainEqual(
+      getDailyReminderCopy(date, { locale: "es", userId: "user-1", dayKey: "2026-01-01" }),
+    );
+    expect(getDailyReminderCopy(date, { locale: "de", userId: "user-1", dayKey: "2026-01-01" })).toEqual(
+      getDailyReminderCopy(date, { locale: "en", userId: "user-1", dayKey: "2026-01-01" }),
+    );
+  });
+
+  it("rotates daily reminders deterministically by user and day while keeping monthly reports deterministic", () => {
+    const date = new Date("2026-01-01T12:00:00.000Z");
+    const first = getDailyReminderCopy(date, { locale: "en", userId: "user-1", dayKey: "2026-01-01" });
+    const repeated = getDailyReminderCopy(date, { locale: "en", userId: "user-1", dayKey: "2026-01-01" });
+    const nextDay = getDailyReminderCopy(date, { locale: "en", userId: "user-1", dayKey: "2026-01-02" });
+
+    expect(repeated).toEqual(first);
+    expect(nextDay).not.toEqual(first);
     expect(getMonthlyReportCopy(new Date("2026-01-01T12:00:00.000Z"))).toEqual(notificationCopyTemplates.monthlyReport[0]);
     expect(getMonthlyReportCopy(new Date("2026-02-01T12:00:00.000Z"))).toEqual(notificationCopyTemplates.monthlyReport[1]);
   });
