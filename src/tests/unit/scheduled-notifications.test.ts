@@ -54,7 +54,15 @@ function makeCandidate(overrides: Partial<ScheduledNotificationCandidate> = {}):
   };
 }
 
-function makeAdapter(candidates: ScheduledNotificationCandidate[], claimed = new Set<string>()) {
+function makeAdapter(
+  candidates: ScheduledNotificationCandidate[],
+  claimed = new Set<string>(),
+  options: {
+    activityByUserId?: Record<string, boolean>;
+    activityErrorUserIds?: Set<string>;
+    activitySpy?: ReturnType<typeof vi.fn>;
+  } = {},
+) {
   const marked: Array<{
     userId: string;
     notificationType: NotificationEventType;
@@ -79,6 +87,15 @@ function makeAdapter(candidates: ScheduledNotificationCandidate[], claimed = new
       marked.push({ userId, notificationType, dedupeKey, status, errorCode });
     }),
     disablePushSubscription: vi.fn(async () => undefined),
+    hasTrackedActivityInRange: vi.fn(async (userId, startIso, endIso) => {
+      options.activitySpy?.(userId, startIso, endIso);
+
+      if (options.activityErrorUserIds?.has(userId)) {
+        throw { code: "activity_check_failed", diagnostic: "database_unavailable:transactions" };
+      }
+
+      return options.activityByUserId?.[userId] ?? false;
+    }),
   };
 
   return { adapter, claimed, marked };
@@ -156,6 +173,144 @@ describe("scheduled notification runner", () => {
         notificationType: "daily_reminder",
       }),
     );
+  });
+
+  it("sends a daily reminder when the user has no tracked transaction today", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const activitySpy = vi.fn();
+    const { adapter } = makeAdapter([makeCandidate({ monthlyReviewEnabled: false })], new Set(), { activitySpy });
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary.daily.sent).toBe(1);
+    expect(summary.daily.skippedActivityToday).toBe(0);
+    expect(activitySpy).toHaveBeenCalledWith("user-1", "2026-04-30T21:00:00.000Z", "2026-05-01T21:00:00.000Z");
+    expect(sendWebPushNotification).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ notificationType: "daily_reminder" }),
+    );
+  });
+
+  it.each([
+    ["expense today"],
+    ["income today"],
+    ["recurring generated transaction today"],
+  ])("skips the daily reminder when the user has %s", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter([makeCandidate({ monthlyReviewEnabled: false })], new Set(), {
+      activityByUserId: { "user-1": true },
+    });
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary.daily.skippedActivityToday).toBe(1);
+    expect(summary.daily.sent).toBe(0);
+    expect(summary.daily.eligible).toBe(0);
+    expect(adapter.claimEvent).not.toHaveBeenCalled();
+    expect(sendWebPushNotification).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["transaction yesterday"],
+    ["transaction tomorrow"],
+    ["deleted transaction today"],
+    ["deleted_forever transaction today"],
+    ["another user's transaction"],
+    ["recurring rule without generated transaction"],
+    ["owed reminder"],
+  ])("keeps the user eligible when only %s exists", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter([makeCandidate({ monthlyReviewEnabled: false })], new Set(), {
+      activityByUserId: { "user-1": false },
+    });
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary.daily.sent).toBe(1);
+    expect(summary.daily.skippedActivityToday).toBe(0);
+    expect(adapter.claimEvent).toHaveBeenCalledWith("user-1", "daily_reminder", "2026-05-01");
+  });
+
+  it("uses the user's local day boundaries for the activity check when UTC day differs", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const activitySpy = vi.fn();
+    const { adapter } = makeAdapter(
+      [makeCandidate({ timezone: "America/Los_Angeles", monthlyReviewEnabled: false })],
+      new Set(),
+      { activitySpy },
+    );
+
+    await runScheduledNotifications(adapter, { now: new Date("2026-05-02T03:05:00.000Z") });
+
+    expect(activitySpy).toHaveBeenCalledWith("user-1", "2026-05-01T07:00:00.000Z", "2026-05-02T07:00:00.000Z");
+  });
+
+  it("respects daylight-saving local day ranges", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const activitySpy = vi.fn();
+    const { adapter } = makeAdapter(
+      [makeCandidate({ timezone: "America/New_York", monthlyReviewEnabled: false })],
+      new Set(),
+      { activitySpy },
+    );
+
+    await runScheduledNotifications(adapter, { now: new Date("2026-03-09T00:05:00.000Z") });
+
+    expect(activitySpy).toHaveBeenCalledWith("user-1", "2026-03-08T05:00:00.000Z", "2026-03-09T04:00:00.000Z");
+  });
+
+  it("uses UTC day boundaries when timezone is missing", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const activitySpy = vi.fn();
+    const { adapter } = makeAdapter(
+      [makeCandidate({ timezone: null, monthlyReviewEnabled: false })],
+      new Set(),
+      { activitySpy },
+    );
+
+    await runScheduledNotifications(adapter, { now: new Date("2026-05-01T20:05:00.000Z") });
+
+    expect(activitySpy).toHaveBeenCalledWith("user-1", "2026-05-01T00:00:00.000Z", "2026-05-02T00:00:00.000Z");
+  });
+
+  it("keeps deterministic daily copy unchanged when the user remains eligible", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter([makeCandidate({ monthlyReviewEnabled: false })]);
+    const expectedCopy = getDailyReminderCopy(now, { locale: "en", userId: "user-1", dayKey: "2026-05-01" });
+
+    await runScheduledNotifications(adapter, { now });
+
+    expect(sendWebPushNotification).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        title: expectedCopy.title,
+        body: expectedCopy.body,
+      }),
+    );
+  });
+
+  it("skips one user's reminder safely when the activity query fails and continues other users", async () => {
+    const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
+    const { adapter } = makeAdapter(
+      [
+        makeCandidate({ userId: "user-1", monthlyReviewEnabled: false }),
+        makeCandidate({
+          userId: "user-2",
+          monthlyReviewEnabled: false,
+          subscriptions: [makeSubscription({ id: "sub-2", user_id: "user-2", endpoint: "https://push.example.test/subscription-2" })],
+        }),
+      ],
+      new Set(),
+      { activityErrorUserIds: new Set(["user-1"]) },
+    );
+
+    const summary = await runScheduledNotifications(adapter, { now });
+
+    expect(summary.ok).toBe(true);
+    expect(summary.daily.activityCheckFailures).toBe(1);
+    expect(summary.daily.sent).toBe(1);
+    expect(sendWebPushNotification).toHaveBeenCalledOnce();
+    expect(JSON.stringify(summary)).not.toContain("subscription");
   });
 
   it("sends daily reminders only when enabled", async () => {

@@ -14,12 +14,14 @@ type SchedulerDiagnostic =
   | "database_unavailable:profiles"
   | "database_unavailable:push_subscriptions"
   | "database_unavailable:notification_events"
+  | "database_unavailable:transactions"
   | "schema_mismatch"
   | "schema_mismatch:notification_preferences"
   | "schema_mismatch:profiles"
   | "schema_mismatch:push_subscriptions"
   | "schema_mismatch:notification_events"
   | "schema_mismatch:notification_events_dedupe"
+  | "schema_mismatch:transactions"
   | "web_push_unconfigured";
 type SupabaseQueryError = { code?: string; message?: string };
 type SupabaseQueryResult<T> = { data: T | null; error: SupabaseQueryError | null };
@@ -36,7 +38,11 @@ type ProfileRecord = {
 type SupabaseSelectQuery<T> = PromiseLike<SupabaseQueryResult<T>> & {
   or(filter: string): PromiseLike<SupabaseQueryResult<T>>;
   in(column: string, values: string[]): SupabaseSelectQuery<T>;
-  is(column: string, value: null): PromiseLike<SupabaseQueryResult<T>>;
+  eq(column: string, value: string): SupabaseSelectQuery<T>;
+  gte(column: string, value: string): SupabaseSelectQuery<T>;
+  lt(column: string, value: string): SupabaseSelectQuery<T>;
+  is(column: string, value: null): SupabaseSelectQuery<T>;
+  limit(count: number): PromiseLike<SupabaseQueryResult<T>>;
 };
 type SupabaseUpdateQuery = PromiseLike<SupabaseQueryResult<unknown>> & {
   eq(column: string, value: string): SupabaseUpdateQuery;
@@ -70,6 +76,7 @@ export type ScheduledNotificationsAdapter = {
     errorCode?: string | null,
   ): Promise<void>;
   disablePushSubscription(userId: string, endpoint: string): Promise<void>;
+  hasTrackedActivityInRange(userId: string, startIso: string, endIso: string): Promise<boolean>;
 };
 
 export type ScheduledNotificationsSummary = {
@@ -91,6 +98,8 @@ export type NotificationRunCounts = {
   skippedOutsideWindow: number;
   skippedNoSubscriptions: number;
   failed: number;
+  skippedActivityToday: number;
+  activityCheckFailures: number;
   expiredSubscriptions: number;
   timezoneFallbacks: number;
 };
@@ -108,6 +117,8 @@ function emptyCounts(): NotificationRunCounts {
     skippedOutsideWindow: 0,
     skippedNoSubscriptions: 0,
     failed: 0,
+    skippedActivityToday: 0,
+    activityCheckFailures: 0,
     expiredSubscriptions: 0,
     timezoneFallbacks: 0,
   };
@@ -133,6 +144,44 @@ function getLocalParts(now: Date, timezone: string) {
     month: get("month"),
     day: get("day"),
     hour: get("hour") === 24 ? 0 : get("hour"),
+  };
+}
+
+function getTimeZoneOffsetMs(date: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+  const hour = get("hour") === 24 ? 0 : get("hour");
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), hour, get("minute"), get("second"));
+
+  return asUtc - date.getTime();
+}
+
+function localDateTimeToUtcDate(year: number, month: number, day: number, timezone: string) {
+  const utcGuess = Date.UTC(year, month - 1, day, 0, 0, 0);
+  const firstPass = new Date(utcGuess - getTimeZoneOffsetMs(new Date(utcGuess), timezone));
+  return new Date(utcGuess - getTimeZoneOffsetMs(firstPass, timezone));
+}
+
+export function getNotificationLocalDayRange(now: Date, timezone?: string | null) {
+  const resolved = resolveNotificationTimezone(timezone);
+  const local = getLocalParts(now, resolved.timezone);
+  const start = localDateTimeToUtcDate(local.year, local.month, local.day, resolved.timezone);
+  const end = localDateTimeToUtcDate(local.year, local.month, local.day + 1, resolved.timezone);
+
+  return {
+    ...resolved,
+    dayKey: `${local.year}-${pad(local.month)}-${pad(local.day)}`,
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
   };
 }
 
@@ -270,8 +319,25 @@ async function runKind(
       continue;
     }
 
-    counts.eligible += 1;
     const dedupeKey = kind === "daily" ? schedule.dayKey : schedule.monthKey;
+    if (kind === "daily") {
+      const dayRange = getNotificationLocalDayRange(now, candidate.timezone);
+
+      try {
+        const hasActivityToday = await adapter.hasTrackedActivityInRange(candidate.userId, dayRange.startIso, dayRange.endIso);
+
+        if (hasActivityToday) {
+          counts.skippedActivityToday += 1;
+          continue;
+        }
+      } catch (error) {
+        counts.activityCheckFailures += 1;
+        logSchedulerDiagnostic(getErrorDiagnostic(error) ?? getQueryDiagnostic(error, "schema_mismatch:transactions"), "activity_check_failed");
+        continue;
+      }
+    }
+
+    counts.eligible += 1;
     const claim = await adapter.claimEvent(candidate.userId, notificationType, dedupeKey);
 
     if (claim === "duplicate") {
@@ -478,6 +544,26 @@ export function createSupabaseScheduledNotificationsAdapter(): ScheduledNotifica
         const diagnostic = getQueryDiagnostic(error, "schema_mismatch:push_subscriptions");
         throw { ...error, diagnostic };
       }
+    },
+
+    async hasTrackedActivityInRange(userId, startIso, endIso) {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select<Array<{ id: string }>>("id")
+        .eq("user_id", userId)
+        .in("transaction_type", ["expense", "income"])
+        .gte("occurred_at", startIso)
+        .lt("occurred_at", endIso)
+        .is("deleted_at", null)
+        .is("deleted_forever_at", null)
+        .limit(1);
+
+      if (error) {
+        const diagnostic = getQueryDiagnostic(error, "schema_mismatch:transactions");
+        throw { ...error, diagnostic };
+      }
+
+      return Boolean(data?.length);
     },
   };
 }
