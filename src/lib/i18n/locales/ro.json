@@ -873,8 +873,9 @@
     },
     "calmInsight": {
       "eyebrow": "Observație calmă",
+      "genericCategoryLabel": "o categorie",
       "rules": {
-        "category_dominance": { "title": "{categoryLabel} a conturat perioada", "body": "{categoryLabel} a reprezentat {percent}% din cheltuielile urmărite." },
+        "category_dominance": { "title": "Categoria principală a fost {categoryLabel}", "body": "Această categorie a reprezentat {percent}% din cheltuielile urmărite." },
         "balanced_spending": { "title": "Nicio categorie nu a dominat", "body": "Cheltuielile au fost împărțite între mai multe categorii." },
         "bars_period_stood_out": { "title": "{bucketLabel} a ieșit în evidență", "body": "Acea perioadă din Bare a conținut {percent}% din cheltuielile urmărite." },
         "bars_early_spending": { "title": "Cele mai multe cheltuieli au fost la început", "body": "Prima parte a perioadei a conținut {percent}% din cheltuielile urmărite." },
@@ -887,8 +888,8 @@
         "not_enough_data": { "title": "Încă se conturează", "body": "Adaugă câteva intrări pentru o imagine mai clară a acestei perioade." },
         "income_covered_spending": { "title": "Veniturile au acoperit cheltuielile", "body": "Veniturile urmărite au fost mai mari decât cheltuielile urmărite în această perioadă." },
         "spending_exceeded_income": { "title": "Cheltuielile au fost mai mari", "body": "Cheltuielile urmărite au fost mai mari decât veniturile urmărite în această perioadă." },
-        "largest_expense_category": { "title": "{categoryLabel} a condus perioada", "body": "{categoryLabel} a fost cea mai mare categorie de cheltuieli urmărite." },
-        "largest_income_category": { "title": "{categoryLabel} a condus veniturile", "body": "{categoryLabel} a fost cea mai mare categorie de venituri urmărite." },
+        "largest_expense_category": { "title": "Categoria principală de cheltuieli: {categoryLabel}", "body": "Aceasta a fost cea mai mare categorie de cheltuieli urmărite." },
+        "largest_income_category": { "title": "Categoria principală de venituri: {categoryLabel}", "body": "Aceasta a fost cea mai mare categorie de venituri urmărite." },
         "comparison_spending_lower": { "title": "O perioadă mai liniștită", "body": "Cheltuielile urmărite au fost cu {percent}% mai mici decât în perioada comparabilă anterioară." },
         "comparison_spending_higher": { "title": "Mai multă activitate de cheltuire", "body": "Cheltuielile urmărite au fost cu {percent}% mai mari decât în perioada comparabilă anterioară." },
         "consistent_tracking": { "title": "Urmărirea a rămas constantă", "body": "Ai înregistrat bani în {days} zile diferite din această perioadă." },

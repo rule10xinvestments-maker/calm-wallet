@@ -873,8 +873,9 @@
     },
     "calmInsight": {
       "eyebrow": "Observation calme",
+      "genericCategoryLabel": "une catégorie",
       "rules": {
-        "category_dominance": { "title": "{categoryLabel} a marqué cette période", "body": "{categoryLabel} a représenté {percent}% des dépenses suivies." },
+        "category_dominance": { "title": "La catégorie principale était {categoryLabel}", "body": "Cette catégorie a représenté {percent}% des dépenses suivies." },
         "balanced_spending": { "title": "Aucune catégorie n’a dominé", "body": "Vos dépenses étaient réparties entre plusieurs catégories." },
         "bars_period_stood_out": { "title": "{bucketLabel} s’est distingué", "body": "Cette période dans Barres contenait {percent}% des dépenses suivies." },
         "bars_early_spending": { "title": "La plupart des dépenses ont eu lieu au début", "body": "La première partie de la période contenait {percent}% des dépenses suivies." },
@@ -887,8 +888,8 @@
         "not_enough_data": { "title": "Cela prend encore forme", "body": "Ajoutez quelques entrées pour faire apparaître une image plus claire de cette période." },
         "income_covered_spending": { "title": "Les revenus ont couvert les dépenses", "body": "Les revenus suivis étaient plus élevés que les dépenses suivies sur cette période." },
         "spending_exceeded_income": { "title": "Les dépenses étaient plus élevées", "body": "Les dépenses suivies étaient plus élevées que les revenus suivis sur cette période." },
-        "largest_expense_category": { "title": "{categoryLabel} a dominé cette période", "body": "{categoryLabel} était votre plus grande catégorie de dépenses suivies." },
-        "largest_income_category": { "title": "{categoryLabel} a dominé vos revenus", "body": "{categoryLabel} était votre plus grande catégorie de revenus suivis." },
+        "largest_expense_category": { "title": "Catégorie principale de dépenses : {categoryLabel}", "body": "C’était votre plus grande catégorie de dépenses suivies." },
+        "largest_income_category": { "title": "Catégorie principale de revenus : {categoryLabel}", "body": "C’était votre plus grande catégorie de revenus suivis." },
         "comparison_spending_lower": { "title": "Une période plus calme", "body": "Les dépenses suivies étaient {percent}% plus basses que sur la période comparable précédente." },
         "comparison_spending_higher": { "title": "Plus d'activité de dépense", "body": "Les dépenses suivies étaient {percent}% plus élevées que sur la période comparable précédente." },
         "consistent_tracking": { "title": "Le suivi est resté régulier", "body": "Vous avez enregistré de l'argent sur {days} jours différents pendant cette période." },

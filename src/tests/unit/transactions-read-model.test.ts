@@ -1750,7 +1750,8 @@ describe("transactions read model", () => {
 
     expect(data.trackedTransactionCount).toBe(3);
     expect(data.calmInsight?.id).toBe("category_dominance");
-    expect(data.calmInsight?.variables).toEqual({ categoryLabel: "housing", percent: 100 });
+    expect(data.calmInsight?.variables).toEqual({ categoryLabel: "Housing", percent: 100 });
+    expect(data.calmInsight?.categoryMeta?.canonicalCategory).toBe("housing");
   });
 
   it("builds budget progress math for monthly category budgets", () => {

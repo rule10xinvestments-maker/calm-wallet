@@ -204,7 +204,7 @@ describe("Calm Insight rule engine", () => {
     ).toBe("spending_exceeded_income");
   });
 
-  it("surfaces category dominance by canonical category id", () => {
+  it("surfaces category dominance with canonical category metadata separated from display label", () => {
     const insight = selectCalmInsight(
       makeInsightsData({
         selectedPeriodTransactionCount: 4,
@@ -217,22 +217,31 @@ describe("Calm Insight rule engine", () => {
     );
 
     expect(insight?.id).toBe("category_dominance");
-    expect(insight?.variables).toEqual({ categoryLabel: "groceries", percent: 42 });
+    expect(insight?.variables).toEqual({ categoryLabel: "Groceries", percent: 42 });
+    expect(insight?.categoryMeta).toEqual({
+      canonicalCategory: "groceries",
+      categoryId: "groceries",
+      displayLabel: "Groceries",
+      iconKey: "Groceries",
+      colorKey: "Groceries",
+    });
   });
 
-  it("surfaces the largest useful income category", () => {
+  it("surfaces the largest useful income category without using the category id as display text", () => {
     const insight = selectCalmInsight(
       makeInsightsData({
         selectedPeriodTransactionCount: 4,
         selectedPeriodIncomeDisplayMinor: 6000,
         incomeCategoryBreakdown: [
-          makeCategory({ key: "salary", label: "Salary", amountMinor: 5000, transactionCount: 3 }),
+          makeCategory({ key: "9aeeaa28-17d4-4be8-9a75-b446c1e40837", label: "Freelance", amountMinor: 5000, transactionCount: 3 }),
         ],
       }),
     );
 
     expect(insight?.id).toBe("largest_income_category");
-    expect(insight?.variables).toEqual({ categoryLabel: "salary" });
+    expect(insight?.variables).toEqual({ categoryLabel: "Freelance" });
+    expect(insight?.categoryMeta?.canonicalCategory).toBe("9aeeaa28-17d4-4be8-9a75-b446c1e40837");
+    expect(insight?.categoryMeta?.displayLabel).toBe("Freelance");
   });
 
   it("detects materially lower spending against a comparable previous period", () => {
@@ -435,7 +444,8 @@ describe("Calm Insight rule engine", () => {
     );
 
     expect(insight?.id).toBe("category_largest_changed");
-    expect(insight?.variables).toEqual({ categoryLabel: "food", previousCategoryLabel: "shopping" });
+    expect(insight?.variables).toEqual({ categoryLabel: "Food", previousCategoryLabel: "shopping" });
+    expect(insight?.categoryMeta?.canonicalCategory).toBe("food");
   });
 
   it("detects recurring spending share when already present in Insights data", () => {

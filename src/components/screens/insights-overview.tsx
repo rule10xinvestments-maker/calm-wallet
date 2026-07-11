@@ -2341,10 +2341,51 @@ function getCalmInsightParams(insight: NonNullable<InsightsData["calmInsight"]>,
   const params: Record<string, string | number> = {};
 
   Object.entries(insight.variables ?? {}).forEach(([key, value]) => {
-    params[key] = key === "categoryLabel" || key === "previousCategoryLabel" ? getCategoryLabel(value, locale) : value;
+    if (key === "categoryLabel") {
+      params[key] = getSafeCalmInsightCategoryLabel({
+        canonicalCategory: insight.categoryMeta?.canonicalCategory,
+        displayLabel: insight.categoryMeta?.displayLabel ?? value,
+        locale,
+      });
+      return;
+    }
+
+    if (key === "previousCategoryLabel") {
+      params[key] = getSafeCalmInsightCategoryLabel({ displayLabel: value, locale });
+      return;
+    }
+
+    params[key] = value;
   });
 
   return params;
+}
+
+function isUuidLike(value: unknown) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+function getSafeCalmInsightCategoryLabel({
+  canonicalCategory,
+  displayLabel,
+  locale,
+}: {
+  canonicalCategory?: string | null;
+  displayLabel: unknown;
+  locale: string;
+}) {
+  const candidateLabel = typeof displayLabel === "string" || typeof displayLabel === "number" ? String(displayLabel).trim() : "";
+  const canonical = typeof canonicalCategory === "string" ? canonicalCategory.trim() : "";
+
+  if (!candidateLabel || isUuidLike(candidateLabel) || (canonical && candidateLabel === canonical && isUuidLike(canonical))) {
+    return t("insights.calmInsight.genericCategoryLabel", locale);
+  }
+
+  return getCategoryLabel(candidateLabel, locale);
+}
+
+function isCategoryCalmInsight(insight: NonNullable<InsightsData["calmInsight"]>) {
+  return Boolean(insight.categoryMeta);
 }
 
 function CalmInsightCard({ data }: { data: InsightsData }) {
@@ -2356,6 +2397,10 @@ function CalmInsightCard({ data }: { data: InsightsData }) {
   }
 
   const params = getCalmInsightParams(insight, locale);
+  const categoryVisuals = isCategoryCalmInsight(insight)
+    ? getCategoryVisualsByName(insight.categoryMeta?.iconKey ?? insight.categoryMeta?.displayLabel ?? insight.categoryMeta?.canonicalCategory)
+    : null;
+  const CategoryIcon = categoryVisuals?.icon;
 
   return (
     <Card className="rounded-lg border-sky-100 bg-sky-50/45" data-testid="calm-insight-card">
@@ -2366,9 +2411,22 @@ function CalmInsightCard({ data }: { data: InsightsData }) {
           </span>
           <span>{t("insights.calmInsight.eyebrow", locale)}</span>
         </div>
-        <div className="space-y-1">
-          <p className="text-base font-semibold leading-6 text-slate-900">{t(insight.titleKey, locale, params)}</p>
-          <p className="text-sm leading-5 text-slate-600">{t(insight.bodyKey, locale, params)}</p>
+        <div className="flex gap-3">
+          {CategoryIcon && categoryVisuals ? (
+            <span
+              aria-hidden="true"
+              className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full border"
+              data-testid="calm-insight-category-icon"
+              data-category-color={categoryVisuals.primary}
+              style={{ backgroundColor: categoryVisuals.bg, borderColor: categoryVisuals.border, color: categoryVisuals.primary }}
+            >
+              <CategoryIcon aria-hidden="true" className="size-4" />
+            </span>
+          ) : null}
+          <div className="min-w-0 space-y-1">
+            <p className="text-base font-semibold leading-6 text-slate-900">{t(insight.titleKey, locale, params)}</p>
+            <p className="text-sm leading-5 text-slate-600">{t(insight.bodyKey, locale, params)}</p>
+          </div>
         </div>
       </CardContent>
     </Card>

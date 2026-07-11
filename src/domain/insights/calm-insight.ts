@@ -29,10 +29,19 @@ export type CalmInsightCandidate = {
   discoveryScore: number;
   titleKey: string;
   bodyKey: string;
+  categoryMeta?: CalmInsightCategoryMeta;
   variables?: Record<string, string | number>;
 };
 
 export type CalmInsightResult = CalmInsightCandidate;
+
+export type CalmInsightCategoryMeta = {
+  canonicalCategory: string | null;
+  categoryId?: string | null;
+  displayLabel: string;
+  iconKey: string;
+  colorKey: string;
+};
 
 export type CalmInsightPreviousPeriod = {
   comparable: boolean;
@@ -77,6 +86,7 @@ function candidate(
   confidence: number,
   discoveryScore: number,
   variables?: Record<string, string | number>,
+  categoryMeta?: CalmInsightCategoryMeta,
 ): CalmInsightCandidate {
   return {
     id,
@@ -85,8 +95,42 @@ function candidate(
     discoveryScore,
     titleKey: `insights.calmInsight.rules.${id}.title`,
     bodyKey: `insights.calmInsight.rules.${id}.body`,
+    categoryMeta,
     variables,
   };
+}
+
+function buildCategoryMeta(item: InsightsData["categoryBreakdown"][number]): CalmInsightCategoryMeta {
+  return {
+    canonicalCategory: item.key,
+    categoryId: item.key,
+    displayLabel: item.label,
+    iconKey: item.label || item.key,
+    colorKey: item.label || item.key,
+  };
+}
+
+function categoryCandidate(
+  id: CalmInsightRuleId,
+  priority: number,
+  confidence: number,
+  discoveryScore: number,
+  item: InsightsData["categoryBreakdown"][number],
+  variables?: Record<string, string | number>,
+): CalmInsightCandidate {
+  const categoryMeta = buildCategoryMeta(item);
+
+  return candidate(
+    id,
+    priority,
+    confidence,
+    discoveryScore,
+    {
+      ...variables,
+      categoryLabel: categoryMeta.displayLabel,
+    },
+    categoryMeta,
+  );
 }
 
 function percent(part: number, total: number) {
@@ -191,8 +235,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("category_largest_changed", 82, current.share, 96, {
-      categoryLabel: current.item.key,
+    return categoryCandidate("category_largest_changed", 82, current.share, 96, current.item, {
       previousCategoryLabel: previous.item.key,
     });
   },
@@ -206,8 +249,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("category_dominance", 78, leading.share, Math.min(95, 55 + leading.share), {
-      categoryLabel: leading.item.key,
+    return categoryCandidate("category_dominance", 78, leading.share, Math.min(95, 55 + leading.share), leading.item, {
       percent: leading.share,
     });
   },
@@ -387,7 +429,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("largest_expense_category", 54, leading.share, 68, { categoryLabel: leading.item.key });
+    return categoryCandidate("largest_expense_category", 54, leading.share, 68, leading.item);
   },
   function largestIncomeCategory({ data }: CalmInsightContext) {
     if (!isMeaningfulPeriod(data)) {
@@ -399,7 +441,7 @@ export const calmInsightRules = [
       return null;
     }
 
-    return candidate("largest_income_category", 52, leading.share, 62, { categoryLabel: leading.item.key });
+    return categoryCandidate("largest_income_category", 52, leading.share, 62, leading.item);
   },
   function incomeCoveredSpending({ data }: CalmInsightContext) {
     if (!isMeaningfulPeriod(data) || data.selectedPeriodIncomeDisplayMinor <= 0 || data.selectedPeriodExpenseDisplayMinor <= 0) {

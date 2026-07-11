@@ -791,6 +791,7 @@ describe("insights overview", () => {
     expect(within(insight).getByText("Calm Insight")).toBeInTheDocument();
     expect(within(insight).getByText("Income covered your spending")).toBeInTheDocument();
     expect(within(insight).getByText("Tracked income was higher than tracked spending in this period.")).toBeInTheDocument();
+    expect(within(insight).queryByTestId("calm-insight-category-icon")).not.toBeInTheDocument();
     expect(within(insight).queryByRole("button")).not.toBeInTheDocument();
     expect(within(insight).queryByRole("link")).not.toBeInTheDocument();
   });
@@ -802,10 +803,10 @@ describe("insights overview", () => {
   });
 
   it.each([
-    ["en", "Calm Insight", "Groceries led this period", "Groceries was your largest tracked expense category."],
-    ["ro", "Observație calmă", "Alimente a condus perioada", "Alimente a fost cea mai mare categorie de cheltuieli urmărite."],
-    ["fr", "Observation calme", "Courses a dominé cette période", "Courses était votre plus grande catégorie de dépenses suivies."],
-    ["es", "Observación tranquila", "Supermercado lideró este periodo", "Supermercado fue tu mayor categoría de gastos registrados."],
+    ["en", "Calm Insight", "Main spending category: Groceries", "This was your largest tracked expense category."],
+    ["ro", "Observație calmă", "Categoria principală de cheltuieli: Alimente", "Aceasta a fost cea mai mare categorie de cheltuieli urmărite."],
+    ["fr", "Observation calme", "Catégorie principale de dépenses : Courses", "C’était votre plus grande catégorie de dépenses suivies."],
+    ["es", "Observación tranquila", "Categoría principal de gastos: Supermercado", "Esta fue tu mayor categoría de gastos registrados."],
   ] satisfies Array<[SupportedLocale, string, string, string]>)(
     "renders localized Calm Insight copy for %s",
     (locale, eyebrow, title, body) => {
@@ -818,7 +819,14 @@ describe("insights overview", () => {
             discoveryScore: 68,
             titleKey: "insights.calmInsight.rules.largest_expense_category.title",
             bodyKey: "insights.calmInsight.rules.largest_expense_category.body",
-            variables: { categoryLabel: "groceries" },
+            variables: { categoryLabel: "Groceries" },
+            categoryMeta: {
+              canonicalCategory: "groceries",
+              categoryId: "groceries",
+              displayLabel: "Groceries",
+              iconKey: "Groceries",
+              colorKey: "Groceries",
+            },
           },
         }),
         { locale },
@@ -829,8 +837,40 @@ describe("insights overview", () => {
       expect(within(insight).getByText(eyebrow)).toBeInTheDocument();
       expect(within(insight).getByText(title)).toBeInTheDocument();
       expect(within(insight).getByText(body)).toBeInTheDocument();
+      expect(within(insight).getByTestId("calm-insight-category-icon")).toHaveAttribute("aria-hidden", "true");
     },
   );
+
+  it("keeps UUID category ids out of Calm Insight copy and uses fallback visuals", () => {
+    renderInsights(
+      makeInsightsData({
+        calmInsight: {
+          id: "category_dominance",
+          priority: 78,
+          confidence: 47,
+          discoveryScore: 95,
+          titleKey: "insights.calmInsight.rules.category_dominance.title",
+          bodyKey: "insights.calmInsight.rules.category_dominance.body",
+          variables: { categoryLabel: "9aeeaa28-17d4-4be8-9a75-b446c1e40837", percent: 47 },
+          categoryMeta: {
+            canonicalCategory: "9aeeaa28-17d4-4be8-9a75-b446c1e40837",
+            categoryId: "9aeeaa28-17d4-4be8-9a75-b446c1e40837",
+            displayLabel: "9aeeaa28-17d4-4be8-9a75-b446c1e40837",
+            iconKey: "9aeeaa28-17d4-4be8-9a75-b446c1e40837",
+            colorKey: "9aeeaa28-17d4-4be8-9a75-b446c1e40837",
+          },
+        },
+      }),
+      { locale: "ro" },
+    );
+
+    const insight = screen.getByTestId("calm-insight-card");
+
+    expect(insight).not.toHaveTextContent("9aeeaa28-17d4-4be8-9a75-b446c1e40837");
+    expect(within(insight).getByText("Categoria principală a fost o categorie")).toBeInTheDocument();
+    expect(within(insight).getByText("Această categorie a reprezentat 47% din cheltuielile urmărite.")).toBeInTheDocument();
+    expect(within(insight).getByTestId("calm-insight-category-icon")).toHaveAttribute("data-category-color", "#64748B");
+  });
 
   it("renders chart mode links and preserves timeframe and currency", () => {
     renderInsights(makeInsightsData({ selectedTimeframe: "6M", displayCurrency: "EUR", availableDisplayCurrencies: ["EUR", "RON"] }));

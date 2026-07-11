@@ -873,8 +873,9 @@
     },
     "calmInsight": {
       "eyebrow": "Calm Insight",
+      "genericCategoryLabel": "a category",
       "rules": {
-        "category_dominance": { "title": "{categoryLabel} shaped this period", "body": "{categoryLabel} represented {percent}% of tracked spending." },
+        "category_dominance": { "title": "This period was led by {categoryLabel}", "body": "This category represented {percent}% of tracked spending." },
         "balanced_spending": { "title": "No category dominated", "body": "Your spending was spread across several categories." },
         "bars_period_stood_out": { "title": "{bucketLabel} stood out", "body": "That Bars period contained {percent}% of tracked spending." },
         "bars_early_spending": { "title": "Most spending happened early", "body": "The first part of the period contained {percent}% of tracked spending." },
@@ -887,8 +888,8 @@
         "not_enough_data": { "title": "Still taking shape", "body": "Add a few more entries to reveal a clearer picture of this period." },
         "income_covered_spending": { "title": "Income covered your spending", "body": "Tracked income was higher than tracked spending in this period." },
         "spending_exceeded_income": { "title": "Spending was higher this period", "body": "Tracked spending was higher than tracked income in this period." },
-        "largest_expense_category": { "title": "{categoryLabel} led this period", "body": "{categoryLabel} was your largest tracked expense category." },
-        "largest_income_category": { "title": "{categoryLabel} led your income", "body": "{categoryLabel} was your largest tracked income category." },
+        "largest_expense_category": { "title": "Main spending category: {categoryLabel}", "body": "This was your largest tracked expense category." },
+        "largest_income_category": { "title": "Main income category: {categoryLabel}", "body": "This was your largest tracked income category." },
         "comparison_spending_lower": { "title": "A quieter period", "body": "Tracked spending was {percent}% lower than the previous comparable period." },
         "comparison_spending_higher": { "title": "More spending activity", "body": "Tracked spending was {percent}% higher than the previous comparable period." },
         "consistent_tracking": { "title": "Tracking stayed consistent", "body": "You recorded money on {days} different days in this period." },

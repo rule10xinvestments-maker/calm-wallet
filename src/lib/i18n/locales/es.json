@@ -873,8 +873,9 @@
     },
     "calmInsight": {
       "eyebrow": "Observación tranquila",
+      "genericCategoryLabel": "una categoría",
       "rules": {
-        "category_dominance": { "title": "{categoryLabel} marcó este periodo", "body": "{categoryLabel} representó el {percent}% de los gastos registrados." },
+        "category_dominance": { "title": "La categoría principal fue {categoryLabel}", "body": "Esta categoría representó el {percent}% de los gastos registrados." },
         "balanced_spending": { "title": "Ninguna categoría dominó", "body": "Tus gastos se repartieron entre varias categorías." },
         "bars_period_stood_out": { "title": "{bucketLabel} destacó", "body": "Ese periodo en Barras concentró el {percent}% de los gastos registrados." },
         "bars_early_spending": { "title": "La mayoría de los gastos ocurrió al principio", "body": "La primera parte del periodo concentró el {percent}% de los gastos registrados." },
@@ -887,8 +888,8 @@
         "not_enough_data": { "title": "Aún está tomando forma", "body": "Añade algunos registros más para ver una imagen más clara de este periodo." },
         "income_covered_spending": { "title": "Los ingresos cubrieron los gastos", "body": "Los ingresos registrados fueron mayores que los gastos registrados en este periodo." },
         "spending_exceeded_income": { "title": "Los gastos fueron más altos", "body": "Los gastos registrados fueron mayores que los ingresos registrados en este periodo." },
-        "largest_expense_category": { "title": "{categoryLabel} lideró este periodo", "body": "{categoryLabel} fue tu mayor categoría de gastos registrados." },
-        "largest_income_category": { "title": "{categoryLabel} lideró tus ingresos", "body": "{categoryLabel} fue tu mayor categoría de ingresos registrados." },
+        "largest_expense_category": { "title": "Categoría principal de gastos: {categoryLabel}", "body": "Esta fue tu mayor categoría de gastos registrados." },
+        "largest_income_category": { "title": "Categoría principal de ingresos: {categoryLabel}", "body": "Esta fue tu mayor categoría de ingresos registrados." },
         "comparison_spending_lower": { "title": "Un periodo más tranquilo", "body": "Los gastos registrados fueron un {percent}% menores que en el periodo comparable anterior." },
         "comparison_spending_higher": { "title": "Más actividad de gasto", "body": "Los gastos registrados fueron un {percent}% mayores que en el periodo comparable anterior." },
         "consistent_tracking": { "title": "El registro se mantuvo constante", "body": "Registraste dinero en {days} días distintos de este periodo." },

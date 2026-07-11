@@ -172,11 +172,12 @@ describe("i18n helper", () => {
     expect(t("insights.calmInsight.eyebrow", "ro")).toBe("Observație calmă");
     expect(t("insights.calmInsight.eyebrow", "fr")).toBe("Observation calme");
     expect(t("insights.calmInsight.eyebrow", "es")).toBe("Observación tranquila");
+    expect(t("insights.calmInsight.genericCategoryLabel", "ro")).toBe("o categorie");
     expect(t("insights.calmInsight.rules.comparison_spending_lower.body", "ro", { percent: 30 })).toBe(
       "Cheltuielile urmărite au fost cu 30% mai mici decât în perioada comparabilă anterioară.",
     );
     expect(t("insights.calmInsight.rules.largest_expense_category.title", "fr", { categoryLabel: "Courses" })).toBe(
-      "Courses a dominé cette période",
+      "Catégorie principale de dépenses : Courses",
     );
     expect(t("insights.calmInsight.rules.consistent_tracking.body", "es", { days: 10 })).toBe(
       "Registraste dinero en 10 días distintos de este periodo.",
