@@ -134,7 +134,7 @@
       "optionalMerchant": "Comerciant opțional",
       "optionalNote": "Notă opțională",
       "recurring": "Recurent",
-      "recurringHelper": "Creează automat înregistrări urmărite.",
+      "recurringHelper": "Creează automat intrări urmărite. Fiecare intrare creată folosește 1 credit.",
       "frequencyLabel": "Repetare",
       "scheduleLabel": "Program",
       "untilOffSummary": "până îl opresc",
@@ -618,6 +618,24 @@
           }
         }
       }
+    }
+  },
+  "credits": {
+    "low10": { "title": "Mai ai 10 credite pentru intrări" },
+    "low3": { "title": "Mai ai câteva credite pentru intrări" },
+    "low": { "helper": "Vei putea adăuga altele mai târziu printr-un mesaj sponsorizat scurt sau un pachet de credite." },
+    "insufficient": {
+      "title": "Adaugă credite pentru a salva intrarea",
+      "helper": "Intrările și Perspectivele existente rămân disponibile."
+    },
+    "options": {
+      "heading": "Continuă să notezi banii",
+      "body": "Fiecare cheltuială sau venit nou folosește 1 credit. Tot ce ai salvat deja rămâne disponibil.",
+      "earn": { "title": "Câștigă 5 credite", "helper": "Vezi un mesaj sponsorizat scurt. În curând." },
+      "small": { "title": "50 credite — $1.49", "helper": "O reîncărcare mică. În curând." },
+      "large": { "title": "500 credite — $9.99", "helper": "Cea mai bună valoare. În curând." },
+      "unlimited": { "title": "Intrări nelimitate — $19.99/an", "helper": "Notezi liber, fără să te gândești la credite." },
+      "footer": "Fără reclame forțate. Nelimitat se reînnoiește anual până la anulare."
     }
   },
   "transactions": {

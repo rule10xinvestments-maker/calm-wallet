@@ -36,6 +36,7 @@ export const createTransactionSchema = z
     importCandidateId: idSchema.nullable().optional(),
     recurringRuleId: idSchema.nullable().optional(),
     recurringOccurrenceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Occurrence date must be a valid date.").nullable().optional(),
+    operationKey: z.string().trim().min(1).max(160).nullable().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.reviewState === "needs_attention" && !value.uncertaintyReason) {

@@ -134,7 +134,7 @@
       "optionalMerchant": "Comercio opcional",
       "optionalNote": "Nota opcional",
       "recurring": "Recurrente",
-      "recurringHelper": "Se repite automáticamente como entradas registradas.",
+      "recurringHelper": "Se repite automáticamente como registros. Cada registro creado usa 1 crédito.",
       "frequencyLabel": "Frecuencia",
       "scheduleLabel": "Calendario",
       "untilOffSummary": "hasta desactivarlo",
@@ -618,6 +618,24 @@
           }
         }
       }
+    }
+  },
+  "credits": {
+    "low10": { "title": "Te quedan 10 créditos de registro" },
+    "low3": { "title": "Te quedan pocos créditos de registro" },
+    "low": { "helper": "Podrás añadir más después con un mensaje patrocinado breve o un paquete de créditos." },
+    "insufficient": {
+      "title": "Añade créditos para guardar este registro",
+      "helper": "Tus registros e Insights existentes seguirán disponibles."
+    },
+    "options": {
+      "heading": "Sigue registrando tu dinero",
+      "body": "Cada nuevo gasto o ingreso usa 1 crédito. Todo lo que ya guardaste seguirá disponible.",
+      "earn": { "title": "Ganar 5 créditos", "helper": "Ver un mensaje patrocinado breve. Próximamente." },
+      "small": { "title": "50 créditos — 1,49 US$", "helper": "Una recarga pequeña. Próximamente." },
+      "large": { "title": "500 créditos — 9,99 US$", "helper": "Mejor valor. Próximamente." },
+      "unlimited": { "title": "Registros ilimitados — 19,99 US$/año", "helper": "Registra sin pensar en créditos." },
+      "footer": "Sin anuncios forzados. Ilimitado se renueva cada año hasta que se cancele."
     }
   },
   "transactions": {

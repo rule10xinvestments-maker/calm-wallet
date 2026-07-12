@@ -1,6 +1,7 @@
 import { AssistantOverview } from "@/components/screens/assistant-overview";
 import { assistantAction } from "@/lib/actions/assistant";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
+import { markCreditNoticeShownAction } from "@/lib/actions/credits";
 import { pauseCategoryLimitAction, resumeCategoryLimitAction, deleteMonthlyCategoryBudgetAction, upsertCategoryLimitAction } from "@/lib/actions/budgets";
 import {
   adjustOwedNoteAmountAction,
@@ -16,6 +17,8 @@ import type { OwedNote } from "@/domain/owed-notes/types";
 import { generateDueRecurringTransactionsForUserSafely } from "@/domain/recurring/service";
 import { loadAssistantRecentTransactions, loadControlledCategoryOptions, loadDefaultCurrency } from "@/lib/server/transactions-read-model";
 import { logProtectedRouteLoadFailure } from "@/lib/server/protected-route-fallbacks";
+import { createSupabaseCreditsService } from "@/domain/credits/service";
+import { isCreditEnforcementEnabled } from "@/lib/credits/config";
 import { redirect } from "next/navigation";
 
 export default async function AssistantPage() {
@@ -32,6 +35,7 @@ export default async function AssistantPage() {
   let categoryLimits: Budget[] = [];
   let owedNotes: OwedNote[] = [];
   let defaultCurrency = "USD";
+  let creditAccount: Awaited<ReturnType<Awaited<ReturnType<typeof createSupabaseCreditsService>>["getAccount"]>> | null = null;
 
   try {
     await generateDueRecurringTransactionsForUserSafely(user.id);
@@ -52,6 +56,16 @@ export default async function AssistantPage() {
       logProtectedRouteLoadFailure("assistant", error);
       owedNotes = [];
     }
+
+    if (isCreditEnforcementEnabled()) {
+      try {
+        const creditsService = await createSupabaseCreditsService();
+        creditAccount = await creditsService.getAccount(user.id);
+      } catch (error) {
+        logProtectedRouteLoadFailure("assistant", error);
+        creditAccount = null;
+      }
+    }
   } catch (error) {
     loadError = true;
     logProtectedRouteLoadFailure("assistant", error);
@@ -64,9 +78,11 @@ export default async function AssistantPage() {
       initialState={initialAssistantActionState}
       categoryLimits={categoryLimits}
       categoryOptions={categoryOptions}
+      creditAccount={creditAccount}
       createOwedNoteAction={createOwedNoteAction}
       deleteLimitAction={deleteMonthlyCategoryBudgetAction}
       defaultCurrency={defaultCurrency}
+      dismissCreditNoticeAction={markCreditNoticeShownAction}
       owedNotes={owedNotes}
       recentTransactions={recentTransactions}
       pauseLimitAction={pauseCategoryLimitAction}

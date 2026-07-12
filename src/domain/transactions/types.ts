@@ -20,6 +20,7 @@ export type TransactionEventInsertRow = Database["public"]["Tables"]["transactio
 
 export type TransactionActorContext = {
   actorType: TransactionMutationActorType;
+  operationKey?: string | null;
 };
 
 export type Transaction = {
@@ -62,6 +63,7 @@ export type CreateTransactionInput = {
   importCandidateId?: string | null;
   recurringRuleId?: string | null;
   recurringOccurrenceDate?: string | null;
+  operationKey?: string | null;
 };
 
 export type UpdateTransactionInput = {

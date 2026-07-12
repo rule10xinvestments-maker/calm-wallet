@@ -134,7 +134,7 @@
       "optionalMerchant": "Optional merchant",
       "optionalNote": "Optional note",
       "recurring": "Recurring",
-      "recurringHelper": "Repeats automatically as tracked entries.",
+      "recurringHelper": "Repeats automatically as tracked entries. Each created entry uses 1 credit.",
       "frequencyLabel": "Frequency",
       "scheduleLabel": "Schedule",
       "untilOffSummary": "until turned off",
@@ -618,6 +618,24 @@
           }
         }
       }
+    }
+  },
+  "credits": {
+    "low10": { "title": "10 entry credits left" },
+    "low3": { "title": "A few entry credits left" },
+    "low": { "helper": "You can add more later with a short sponsored message or a credit pack." },
+    "insufficient": {
+      "title": "Add entry credits to save this entry",
+      "helper": "Your existing entries and Insights remain available."
+    },
+    "options": {
+      "heading": "Keep logging your money",
+      "body": "Each new expense or income uses 1 credit. Everything you already saved remains available.",
+      "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message. Coming soon." },
+      "small": { "title": "50 credits — $1.49", "helper": "A small refill. Coming soon." },
+      "large": { "title": "500 credits — $9.99", "helper": "Best value. Coming soon." },
+      "unlimited": { "title": "Unlimited entries — $19.99/year", "helper": "Log freely without thinking about credits." },
+      "footer": "No forced ads. Renews yearly until cancelled for Unlimited."
     }
   },
   "transactions": {

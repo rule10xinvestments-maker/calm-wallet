@@ -3,6 +3,7 @@ import { AI_TOOL_REGISTRY, getAiRegisteredTool, type AiToolExecutorDependencies 
 import { rejectUnsupportedTool } from "@/domain/ai/tool-policy";
 import type { AiRuntimeContext, AiToolExecutionResult, AiToolRequest } from "@/domain/ai/tool-types";
 import { logSafeAssistantActionError } from "@/lib/server/safe-error-logging";
+import { isCreditChargeError } from "@/domain/transactions/service";
 
 function getSafeTransactionType(input: unknown) {
   if (input && typeof input === "object" && "transactionType" in input) {
@@ -106,6 +107,30 @@ export async function executeAiTool(args: {
       }),
     };
   } catch (error) {
+    if (isCreditChargeError(error)) {
+      const result: AiToolExecutionResult<typeof tool.toolName> = {
+        ok: false,
+        toolName: tool.toolName,
+        outcome: "denied",
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+
+      return {
+        result,
+        runtimeLog: createAiRuntimeLogPayload({
+          userId: args.context.userId!,
+          toolName: tool.toolName,
+          rawPayload: args.request as never,
+          validatedPayload: policy.validatedRequest as never,
+          policyOutcome: "denied",
+          result,
+        }),
+      };
+    }
+
     logSafeAssistantActionError(
       {
         operation: "executeAiTool",

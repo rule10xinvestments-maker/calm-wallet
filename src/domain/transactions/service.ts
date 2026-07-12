@@ -1,5 +1,8 @@
 import type { Database, Json } from "@/lib/db/types";
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
+import { createSupabaseCreditsService } from "@/domain/credits/service";
+import type { CreditChargeError } from "@/domain/credits/types";
+import { isCreditEnforcementEnabled } from "@/lib/credits/config";
 import {
   mapDomainTransactionToEventPayload,
   mapTransactionEventInsert,
@@ -61,6 +64,11 @@ export type TransactionServiceAdapter = {
 };
 
 export type TransactionService = ReturnType<typeof createTransactionService>;
+type CreditAwareCreateTransaction = (
+  userId: string,
+  input: CreateTransactionInput,
+  actorContext?: TransactionActorContext,
+) => Promise<TransactionMutationResult>;
 
 function getActorContext(actorContext?: TransactionActorContext): TransactionActorContext {
   return actorContext ?? { actorType: "user" };
@@ -122,7 +130,7 @@ async function writeAuditEvent(
   return Boolean(result.data && !result.error);
 }
 
-export function createTransactionService(adapter: TransactionServiceAdapter) {
+export function createTransactionService(adapter: TransactionServiceAdapter, creditAwareCreateTransaction?: CreditAwareCreateTransaction) {
   return {
     async createTransaction(
       userId: string,
@@ -133,6 +141,10 @@ export function createTransactionService(adapter: TransactionServiceAdapter) {
 
       if (!canCreateFinancialTransaction(parsed)) {
         throw new Error("A transaction requires a positive amount and clear expense or income intent.");
+      }
+
+      if (creditAwareCreateTransaction) {
+        return creditAwareCreateTransaction(userId, parsed, actorContext);
       }
 
       const reviewDecision = normalizeReviewDecision(parsed);
@@ -506,5 +518,27 @@ export async function createSupabaseTransactionService() {
     },
   };
 
-  return createTransactionService(adapter);
+  const creditAwareCreateTransaction: CreditAwareCreateTransaction | undefined = isCreditEnforcementEnabled()
+    ? async (userId, input, actorContext) => {
+        const credits = await createSupabaseCreditsService();
+        const result = await credits.createTransactionWithCredit({
+          userId,
+          input,
+          actorContext,
+          operationKey: actorContext?.operationKey,
+          allowRecurringGrace: Boolean(input.recurringRuleId && input.recurringOccurrenceDate && actorContext?.actorType === "system"),
+        });
+
+        return {
+          transaction: result.transaction,
+          eventCreated: result.eventCreated,
+        };
+      }
+    : undefined;
+
+  return createTransactionService(adapter, creditAwareCreateTransaction);
+}
+
+export function isCreditChargeError(error: unknown): error is CreditChargeError {
+  return error instanceof Error && "code" in error && (error as { code?: unknown }).code === "insufficient_credits";
 }

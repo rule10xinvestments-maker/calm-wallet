@@ -5,5 +5,8 @@ export const initialAssistantActionState: AssistantActionState = {
   message: null,
   reviewState: null,
   latestTransaction: null,
+  creditStatus: "ok",
+  creditBalance: null,
+  lowCreditThreshold: null,
   recentItems: [],
 };

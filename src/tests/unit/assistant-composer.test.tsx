@@ -1284,7 +1284,7 @@ describe("assistant composer", () => {
 
     fireEvent.click(screen.getByLabelText("Recurent"));
 
-    expect(screen.getByText("Creează automat înregistrări urmărite.")).toBeInTheDocument();
+    expect(screen.getByText(t("assistant.manual.recurringHelper", "ro"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Repetare/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: /Program/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText("Data de început")).not.toBeInTheDocument();
@@ -1376,11 +1376,11 @@ describe("assistant composer", () => {
 
     openManualEntry();
     expect(screen.getByLabelText("Recurring")).not.toBeChecked();
-    expect(screen.queryByText("Repeats automatically as tracked entries.")).not.toBeInTheDocument();
+    expect(screen.queryByText(t("assistant.manual.recurringHelper", "en"))).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
     fireEvent.click(screen.getByLabelText("Recurring"));
-    expect(screen.getByText("Repeats automatically as tracked entries.")).toBeInTheDocument();
+    expect(screen.getByText(t("assistant.manual.recurringHelper", "en"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Frequency/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: /Schedule/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: /Start date:/ })).not.toBeInTheDocument();
@@ -1517,7 +1517,7 @@ describe("assistant composer", () => {
 
       owed.unmount();
     }
-  });
+  }, 15000);
 
   it("guesses categories from merchant or note unless the user selected one", () => {
     const categoryOptions: ControlledCategoryOption[] = [

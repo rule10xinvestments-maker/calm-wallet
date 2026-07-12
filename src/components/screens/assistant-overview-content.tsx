@@ -15,6 +15,7 @@ import type { ControlledCategoryOption } from "@/lib/server/transactions-read-mo
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
+type CreditNoticeDismissAction = (formData: FormData) => Promise<void>;
 
 type AssistantOverviewContentProps = {
   action: AssistantActionHandler;
@@ -32,7 +33,15 @@ type AssistantOverviewContentProps = {
   adjustOwedNoteAmountAction: OwedNoteActionHandler;
   updateOwedNoteNoteAction: OwedNoteActionHandler;
   settleOwedNoteAction: OwedNoteActionHandler;
+  dismissCreditNoticeAction?: CreditNoticeDismissAction;
   loadError: boolean;
+  creditAccount?: {
+    creditBalance: number;
+    recurringGraceDebt: number;
+    unlimitedUntil: string | null;
+    lowBalanceNotice10ShownAt: string | null;
+    lowBalanceNotice3ShownAt: string | null;
+  } | null;
 };
 
 export function AssistantOverviewContent({
@@ -43,6 +52,7 @@ export function AssistantOverviewContent({
   createOwedNoteAction,
   deleteLimitAction,
   defaultCurrency,
+  dismissCreditNoticeAction,
   initialState,
   loadError,
   owedNotes,
@@ -52,6 +62,7 @@ export function AssistantOverviewContent({
   settleOwedNoteAction,
   updateOwedNoteNoteAction,
   upsertLimitAction,
+  creditAccount = null,
 }: AssistantOverviewContentProps) {
   const { locale } = useLocale();
 
@@ -84,9 +95,11 @@ export function AssistantOverviewContent({
             adjustOwedNoteAmountAction={adjustOwedNoteAmountAction}
             categoryLimits={categoryLimits}
             categoryOptions={categoryOptions}
+            creditAccount={creditAccount}
             createOwedNoteAction={createOwedNoteAction}
             deleteLimitAction={deleteLimitAction}
             defaultCurrency={defaultCurrency}
+            dismissCreditNoticeAction={dismissCreditNoticeAction}
             initialState={initialState}
             owedNotes={owedNotes}
             pauseLimitAction={pauseLimitAction}

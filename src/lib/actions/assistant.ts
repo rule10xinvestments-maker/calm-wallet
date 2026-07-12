@@ -127,8 +127,9 @@ export async function assistantAction(_prevState: AssistantActionState, formData
         ? {
             recurringEnabled,
             recurringFrequency: getSafeRecurringFrequency(formData.get("recurringFrequency")),
-            recurringStartDate: getOptionalFormString(formData, "recurringStartDate"),
-            recurringEndDate: getOptionalFormString(formData, "recurringEndDate"),
+      recurringStartDate: getOptionalFormString(formData, "recurringStartDate"),
+      recurringEndDate: getOptionalFormString(formData, "recurringEndDate"),
+      operationKey: getOptionalFormString(formData, "operationKey"),
           }
         : {}),
     };

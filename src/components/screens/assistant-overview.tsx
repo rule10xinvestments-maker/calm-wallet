@@ -10,6 +10,7 @@ import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
+type CreditNoticeDismissAction = (formData: FormData) => Promise<void>;
 
 const noopBudgetAction: BudgetActionHandler = async (state) => state;
 const noopOwedNoteAction: OwedNoteActionHandler = async (state) => state;
@@ -30,7 +31,15 @@ type AssistantOverviewProps = {
   adjustOwedNoteAmountAction?: OwedNoteActionHandler;
   updateOwedNoteNoteAction?: OwedNoteActionHandler;
   settleOwedNoteAction?: OwedNoteActionHandler;
+  dismissCreditNoticeAction?: CreditNoticeDismissAction;
   loadError?: boolean;
+  creditAccount?: {
+    creditBalance: number;
+    recurringGraceDebt: number;
+    unlimitedUntil: string | null;
+    lowBalanceNotice10ShownAt: string | null;
+    lowBalanceNotice3ShownAt: string | null;
+  } | null;
 };
 
 export function AssistantOverview({
@@ -42,6 +51,7 @@ export function AssistantOverview({
   createOwedNoteAction = noopOwedNoteAction,
   deleteLimitAction = noopBudgetAction,
   defaultCurrency = "USD",
+  dismissCreditNoticeAction,
   owedNotes = [],
   pauseLimitAction = noopBudgetAction,
   recentTransactions,
@@ -50,6 +60,7 @@ export function AssistantOverview({
   updateOwedNoteNoteAction = noopOwedNoteAction,
   upsertLimitAction = noopBudgetAction,
   loadError = false,
+  creditAccount = null,
 }: AssistantOverviewProps) {
   const recentItems = mapTransactionsToAssistantItems(recentTransactions);
 
@@ -59,9 +70,11 @@ export function AssistantOverview({
       adjustOwedNoteAmountAction={adjustOwedNoteAmountAction}
       categoryLimits={categoryLimits}
       categoryOptions={categoryOptions}
+      creditAccount={creditAccount}
       createOwedNoteAction={createOwedNoteAction}
       deleteLimitAction={deleteLimitAction}
       defaultCurrency={defaultCurrency}
+      dismissCreditNoticeAction={dismissCreditNoticeAction}
       initialState={initialState}
       loadError={loadError}
       owedNotes={owedNotes}

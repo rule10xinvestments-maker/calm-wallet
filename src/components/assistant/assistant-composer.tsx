@@ -53,6 +53,7 @@ import { t } from "@/lib/i18n";
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
+type CreditNoticeDismissAction = (formData: FormData) => Promise<void>;
 
 type AssistantComposerProps = {
   action: AssistantActionHandler;
@@ -70,7 +71,15 @@ type AssistantComposerProps = {
   adjustOwedNoteAmountAction?: OwedNoteActionHandler;
   updateOwedNoteNoteAction?: OwedNoteActionHandler;
   settleOwedNoteAction?: OwedNoteActionHandler;
+  dismissCreditNoticeAction?: CreditNoticeDismissAction;
   importsEnabled?: boolean;
+  creditAccount?: {
+    creditBalance: number;
+    recurringGraceDebt: number;
+    unlimitedUntil: string | null;
+    lowBalanceNotice10ShownAt: string | null;
+    lowBalanceNotice3ShownAt: string | null;
+  } | null;
 };
 
 type UploadFlowState = {
@@ -109,6 +118,10 @@ type ManualCurrencyOption = (typeof manualCurrencyOptions)[number];
 function getSupportedManualCurrency(value: string): ManualCurrencyOption {
   const normalized = value.trim().toUpperCase();
   return manualCurrencyOptions.includes(normalized as ManualCurrencyOption) ? (normalized as ManualCurrencyOption) : "USD";
+}
+
+function createClientOperationKey() {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function toLocalDateKey(value: Date) {
@@ -297,12 +310,14 @@ export function AssistantComposer({
   pauseLimitAction = noopBudgetAction,
   resumeLimitAction = noopBudgetAction,
   deleteLimitAction = noopBudgetAction,
+  dismissCreditNoticeAction,
   owedNotes = [],
   createOwedNoteAction = noopOwedNoteAction,
   adjustOwedNoteAmountAction = noopOwedNoteAction,
   updateOwedNoteNoteAction = noopOwedNoteAction,
   settleOwedNoteAction = noopOwedNoteAction,
   importsEnabled = areImportsEnabled(),
+  creditAccount = null,
 }: AssistantComposerProps) {
   const { locale } = useLocale();
   const useRomanianLimitLayout = locale === "ro";
@@ -333,6 +348,17 @@ export function AssistantComposer({
   });
   const [manualFeedback, setManualFeedback] = useState<ManualFeedback>({ status: "idle", message: null });
   const [manualLastSubmitted, setManualLastSubmitted] = useState(false);
+  const [quickAddOperationKey, setQuickAddOperationKey] = useState(() => createClientOperationKey());
+  const [manualOperationKey, setManualOperationKey] = useState(() => createClientOperationKey());
+  const [isCreditOptionsOpen, setIsCreditOptionsOpen] = useState(false);
+  const [dismissedLowCreditThreshold, setDismissedLowCreditThreshold] = useState<10 | 3 | null>(null);
+  const lowCreditThreshold =
+    creditAccount && creditAccount.creditBalance === 10 && !creditAccount.lowBalanceNotice10ShownAt
+      ? 10
+      : creditAccount && creditAccount.creditBalance === 3 && !creditAccount.lowBalanceNotice3ShownAt
+        ? 3
+        : null;
+  const visibleLowCreditThreshold = lowCreditThreshold === dismissedLowCreditThreshold ? null : lowCreditThreshold;
   const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
   const [pauseState, pauseFormAction] = useActionState<BudgetActionState, FormData>(pauseLimitAction, initialBudgetActionState);
   const [resumeState, resumeFormAction] = useActionState<BudgetActionState, FormData>(resumeLimitAction, initialBudgetActionState);
@@ -462,6 +488,18 @@ export function AssistantComposer({
       setManualLastSubmitted(false);
     }
   }, [locale, manualLastSubmitted, state.message, state.status]);
+
+  useEffect(() => {
+    if (state.status === "success" && state.latestTransaction) {
+      setQuickAddOperationKey(createClientOperationKey());
+      setManualOperationKey(createClientOperationKey());
+    }
+
+    if (state.creditStatus === "insufficient_credits") {
+      setIsCreditOptionsOpen(true);
+      setManualFeedback({ status: "error", message: t("credits.insufficient.title", locale) });
+    }
+  }, [locale, state.creditStatus, state.latestTransaction, state.status]);
 
   useEffect(() => {
     if (limitState.status === "success") {
@@ -758,12 +796,72 @@ export function AssistantComposer({
         </div>
       ) : null}
 
+      {visibleLowCreditThreshold ? (
+        <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold">{t(visibleLowCreditThreshold === 10 ? "credits.low10.title" : "credits.low3.title", locale)}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{t("credits.low.helper", locale)}</p>
+            </div>
+            <form
+              action={(formData) => {
+                setDismissedLowCreditThreshold(visibleLowCreditThreshold);
+                void dismissCreditNoticeAction?.(formData);
+              }}
+            >
+              <input name="threshold" type="hidden" value={visibleLowCreditThreshold} />
+              <button className="shrink-0 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600" type="submit">
+                {t("common.close", locale)}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {isCreditOptionsOpen ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900">
+                {state.creditStatus === "insufficient_credits" ? t("credits.insufficient.title", locale) : t("credits.options.heading", locale)}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {state.creditStatus === "insufficient_credits" ? t("credits.insufficient.helper", locale) : t("credits.options.body", locale)}
+              </p>
+            </div>
+            <button className="shrink-0 rounded-xl bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600" onClick={() => setIsCreditOptionsOpen(false)} type="button">
+              {t("common.close", locale)}
+            </button>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {[
+              ["credits.options.earn.title", "credits.options.earn.helper"],
+              ["credits.options.small.title", "credits.options.small.helper"],
+              ["credits.options.large.title", "credits.options.large.helper"],
+              ["credits.options.unlimited.title", "credits.options.unlimited.helper"],
+            ].map(([titleKey, helperKey]) => (
+              <button
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-500"
+                disabled
+                key={titleKey}
+                type="button"
+              >
+                <span className="block font-semibold text-slate-700">{t(titleKey, locale)}</span>
+                <span className="block text-xs leading-5">{t(helperKey, locale)}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-slate-500">{t("credits.options.footer", locale)}</p>
+        </div>
+      ) : null}
+
       <form
         action={(formData) => {
           return formAction(formData);
         }}
         className="space-y-3"
       >
+        <input name="operationKey" type="hidden" value={quickAddOperationKey} />
         <label className="block space-y-2">
           <span className="text-sm font-medium text-slate-700">{t("assistant.quickAdd.messageLabel", locale)}</span>
           <textarea
@@ -1022,6 +1120,7 @@ export function AssistantComposer({
               className="space-y-3"
             >
               <input name="toolName" type="hidden" value="create_transaction" />
+              <input name="operationKey" type="hidden" value={manualOperationKey} />
               <input name="transactionType" type="hidden" value={manualTransactionType} />
               <input name="currency" type="hidden" value={manualCurrency} />
               {submittedManualCategoryId ? <input name="categoryId" type="hidden" value={submittedManualCategoryId} /> : null}

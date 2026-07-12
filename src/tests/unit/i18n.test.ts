@@ -167,6 +167,18 @@ describe("i18n helper", () => {
     });
   });
 
+  it("returns credit UX copy in supported locales", () => {
+    expect(t("credits.low10.title", "en")).toBe("10 entry credits left");
+    expect(t("credits.low10.title", "ro")).toBe("Mai ai 10 credite pentru intrări");
+    expect(t("credits.low10.title", "fr")).toBe("10 crédits d’entrée restants");
+    expect(t("credits.low10.title", "es")).toBe("Te quedan 10 créditos de registro");
+    expect(t("credits.insufficient.title", "ro")).toBe("Adaugă credite pentru a salva intrarea");
+    expect(t("credits.options.earn.title", "fr")).toBe("Gagner 5 crédits");
+    expect(t("credits.options.small.title", "es")).toBe("50 créditos — 1,49 US$");
+    expect(t("assistant.manual.recurringHelper", "en")).toContain("uses 1 credit");
+    expect(t("assistant.manual.recurringHelper", "ro")).toContain("1 credit");
+  });
+
   it("returns Calm Insight rule copy in supported locales", () => {
     expect(t("insights.calmInsight.eyebrow", "en")).toBe("Calm Insight");
     expect(t("insights.calmInsight.eyebrow", "ro")).toBe("Observație calmă");

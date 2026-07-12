@@ -60,6 +60,7 @@ export type AssistantCommandInput = {
   recurringFrequency?: RecurringFrequency;
   recurringStartDate?: string;
   recurringEndDate?: string;
+  operationKey?: string;
 };
 
 export type AssistantActionState = {
@@ -74,6 +75,9 @@ export type AssistantActionState = {
     itemName?: string | null;
     reviewState: string;
   } | null;
+  creditStatus?: "ok" | "insufficient_credits" | "low_balance";
+  creditBalance?: number | null;
+  lowCreditThreshold?: 10 | 3 | null;
   recentItems: Array<{
     id: string;
     title: string;
@@ -334,6 +338,7 @@ export function buildAssistantToolRequest(input: AssistantCommandInput) {
       merchant: input.merchant?.trim() || null,
       note: input.note?.trim() || null,
       source: DEFAULT_TRANSACTION_SOURCE,
+      ...(input.operationKey ? { operationKey: input.operationKey } : {}),
       ...(input.reviewState ? { reviewState: input.reviewState } : {}),
       ...(input.uncertaintyReason !== undefined ? { uncertaintyReason: toNullableText(input.uncertaintyReason) } : {}),
     },
@@ -363,6 +368,16 @@ export function mapTransactionsToAssistantItems(
 
 export function summarizeAssistantResult(result: AiToolExecutionResult): AssistantActionState {
   if (!result.ok) {
+    if (result.error.code === "insufficient_credits") {
+      return {
+        ...initialAssistantActionState,
+        status: "error",
+        message: "Add entry credits to save this entry.",
+        creditStatus: "insufficient_credits",
+        creditBalance: 0,
+      };
+    }
+
     return {
       ...initialAssistantActionState,
       status: "error",

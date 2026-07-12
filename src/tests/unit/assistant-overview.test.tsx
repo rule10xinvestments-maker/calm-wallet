@@ -195,7 +195,7 @@ describe("assistant overview", () => {
     expect(screen.getByText("Add one item without chat.")).toBeInTheDocument();
     expect(screen.queryByText("Add one item quickly when chat is too much.")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount")).toBeInTheDocument();
-    expect(screen.getByLabelText("Currency")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Currency: USD" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Category: Other" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit recent" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete recent" })).not.toBeInTheDocument();

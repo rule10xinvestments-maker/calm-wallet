@@ -134,7 +134,7 @@
       "optionalMerchant": "Magasin optionnel",
       "optionalNote": "Note optionnelle",
       "recurring": "Récurrent",
-      "recurringHelper": "Se répète automatiquement comme entrée suivie.",
+      "recurringHelper": "Se répète automatiquement comme entrée suivie. Chaque entrée créée utilise 1 crédit.",
       "frequencyLabel": "Fréquence",
       "scheduleLabel": "Calendrier",
       "untilOffSummary": "jusqu’à désactivation",
@@ -618,6 +618,24 @@
           }
         }
       }
+    }
+  },
+  "credits": {
+    "low10": { "title": "10 crédits d’entrée restants" },
+    "low3": { "title": "Encore quelques crédits d’entrée" },
+    "low": { "helper": "Vous pourrez en ajouter plus tard avec un court message sponsorisé ou un pack de crédits." },
+    "insufficient": {
+      "title": "Ajoutez des crédits pour enregistrer cette entrée",
+      "helper": "Vos entrées et vos Insights existants restent disponibles."
+    },
+    "options": {
+      "heading": "Continuez à noter votre argent",
+      "body": "Chaque nouvelle dépense ou entrée d’argent utilise 1 crédit. Tout ce que vous avez déjà enregistré reste disponible.",
+      "earn": { "title": "Gagner 5 crédits", "helper": "Voir un court message sponsorisé. Bientôt disponible." },
+      "small": { "title": "50 crédits — 1,49 $", "helper": "Une petite recharge. Bientôt disponible." },
+      "large": { "title": "500 crédits — 9,99 $", "helper": "Le meilleur rapport. Bientôt disponible." },
+      "unlimited": { "title": "Entrées illimitées — 19,99 $/an", "helper": "Notez librement, sans penser aux crédits." },
+      "footer": "Aucune publicité forcée. L’illimité se renouvelle chaque année jusqu’à annulation."
     }
   },
   "transactions": {
