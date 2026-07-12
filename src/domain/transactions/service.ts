@@ -532,6 +532,10 @@ export async function createSupabaseTransactionService() {
         return {
           transaction: result.transaction,
           eventCreated: result.eventCreated,
+          creditBalance: result.creditBalance,
+          recurringGraceDebt: result.recurringGraceDebt,
+          debited: result.debited,
+          graceUsed: result.graceUsed,
         };
       }
     : undefined;

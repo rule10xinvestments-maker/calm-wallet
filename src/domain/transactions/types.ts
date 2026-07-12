@@ -106,4 +106,8 @@ export type ListTransactionsFilters = {
 export type TransactionMutationResult = {
   transaction: Transaction;
   eventCreated: boolean;
+  creditBalance?: number | null;
+  recurringGraceDebt?: number | null;
+  debited?: boolean;
+  graceUsed?: boolean;
 };

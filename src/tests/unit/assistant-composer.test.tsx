@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantComposer } from "@/components/assistant/assistant-composer";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
@@ -23,6 +23,13 @@ vi.mock("@/lib/actions/imports", () => ({
 }));
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
+type TestCreditAccount = {
+  creditBalance: number;
+  recurringGraceDebt: number;
+  unlimitedUntil: string | null;
+  lowBalanceNotice10ShownAt: string | null;
+  lowBalanceNotice3ShownAt: string | null;
+};
 const owedAction = async () => ({ status: "idle" as const, message: null, note: null });
 
 function renderComposer(
@@ -37,11 +44,13 @@ function renderComposer(
   action: AssistantActionHandler = async () => initialState,
   categoryOptions: ControlledCategoryOption[] = [],
   importsEnabled = false,
+  creditAccount: TestCreditAccount | null = null,
 ) {
   return render(
     <AssistantComposer
       action={action}
       categoryOptions={categoryOptions}
+      creditAccount={creditAccount}
       initialState={initialState}
       importsEnabled={importsEnabled}
       recentItems={recentItems}
@@ -1568,7 +1577,7 @@ describe("assistant composer", () => {
     expect(formData.get("categoryId")).toBe("category-salary");
   });
 
-  it("submits Spend and Income manual saves while showing local save feedback", async () => {
+  it("submits Spend and Income manual saves while showing compact post-save feedback", async () => {
     const action = vi.fn(async (state: AssistantActionState, formData: FormData): Promise<AssistantActionState> => {
       void state;
       void formData;
@@ -1596,7 +1605,10 @@ describe("assistant composer", () => {
     await waitFor(() => expect(screen.getByText("Saved.")).toBeInTheDocument());
     expect(action.mock.calls[0]![1].get("toolName")).toBe("create_transaction");
     expect(action.mock.calls[0]![1].get("transactionType")).toBe("expense");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Manual" })).toHaveAttribute("aria-expanded", "false"));
+    expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
 
+    openManualEntry();
     await waitFor(() => expect(screen.getByLabelText("Amount")).toHaveValue(""));
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "44.00" } });
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
@@ -1604,6 +1616,120 @@ describe("assistant composer", () => {
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(2));
     expect(action.mock.calls[1]![1].get("transactionType")).toBe("income");
+  });
+
+  it("hides the Manual post-save message after five seconds", async () => {
+    vi.useFakeTimers();
+    const action = vi.fn(async (): Promise<AssistantActionState> => ({
+      status: "success",
+      message: "Saved.",
+      reviewState: null,
+      latestTransaction: null,
+      recentItems: [],
+    }));
+
+    try {
+      renderComposer(undefined, [], action);
+      openManualEntry();
+
+      fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "24.50" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save item" }));
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText("Saved.")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Amount")).not.toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      expect(screen.queryByText("Saved.")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("updates the low-credit notice from the current balance returned after saves", async () => {
+    let nextBalance = 10;
+    const action = vi.fn(async (): Promise<AssistantActionState> => {
+      nextBalance -= 1;
+
+      return {
+        status: "success",
+        message: "Saved.",
+        reviewState: null,
+        latestTransaction: {
+          id: `txn-${nextBalance}`,
+          amountMinor: 1200,
+          currency: "RON",
+          merchant: "Coffee",
+          itemName: "Coffee",
+          reviewState: "reviewed",
+        },
+        creditStatus: "low_balance",
+        creditBalance: nextBalance,
+        lowCreditThreshold: 10,
+        recentItems: [],
+      };
+    });
+
+    renderComposer(
+      undefined,
+      [],
+      action,
+      [],
+      false,
+      {
+        creditBalance: 10,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    expect(screen.getByText("10 credits left")).toBeInTheDocument();
+    expect(screen.queryByText("10 entry credits left")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Coffee 12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(screen.getByText("9 credits left")).toBeInTheDocument());
+    expect(screen.queryByText("10 credits left")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Tea 8" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(screen.getByText("8 credits left")).toBeInTheDocument());
+    expect(screen.queryByText("9 credits left")).not.toBeInTheDocument();
+  });
+
+  it("renders the Romanian low-credit notice as compact dynamic copy", () => {
+    render(
+      <LocaleProvider savedLocale="ro">
+        <AssistantComposer
+          action={async () => ({ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] })}
+          creditAccount={{
+            creditBalance: 8,
+            recurringGraceDebt: 0,
+            unlimitedUntil: null,
+            lowBalanceNotice10ShownAt: null,
+            lowBalanceNotice3ShownAt: null,
+          }}
+          initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
+          recentItems={[]}
+        />
+      </LocaleProvider>,
+    );
+
+    const title = screen.getByText("Mai ai 8 credite");
+    const notice = title.closest(".rounded-xl");
+
+    expect(title).toBeInTheDocument();
+    expect(screen.getByText("Poți adăuga altele mai târziu.")).toBeInTheDocument();
+    expect(notice).toHaveClass("px-3", "py-2", "text-xs");
   });
 
   it("submits the selected type-aware Manual category when saving", async () => {

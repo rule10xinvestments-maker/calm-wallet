@@ -87,6 +87,22 @@ export type AssistantActionState = {
   }>;
 };
 
+function getLowCreditThreshold(creditBalance: number | null | undefined): 10 | 3 | null {
+  if (typeof creditBalance !== "number" || creditBalance < 0) {
+    return null;
+  }
+
+  if (creditBalance <= 3) {
+    return 3;
+  }
+
+  if (creditBalance <= 10) {
+    return 10;
+  }
+
+  return null;
+}
+
 type ResolvedCreateTransactionIntent = Extract<NaturalLanguageAssistantIntent, { kind: "create_transaction" }> & {
   categoryResolution?: CategoryResolutionResult;
 };
@@ -403,6 +419,8 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
   if (result.toolName === "create_transaction" && "transaction" in result.data) {
     const transaction = result.data.transaction;
     const amountDisplay = formatMoney(transaction.amountMinor, transaction.currency);
+    const creditBalance = "creditBalance" in result.data ? result.data.creditBalance : null;
+    const lowCreditThreshold = getLowCreditThreshold(creditBalance);
 
     return {
       ...initialAssistantActionState,
@@ -420,6 +438,9 @@ export function summarizeAssistantResult(result: AiToolExecutionResult): Assista
         merchant: transaction.merchant,
         reviewState: transaction.reviewState,
       },
+      creditStatus: lowCreditThreshold ? "low_balance" : "ok",
+      creditBalance,
+      lowCreditThreshold,
     };
   }
 
@@ -1021,6 +1042,9 @@ function summarizeMultiCreateResults(results: AssistantActionState[]) {
       : `Saved ${successes.length} items:\n${lines.join("\n")}`,
     reviewState: successes.at(-1)?.reviewState ?? null,
     latestTransaction: successes.at(-1)?.latestTransaction ?? null,
+    creditStatus: successes.at(-1)?.creditStatus ?? undefined,
+    creditBalance: successes.at(-1)?.creditBalance ?? null,
+    lowCreditThreshold: successes.at(-1)?.lowCreditThreshold ?? null,
   };
 }
 

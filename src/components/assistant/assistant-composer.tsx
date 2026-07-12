@@ -94,6 +94,7 @@ type ManualOptionalPanel = "category" | "date" | "merchant" | "note" | null;
 type ManualRecurringPanel = "frequency" | "schedule" | null;
 type ManualRecurringDateField = "start" | "end";
 type ManualFeedback = { status: "idle" | "pending" | "success" | "error"; message: string | null };
+type TransientPanelSuccess = { id: number; message: string };
 type ManualCategoryOption = CategoryPickerOption;
 type LimitSection = "create" | "manage" | null;
 
@@ -122,6 +123,22 @@ function getSupportedManualCurrency(value: string): ManualCurrencyOption {
 
 function createClientOperationKey() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getCreditNoticeThreshold(creditBalance: number | null | undefined): 10 | 3 | null {
+  if (typeof creditBalance !== "number" || creditBalance < 0) {
+    return null;
+  }
+
+  if (creditBalance <= 3) {
+    return 3;
+  }
+
+  if (creditBalance <= 10) {
+    return 10;
+  }
+
+  return null;
 }
 
 function toLocalDateKey(value: Date) {
@@ -352,13 +369,21 @@ export function AssistantComposer({
   const [manualOperationKey, setManualOperationKey] = useState(() => createClientOperationKey());
   const [isCreditOptionsOpen, setIsCreditOptionsOpen] = useState(false);
   const [dismissedLowCreditThreshold, setDismissedLowCreditThreshold] = useState<10 | 3 | null>(null);
-  const lowCreditThreshold =
-    creditAccount && creditAccount.creditBalance === 10 && !creditAccount.lowBalanceNotice10ShownAt
-      ? 10
-      : creditAccount && creditAccount.creditBalance === 3 && !creditAccount.lowBalanceNotice3ShownAt
-        ? 3
+  const [latestCreditBalance, setLatestCreditBalance] = useState<number | null>(creditAccount?.creditBalance ?? null);
+  const [transientPanelSuccess, setTransientPanelSuccess] = useState<TransientPanelSuccess | null>(null);
+  const [hideManualActionMessage, setHideManualActionMessage] = useState(false);
+  const effectiveCreditBalance = latestCreditBalance ?? creditAccount?.creditBalance ?? null;
+  const lowCreditThreshold = getCreditNoticeThreshold(effectiveCreditBalance);
+  const lowCreditNoticeAlreadyShown =
+    lowCreditThreshold === 10
+      ? creditAccount?.lowBalanceNotice10ShownAt
+      : lowCreditThreshold === 3
+        ? creditAccount?.lowBalanceNotice3ShownAt
         : null;
-  const visibleLowCreditThreshold = lowCreditThreshold === dismissedLowCreditThreshold ? null : lowCreditThreshold;
+  const visibleLowCreditThreshold =
+    lowCreditThreshold && !lowCreditNoticeAlreadyShown && lowCreditThreshold !== dismissedLowCreditThreshold
+      ? lowCreditThreshold
+      : null;
   const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
   const [pauseState, pauseFormAction] = useActionState<BudgetActionState, FormData>(pauseLimitAction, initialBudgetActionState);
   const [resumeState, resumeFormAction] = useActionState<BudgetActionState, FormData>(resumeLimitAction, initialBudgetActionState);
@@ -451,6 +476,30 @@ export function AssistantComposer({
   }, [guessedManualCategoryId, manualCategoryWasSelected]);
 
   useEffect(() => {
+    if (typeof state.creditBalance === "number") {
+      setLatestCreditBalance(state.creditBalance);
+    }
+  }, [state.creditBalance]);
+
+  useEffect(() => {
+    if (typeof creditAccount?.creditBalance === "number") {
+      setLatestCreditBalance(creditAccount.creditBalance);
+    }
+  }, [creditAccount?.creditBalance]);
+
+  useEffect(() => {
+    if (!transientPanelSuccess) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setTransientPanelSuccess(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timeout);
+  }, [transientPanelSuccess]);
+
+  useEffect(() => {
     if (!limitCategoryId && limitCategoryOptions[0]) {
       setLimitCategoryId(limitCategoryOptions[0].id);
     }
@@ -462,10 +511,11 @@ export function AssistantComposer({
     }
 
     if (state.status === "success") {
-      setManualFeedback({
-        status: "success",
-        message: state.message?.startsWith("Saved and set") ? state.message : t("transactions.saved", locale),
-      });
+      const message = state.message?.startsWith("Saved and set") ? state.message : t("transactions.saved", locale);
+      setManualFeedback({ status: "idle", message: null });
+      setTransientPanelSuccess({ id: Date.now(), message });
+      setHideManualActionMessage(true);
+      setOpenPanel(null);
       setManualName("");
       setManualAmount("");
       setManualDate("");
@@ -481,6 +531,7 @@ export function AssistantComposer({
     }
 
     if (state.status === "error") {
+      setHideManualActionMessage(false);
       setManualFeedback({
         status: "error",
         message: t("assistant.manual.errors.saveFailed", locale),
@@ -493,13 +544,16 @@ export function AssistantComposer({
     if (state.status === "success" && state.latestTransaction) {
       setQuickAddOperationKey(createClientOperationKey());
       setManualOperationKey(createClientOperationKey());
+      if (!manualLastSubmitted) {
+        setHideManualActionMessage(false);
+      }
     }
 
     if (state.creditStatus === "insufficient_credits") {
       setIsCreditOptionsOpen(true);
       setManualFeedback({ status: "error", message: t("credits.insufficient.title", locale) });
     }
-  }, [locale, state.creditStatus, state.latestTransaction, state.status]);
+  }, [locale, manualLastSubmitted, state.creditStatus, state.latestTransaction, state.status]);
 
   useEffect(() => {
     if (limitState.status === "success") {
@@ -515,6 +569,7 @@ export function AssistantComposer({
   }, [isLimitsPanelOpen]);
 
   function togglePanel(panel: ActionPanel) {
+    setTransientPanelSuccess(null);
     setOpenPanel((currentPanel) => (currentPanel === panel ? null : panel));
   }
 
@@ -778,7 +833,7 @@ export function AssistantComposer({
 
   return (
     <div className="space-y-4">
-      {state.message ? (
+      {state.message && !hideManualActionMessage ? (
         <div
           className={`rounded-2xl border px-4 py-3 text-sm ${
             state.status === "error"
@@ -797,11 +852,15 @@ export function AssistantComposer({
       ) : null}
 
       {visibleLowCreditThreshold ? (
-        <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-          <div className="flex items-start justify-between gap-3">
+        <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="font-semibold">{t(visibleLowCreditThreshold === 10 ? "credits.low10.title" : "credits.low3.title", locale)}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">{t("credits.low.helper", locale)}</p>
+              <p className="font-semibold">
+                {visibleLowCreditThreshold === 10
+                  ? t("credits.low.title", locale, { count: effectiveCreditBalance ?? 10 })
+                  : t("credits.low3.title", locale)}
+              </p>
+              <p className="mt-0.5 leading-5 text-slate-600">{t("credits.low.helper", locale)}</p>
             </div>
             <form
               action={(formData) => {
@@ -857,6 +916,8 @@ export function AssistantComposer({
 
       <form
         action={(formData) => {
+          setHideManualActionMessage(false);
+          setTransientPanelSuccess(null);
           return formAction(formData);
         }}
         className="space-y-3"
@@ -885,6 +946,8 @@ export function AssistantComposer({
             return (
               <form
                 action={(formData) => {
+                  setHideManualActionMessage(false);
+                  setTransientPanelSuccess(null);
                   return formAction(formData);
                 }}
                 key={id}
@@ -934,6 +997,12 @@ export function AssistantComposer({
           );
         })}
       </div>
+
+      {transientPanelSuccess ? (
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700" role="status">
+          {transientPanelSuccess.message}
+        </div>
+      ) : null}
 
       {isReceiptPanelOpen ? (
         <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
@@ -1113,6 +1182,7 @@ export function AssistantComposer({
                   return;
                 }
 
+                setHideManualActionMessage(false);
                 setManualFeedback({ status: "pending", message: t("common.saving", locale) });
                 setManualLastSubmitted(true);
                 formAction(formData);

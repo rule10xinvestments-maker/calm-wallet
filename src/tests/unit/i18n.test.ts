@@ -172,6 +172,11 @@ describe("i18n helper", () => {
     expect(t("credits.low10.title", "ro")).toBe("Mai ai 10 credite pentru intrări");
     expect(t("credits.low10.title", "fr")).toBe("10 crédits d’entrée restants");
     expect(t("credits.low10.title", "es")).toBe("Te quedan 10 créditos de registro");
+    expect(t("credits.low.title", "en", { count: 8 })).toBe("8 credits left");
+    expect(t("credits.low.title", "ro", { count: 8 })).toBe("Mai ai 8 credite");
+    expect(t("credits.low.title", "fr", { count: 8 })).toBe("8 crédits restants");
+    expect(t("credits.low.title", "es", { count: 8 })).toBe("Te quedan 8 créditos");
+    expect(t("credits.low.helper", "en")).toBe("You can add more later.");
     expect(t("credits.insufficient.title", "ro")).toBe("Adaugă credite pentru a salva intrarea");
     expect(t("credits.options.earn.title", "fr")).toBe("Gagner 5 crédits");
     expect(t("credits.options.small.title", "es")).toBe("50 créditos — 1,49 US$");

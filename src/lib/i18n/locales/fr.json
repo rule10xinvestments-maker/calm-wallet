@@ -623,7 +623,7 @@
   "credits": {
     "low10": { "title": "10 crédits d’entrée restants" },
     "low3": { "title": "Encore quelques crédits d’entrée" },
-    "low": { "helper": "Vous pourrez en ajouter plus tard avec un court message sponsorisé ou un pack de crédits." },
+    "low": { "title": "{count} crédits restants", "helper": "Vous pourrez en ajouter plus tard." },
     "insufficient": {
       "title": "Ajoutez des crédits pour enregistrer cette entrée",
       "helper": "Vos entrées et vos Insights existants restent disponibles."

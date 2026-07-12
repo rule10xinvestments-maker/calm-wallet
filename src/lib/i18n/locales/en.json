@@ -623,7 +623,7 @@
   "credits": {
     "low10": { "title": "10 entry credits left" },
     "low3": { "title": "A few entry credits left" },
-    "low": { "helper": "You can add more later with a short sponsored message or a credit pack." },
+    "low": { "title": "{count} credits left", "helper": "You can add more later." },
     "insufficient": {
       "title": "Add entry credits to save this entry",
       "helper": "Your existing entries and Insights remain available."

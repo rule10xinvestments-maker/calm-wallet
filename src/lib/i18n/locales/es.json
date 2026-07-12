@@ -623,7 +623,7 @@
   "credits": {
     "low10": { "title": "Te quedan 10 créditos de registro" },
     "low3": { "title": "Te quedan pocos créditos de registro" },
-    "low": { "helper": "Podrás añadir más después con un mensaje patrocinado breve o un paquete de créditos." },
+    "low": { "title": "Te quedan {count} créditos", "helper": "Puedes añadir más después." },
     "insufficient": {
       "title": "Añade créditos para guardar este registro",
       "helper": "Tus registros e Insights existentes seguirán disponibles."

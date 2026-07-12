@@ -280,6 +280,38 @@ describe("assistant server integration", () => {
     expect(result.status).toBe("success");
   });
 
+  it("returns the post-save credit balance for Assistant low-credit UI", async () => {
+    const services = makeTransactionServices();
+    services.createTransaction = vi.fn(async (_userId, input) => ({
+      ...makeMutationResult({
+        transactionType: input.transactionType,
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+        merchant: input.merchant ?? null,
+      }),
+      creditBalance: 9,
+      debited: true,
+      recurringGraceDebt: 0,
+      graceUsed: false,
+    }));
+
+    const result = await runAssistantCommand({
+      userId: "user-1",
+      input: {
+        toolName: "create_transaction",
+        transactionType: "expense",
+        amount: "24.00",
+        merchant: "Market",
+      },
+      transactionService: services,
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.creditStatus).toBe("low_balance");
+    expect(result.creditBalance).toBe(9);
+    expect(result.lowCreditThreshold).toBe(10);
+  });
+
   it("creates a recurring rule and tags the first manual transaction when recurring is enabled", async () => {
     const services = makeTransactionServices();
     const recurringService = {
