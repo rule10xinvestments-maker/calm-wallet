@@ -46,6 +46,7 @@ create unique index if not exists idx_credit_ledger_operation_key
 create index if not exists idx_credit_ledger_user_created_at
   on public.credit_ledger(user_id, created_at desc);
 
+drop trigger if exists set_credit_accounts_updated_at on public.credit_accounts;
 create trigger set_credit_accounts_updated_at
 before update on public.credit_accounts
 for each row
@@ -54,12 +55,14 @@ execute function public.set_updated_at();
 alter table public.credit_accounts enable row level security;
 alter table public.credit_ledger enable row level security;
 
+drop policy if exists "credit_accounts_select_own" on public.credit_accounts;
 create policy "credit_accounts_select_own"
 on public.credit_accounts
 for select
 to authenticated
 using (auth.uid() = user_id);
 
+drop policy if exists "credit_ledger_select_own" on public.credit_ledger;
 create policy "credit_ledger_select_own"
 on public.credit_ledger
 for select
@@ -81,7 +84,7 @@ begin
 
   insert into public.credit_ledger (user_id, delta, balance_after, reason, operation_key)
   values (p_user_id, 30, 30, 'welcome_grant', 'welcome_grant:' || p_user_id::text)
-  on conflict (operation_key) do nothing;
+  on conflict (operation_key) where operation_key is not null do nothing;
 
   select *
     into account_row
@@ -400,4 +403,4 @@ on conflict (user_id) do nothing;
 insert into public.credit_ledger (user_id, delta, balance_after, reason, operation_key)
 select users.id, 30, 30, 'welcome_grant', 'welcome_grant:' || users.id::text
 from auth.users as users
-on conflict (operation_key) do nothing;
+on conflict (operation_key) where operation_key is not null do nothing;

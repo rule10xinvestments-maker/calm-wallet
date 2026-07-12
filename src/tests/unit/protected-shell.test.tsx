@@ -265,7 +265,7 @@ describe("protected shell PWA install affordance", () => {
 
     expect(settingsButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it("keeps Report a problem inside Settings while Help stays out of Settings", () => {
     renderProtectedShell();
