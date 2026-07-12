@@ -3297,6 +3297,8 @@ describe("insights overview", () => {
     expect(screen.getAllByText("$52")).toHaveLength(2);
     expect(screen.queryByText("$40")).not.toBeInTheDocument();
     expect(screen.getAllByText("33%")).toHaveLength(2);
+    expect(within(screen.getByRole("button", { name: "Show Needs category entries" })).getByText("Needs review")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
     expect(screen.queryByText("26%")).not.toBeInTheDocument();
     expect(screen.queryByRole("meter", { name: "Dining spending share 22%" })).not.toBeInTheDocument();
     expect(screen.queryByRole("meter", { name: "Transport spending share 19%" })).not.toBeInTheDocument();
@@ -3309,12 +3311,38 @@ describe("insights overview", () => {
     expect(screen.getByRole("button", { name: "Show Housing entries" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show Dining entries" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show Transport entries" })).toBeInTheDocument();
+    expect(within(screen.getByRole("button", { name: "Show Needs category entries" })).getByText("Needs review")).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Dining spending share 22%" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show selected only" }));
 
     expect(screen.getByText("Selected category")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show Housing entries" })).not.toBeInTheDocument();
+  });
+
+  it("uses Romanian inline Mix review metadata without the detached review badge", () => {
+    renderInsights(
+      makeInsightsData({
+        selectedChartMode: "mix",
+        categoryBreakdown: [
+          makeCategory({
+            key: "needs-category",
+            label: "Needs category",
+            amountMinor: 1400,
+            amountDisplay: "RON 14",
+            transactionCount: 2,
+          }),
+        ],
+      }),
+      { locale: "ro" },
+    );
+
+    const needsCategoryRow = screen.getByRole("button", { name: "Arată Necesită categorie intrări" });
+
+    expect(within(needsCategoryRow).getByText("2 intrări")).toBeInTheDocument();
+    expect(within(needsCategoryRow).getByText("De verificat")).toBeInTheDocument();
+    expect(screen.queryByText("Verificare")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Verificare" })).not.toBeInTheDocument();
   });
 
   it("uses distinct category icons in Mix rows", () => {
@@ -3800,7 +3828,8 @@ describe("insights overview", () => {
     expect(screen.queryByText(/2 tracked transactions need review/)).not.toBeInTheDocument();
     expect(screen.getAllByText("Needs category").length).toBeGreaterThan(0);
     expect(screen.getByRole("img", { name: "Needs category represents 100% of spending" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute("href", "/transactions?view=needs-review");
+    expect(within(screen.getByRole("button", { name: "Show Needs category entries" })).getByText("Needs review")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
   });
 
   it("renders mixed-currency conversion detail text", () => {

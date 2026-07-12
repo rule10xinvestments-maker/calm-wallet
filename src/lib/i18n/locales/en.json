@@ -918,6 +918,7 @@
       "categoryBreakdown": "Category breakdown",
       "showAllCategories": "Show all categories",
       "showSelectedOnly": "Show selected only",
+      "needsReviewInline": "Needs review",
       "noCategoryData": "No category data yet",
       "tapCategory": "Tap a category to see details",
       "noIncomeThisMonth": "No income entries for this month yet. When income is tracked, it will show up here.",

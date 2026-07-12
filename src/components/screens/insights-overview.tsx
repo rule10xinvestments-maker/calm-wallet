@@ -1861,6 +1861,10 @@ function formatTransactionCountLabel(count: number, locale: string) {
   return `${count} ${t(count === 1 ? "transactions.transaction" : "transactions.transactions", locale).toLowerCase()}`;
 }
 
+function isNeedsReviewMixCategory(item: SpendingMixCategoryItem) {
+  return item.key === "needs-category" || getCategoryLabelKey(item.label) === "categories.needsCategory";
+}
+
 function formatTrendNetAmountDisplay(item: TrendCategoryItem) {
   const netMinor = item.netMinor ?? item.amountMinor;
   const display = item.netDisplay ?? item.amountDisplay;
@@ -3086,6 +3090,7 @@ function SpendingMixRows({
         const groupedEntries = isExpanded ? buildGroupedMixEntries(item.recentEntries, displayCurrency) : [];
         const displayLabel = getCategoryLabel(item.label, locale);
         const inspectCategory = getInspectCategoryValue(item.key) ?? getInspectCategoryValue(item.label);
+        const needsReview = isNeedsReviewMixCategory(item);
 
         return (
           <div key={item.key} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
@@ -3113,8 +3118,16 @@ function SpendingMixRows({
                   <span className="whitespace-nowrap text-right text-sm font-semibold text-slate-800">{item.amountDisplay}</span>
                 </span>
                 <span className="grid grid-cols-[1fr_auto] gap-3">
-                  <span className="text-xs text-slate-500">
-                    {item.transactionCount} {t(item.transactionCount === 1 ? "insights.entry" : "insights.entries", locale)}
+                  <span className="min-w-0 text-xs text-slate-500">
+                    <span>
+                      {item.transactionCount} {t(item.transactionCount === 1 ? "insights.entry" : "insights.entries", locale)}
+                    </span>
+                    {needsReview ? (
+                      <>
+                        <span className="text-slate-400"> · </span>
+                        <span className="font-medium text-amber-700">{t("insights.mix.needsReviewInline", locale)}</span>
+                      </>
+                    ) : null}
                   </span>
                   <span className="text-xs font-medium text-slate-500">{percent}%</span>
                 </span>
@@ -3131,14 +3144,6 @@ function SpendingMixRows({
                 </span>
               </span>
             </button>
-            {getCategoryLabelKey(item.label) === "categories.needsCategory" ? (
-              <Link
-                className="ml-11 mt-2 inline-flex rounded-full border border-amber-200 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
-                href="/transactions?view=needs-review"
-              >
-                {t("common.review", locale)}
-              </Link>
-            ) : null}
             <div className="ml-11 min-w-0 space-y-2">
               {isExpanded ? (
                 <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
