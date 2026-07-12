@@ -2911,11 +2911,10 @@ type GroupedMixEntry = {
   key: string;
   title: string;
   amountDisplay: string;
-  metaLabel: string;
   count: number;
+  entries: SpendingMixRecentEntry[];
   totalMinor: number;
   latestOccurredAt: string;
-  focusTransactionId: string | null;
 };
 
 function normalizeMixEntryTitle(title: string) {
@@ -2951,6 +2950,7 @@ function buildGroupedMixEntries(entries: SpendingMixRecentEntry[], displayCurren
       approximate: boolean;
       hasUnavailableRate: boolean;
       firstEntry: SpendingMixRecentEntry;
+      entries: SpendingMixRecentEntry[];
     }
   >();
 
@@ -2974,6 +2974,7 @@ function buildGroupedMixEntries(entries: SpendingMixRecentEntry[], displayCurren
       approximate: Boolean(current?.approximate || entry.displayAmountApproximate),
       hasUnavailableRate: Boolean(current?.hasUnavailableRate || entry.displayAmountUnavailable),
       firstEntry: current?.firstEntry ?? entry,
+      entries: [...(current?.entries ?? []), entry],
     });
   }
 
@@ -2985,11 +2986,10 @@ function buildGroupedMixEntries(entries: SpendingMixRecentEntry[], displayCurren
         group.count === 1
           ? group.firstEntry.amountDisplay
           : formatGroupedMixAmount(group, displayCurrency),
-      metaLabel: group.count === 1 ? group.latestOccurredLabel : `${group.count} entries`,
       count: group.count,
+      entries: [...group.entries].sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()),
       totalMinor: group.totalMinor,
       latestOccurredAt: group.latestOccurredAt,
-      focusTransactionId: group.count === 1 ? group.firstEntry.id : null,
     }))
     .sort((a, b) => {
       if (b.totalMinor !== a.totalMinor) {
@@ -3004,6 +3004,44 @@ function buildGroupedMixEntries(entries: SpendingMixRecentEntry[], displayCurren
 
       return a.title.localeCompare(b.title);
     });
+}
+
+function SpendingMixEntryDetailRow({
+  entry,
+  inspectCategory,
+  inspectMonth,
+  locale,
+  showTitle = false,
+}: {
+  entry: SpendingMixRecentEntry;
+  inspectCategory?: string | null;
+  inspectMonth: string;
+  locale: string;
+  showTitle?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md px-2 py-1",
+        showTitle ? "bg-white/80" : "bg-white/60",
+      )}
+      data-testid="mix-transaction-detail-row"
+    >
+      <div className="min-w-0">
+        {showTitle ? <p className="truncate text-sm font-medium text-slate-800">{formatGroupedMixTitle(entry.title)}</p> : null}
+        <p className="truncate text-xs text-slate-500">{entry.occurredLabel}</p>
+      </div>
+      <p className="whitespace-nowrap text-right text-xs font-semibold text-slate-700">{entry.amountDisplay}</p>
+      <InspectActivityLink
+        href={buildActivityInspectHref({
+          category: inspectCategory,
+          focusTransaction: entry.id,
+          month: getInspectMonthFromDate(entry.occurredAt) ?? inspectMonth,
+        })}
+        locale={locale}
+      />
+    </div>
+  );
 }
 
 function SpendingMixRows({
@@ -3106,25 +3144,37 @@ function SpendingMixRows({
                 <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
                   <div className="space-y-2">
                     {groupedEntries.map((entry) => (
-                      <div key={entry.key} className="grid grid-cols-[1fr_auto] items-start gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800">{entry.title}</p>
-                          <p className="text-xs text-slate-500">{entry.metaLabel}</p>
+                      entry.count === 1 ? (
+                        <SpendingMixEntryDetailRow
+                          entry={entry.entries[0]!}
+                          inspectCategory={inspectCategory}
+                          inspectMonth={inspectMonth}
+                          key={entry.key}
+                          locale={locale}
+                          showTitle
+                        />
+                      ) : (
+                        <div className="space-y-1.5" data-testid="mix-grouped-title-row" key={entry.key}>
+                          <div
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-md bg-white/80 px-2 py-1.5"
+                            data-testid="mix-grouped-subtotal-row"
+                          >
+                            <p className="min-w-0 truncate text-sm font-medium text-slate-800">{entry.title}</p>
+                            <p className="whitespace-nowrap text-right text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
+                          </div>
+                          <div className="ml-2 space-y-1 border-l border-slate-200 pl-2">
+                            {entry.entries.map((childEntry) => (
+                              <SpendingMixEntryDetailRow
+                                entry={childEntry}
+                                inspectCategory={inspectCategory}
+                                inspectMonth={inspectMonth}
+                                key={childEntry.id}
+                                locale={locale}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <p className="whitespace-nowrap text-sm font-semibold text-slate-700">{entry.amountDisplay}</p>
-                          {entry.focusTransactionId ? (
-                            <InspectActivityLink
-                              href={buildActivityInspectHref({
-                                category: inspectCategory,
-                                focusTransaction: entry.focusTransactionId,
-                                month: getInspectMonthFromDate(entry.latestOccurredAt) ?? inspectMonth,
-                              })}
-                              locale={locale}
-                            />
-                          ) : null}
-                        </div>
-                      </div>
+                      )
                     ))}
                   </div>
                 </div>

@@ -3660,14 +3660,50 @@ describe("insights overview", () => {
 
     expect(screen.getAllByText("Cola")).toHaveLength(1);
     expect(screen.getByText("≈ RON 55.20")).toBeInTheDocument();
-    expect(screen.getByText("2 entries")).toBeInTheDocument();
-    expect(screen.queryByText("Jun 29")).not.toBeInTheDocument();
-    expect(screen.queryByText("Jun 3")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 entries")).not.toBeInTheDocument();
+    expect(screen.getByText("Jun 29")).toBeInTheDocument();
+    expect(screen.getByText("Jun 3")).toBeInTheDocument();
 
     expect(screen.getByText("Bere")).toBeInTheDocument();
     expect(screen.getByText("Jun 13")).toBeInTheDocument();
     expect(screen.getByText("Kaufland")).toBeInTheDocument();
     expect(screen.getByText("Jun 10")).toBeInTheDocument();
+
+    const colaSubtotal = screen.getByText("Cola").closest("[data-testid='mix-grouped-subtotal-row']") as HTMLElement;
+    expect(screen.getAllByTestId("mix-grouped-subtotal-row")).toHaveLength(1);
+    expect(colaSubtotal).toHaveTextContent(/RON\s*55\.20/);
+    expect(within(colaSubtotal).queryByRole("link", { name: "View in Activity" })).not.toBeInTheDocument();
+
+    const detailRows = screen.getAllByTestId("mix-transaction-detail-row");
+    expect(detailRows).toHaveLength(4);
+    expect(
+      detailRows.some(
+        (row) =>
+          within(row).queryByText("Jun 29") &&
+          within(row).queryByText("$10.00") &&
+          within(row).queryByRole("link", { name: "View in Activity" })?.getAttribute("href") ===
+            "/transactions?month=2026-06&category=groceries&focusTransaction=cola-usd",
+      ),
+    ).toBe(true);
+    expect(
+      detailRows.some(
+        (row) =>
+          within(row).queryByText("Jun 3") &&
+          within(row).queryByText("RON 10.00") &&
+          within(row).queryByRole("link", { name: "View in Activity" })?.getAttribute("href") ===
+            "/transactions?month=2026-06&category=groceries&focusTransaction=cola-ron",
+      ),
+    ).toBe(true);
+    expect(
+      detailRows.some(
+        (row) =>
+          within(row).queryByText("Kaufland") &&
+          within(row).queryByText("Jun 10") &&
+          within(row).queryByText("RON 250.00") &&
+          within(row).queryByRole("link", { name: "View in Activity" })?.getAttribute("href") ===
+            "/transactions?month=2026-06&category=groceries&focusTransaction=kaufland",
+      ),
+    ).toBe(true);
 
     const expandedText = screen.getByText("Kaufland").closest(".space-y-2")?.textContent ?? "";
     expect(expandedText.indexOf("Kaufland")).toBeLessThan(expandedText.indexOf("Cola"));
