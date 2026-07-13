@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   CalendarDays,
   ChevronDown,
@@ -63,6 +64,14 @@ import { t } from "@/lib/i18n";
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
+
+function BodyPortal({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(children, document.body);
+}
 
 type AssistantComposerProps = {
   action: AssistantActionHandler;
@@ -413,6 +422,16 @@ export function AssistantComposer({
   const assistantMessageDisplay = getAssistantMessageDisplay(state, locale);
   const latestReviewLabel = getReviewStateDisplayLabel(state.latestTransaction?.reviewState, locale);
   const currentCreditBalanceDisplay = getCreditBalanceDisplay(effectiveCreditBalance, locale);
+  const launchPricingHelperLines = useMemo(() => {
+    const helper = t("credits.options.launchPricing.helper", locale);
+    const [firstSentence, ...remainingSentences] = helper.split(". ");
+
+    if (!remainingSentences.length) {
+      return [helper];
+    }
+
+    return [firstSentence.endsWith(".") ? firstSentence : `${firstSentence}.`, remainingSentences.join(". ")];
+  }, [locale]);
   const rewardedCreditsEnabled = areRewardedCreditsEnabled();
   const creditPacksEnabled = areCreditPacksEnabled();
   const yearlyUnlimitedEnabled = isYearlyUnlimitedEnabled();
@@ -924,14 +943,15 @@ export function AssistantComposer({
       ) : null}
 
       {isCreditOptionsOpen ? (
+        <BodyPortal>
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden overscroll-none bg-slate-900/25 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center"
+          className="fixed inset-0 z-[200] flex items-end justify-center overflow-hidden overscroll-none bg-slate-900/25 backdrop-blur-sm sm:items-center sm:px-3 sm:py-4"
           role="presentation"
         >
           <div
             aria-labelledby="credit-options-title"
             aria-modal="true"
-            className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl"
+            className="flex h-[92dvh] max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl"
             role="dialog"
           >
             <div className="shrink-0 border-b border-slate-100 px-4 py-3">
@@ -972,7 +992,13 @@ export function AssistantComposer({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-900">{t("credits.options.launchPricing.label", locale)}</p>
-                <p className="mt-0.5 text-xs leading-5 text-slate-600">{t("credits.options.launchPricing.helper", locale)}</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-600">
+                  {launchPricingHelperLines.map((line) => (
+                    <span className="block" key={line}>
+                      {line}
+                    </span>
+                  ))}
+                </p>
               </div>
             </div>
             <div className="mt-4 space-y-4">
@@ -1088,6 +1114,7 @@ export function AssistantComposer({
             </div>
           </div>
         </div>
+        </BodyPortal>
       ) : null}
 
       {showLowCreditHelper ? (

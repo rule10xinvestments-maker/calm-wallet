@@ -1745,7 +1745,7 @@ describe("assistant composer", () => {
   });
 
   it("opens the shared credit options sheet from the low-credit helper row", () => {
-    const { container } = renderComposer(
+    renderComposer(
       undefined,
       [],
       undefined,
@@ -1764,15 +1764,20 @@ describe("assistant composer", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Add credits" });
     expect(dialog).toBeInTheDocument();
+    const overlay = dialog.parentElement;
+    expect(overlay?.parentElement).toBe(document.body);
+    expect(overlay).toHaveClass("fixed", "inset-0", "z-[200]", "items-end", "overflow-hidden");
+    expect(dialog).toHaveClass("h-[92dvh]", "max-h-[92dvh]", "w-full", "rounded-t-3xl", "rounded-b-none");
     expect(within(dialog).getByText("Current balance")).toBeInTheDocument();
     expect(within(dialog).getByText("8 credits available")).toBeInTheDocument();
     expect(within(dialog).getByText("Launch pricing")).toBeInTheDocument();
-    expect(within(dialog).getByText("First-year introductory pricing. Prices may change later.")).toBeInTheDocument();
+    expect(within(dialog).getByText("First-year introductory pricing.")).toHaveClass("block");
+    expect(within(dialog).getByText("Prices may change later.")).toHaveClass("block");
     expect(within(dialog).getByText("Earn credits")).toBeInTheDocument();
     expect(within(dialog).getByText("Earn 5 credits")).toBeInTheDocument();
     expect(within(dialog).getByText("Buy credits")).toBeInTheDocument();
     expect(within(dialog).getByText("50 credits")).toBeInTheDocument();
-    const smallPack = container.querySelector('[data-credit-option="small"]');
+    const smallPack = document.body.querySelector('[data-credit-option="small"]');
     expect(smallPack).not.toBeNull();
     const smallPackPrice = within(smallPack as HTMLElement).getByText("$1.49");
     const smallPackHelper = within(smallPack as HTMLElement).getByText("Simple refill");
@@ -1786,7 +1791,7 @@ describe("assistant composer", () => {
     expect(within(dialog).getByText("Best value")).toBeInTheDocument();
     expect(within(dialog).getByText("Unlimited")).toBeInTheDocument();
     expect(within(dialog).getByText("Unlimited entries")).toBeInTheDocument();
-    const unlimitedPack = container.querySelector('[data-credit-option="unlimited"]');
+    const unlimitedPack = document.body.querySelector('[data-credit-option="unlimited"]');
     expect(unlimitedPack).not.toBeNull();
     const unlimitedPrice = within(unlimitedPack as HTMLElement).getByText("$19.99/year");
     const unlimitedHelper = within(unlimitedPack as HTMLElement).getByText("Renews yearly");
@@ -1799,11 +1804,11 @@ describe("assistant composer", () => {
     expect(within(dialog).queryByText("Coming soon")).not.toBeInTheDocument();
     expect(within(dialog).queryAllByRole("button", { name: "Coming soon" })).toHaveLength(0);
 
-    const options = Array.from(container.querySelectorAll("[data-credit-option]")).map((option) =>
+    const options = Array.from(document.body.querySelectorAll("[data-credit-option]")).map((option) =>
       option.getAttribute("data-credit-option"),
     );
     expect(options).toEqual(["earn", "small", "large", "unlimited"]);
-    expect(container.querySelectorAll("[data-credit-option] button")).toHaveLength(0);
+    expect(document.body.querySelectorAll("[data-credit-option] button")).toHaveLength(0);
   });
 
   it("locks the Assistant page scroll while the credit sheet owns vertical scrolling", async () => {
@@ -1835,8 +1840,8 @@ describe("assistant composer", () => {
     expect(document.body.style.top).toBe("-140px");
     expect(document.body.style.width).toBe("100%");
     expect(document.documentElement.style.overscrollBehavior).toBe("none");
-    expect(dialog).toHaveClass("overflow-hidden", "max-h-[90dvh]", "rounded-t-3xl", "rounded-b-none", "sm:rounded-3xl");
-    expect(dialog).not.toHaveClass("h-[90dvh]");
+    expect(dialog.parentElement).toHaveClass("fixed", "inset-0", "z-[200]");
+    expect(dialog).toHaveClass("overflow-hidden", "h-[92dvh]", "max-h-[92dvh]", "rounded-t-3xl", "rounded-b-none", "sm:rounded-3xl");
     expect(scrollArea).toHaveClass("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain", "pt-2");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
