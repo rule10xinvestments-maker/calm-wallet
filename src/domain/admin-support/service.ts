@@ -204,7 +204,7 @@ export async function grantAdminCredits(args: {
     throw new Error("credit_grant_failed");
   }
 
-  await admin.from("admin_credit_actions").upsert({
+  const { error: auditError } = await admin.from("admin_credit_actions").upsert({
     target_user_id: args.targetUserId,
     acting_admin_id: args.actingAdminId,
     action_type: "credit_grant",
@@ -213,6 +213,10 @@ export async function grantAdminCredits(args: {
     internal_note: args.internalNote,
     operation_key: args.operationKey,
   }, { onConflict: "operation_key", ignoreDuplicates: true });
+
+  if (auditError) {
+    throw new Error("credit_grant_audit_failed");
+  }
 
   return data;
 }
@@ -226,15 +230,36 @@ export async function setAdminUnlimited(args: {
   mode: "grant_one_year" | "remove";
 }) {
   const admin = requireAdminClient();
-  await admin.rpc("ensure_credit_account", { p_user_id: args.targetUserId });
+  const ensureResult = await admin.rpc("ensure_credit_account", { p_user_id: args.targetUserId });
+  if (ensureResult.error) {
+    throw new Error("unlimited_update_failed");
+  }
 
-  const { data: existingAction } = await admin
+  const { data: existingAction, error: existingActionError } = await admin
     .from("admin_credit_actions")
     .select("id")
     .eq("operation_key", args.operationKey)
     .maybeSingle();
 
+  if (existingActionError) {
+    throw new Error("unlimited_audit_lookup_failed");
+  }
+
   if (existingAction) {
+    return;
+  }
+
+  const { data: existingLedger, error: existingLedgerError } = await admin
+    .from("credit_ledger")
+    .select("id")
+    .eq("operation_key", args.operationKey)
+    .maybeSingle();
+
+  if (existingLedgerError) {
+    throw new Error("unlimited_ledger_lookup_failed");
+  }
+
+  if (existingLedger) {
     return;
   }
 
@@ -261,7 +286,7 @@ export async function setAdminUnlimited(args: {
     throw new Error("unlimited_update_failed");
   }
 
-  await admin.from("credit_ledger").insert({
+  const { error: ledgerError } = await admin.from("credit_ledger").insert({
     user_id: args.targetUserId,
     delta: 0,
     balance_after: before.credit_balance,
@@ -278,7 +303,15 @@ export async function setAdminUnlimited(args: {
     },
   });
 
-  await admin.from("admin_credit_actions").upsert({
+  if (ledgerError) {
+    await admin
+      .from("credit_accounts")
+      .update({ unlimited_until: before.unlimited_until })
+      .eq("user_id", args.targetUserId);
+    throw new Error("unlimited_ledger_failed");
+  }
+
+  const { error: auditError } = await admin.from("admin_credit_actions").upsert({
     target_user_id: args.targetUserId,
     acting_admin_id: args.actingAdminId,
     action_type: args.mode === "grant_one_year" ? "unlimited_grant" : "unlimited_remove",
@@ -289,4 +322,12 @@ export async function setAdminUnlimited(args: {
     unlimited_until_before: before.unlimited_until,
     unlimited_until_after: nextUnlimitedUntil,
   }, { onConflict: "operation_key", ignoreDuplicates: true });
+
+  if (auditError) {
+    await admin
+      .from("credit_accounts")
+      .update({ unlimited_until: before.unlimited_until })
+      .eq("user_id", args.targetUserId);
+    throw new Error("unlimited_audit_failed");
+  }
 }

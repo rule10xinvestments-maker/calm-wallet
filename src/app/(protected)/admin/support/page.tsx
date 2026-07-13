@@ -3,7 +3,7 @@ import { AdminSupportConsole } from "@/components/support/admin-support-console"
 import { findAdminUserByExactEmail, getAdminDashboardSummary } from "@/domain/admin-support/service";
 import { createSupabaseSupportService } from "@/domain/support/service";
 import type { SupportStatus } from "@/domain/support/types";
-import { grantCreditsAdminAction, updateUnlimitedAdminAction } from "@/lib/actions/admin-support";
+import { grantCreditsAdminAction, searchAdminUserCreditsAction, updateUnlimitedAdminAction } from "@/lib/actions/admin-support";
 import { updateSupportTicketAdminAction } from "@/lib/actions/support";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 
@@ -49,6 +49,7 @@ export default async function AdminSupportPage({ searchParams }: AdminSupportPag
     <AdminSupportConsole
       action={updateSupportTicketAdminAction}
       grantCreditsAction={grantCreditsAdminAction}
+      searchUserAction={searchAdminUserCreditsAction}
       unlimitedAction={updateUnlimitedAdminAction}
       activeStatus={activeStatus}
       activeSection={activeSection}

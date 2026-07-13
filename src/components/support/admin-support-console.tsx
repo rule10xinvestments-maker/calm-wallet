@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart3, Check, ChevronDown, CreditCard, Image as ImageIcon, Search } from "lucide-react";
 import { initialAdminSupportTicketActionState, type AdminSupportTicketActionState } from "@/lib/actions/support-state";
 import type { AdminDashboardSummary, AdminUserCreditLookup } from "@/domain/admin-support/service";
+import type { AdminUserCreditsActionState } from "@/lib/actions/admin-support";
 import type { SupportStatus, SupportTicket } from "@/domain/support/types";
 import { Button } from "@/components/ui/button";
 
@@ -18,11 +19,12 @@ type AdminSupportConsoleProps = {
   searchEmail?: string;
   searchAttempted?: boolean;
   action: (state: AdminSupportTicketActionState, formData: FormData) => Promise<AdminSupportTicketActionState>;
-  grantCreditsAction?: (state: AdminSupportTicketActionState, formData: FormData) => Promise<AdminSupportTicketActionState>;
-  unlimitedAction?: (state: AdminSupportTicketActionState, formData: FormData) => Promise<AdminSupportTicketActionState>;
+  grantCreditsAction?: (state: AdminUserCreditsActionState, formData: FormData) => Promise<AdminUserCreditsActionState>;
+  searchUserAction?: (state: AdminUserCreditsActionState, formData: FormData) => Promise<AdminUserCreditsActionState>;
+  unlimitedAction?: (state: AdminUserCreditsActionState, formData: FormData) => Promise<AdminUserCreditsActionState>;
 };
 
-type AdminConsoleAction = (state: AdminSupportTicketActionState, formData: FormData) => Promise<AdminSupportTicketActionState>;
+type AdminUserCreditsAction = (state: AdminUserCreditsActionState, formData: FormData) => Promise<AdminUserCreditsActionState>;
 
 const statusFilters: Array<SupportStatus | "active" | "all"> = ["active", "new", "in_progress", "resolved", "closed", "archived", "all"];
 const editableStatuses: SupportStatus[] = ["new", "in_progress", "resolved"];
@@ -56,8 +58,8 @@ const sections = [
   { id: "users", label: "Users & Credits" },
 ] as const;
 
-async function unavailableAdminAction(): Promise<AdminSupportTicketActionState> {
-  return { status: "error", message: "Admin action is unavailable." };
+async function unavailableUserCreditsAction(): Promise<AdminUserCreditsActionState> {
+  return { status: "error", message: "Admin action is unavailable.", user: null, email: "" };
 }
 
 export function AdminSupportConsole({
@@ -70,8 +72,9 @@ export function AdminSupportConsole({
   searchEmail = "",
   searchAttempted = false,
   action,
-  grantCreditsAction = unavailableAdminAction,
-  unlimitedAction = unavailableAdminAction,
+  grantCreditsAction = unavailableUserCreditsAction,
+  searchUserAction = unavailableUserCreditsAction,
+  unlimitedAction = unavailableUserCreditsAction,
 }: AdminSupportConsoleProps) {
   return (
     <section className="space-y-4">
@@ -99,6 +102,7 @@ export function AdminSupportConsole({
       {activeSection === "users" ? (
         <UsersCreditsSection
           grantCreditsAction={grantCreditsAction}
+          searchUserAction={searchUserAction}
           searchAttempted={searchAttempted}
           searchEmail={searchEmail}
           unlimitedAction={unlimitedAction}
@@ -158,46 +162,95 @@ function UsersCreditsSection({
   searchEmail,
   searchAttempted,
   grantCreditsAction,
+  searchUserAction,
   unlimitedAction,
 }: {
   userLookup: AdminUserCreditLookup | null;
   searchEmail: string;
   searchAttempted: boolean;
-  grantCreditsAction: AdminConsoleAction;
-  unlimitedAction: AdminConsoleAction;
+  grantCreditsAction: AdminUserCreditsAction;
+  searchUserAction: AdminUserCreditsAction;
+  unlimitedAction: AdminUserCreditsAction;
 }) {
+  const [currentUser, setCurrentUser] = useState(userLookup);
+  const [lookupAttempted, setLookupAttempted] = useState(searchAttempted);
+  const [openSection, setOpenSection] = useState<"credits" | "unlimited" | "ledger" | null>(null);
+  const [searchState, searchFormAction, isSearching] = useActionState(searchUserAction, {
+    status: "idle",
+    message: null,
+    user: userLookup,
+    email: searchEmail,
+  });
+
+  useEffect(() => {
+    setCurrentUser(userLookup);
+    setLookupAttempted(searchAttempted);
+  }, [searchAttempted, userLookup]);
+
+  useEffect(() => {
+    if (searchState.status !== "idle") {
+      setCurrentUser(searchState.user);
+      setLookupAttempted(true);
+      setOpenSection(null);
+    }
+  }, [searchState]);
+
+  const handleUserUpdated = useCallback((user: AdminUserCreditLookup, sectionToClose: "credits" | "unlimited") => {
+    setCurrentUser(user);
+    setOpenSection((current) => (current === sectionToClose ? null : current));
+  }, []);
+  const handleCreditsUpdated = useCallback((user: AdminUserCreditLookup) => handleUserUpdated(user, "credits"), [handleUserUpdated]);
+  const handleUnlimitedUpdated = useCallback((user: AdminUserCreditLookup) => handleUserUpdated(user, "unlimited"), [handleUserUpdated]);
+
   return (
     <div className="space-y-3">
-      <form action="/admin/support" className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-        <input name="tab" type="hidden" value="users" />
+      <form action={searchFormAction} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
         <label className="space-y-1.5">
           <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Exact email lookup</span>
           <span className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-sky-300 focus-within:bg-white">
             <Search aria-hidden="true" className="size-4 shrink-0 text-slate-400" />
             <input
               className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-              defaultValue={searchEmail}
+              defaultValue={searchState.email || searchEmail}
               name="email"
               placeholder="user@example.com"
               type="email"
             />
           </span>
         </label>
-        <Button className="mt-3 w-full" type="submit">
-          Search user
+        <Button className="mt-3 w-full" disabled={isSearching} type="submit">
+          {isSearching ? "Searching..." : "Search user"}
         </Button>
       </form>
 
-      {searchAttempted && !userLookup ? (
-        <p className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">No user found for that exact email.</p>
+      {lookupAttempted && !currentUser ? (
+        <p className={`rounded-2xl border px-4 py-4 text-sm ${searchState.status === "error" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-500"}`}>
+          {searchState.message ?? "No user found for that exact email."}
+        </p>
       ) : null}
 
-      {userLookup ? (
+      {currentUser ? (
         <div className="space-y-3">
-          <UserCreditSummary user={userLookup} />
-          <AdminCreditGrantForm action={grantCreditsAction} user={userLookup} />
-          <AdminUnlimitedForm action={unlimitedAction} user={userLookup} />
-          <RecentLedgerEvents events={userLookup.recentLedgerEvents} />
+          <UserCreditSummary user={currentUser} />
+          <AdminCreditGrantForm
+            action={grantCreditsAction}
+            isOpen={openSection === "credits"}
+            onOpenChange={() => setOpenSection((current) => (current === "credits" ? null : "credits"))}
+            onUserUpdated={handleCreditsUpdated}
+            user={currentUser}
+          />
+          <AdminUnlimitedForm
+            action={unlimitedAction}
+            isOpen={openSection === "unlimited"}
+            onOpenChange={() => setOpenSection((current) => (current === "unlimited" ? null : "unlimited"))}
+            onUserUpdated={handleUnlimitedUpdated}
+            user={currentUser}
+          />
+          <RecentLedgerEvents
+            events={currentUser.recentLedgerEvents}
+            isOpen={openSection === "ledger"}
+            onOpenChange={() => setOpenSection((current) => (current === "ledger" ? null : "ledger"))}
+          />
         </div>
       ) : null}
     </div>
@@ -228,136 +281,229 @@ function UserCreditSummary({ user }: { user: AdminUserCreditLookup }) {
   );
 }
 
-function AdminCreditGrantForm({ user, action }: { user: AdminUserCreditLookup; action: AdminConsoleAction }) {
-  const [state, formAction, isPending] = useActionState(action, initialAdminSupportTicketActionState);
+function AdminCreditGrantForm({
+  user,
+  action,
+  isOpen,
+  onOpenChange,
+  onUserUpdated,
+}: {
+  user: AdminUserCreditLookup;
+  action: AdminUserCreditsAction;
+  isOpen: boolean;
+  onOpenChange: () => void;
+  onUserUpdated: (user: AdminUserCreditLookup) => void;
+}) {
+  const [state, formAction, isPending] = useActionState(action, {
+    status: "idle",
+    message: null,
+    user,
+    email: user.email,
+  });
   const [amount, setAmount] = useState("");
-  const [operationKey] = useState(() => crypto.randomUUID());
+  const [operationKey, setOperationKey] = useState(() => crypto.randomUUID());
   const numericAmount = Number(amount);
   const requiresLargeConfirm = Number.isInteger(numericAmount) && numericAmount >= 500;
 
+  useEffect(() => {
+    if (state.status === "success" && state.user) {
+      onUserUpdated(state.user);
+      setAmount("");
+      setOperationKey(crypto.randomUUID());
+    }
+  }, [onUserUpdated, state]);
+
   return (
-    <form action={formAction} className="space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-      <input name="targetUserId" type="hidden" value={user.userId} />
-      <input name="email" type="hidden" value={user.email} />
-      <input name="operationKey" type="hidden" value={operationKey} />
-      <h3 className="text-sm font-semibold text-slate-900">Add credits</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1.5">
-          <span className="text-xs font-medium text-slate-700">Credit amount</span>
-          <input
-            className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-sky-300 focus:bg-white"
-            inputMode="numeric"
-            max={5000}
-            min={1}
-            name="amount"
-            onChange={(event) => setAmount(event.currentTarget.value)}
-            pattern="[0-9]*"
-            required
-            type="text"
-            value={amount}
-          />
-        </label>
-        <label className="space-y-1.5">
-          <span className="text-xs font-medium text-slate-700">Reason</span>
-          <select className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm" name="reasonCategory" required>
-            {reasonCategories.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <label className="space-y-1.5">
-        <span className="text-xs font-medium text-slate-700">Internal note</span>
-        <textarea className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" maxLength={500} name="internalNote" />
-      </label>
-      {requiresLargeConfirm ? (
-        <label className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <input className="mt-0.5" required type="checkbox" />
-          <span>Confirm this unusually large credit grant.</span>
-        </label>
+    <section className="rounded-2xl border border-slate-200 bg-white">
+      <button className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left" onClick={onOpenChange} type="button" aria-expanded={isOpen}>
+        <span>
+          <span className="block text-sm font-semibold text-slate-900">Add credits</span>
+          <span className="mt-0.5 block text-xs text-slate-500">Giveaway, support, testing, or correction.</span>
+        </span>
+        <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {state.status !== "idle" && !isOpen ? <div className="px-4 pb-3"><ActionMessage state={state} /></div> : null}
+      {isOpen ? (
+        <form action={formAction} className="space-y-3 border-t border-slate-100 px-4 py-4">
+          <input name="targetUserId" type="hidden" value={user.userId} />
+          <input name="email" type="hidden" value={user.email} />
+          <input name="operationKey" type="hidden" value={operationKey} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-slate-700">Credit amount</span>
+              <input
+                className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-sky-300 focus:bg-white"
+                inputMode="numeric"
+                max={5000}
+                min={1}
+                name="amount"
+                onChange={(event) => setAmount(event.currentTarget.value)}
+                pattern="[0-9]*"
+                required
+                type="text"
+                value={amount}
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-slate-700">Reason</span>
+              <select className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm" name="reasonCategory" required>
+                {reasonCategories.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="space-y-1.5">
+            <span className="text-xs font-medium text-slate-700">Internal note</span>
+            <textarea className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" maxLength={500} name="internalNote" />
+          </label>
+          {requiresLargeConfirm ? (
+            <label className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <input className="mt-0.5" required type="checkbox" />
+              <span>Confirm this unusually large credit grant.</span>
+            </label>
+          ) : null}
+          <ActionMessage state={state} />
+          <Button className="w-full" disabled={isPending} type="submit">
+            {isPending ? "Adding..." : "Add credits"}
+          </Button>
+        </form>
       ) : null}
-      <ActionMessage state={state} />
-      <Button className="w-full" disabled={isPending} type="submit">
-        {isPending ? "Adding..." : "Add credits"}
-      </Button>
-    </form>
+    </section>
   );
 }
 
-function AdminUnlimitedForm({ user, action }: { user: AdminUserCreditLookup; action: AdminConsoleAction }) {
-  const [state, formAction, isPending] = useActionState(action, initialAdminSupportTicketActionState);
+function AdminUnlimitedForm({
+  user,
+  action,
+  isOpen,
+  onOpenChange,
+  onUserUpdated,
+}: {
+  user: AdminUserCreditLookup;
+  action: AdminUserCreditsAction;
+  isOpen: boolean;
+  onOpenChange: () => void;
+  onUserUpdated: (user: AdminUserCreditLookup) => void;
+}) {
+  const [state, formAction, isPending] = useActionState(action, {
+    status: "idle",
+    message: null,
+    user,
+    email: user.email,
+  });
   const [mode, setMode] = useState<"grant_one_year" | "remove">("grant_one_year");
-  const [operationKey] = useState(() => crypto.randomUUID());
+  const [operationKey, setOperationKey] = useState(() => crypto.randomUUID());
   const nextExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
+  useEffect(() => {
+    if (state.status === "success" && state.user) {
+      onUserUpdated(state.user);
+      setOperationKey(crypto.randomUUID());
+    }
+  }, [onUserUpdated, state]);
+
   return (
-    <form action={formAction} className="space-y-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-      <input name="targetUserId" type="hidden" value={user.userId} />
-      <input name="email" type="hidden" value={user.email} />
-      <input name="operationKey" type="hidden" value={operationKey} />
-      <h3 className="text-sm font-semibold text-slate-900">Unlimited controls</h3>
-      <div className="grid grid-cols-2 gap-2">
-        <label className={`rounded-xl border px-3 py-2 text-sm ${mode === "grant_one_year" ? "border-sky-200 bg-sky-50 text-sky-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
-          <input className="sr-only" name="mode" onChange={() => setMode("grant_one_year")} type="radio" value="grant_one_year" checked={mode === "grant_one_year"} />
-          Grant one year
-        </label>
-        <label className={`rounded-xl border px-3 py-2 text-sm ${mode === "remove" ? "border-rose-200 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
-          <input className="sr-only" name="mode" onChange={() => setMode("remove")} type="radio" value="remove" checked={mode === "remove"} />
-          Remove
-        </label>
-      </div>
-      <p className="text-xs leading-5 text-slate-500">
-        {mode === "grant_one_year" ? `Resulting expiry: ${formatDateTime(nextExpiry)}.` : "Removing Unlimited requires confirmation."}
-      </p>
-      <label className="space-y-1.5">
-        <span className="text-xs font-medium text-slate-700">Reason</span>
-        <select className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm" name="reasonCategory" required>
-          {reasonCategories.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="space-y-1.5">
-        <span className="text-xs font-medium text-slate-700">Internal note</span>
-        <textarea className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" maxLength={500} name="internalNote" />
-      </label>
-      {mode === "remove" ? (
-        <label className="flex items-start gap-2 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-800">
-          <input className="mt-0.5" name="confirm" required type="checkbox" value="remove" />
-          <span>Confirm Unlimited removal.</span>
-        </label>
+    <section className="rounded-2xl border border-slate-200 bg-white">
+      <button className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left" onClick={onOpenChange} type="button" aria-expanded={isOpen}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-slate-900">Unlimited</span>
+          <span className="mt-0.5 block truncate text-xs text-slate-500">
+            {user.unlimitedActive ? `Unlimited until ${formatDateTime(user.unlimitedUntil ?? "")}` : "Unlimited: Not active"}
+          </span>
+        </span>
+        <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {state.status !== "idle" && !isOpen ? <div className="px-4 pb-3"><ActionMessage state={state} /></div> : null}
+      {isOpen ? (
+        <form action={formAction} className="space-y-3 border-t border-slate-100 px-4 py-4">
+          <input name="targetUserId" type="hidden" value={user.userId} />
+          <input name="email" type="hidden" value={user.email} />
+          <input name="operationKey" type="hidden" value={operationKey} />
+          <div className="grid grid-cols-2 gap-2">
+            <label className={`rounded-xl border px-3 py-2 text-sm ${mode === "grant_one_year" ? "border-sky-200 bg-sky-50 text-sky-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+              <input className="sr-only" name="mode" onChange={() => setMode("grant_one_year")} type="radio" value="grant_one_year" checked={mode === "grant_one_year"} />
+              Grant one year
+            </label>
+            <label className={`rounded-xl border px-3 py-2 text-sm ${mode === "remove" ? "border-rose-200 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+              <input className="sr-only" name="mode" onChange={() => setMode("remove")} type="radio" value="remove" checked={mode === "remove"} />
+              Remove
+            </label>
+          </div>
+          <p className="text-xs leading-5 text-slate-500">
+            {mode === "grant_one_year" ? `Resulting expiry: ${formatDateTime(nextExpiry)}.` : "Removing Unlimited requires confirmation."}
+          </p>
+          <label className="space-y-1.5">
+            <span className="text-xs font-medium text-slate-700">Reason</span>
+            <select className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm" name="reasonCategory" required>
+              {reasonCategories.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-xs font-medium text-slate-700">Internal note</span>
+            <textarea className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" maxLength={500} name="internalNote" />
+          </label>
+          {mode === "remove" ? (
+            <label className="flex items-start gap-2 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-800">
+              <input className="mt-0.5" name="confirm" required type="checkbox" value="remove" />
+              <span>Confirm Unlimited removal.</span>
+            </label>
+          ) : null}
+          <ActionMessage state={state} />
+          <Button className="w-full" disabled={isPending} type="submit">
+            {isPending ? "Saving..." : mode === "grant_one_year" ? "Grant Unlimited" : "Remove Unlimited"}
+          </Button>
+        </form>
       ) : null}
-      <ActionMessage state={state} />
-      <Button className="w-full" disabled={isPending} type="submit">
-        {isPending ? "Saving..." : mode === "grant_one_year" ? "Grant Unlimited" : "Remove Unlimited"}
-      </Button>
-    </form>
+    </section>
   );
 }
 
-function RecentLedgerEvents({ events }: { events: AdminUserCreditLookup["recentLedgerEvents"] }) {
+function RecentLedgerEvents({
+  events,
+  isOpen,
+  onOpenChange,
+}: {
+  events: AdminUserCreditLookup["recentLedgerEvents"];
+  isOpen: boolean;
+  onOpenChange: () => void;
+}) {
+  const latest = events[0] ?? null;
+
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-      <h3 className="text-sm font-semibold text-slate-900">Recent credit ledger events</h3>
-      <div className="mt-3 space-y-2">
-        {events.length === 0 ? (
-          <p className="text-sm text-slate-500">No recent ledger events.</p>
-        ) : (
-          events.map((event) => (
-            <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs" key={event.id}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-semibold text-slate-700">{event.reason}</span>
-                <span className={event.delta >= 0 ? "text-emerald-700" : "text-rose-700"}>{event.delta > 0 ? `+${event.delta}` : event.delta}</span>
+    <section className="rounded-2xl border border-slate-200 bg-white">
+      <button className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left" onClick={onOpenChange} type="button" aria-expanded={isOpen}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-slate-900">Recent credit ledger</span>
+          <span className="mt-0.5 block truncate text-xs text-slate-500">
+            {latest ? `${latest.reason} · ${latest.delta > 0 ? `+${latest.delta}` : latest.delta}` : "No recent ledger events"}
+          </span>
+        </span>
+        <ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-slate-400 transition ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {isOpen ? (
+        <div className="space-y-2 border-t border-slate-100 px-4 py-4">
+          {events.length === 0 ? (
+            <p className="text-sm text-slate-500">No recent ledger events.</p>
+          ) : (
+            events.map((event) => (
+              <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs" key={event.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-slate-700">{event.reason}</span>
+                  <span className={event.delta >= 0 ? "text-emerald-700" : "text-rose-700"}>{event.delta > 0 ? `+${event.delta}` : event.delta}</span>
+                </div>
+                <p className="mt-1 text-slate-500">Balance after {event.balanceAfter} · {formatDateTime(event.createdAt)}</p>
               </div>
-              <p className="mt-1 text-slate-500">Balance after {event.balanceAfter} · {formatDateTime(event.createdAt)}</p>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -556,7 +702,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ActionMessage({ state }: { state: AdminSupportTicketActionState }) {
+function ActionMessage({ state }: { state: { status: "idle" | "success" | "error"; message: string | null } }) {
   if (state.status === "idle" || !state.message) return null;
   return <p className={`rounded-xl px-3 py-2 text-xs ${state.status === "success" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{state.message}</p>;
 }

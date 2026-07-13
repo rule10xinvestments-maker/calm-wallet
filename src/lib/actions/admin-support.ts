@@ -1,17 +1,16 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   adminCreditReasonCategories,
   assertSupportAdmin,
+  findAdminUserByExactEmail,
   grantAdminCredits,
   setAdminUnlimited,
+  type AdminUserCreditLookup,
 } from "@/domain/admin-support/service";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
-import type { SupportTicketActionState } from "@/lib/actions/support-state";
 
 const maxCreditGrant = 5_000;
 
@@ -34,6 +33,17 @@ const unlimitedSchema = z.object({
   confirm: z.string().optional(),
 });
 
+const searchUserSchema = z.object({
+  email: z.string().trim().email(),
+});
+
+export type AdminUserCreditsActionState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+  user: AdminUserCreditLookup | null;
+  email: string;
+};
+
 function stringValue(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value : "";
 }
@@ -53,6 +63,28 @@ async function requireAdminUser() {
   return auth.user;
 }
 
+function logAdminActionFailure(args: {
+  actionType: string;
+  actingAdminId?: string | null;
+  targetUserId?: string | null;
+  errorCode: string;
+}) {
+  console.error("[admin-support-action-failed]", {
+    actionType: args.actionType,
+    actingAdminId: args.actingAdminId ?? null,
+    targetUserId: args.targetUserId ?? null,
+    errorCode: args.errorCode,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function safeErrorCode(error: unknown, fallback: string) {
+  if (error instanceof Error && /^[a-z_]+$/.test(error.message)) {
+    return error.message;
+  }
+  return fallback;
+}
+
 export async function markAuthenticatedAppActivityAction(): Promise<void> {
   const auth = await requireAuthenticatedSession();
 
@@ -69,19 +101,25 @@ export async function markAuthenticatedAppActivityAction(): Promise<void> {
 }
 
 export async function grantCreditsAdminAction(
-  _prevState: SupportTicketActionState,
+  prevState: AdminUserCreditsActionState,
   formData: FormData,
-): Promise<SupportTicketActionState> {
+): Promise<AdminUserCreditsActionState> {
+  let actingAdminId: string | null = null;
+  let targetUserId: string | null = null;
+  let email = normalizeEmail(stringValue(formData.get("email")) || prevState.email);
   try {
     const admin = await requireAdminUser();
+    actingAdminId = admin.id;
     const parsed = grantCreditsSchema.parse({
       targetUserId: stringValue(formData.get("targetUserId")),
-      email: normalizeEmail(stringValue(formData.get("email"))),
+      email,
       amount: stringValue(formData.get("amount")),
       reasonCategory: stringValue(formData.get("reasonCategory")),
       internalNote: stringValue(formData.get("internalNote")) || null,
       operationKey: stringValue(formData.get("operationKey")),
     });
+    targetUserId = parsed.targetUserId;
+    email = parsed.email;
 
     await grantAdminCredits({
       targetUserId: parsed.targetUserId,
@@ -91,32 +129,45 @@ export async function grantCreditsAdminAction(
       internalNote: parsed.internalNote ?? null,
       operationKey: `admin-credit:${parsed.operationKey}`,
     });
-  } catch {
-    return { status: "error", message: "Credits could not be added." };
-  }
 
-  revalidatePath("/admin/support");
-  redirect(`/admin/support?tab=users&email=${encodeURIComponent(normalizeEmail(stringValue(formData.get("email"))))}&updated=credits`);
+    const user = await findAdminUserByExactEmail(parsed.email);
+
+    return {
+      status: "success",
+      message: `${parsed.amount} credits added.`,
+      user,
+      email: parsed.email,
+    };
+  } catch (error) {
+    logAdminActionFailure({ actionType: "credit_grant", actingAdminId, targetUserId, errorCode: safeErrorCode(error, "credit_grant_failed") });
+    return { status: "error", message: "Credits could not be added.", user: prevState.user, email };
+  }
 }
 
 export async function updateUnlimitedAdminAction(
-  _prevState: SupportTicketActionState,
+  prevState: AdminUserCreditsActionState,
   formData: FormData,
-): Promise<SupportTicketActionState> {
+): Promise<AdminUserCreditsActionState> {
+  let actingAdminId: string | null = null;
+  let targetUserId: string | null = null;
+  let email = normalizeEmail(stringValue(formData.get("email")) || prevState.email);
   try {
     const admin = await requireAdminUser();
+    actingAdminId = admin.id;
     const parsed = unlimitedSchema.parse({
       targetUserId: stringValue(formData.get("targetUserId")),
-      email: normalizeEmail(stringValue(formData.get("email"))),
+      email,
       reasonCategory: stringValue(formData.get("reasonCategory")),
       internalNote: stringValue(formData.get("internalNote")) || null,
       operationKey: stringValue(formData.get("operationKey")),
       mode: stringValue(formData.get("mode")),
       confirm: stringValue(formData.get("confirm")),
     });
+    targetUserId = parsed.targetUserId;
+    email = parsed.email;
 
     if (parsed.mode === "remove" && parsed.confirm !== "remove") {
-      return { status: "error", message: "Confirm removal before continuing." };
+      return { status: "error", message: "Confirm removal before continuing.", user: prevState.user, email: parsed.email };
     }
 
     await setAdminUnlimited({
@@ -127,10 +178,40 @@ export async function updateUnlimitedAdminAction(
       operationKey: `admin-unlimited:${parsed.operationKey}`,
       mode: parsed.mode,
     });
-  } catch {
-    return { status: "error", message: "Unlimited could not be updated." };
-  }
 
-  revalidatePath("/admin/support");
-  redirect(`/admin/support?tab=users&email=${encodeURIComponent(normalizeEmail(stringValue(formData.get("email"))))}&updated=unlimited`);
+    const user = await findAdminUserByExactEmail(parsed.email);
+
+    return {
+      status: "success",
+      message: parsed.mode === "grant_one_year" ? "Unlimited granted." : "Unlimited removed.",
+      user,
+      email: parsed.email,
+    };
+  } catch (error) {
+    logAdminActionFailure({ actionType: "unlimited_update", actingAdminId, targetUserId, errorCode: safeErrorCode(error, "unlimited_update_failed") });
+    return { status: "error", message: "Unlimited could not be updated.", user: prevState.user, email };
+  }
+}
+
+export async function searchAdminUserCreditsAction(
+  prevState: AdminUserCreditsActionState,
+  formData: FormData,
+): Promise<AdminUserCreditsActionState> {
+  const email = normalizeEmail(stringValue(formData.get("email")) || prevState.email);
+
+  try {
+    await requireAdminUser();
+    const parsed = searchUserSchema.parse({ email });
+    const user = await findAdminUserByExactEmail(parsed.email);
+
+    return {
+      status: user ? "success" : "error",
+      message: user ? "User found." : "No user found for that exact email.",
+      user,
+      email: parsed.email,
+    };
+  } catch (error) {
+    logAdminActionFailure({ actionType: "user_lookup", errorCode: safeErrorCode(error, "user_lookup_failed") });
+    return { status: "error", message: "User lookup could not be completed.", user: null, email };
+  }
 }

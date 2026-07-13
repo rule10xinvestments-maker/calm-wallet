@@ -3,6 +3,7 @@ import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { AdminSupportConsole } from "@/components/support/admin-support-console";
 import { initialAdminSupportTicketActionState } from "@/lib/actions/support-state";
+import type { AdminUserCreditsActionState } from "@/lib/actions/admin-support";
 import type { SupportTicket } from "@/domain/support/types";
 
 const tickets: SupportTicket[] = [
@@ -95,6 +96,19 @@ function renderConsole(props: Partial<ComponentProps<typeof AdminSupportConsole>
   return { action };
 }
 
+function makeLookup(overrides: Partial<NonNullable<ComponentProps<typeof AdminSupportConsole>["userLookup"]>> = {}) {
+  return {
+    userId: "11111111-1111-1111-1111-111111111111",
+    email: "user@example.com",
+    creditBalance: 30,
+    recurringGraceDebt: 0,
+    unlimitedUntil: null,
+    unlimitedActive: false,
+    recentLedgerEvents: [],
+    ...overrides,
+  };
+}
+
 describe("AdminSupportConsole", () => {
   it("renders the owner dashboard with aggregate counts only", () => {
     renderConsole({
@@ -120,21 +134,47 @@ describe("AdminSupportConsole", () => {
       activeSection: "users",
       searchEmail: "user@example.com",
       searchAttempted: true,
-      userLookup: {
-        userId: "11111111-1111-1111-1111-111111111111",
-        email: "user@example.com",
-        creditBalance: 30,
-        recurringGraceDebt: 0,
-        unlimitedUntil: null,
-        unlimitedActive: false,
-        recentLedgerEvents: [],
-      },
+      userLookup: makeLookup(),
     });
 
     expect(screen.getByLabelText("Exact email lookup")).toHaveValue("user@example.com");
     expect(screen.getByText("30 credits")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add credits" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add credits/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Unlimited: Not active/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Recent credit ledger/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Grant Unlimited" })).not.toBeInTheDocument();
+  });
+
+  it("expands Unlimited, submits without route navigation, and updates the displayed status", async () => {
+    const unlimitedAction = vi.fn(async (): Promise<AdminUserCreditsActionState> => ({
+      status: "success",
+      message: "Unlimited granted.",
+      email: "user@example.com",
+      user: makeLookup({
+        unlimitedActive: true,
+        unlimitedUntil: "2027-07-14T00:00:00.000Z",
+      }),
+    }));
+
+    renderConsole({
+      activeSection: "users",
+      searchEmail: "user@example.com",
+      searchAttempted: true,
+      userLookup: makeLookup(),
+      unlimitedAction,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Unlimited: Not active/ }));
     expect(screen.getByRole("button", { name: "Grant Unlimited" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Grant Unlimited" }));
+
+    await waitFor(() => expect(unlimitedAction).toHaveBeenCalled());
+    const submittedForm = (unlimitedAction.mock.calls[0] as unknown as [AdminUserCreditsActionState, FormData])[1];
+    expect(submittedForm.get("targetUserId")).toBe("11111111-1111-1111-1111-111111111111");
+    expect(submittedForm.get("mode")).toBe("grant_one_year");
+    await waitFor(() => expect(screen.getByText("Unlimited granted.")).toBeInTheDocument());
+    expect(screen.getByText(/Active until/)).toBeInTheDocument();
   });
 
   it("starts in list mode with no selected ticket", () => {
