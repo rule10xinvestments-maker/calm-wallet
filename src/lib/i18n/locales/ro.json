@@ -651,7 +651,6 @@
       "bestValue": "Cel mai bun preț",
       "savings": "Economisești {percent}%",
       "launchPricing": { "label": "Preț de lansare", "helper": "Ești alături de Calm Wallet în primul an. Bucură-te de prețul introductiv cât timp aplicația crește. Prețurile se pot schimba în actualizări viitoare." },
-      "comingSoon": { "title": "În curând", "helper": "Pregătim această opțiune." },
       "earn": { "title": "Primește 5 credite", "helper": "Vezi un mesaj sponsorizat scurt.", "secondary": "Fără reclame forțate.", "action": "Vezi mesajul" },
       "small": { "title": "50 de credite", "price": "${price}", "helper": "O reîncărcare simplă." },
       "large": { "title": "500 de credite", "price": "${price}", "helper": "Cel mai bun preț pentru utilizare regulată." },

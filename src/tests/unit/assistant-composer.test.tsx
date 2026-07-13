@@ -185,6 +185,11 @@ function expectElementBefore(first: Element, second: Element) {
 describe("assistant composer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.width = "";
+    document.documentElement.style.overscrollBehavior = "";
   });
 
   it("shows only the minimal create fields by default", () => {
@@ -1774,14 +1779,60 @@ describe("assistant composer", () => {
     expect(within(dialog).getByText("$19.99/year")).toBeInTheDocument();
     expect(within(dialog).getByText("Renews yearly until cancelled.")).toBeInTheDocument();
     expect(within(dialog).queryByText("We are preparing this option.")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Coming soon")).not.toBeInTheDocument();
+    expect(within(dialog).queryAllByRole("button", { name: "Coming soon" })).toHaveLength(0);
 
     const options = Array.from(container.querySelectorAll("[data-credit-option]")).map((option) =>
       option.getAttribute("data-credit-option"),
     );
     expect(options).toEqual(["earn", "small", "large", "unlimited"]);
+    expect(container.querySelectorAll("[data-credit-option] button")).toHaveLength(0);
   });
 
-  it("keeps provider-backed credit options disabled without granting credits", () => {
+  it("locks the Assistant page scroll while the credit sheet owns vertical scrolling", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 140 });
+
+    renderComposer(
+      undefined,
+      [],
+      undefined,
+      [],
+      false,
+      {
+        creditBalance: 3,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "3 credits left. Tap to refill credits." }));
+
+    const dialog = screen.getByRole("dialog", { name: "Add credits" });
+    const scrollArea = within(dialog).getByTestId("credit-options-scroll-area");
+
+    await waitFor(() => expect(document.body.style.position).toBe("fixed"));
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.body.style.top).toBe("-140px");
+    expect(document.body.style.width).toBe("100%");
+    expect(document.documentElement.style.overscrollBehavior).toBe("none");
+    expect(dialog).toHaveClass("overflow-hidden", "max-h-[calc(100dvh-2rem)]");
+    expect(scrollArea).toHaveClass("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add credits" })).not.toBeInTheDocument());
+    expect(document.body.style.position).toBe("");
+    expect(document.body.style.overflow).toBe("");
+    expect(document.body.style.top).toBe("");
+    expect(document.body.style.width).toBe("");
+    expect(document.documentElement.style.overscrollBehavior).toBe("");
+    expect(scrollTo).toHaveBeenCalledWith(0, 140);
+  });
+
+  it("keeps provider-backed credit options guarded without rendering temporary controls", () => {
     const action = vi.fn(async (): Promise<AssistantActionState> => ({
       status: "idle",
       message: null,
@@ -1807,12 +1858,13 @@ describe("assistant composer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "3 credits left. Tap to refill credits." }));
 
-    const comingSoonButtons = within(screen.getByRole("dialog")).getAllByRole("button", { name: "Coming soon" });
-    expect(comingSoonButtons).toHaveLength(4);
-    comingSoonButtons.forEach((button) => {
-      expect(button).toBeDisabled();
-      fireEvent.click(button);
-    });
+    const dialog = screen.getByRole("dialog");
+    const optionCards = Array.from(dialog.querySelectorAll("[data-credit-option]"));
+
+    expect(optionCards).toHaveLength(4);
+    expect(optionCards.map((option) => option.getAttribute("data-provider-enabled"))).toEqual(["false", "false", "false", "false"]);
+    expect(within(dialog).queryByText("Coming soon")).not.toBeInTheDocument();
+    expect(dialog.querySelectorAll("[data-credit-option] button")).toHaveLength(0);
     expect(action).not.toHaveBeenCalled();
   });
 

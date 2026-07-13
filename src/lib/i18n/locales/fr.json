@@ -651,7 +651,6 @@
       "bestValue": "Meilleur prix",
       "savings": "Économisez {percent} %",
       "launchPricing": { "label": "Tarif de lancement", "helper": "Vous rejoignez Calm Wallet pendant sa première année. Profitez du tarif de lancement pendant que l’app grandit. Les prix pourront changer lors de futures mises à jour." },
-      "comingSoon": { "title": "Bientôt", "helper": "Nous préparons cette option." },
       "earn": { "title": "Recevoir 5 crédits", "helper": "Regardez un court message sponsorisé.", "secondary": "Aucune publicité forcée.", "action": "Voir le message" },
       "small": { "title": "50 crédits", "price": "{price} $", "helper": "Une recharge simple." },
       "large": { "title": "500 crédits", "price": "{price} $", "helper": "Le meilleur prix pour une utilisation régulière." },

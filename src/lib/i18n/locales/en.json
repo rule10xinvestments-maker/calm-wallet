@@ -651,7 +651,6 @@
       "bestValue": "Best value",
       "savings": "Save {percent}%",
       "launchPricing": { "label": "Launch pricing", "helper": "You’re joining Calm Wallet during its first year. Enjoy introductory pricing while it grows. Prices may change in future updates." },
-      "comingSoon": { "title": "Coming soon", "helper": "We are preparing this option." },
       "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message.", "secondary": "No forced ads.", "action": "View message" },
       "small": { "title": "50 credits", "price": "${price}", "helper": "A simple refill." },
       "large": { "title": "500 credits", "price": "${price}", "helper": "Best price for regular use." },
