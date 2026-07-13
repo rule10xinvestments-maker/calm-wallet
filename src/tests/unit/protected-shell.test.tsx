@@ -361,8 +361,9 @@ describe("protected shell PWA install affordance", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Terms of Service" });
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText(/Version 1.0/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Placeholder for the production Terms of Service/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Version 1.1/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Welcome to Calm Wallet/)).toBeInTheDocument();
+    expect(within(dialog).getByText("Credits never expire")).toBeInTheDocument();
   });
 
   it("shows Credits and About rows from Settings", () => {

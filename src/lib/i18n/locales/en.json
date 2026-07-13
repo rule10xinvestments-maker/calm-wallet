@@ -299,7 +299,6 @@
     "read": "Read",
     "closeDocument": "Close legal document",
     "whatChanged": "What changed",
-    "productFacts": "Product facts for the final document",
     "acceptance": {
       "title": "We've updated our legal documents",
       "helper": "We've made changes to one or more legal documents. Please review and accept the latest versions to continue using Calm Wallet.",
@@ -310,41 +309,21 @@
     },
     "documents": {
       "terms": {
-        "title": "Terms of Service",
-        "placeholder": "Placeholder for the production Terms of Service. This document will be written separately and should cover the product facts below."
+        "title": "Terms of Service"
       },
       "privacy": {
-        "title": "Privacy Policy",
-        "placeholder": "Placeholder for the production Privacy Policy. This document will be written separately and should cover the product facts below."
+        "title": "Privacy Policy"
       },
       "refund": {
-        "title": "Refund Policy",
-        "placeholder": "Placeholder for the production Refund Policy. This document will be written separately and should cover the product facts below."
+        "title": "Refund Policy"
       },
       "ai": {
-        "title": "AI Disclaimer",
-        "placeholder": "Placeholder for the production AI Disclaimer. This document will be written separately and should cover the product facts below."
+        "title": "AI Disclaimer"
       }
     },
-    "productFactItems": {
-      "creditsNeverExpire": "Credits never expire.",
-      "creditsSingleBalance": "All credits share one account balance.",
-      "creditsNonTransferable": "Credits are non-transferable.",
-      "creditsNoCashValue": "Credits have no cash value.",
-      "noRefunds": "No refunds after purchase.",
-      "billingMistakes": "Billing mistakes may be investigated and corrected.",
-      "unlimitedRenews": "Unlimited auto-renews yearly.",
-      "cancelRenewal": "Users may cancel renewal at any time.",
-      "accessUntilPeriodEnds": "Access continues until the paid period ends.",
-      "aiMistakes": "AI may make mistakes.",
-      "noAdvice": "Calm Wallet does not provide financial, tax, legal, or investment advice.",
-      "minimumAge": "Minimum age is 16.",
-      "analyticsCrash": "Anonymous analytics and crash reporting are used.",
-      "stripePayments": "Payments are handled through Stripe.",
-      "noFullCards": "Calm Wallet does not store full payment card information.",
-      "accountDeletion": "Users may delete their account.",
-      "legalRetention": "Data is retained only where legally required.",
-      "sponsoredOptional": "Sponsored credits are optional. Watching sponsored content is never required."
+    "canonicalEnglishNotice": "The legal text is provided in English as the canonical version.",
+    "changeSummaries": {
+      "finalLaunchDocuments": "Replaced placeholder legal text with the final launch documents."
     }
   },
   "help": {
@@ -706,9 +685,17 @@
   },
   "credits": {
     "addCredits": "Add credits",
-    "low10": { "title": "10 entry credits left" },
-    "low3": { "title": "A few entry credits left" },
-    "low": { "title": "{count} credits left", "helper": "Tap to refill credits", "openOptions": "{count} credits left. Tap to refill credits." },
+    "low10": {
+      "title": "10 entry credits left"
+    },
+    "low3": {
+      "title": "A few entry credits left"
+    },
+    "low": {
+      "title": "{count} credits left",
+      "helper": "Tap to refill credits",
+      "openOptions": "{count} credits left. Tap to refill credits."
+    },
     "balance": {
       "one": "{count} credit available",
       "many": "{count} credits available"
@@ -724,12 +711,38 @@
       "buy": "Buy",
       "bestValue": "Best value",
       "savings": "Save {percent}%",
-      "launchPricing": { "label": "Launch pricing", "helper": "First-year introductory pricing. Prices may change later." },
-      "sections": { "earn": "Earn credits", "buy": "Buy credits", "unlimited": "Unlimited" },
-      "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message.", "secondary": "No forced ads.", "action": "View message" },
-      "small": { "title": "50 credits", "price": "${price}", "helper": "Simple refill" },
-      "large": { "title": "500 credits", "price": "${price}", "helper": "Best price for regular use." },
-      "unlimited": { "title": "Unlimited entries", "price": "${price}/year", "helper": "Add entries without thinking about credits.", "renewal": "Renews yearly", "action": "Choose unlimited" }
+      "launchPricing": {
+        "label": "Launch pricing",
+        "helper": "First-year introductory pricing. Prices may change later."
+      },
+      "sections": {
+        "earn": "Earn credits",
+        "buy": "Buy credits",
+        "unlimited": "Unlimited"
+      },
+      "earn": {
+        "title": "Earn 5 credits",
+        "helper": "View a short sponsored message.",
+        "secondary": "No forced ads.",
+        "action": "View message"
+      },
+      "small": {
+        "title": "50 credits",
+        "price": "${price}",
+        "helper": "Simple refill"
+      },
+      "large": {
+        "title": "500 credits",
+        "price": "${price}",
+        "helper": "Best price for regular use."
+      },
+      "unlimited": {
+        "title": "Unlimited entries",
+        "price": "${price}/year",
+        "helper": "Add entries without thinking about credits.",
+        "renewal": "Renews yearly",
+        "action": "Choose unlimited"
+      }
     }
   },
   "transactions": {
@@ -994,26 +1007,86 @@
         "activity": "View activity"
       },
       "rules": {
-        "category_dominance": { "title": "This period was led by {categoryLabel}", "body": "This category represented {percent}% of tracked spending." },
-        "balanced_spending": { "title": "No category dominated", "body": "Your spending was spread across several categories." },
-        "bars_period_stood_out": { "title": "{bucketLabel} stood out", "body": "That Bars period contained {percent}% of tracked spending." },
-        "bars_early_spending": { "title": "Most spending happened early", "body": "The first part of the period contained {percent}% of tracked spending." },
-        "trend_spending_decreased": { "title": "The period became quieter", "body": "Tracked spending decreased toward the end of the period." },
-        "trend_spending_increased": { "title": "Activity increased later", "body": "Tracked spending was higher toward the end of the period." },
-        "category_largest_changed": { "title": "{categoryLabel} moved to the front", "body": "{categoryLabel} became your largest tracked expense category." },
-        "recurring_share": { "title": "Recurring spending stayed visible", "body": "Recurring entries represented about {percent}% of tracked spending." },
-        "balanced_month": { "title": "No single purchase dominated", "body": "Most spending was spread across multiple purchases." },
-        "first_entries": { "title": "Your picture is taking shape", "body": "Every entry you add makes this period easier to understand." },
-        "not_enough_data": { "title": "Still taking shape", "body": "Add a few more entries to reveal a clearer picture of this period." },
-        "income_covered_spending": { "title": "Income covered your spending", "body": "Tracked income was higher than tracked spending in this period." },
-        "spending_exceeded_income": { "title": "Spending was higher this period", "body": "Tracked spending was higher than tracked income in this period." },
-        "largest_expense_category": { "title": "Main spending category: {categoryLabel}", "body": "This was your largest tracked expense category." },
-        "largest_income_category": { "title": "Main income category: {categoryLabel}", "body": "This was your largest tracked income category." },
-        "comparison_spending_lower": { "title": "A quieter period", "body": "Tracked spending was {percent}% lower than the previous comparable period." },
-        "comparison_spending_higher": { "title": "More spending activity", "body": "Tracked spending was {percent}% higher than the previous comparable period." },
-        "consistent_tracking": { "title": "Tracking stayed consistent", "body": "You recorded money on {days} different days in this period." },
-        "concentrated_spending_period": { "title": "Most spending happened in one part of the period", "body": "One time block contained the largest share of your tracked spending." },
-        "largest_single_expense": { "title": "One purchase stood out", "body": "Your largest expense represented {percent}% of this period's spending." }
+        "category_dominance": {
+          "title": "This period was led by {categoryLabel}",
+          "body": "This category represented {percent}% of tracked spending."
+        },
+        "balanced_spending": {
+          "title": "No category dominated",
+          "body": "Your spending was spread across several categories."
+        },
+        "bars_period_stood_out": {
+          "title": "{bucketLabel} stood out",
+          "body": "That Bars period contained {percent}% of tracked spending."
+        },
+        "bars_early_spending": {
+          "title": "Most spending happened early",
+          "body": "The first part of the period contained {percent}% of tracked spending."
+        },
+        "trend_spending_decreased": {
+          "title": "The period became quieter",
+          "body": "Tracked spending decreased toward the end of the period."
+        },
+        "trend_spending_increased": {
+          "title": "Activity increased later",
+          "body": "Tracked spending was higher toward the end of the period."
+        },
+        "category_largest_changed": {
+          "title": "{categoryLabel} moved to the front",
+          "body": "{categoryLabel} became your largest tracked expense category."
+        },
+        "recurring_share": {
+          "title": "Recurring spending stayed visible",
+          "body": "Recurring entries represented about {percent}% of tracked spending."
+        },
+        "balanced_month": {
+          "title": "No single purchase dominated",
+          "body": "Most spending was spread across multiple purchases."
+        },
+        "first_entries": {
+          "title": "Your picture is taking shape",
+          "body": "Every entry you add makes this period easier to understand."
+        },
+        "not_enough_data": {
+          "title": "Still taking shape",
+          "body": "Add a few more entries to reveal a clearer picture of this period."
+        },
+        "income_covered_spending": {
+          "title": "Income covered your spending",
+          "body": "Tracked income was higher than tracked spending in this period."
+        },
+        "spending_exceeded_income": {
+          "title": "Spending was higher this period",
+          "body": "Tracked spending was higher than tracked income in this period."
+        },
+        "largest_expense_category": {
+          "title": "Main spending category: {categoryLabel}",
+          "body": "This was your largest tracked expense category."
+        },
+        "largest_income_category": {
+          "title": "Main income category: {categoryLabel}",
+          "body": "This was your largest tracked income category."
+        },
+        "comparison_spending_lower": {
+          "title": "A quieter period",
+          "body": "Tracked spending was {percent}% lower than the previous comparable period."
+        },
+        "comparison_spending_higher": {
+          "title": "More spending activity",
+          "body": "Tracked spending was {percent}% higher than the previous comparable period."
+        },
+        "consistent_tracking": {
+          "title": "Tracking stayed consistent",
+          "body": "You recorded money on {days} different days in this period."
+        },
+        "concentrated_spending_period": {
+          "title": "Most spending happened in one part of the period",
+          "body": "One time block contained the largest share of your tracked spending."
+        },
+        "largest_single_expense": {
+          "title": "One purchase stood out",
+          "body": "Your largest expense represented {percent}% of this period's spending."
+        }
       }
     },
     "converted": {

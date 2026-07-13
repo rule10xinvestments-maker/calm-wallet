@@ -299,7 +299,6 @@
     "read": "Citește",
     "closeDocument": "Închide documentul legal",
     "whatChanged": "Ce s-a schimbat",
-    "productFacts": "Fapte despre produs pentru documentul final",
     "acceptance": {
       "title": "Am actualizat documentele legale",
       "helper": "Am făcut modificări în unul sau mai multe documente legale. Te rugăm să citești și să accepți cele mai recente versiuni pentru a continua să folosești Calm Wallet.",
@@ -310,41 +309,21 @@
     },
     "documents": {
       "terms": {
-        "title": "Termeni și condiții",
-        "placeholder": "Spațiu rezervat pentru Termenii și condițiile de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+        "title": "Termeni și condiții"
       },
       "privacy": {
-        "title": "Politica de confidențialitate",
-        "placeholder": "Spațiu rezervat pentru Politica de confidențialitate de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+        "title": "Politica de confidențialitate"
       },
       "refund": {
-        "title": "Politica de rambursare",
-        "placeholder": "Spațiu rezervat pentru Politica de rambursare de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+        "title": "Politica de rambursare"
       },
       "ai": {
-        "title": "Declinarea responsabilității AI",
-        "placeholder": "Spațiu rezervat pentru Declinarea responsabilității AI de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+        "title": "Declinarea responsabilității AI"
       }
     },
-    "productFactItems": {
-      "creditsNeverExpire": "Creditele nu expiră niciodată.",
-      "creditsSingleBalance": "Toate creditele folosesc un singur sold al contului.",
-      "creditsNonTransferable": "Creditele nu pot fi transferate.",
-      "creditsNoCashValue": "Creditele nu au valoare în numerar.",
-      "noRefunds": "Nu există rambursări după cumpărare.",
-      "billingMistakes": "Erorile de facturare pot fi investigate și corectate.",
-      "unlimitedRenews": "Unlimited se reînnoiește anual.",
-      "cancelRenewal": "Utilizatorii pot anula reînnoirea oricând.",
-      "accessUntilPeriodEnds": "Accesul continuă până la finalul perioadei plătite.",
-      "aiMistakes": "AI poate face greșeli.",
-      "noAdvice": "Calm Wallet nu oferă consultanță financiară, fiscală, juridică sau de investiții.",
-      "minimumAge": "Vârsta minimă este 16 ani.",
-      "analyticsCrash": "Se folosesc analize anonime și raportări de erori.",
-      "stripePayments": "Plățile sunt procesate prin Stripe.",
-      "noFullCards": "Calm Wallet nu stochează informațiile complete ale cardului.",
-      "accountDeletion": "Utilizatorii își pot șterge contul.",
-      "legalRetention": "Datele sunt păstrate doar unde este cerut de lege.",
-      "sponsoredOptional": "Creditele sponsorizate sunt opționale. Vizionarea conținutului sponsorizat nu este niciodată obligatorie."
+    "canonicalEnglishNotice": "Textul legal este disponibil în engleză ca versiune canonică.",
+    "changeSummaries": {
+      "finalLaunchDocuments": "Textul legal temporar a fost înlocuit cu documentele finale de lansare."
     }
   },
   "help": {
@@ -706,9 +685,17 @@
   },
   "credits": {
     "addCredits": "Adaugă credite",
-    "low10": { "title": "Mai ai 10 credite pentru intrări" },
-    "low3": { "title": "Mai ai câteva credite pentru intrări" },
-    "low": { "title": "Mai ai {count} credite", "helper": "Atinge pentru reîncărcare", "openOptions": "Mai ai {count} credite. Atinge pentru reîncărcare." },
+    "low10": {
+      "title": "Mai ai 10 credite pentru intrări"
+    },
+    "low3": {
+      "title": "Mai ai câteva credite pentru intrări"
+    },
+    "low": {
+      "title": "Mai ai {count} credite",
+      "helper": "Atinge pentru reîncărcare",
+      "openOptions": "Mai ai {count} credite. Atinge pentru reîncărcare."
+    },
     "balance": {
       "one": "{count} credit disponibil",
       "many": "{count} credite disponibile"
@@ -724,12 +711,38 @@
       "buy": "Cumpără",
       "bestValue": "Cel mai bun preț",
       "savings": "Economisești {percent}%",
-      "launchPricing": { "label": "Preț de lansare", "helper": "Preț introductiv în primul an. Prețurile se pot schimba mai târziu." },
-      "sections": { "earn": "Câștigă credite", "buy": "Cumpără credite", "unlimited": "Nelimitat" },
-      "earn": { "title": "Primește 5 credite", "helper": "Vezi un mesaj sponsorizat scurt.", "secondary": "Fără reclame forțate.", "action": "Vezi mesajul" },
-      "small": { "title": "50 de credite", "price": "${price}", "helper": "Reîncărcare simplă" },
-      "large": { "title": "500 de credite", "price": "${price}", "helper": "Cel mai bun preț pentru utilizare regulată." },
-      "unlimited": { "title": "Intrări nelimitate", "price": "${price} / an", "helper": "Adaugă intrări fără să te gândești la credite.", "renewal": "Reînnoire anuală", "action": "Alege nelimitat" }
+      "launchPricing": {
+        "label": "Preț de lansare",
+        "helper": "Preț introductiv în primul an. Prețurile se pot schimba mai târziu."
+      },
+      "sections": {
+        "earn": "Câștigă credite",
+        "buy": "Cumpără credite",
+        "unlimited": "Nelimitat"
+      },
+      "earn": {
+        "title": "Primește 5 credite",
+        "helper": "Vezi un mesaj sponsorizat scurt.",
+        "secondary": "Fără reclame forțate.",
+        "action": "Vezi mesajul"
+      },
+      "small": {
+        "title": "50 de credite",
+        "price": "${price}",
+        "helper": "Reîncărcare simplă"
+      },
+      "large": {
+        "title": "500 de credite",
+        "price": "${price}",
+        "helper": "Cel mai bun preț pentru utilizare regulată."
+      },
+      "unlimited": {
+        "title": "Intrări nelimitate",
+        "price": "${price} / an",
+        "helper": "Adaugă intrări fără să te gândești la credite.",
+        "renewal": "Reînnoire anuală",
+        "action": "Alege nelimitat"
+      }
     }
   },
   "transactions": {
@@ -994,26 +1007,86 @@
         "activity": "Vezi activitatea"
       },
       "rules": {
-        "category_dominance": { "title": "Categoria principală a fost {categoryLabel}", "body": "Această categorie a reprezentat {percent}% din cheltuielile urmărite." },
-        "balanced_spending": { "title": "Nicio categorie nu a dominat", "body": "Cheltuielile au fost împărțite între mai multe categorii." },
-        "bars_period_stood_out": { "title": "{bucketLabel} a ieșit în evidență", "body": "Acea perioadă din Bare a conținut {percent}% din cheltuielile urmărite." },
-        "bars_early_spending": { "title": "Cele mai multe cheltuieli au fost la început", "body": "Prima parte a perioadei a conținut {percent}% din cheltuielile urmărite." },
-        "trend_spending_decreased": { "title": "Perioada a devenit mai liniștită", "body": "Cheltuielile urmărite au scăzut spre finalul perioadei." },
-        "trend_spending_increased": { "title": "Activitatea a crescut spre final", "body": "Cheltuielile urmărite au fost mai mari spre finalul perioadei." },
-        "category_largest_changed": { "title": "{categoryLabel} a trecut în față", "body": "{categoryLabel} a devenit cea mai mare categorie de cheltuieli urmărite." },
-        "recurring_share": { "title": "Cheltuielile recurente au rămas vizibile", "body": "Intrările recurente au reprezentat aproximativ {percent}% din cheltuielile urmărite." },
-        "balanced_month": { "title": "Nicio achiziție nu a dominat", "body": "Cele mai multe cheltuieli au fost împărțite între mai multe achiziții." },
-        "first_entries": { "title": "Imaginea ta începe să se contureze", "body": "Fiecare intrare adăugată face această perioadă mai ușor de înțeles." },
-        "not_enough_data": { "title": "Încă se conturează", "body": "Adaugă câteva intrări pentru o imagine mai clară a acestei perioade." },
-        "income_covered_spending": { "title": "Veniturile au acoperit cheltuielile", "body": "Veniturile urmărite au fost mai mari decât cheltuielile urmărite în această perioadă." },
-        "spending_exceeded_income": { "title": "Cheltuielile au fost mai mari", "body": "Cheltuielile urmărite au fost mai mari decât veniturile urmărite în această perioadă." },
-        "largest_expense_category": { "title": "Categoria principală de cheltuieli: {categoryLabel}", "body": "Aceasta a fost cea mai mare categorie de cheltuieli urmărite." },
-        "largest_income_category": { "title": "Categoria principală de venituri: {categoryLabel}", "body": "Aceasta a fost cea mai mare categorie de venituri urmărite." },
-        "comparison_spending_lower": { "title": "O perioadă mai liniștită", "body": "Cheltuielile urmărite au fost cu {percent}% mai mici decât în perioada comparabilă anterioară." },
-        "comparison_spending_higher": { "title": "Mai multă activitate de cheltuire", "body": "Cheltuielile urmărite au fost cu {percent}% mai mari decât în perioada comparabilă anterioară." },
-        "consistent_tracking": { "title": "Urmărirea a rămas constantă", "body": "Ai înregistrat bani în {days} zile diferite din această perioadă." },
-        "concentrated_spending_period": { "title": "Cele mai multe cheltuieli au fost într-o parte a perioadei", "body": "Un bloc de timp a conținut cea mai mare parte a cheltuielilor urmărite." },
-        "largest_single_expense": { "title": "O achiziție a ieșit în evidență", "body": "Cea mai mare cheltuială a reprezentat {percent}% din cheltuielile perioadei." }
+        "category_dominance": {
+          "title": "Categoria principală a fost {categoryLabel}",
+          "body": "Această categorie a reprezentat {percent}% din cheltuielile urmărite."
+        },
+        "balanced_spending": {
+          "title": "Nicio categorie nu a dominat",
+          "body": "Cheltuielile au fost împărțite între mai multe categorii."
+        },
+        "bars_period_stood_out": {
+          "title": "{bucketLabel} a ieșit în evidență",
+          "body": "Acea perioadă din Bare a conținut {percent}% din cheltuielile urmărite."
+        },
+        "bars_early_spending": {
+          "title": "Cele mai multe cheltuieli au fost la început",
+          "body": "Prima parte a perioadei a conținut {percent}% din cheltuielile urmărite."
+        },
+        "trend_spending_decreased": {
+          "title": "Perioada a devenit mai liniștită",
+          "body": "Cheltuielile urmărite au scăzut spre finalul perioadei."
+        },
+        "trend_spending_increased": {
+          "title": "Activitatea a crescut spre final",
+          "body": "Cheltuielile urmărite au fost mai mari spre finalul perioadei."
+        },
+        "category_largest_changed": {
+          "title": "{categoryLabel} a trecut în față",
+          "body": "{categoryLabel} a devenit cea mai mare categorie de cheltuieli urmărite."
+        },
+        "recurring_share": {
+          "title": "Cheltuielile recurente au rămas vizibile",
+          "body": "Intrările recurente au reprezentat aproximativ {percent}% din cheltuielile urmărite."
+        },
+        "balanced_month": {
+          "title": "Nicio achiziție nu a dominat",
+          "body": "Cele mai multe cheltuieli au fost împărțite între mai multe achiziții."
+        },
+        "first_entries": {
+          "title": "Imaginea ta începe să se contureze",
+          "body": "Fiecare intrare adăugată face această perioadă mai ușor de înțeles."
+        },
+        "not_enough_data": {
+          "title": "Încă se conturează",
+          "body": "Adaugă câteva intrări pentru o imagine mai clară a acestei perioade."
+        },
+        "income_covered_spending": {
+          "title": "Veniturile au acoperit cheltuielile",
+          "body": "Veniturile urmărite au fost mai mari decât cheltuielile urmărite în această perioadă."
+        },
+        "spending_exceeded_income": {
+          "title": "Cheltuielile au fost mai mari",
+          "body": "Cheltuielile urmărite au fost mai mari decât veniturile urmărite în această perioadă."
+        },
+        "largest_expense_category": {
+          "title": "Categoria principală de cheltuieli: {categoryLabel}",
+          "body": "Aceasta a fost cea mai mare categorie de cheltuieli urmărite."
+        },
+        "largest_income_category": {
+          "title": "Categoria principală de venituri: {categoryLabel}",
+          "body": "Aceasta a fost cea mai mare categorie de venituri urmărite."
+        },
+        "comparison_spending_lower": {
+          "title": "O perioadă mai liniștită",
+          "body": "Cheltuielile urmărite au fost cu {percent}% mai mici decât în perioada comparabilă anterioară."
+        },
+        "comparison_spending_higher": {
+          "title": "Mai multă activitate de cheltuire",
+          "body": "Cheltuielile urmărite au fost cu {percent}% mai mari decât în perioada comparabilă anterioară."
+        },
+        "consistent_tracking": {
+          "title": "Urmărirea a rămas constantă",
+          "body": "Ai înregistrat bani în {days} zile diferite din această perioadă."
+        },
+        "concentrated_spending_period": {
+          "title": "Cele mai multe cheltuieli au fost într-o parte a perioadei",
+          "body": "Un bloc de timp a conținut cea mai mare parte a cheltuielilor urmărite."
+        },
+        "largest_single_expense": {
+          "title": "O achiziție a ieșit în evidență",
+          "body": "Cea mai mare cheltuială a reprezentat {percent}% din cheltuielile perioadei."
+        }
       }
     },
     "converted": {

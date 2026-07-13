@@ -5,59 +5,37 @@ export type LegalDocumentConfig = {
   version: string;
   effectiveDate: string;
   lastUpdated: string;
-  changeSummary?: string[];
-  productFactKeys: string[];
+  changeSummaryKeys?: string[];
 };
 
 export const legalDocuments = [
   {
     id: "terms",
-    version: "1.0",
+    version: "1.1",
     effectiveDate: "2026-07-13",
     lastUpdated: "2026-07-13",
-    productFactKeys: [
-      "minimumAge",
-      "creditsNeverExpire",
-      "creditsSingleBalance",
-      "creditsNonTransferable",
-      "creditsNoCashValue",
-      "sponsoredOptional",
-      "accountDeletion",
-    ],
+    changeSummaryKeys: ["finalLaunchDocuments"],
   },
   {
     id: "privacy",
-    version: "1.0",
+    version: "1.1",
     effectiveDate: "2026-07-13",
     lastUpdated: "2026-07-13",
-    productFactKeys: [
-      "analyticsCrash",
-      "stripePayments",
-      "noFullCards",
-      "accountDeletion",
-      "legalRetention",
-    ],
+    changeSummaryKeys: ["finalLaunchDocuments"],
   },
   {
     id: "refund",
-    version: "1.0",
+    version: "1.1",
     effectiveDate: "2026-07-13",
     lastUpdated: "2026-07-13",
-    productFactKeys: [
-      "noRefunds",
-      "billingMistakes",
-      "unlimitedRenews",
-      "cancelRenewal",
-      "accessUntilPeriodEnds",
-      "stripePayments",
-    ],
+    changeSummaryKeys: ["finalLaunchDocuments"],
   },
   {
     id: "ai",
-    version: "1.0",
+    version: "1.1",
     effectiveDate: "2026-07-13",
     lastUpdated: "2026-07-13",
-    productFactKeys: ["aiMistakes", "noAdvice"],
+    changeSummaryKeys: ["finalLaunchDocuments"],
   },
 ] as const satisfies readonly LegalDocumentConfig[];
 

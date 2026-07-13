@@ -299,7 +299,6 @@
     "read": "Leer",
     "closeDocument": "Cerrar documento legal",
     "whatChanged": "Qué cambió",
-    "productFacts": "Datos del producto para el documento final",
     "acceptance": {
       "title": "Hemos actualizado nuestros documentos legales",
       "helper": "Hemos hecho cambios en uno o más documentos legales. Revisa y acepta las versiones más recientes para seguir usando Calm Wallet.",
@@ -310,41 +309,21 @@
     },
     "documents": {
       "terms": {
-        "title": "Términos de servicio",
-        "placeholder": "Marcador de posición para los Términos de servicio de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+        "title": "Términos de servicio"
       },
       "privacy": {
-        "title": "Política de privacidad",
-        "placeholder": "Marcador de posición para la Política de privacidad de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+        "title": "Política de privacidad"
       },
       "refund": {
-        "title": "Política de reembolso",
-        "placeholder": "Marcador de posición para la Política de reembolso de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+        "title": "Política de reembolso"
       },
       "ai": {
-        "title": "Aviso sobre IA",
-        "placeholder": "Marcador de posición para el Aviso sobre IA de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+        "title": "Aviso sobre IA"
       }
     },
-    "productFactItems": {
-      "creditsNeverExpire": "Los créditos nunca caducan.",
-      "creditsSingleBalance": "Todos los créditos comparten un único saldo de cuenta.",
-      "creditsNonTransferable": "Los créditos no son transferibles.",
-      "creditsNoCashValue": "Los créditos no tienen valor en efectivo.",
-      "noRefunds": "No hay reembolsos después de la compra.",
-      "billingMistakes": "Los errores de facturación pueden investigarse y corregirse.",
-      "unlimitedRenews": "Unlimited se renueva anualmente.",
-      "cancelRenewal": "Los usuarios pueden cancelar la renovación en cualquier momento.",
-      "accessUntilPeriodEnds": "El acceso continúa hasta que termine el periodo pagado.",
-      "aiMistakes": "La IA puede cometer errores.",
-      "noAdvice": "Calm Wallet no ofrece asesoramiento financiero, fiscal, legal ni de inversión.",
-      "minimumAge": "La edad mínima es 16 años.",
-      "analyticsCrash": "Se usan analíticas anónimas e informes de fallos.",
-      "stripePayments": "Los pagos se procesan mediante Stripe.",
-      "noFullCards": "Calm Wallet no almacena la información completa de las tarjetas de pago.",
-      "accountDeletion": "Los usuarios pueden eliminar su cuenta.",
-      "legalRetention": "Los datos se conservan solo cuando la ley lo exige.",
-      "sponsoredOptional": "Los créditos patrocinados son opcionales. Ver contenido patrocinado nunca es obligatorio."
+    "canonicalEnglishNotice": "El texto legal se ofrece en inglés como versión canónica.",
+    "changeSummaries": {
+      "finalLaunchDocuments": "El texto legal provisional se sustituyó por los documentos finales de lanzamiento."
     }
   },
   "help": {
@@ -706,9 +685,17 @@
   },
   "credits": {
     "addCredits": "Añadir créditos",
-    "low10": { "title": "Te quedan 10 créditos de registro" },
-    "low3": { "title": "Te quedan pocos créditos de registro" },
-    "low": { "title": "Te quedan {count} créditos", "helper": "Toca para recargar", "openOptions": "Te quedan {count} créditos. Toca para recargar." },
+    "low10": {
+      "title": "Te quedan 10 créditos de registro"
+    },
+    "low3": {
+      "title": "Te quedan pocos créditos de registro"
+    },
+    "low": {
+      "title": "Te quedan {count} créditos",
+      "helper": "Toca para recargar",
+      "openOptions": "Te quedan {count} créditos. Toca para recargar."
+    },
     "balance": {
       "one": "{count} crédito disponible",
       "many": "{count} créditos disponibles"
@@ -724,12 +711,38 @@
       "buy": "Comprar",
       "bestValue": "Mejor precio",
       "savings": "Ahorra {percent}%",
-      "launchPricing": { "label": "Precio de lanzamiento", "helper": "Precio introductorio el primer año. Los precios pueden cambiar más adelante." },
-      "sections": { "earn": "Ganar créditos", "buy": "Comprar créditos", "unlimited": "Ilimitado" },
-      "earn": { "title": "Recibe 5 créditos", "helper": "Ve un mensaje patrocinado breve.", "secondary": "Sin anuncios forzados.", "action": "Ver mensaje" },
-      "small": { "title": "50 créditos", "price": "{price} US$", "helper": "Recarga sencilla" },
-      "large": { "title": "500 créditos", "price": "{price} US$", "helper": "Mejor precio para uso regular." },
-      "unlimited": { "title": "Registros ilimitados", "price": "{price} US$/año", "helper": "Añade registros sin pensar en créditos.", "renewal": "Renovación anual", "action": "Elegir ilimitado" }
+      "launchPricing": {
+        "label": "Precio de lanzamiento",
+        "helper": "Precio introductorio el primer año. Los precios pueden cambiar más adelante."
+      },
+      "sections": {
+        "earn": "Ganar créditos",
+        "buy": "Comprar créditos",
+        "unlimited": "Ilimitado"
+      },
+      "earn": {
+        "title": "Recibe 5 créditos",
+        "helper": "Ve un mensaje patrocinado breve.",
+        "secondary": "Sin anuncios forzados.",
+        "action": "Ver mensaje"
+      },
+      "small": {
+        "title": "50 créditos",
+        "price": "{price} US$",
+        "helper": "Recarga sencilla"
+      },
+      "large": {
+        "title": "500 créditos",
+        "price": "{price} US$",
+        "helper": "Mejor precio para uso regular."
+      },
+      "unlimited": {
+        "title": "Registros ilimitados",
+        "price": "{price} US$/año",
+        "helper": "Añade registros sin pensar en créditos.",
+        "renewal": "Renovación anual",
+        "action": "Elegir ilimitado"
+      }
     }
   },
   "transactions": {
@@ -994,26 +1007,86 @@
         "activity": "Ver actividad"
       },
       "rules": {
-        "category_dominance": { "title": "La categoría principal fue {categoryLabel}", "body": "Esta categoría representó el {percent}% de los gastos registrados." },
-        "balanced_spending": { "title": "Ninguna categoría dominó", "body": "Tus gastos se repartieron entre varias categorías." },
-        "bars_period_stood_out": { "title": "{bucketLabel} destacó", "body": "Ese periodo en Barras concentró el {percent}% de los gastos registrados." },
-        "bars_early_spending": { "title": "La mayoría de los gastos ocurrió al principio", "body": "La primera parte del periodo concentró el {percent}% de los gastos registrados." },
-        "trend_spending_decreased": { "title": "El periodo se volvió más tranquilo", "body": "Los gastos registrados bajaron hacia el final del periodo." },
-        "trend_spending_increased": { "title": "La actividad aumentó después", "body": "Los gastos registrados fueron más altos hacia el final del periodo." },
-        "category_largest_changed": { "title": "{categoryLabel} pasó al frente", "body": "{categoryLabel} se convirtió en tu mayor categoría de gastos registrados." },
-        "recurring_share": { "title": "Los gastos recurrentes se mantuvieron visibles", "body": "Los registros recurrentes representaron cerca del {percent}% de los gastos registrados." },
-        "balanced_month": { "title": "Ninguna compra dominó", "body": "La mayoría de los gastos se repartió entre varias compras." },
-        "first_entries": { "title": "Tu imagen empieza a tomar forma", "body": "Cada registro que añades hace que este periodo sea más fácil de entender." },
-        "not_enough_data": { "title": "Aún está tomando forma", "body": "Añade algunos registros más para ver una imagen más clara de este periodo." },
-        "income_covered_spending": { "title": "Los ingresos cubrieron los gastos", "body": "Los ingresos registrados fueron mayores que los gastos registrados en este periodo." },
-        "spending_exceeded_income": { "title": "Los gastos fueron más altos", "body": "Los gastos registrados fueron mayores que los ingresos registrados en este periodo." },
-        "largest_expense_category": { "title": "Categoría principal de gastos: {categoryLabel}", "body": "Esta fue tu mayor categoría de gastos registrados." },
-        "largest_income_category": { "title": "Categoría principal de ingresos: {categoryLabel}", "body": "Esta fue tu mayor categoría de ingresos registrados." },
-        "comparison_spending_lower": { "title": "Un periodo más tranquilo", "body": "Los gastos registrados fueron un {percent}% menores que en el periodo comparable anterior." },
-        "comparison_spending_higher": { "title": "Más actividad de gasto", "body": "Los gastos registrados fueron un {percent}% mayores que en el periodo comparable anterior." },
-        "consistent_tracking": { "title": "El registro se mantuvo constante", "body": "Registraste dinero en {days} días distintos de este periodo." },
-        "concentrated_spending_period": { "title": "La mayoría de los gastos ocurrió en una parte del periodo", "body": "Un bloque de tiempo concentró la mayor parte de tus gastos registrados." },
-        "largest_single_expense": { "title": "Una compra destacó", "body": "Tu mayor gasto representó el {percent}% de los gastos de este periodo." }
+        "category_dominance": {
+          "title": "La categoría principal fue {categoryLabel}",
+          "body": "Esta categoría representó el {percent}% de los gastos registrados."
+        },
+        "balanced_spending": {
+          "title": "Ninguna categoría dominó",
+          "body": "Tus gastos se repartieron entre varias categorías."
+        },
+        "bars_period_stood_out": {
+          "title": "{bucketLabel} destacó",
+          "body": "Ese periodo en Barras concentró el {percent}% de los gastos registrados."
+        },
+        "bars_early_spending": {
+          "title": "La mayoría de los gastos ocurrió al principio",
+          "body": "La primera parte del periodo concentró el {percent}% de los gastos registrados."
+        },
+        "trend_spending_decreased": {
+          "title": "El periodo se volvió más tranquilo",
+          "body": "Los gastos registrados bajaron hacia el final del periodo."
+        },
+        "trend_spending_increased": {
+          "title": "La actividad aumentó después",
+          "body": "Los gastos registrados fueron más altos hacia el final del periodo."
+        },
+        "category_largest_changed": {
+          "title": "{categoryLabel} pasó al frente",
+          "body": "{categoryLabel} se convirtió en tu mayor categoría de gastos registrados."
+        },
+        "recurring_share": {
+          "title": "Los gastos recurrentes se mantuvieron visibles",
+          "body": "Los registros recurrentes representaron cerca del {percent}% de los gastos registrados."
+        },
+        "balanced_month": {
+          "title": "Ninguna compra dominó",
+          "body": "La mayoría de los gastos se repartió entre varias compras."
+        },
+        "first_entries": {
+          "title": "Tu imagen empieza a tomar forma",
+          "body": "Cada registro que añades hace que este periodo sea más fácil de entender."
+        },
+        "not_enough_data": {
+          "title": "Aún está tomando forma",
+          "body": "Añade algunos registros más para ver una imagen más clara de este periodo."
+        },
+        "income_covered_spending": {
+          "title": "Los ingresos cubrieron los gastos",
+          "body": "Los ingresos registrados fueron mayores que los gastos registrados en este periodo."
+        },
+        "spending_exceeded_income": {
+          "title": "Los gastos fueron más altos",
+          "body": "Los gastos registrados fueron mayores que los ingresos registrados en este periodo."
+        },
+        "largest_expense_category": {
+          "title": "Categoría principal de gastos: {categoryLabel}",
+          "body": "Esta fue tu mayor categoría de gastos registrados."
+        },
+        "largest_income_category": {
+          "title": "Categoría principal de ingresos: {categoryLabel}",
+          "body": "Esta fue tu mayor categoría de ingresos registrados."
+        },
+        "comparison_spending_lower": {
+          "title": "Un periodo más tranquilo",
+          "body": "Los gastos registrados fueron un {percent}% menores que en el periodo comparable anterior."
+        },
+        "comparison_spending_higher": {
+          "title": "Más actividad de gasto",
+          "body": "Los gastos registrados fueron un {percent}% mayores que en el periodo comparable anterior."
+        },
+        "consistent_tracking": {
+          "title": "El registro se mantuvo constante",
+          "body": "Registraste dinero en {days} días distintos de este periodo."
+        },
+        "concentrated_spending_period": {
+          "title": "La mayoría de los gastos ocurrió en una parte del periodo",
+          "body": "Un bloque de tiempo concentró la mayor parte de tus gastos registrados."
+        },
+        "largest_single_expense": {
+          "title": "Una compra destacó",
+          "body": "Tu mayor gasto representó el {percent}% de los gastos de este periodo."
+        }
       }
     },
     "converted": {

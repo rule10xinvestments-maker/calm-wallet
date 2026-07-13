@@ -1,0 +1,539 @@
+{
+  "terms": {
+    "en": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Welcome"
+      },
+      {
+        "type": "paragraph",
+        "text": "Welcome to Calm Wallet. These Terms of Service explain the rules for using Calm Wallet and its services. By creating an account or using Calm Wallet, you agree to these Terms."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "In Short"
+      },
+      {
+        "type": "list",
+        "items": [
+          "Personal finance companion",
+          "Minimum age: 16",
+          "Credits never expire",
+          "One shared credit balance",
+          "Unlimited renews yearly until cancelled",
+          "AI may make mistakes",
+          "Plain-language legal documents"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Definitions"
+      },
+      {
+        "type": "paragraph",
+        "text": "\"Service\" means Calm Wallet. \"Credits\" are virtual units used within the Service. \"Unlimited\" means the paid subscription removing credit limits as described. \"User\" means the account holder using the Service."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Eligibility"
+      },
+      {
+        "type": "paragraph",
+        "text": "You must be at least 16 years old to use Calm Wallet."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Accounts"
+      },
+      {
+        "type": "paragraph",
+        "text": "You are responsible for keeping your account secure and for activity performed through your account unless caused by our negligence."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Use of the Service"
+      },
+      {
+        "type": "paragraph",
+        "text": "Calm Wallet helps users organize personal finances. It is not a bank, financial institution, accountant, or investment platform."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "AI Assistant"
+      },
+      {
+        "type": "paragraph",
+        "text": "The AI Assistant may generate inaccurate or incomplete responses. It does not provide financial, tax, legal, or investment advice."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Credits"
+      },
+      {
+        "type": "paragraph",
+        "text": "All credits, whether earned or purchased, are added to a single account balance. Credits never expire, are non-transferable, have no cash value, and may only be used within Calm Wallet."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Unlimited Subscription"
+      },
+      {
+        "type": "paragraph",
+        "text": "Unlimited renews yearly until cancelled. Cancelling stops future renewals while access continues until the end of the paid billing period."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Payments & Refunds"
+      },
+      {
+        "type": "paragraph",
+        "text": "Payments are processed by Stripe or other authorized payment providers. Calm Wallet does not store full payment card details. Purchased credits are generally non-refundable because they never expire. Billing errors or duplicate charges may be investigated and corrected."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Privacy"
+      },
+      {
+        "type": "paragraph",
+        "text": "Personal information is handled as described in the Privacy Policy. Calm Wallet aims to comply with applicable GDPR requirements where relevant."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Intellectual Property"
+      },
+      {
+        "type": "paragraph",
+        "text": "The Calm Wallet application, branding, software, designs, and content are owned by Calm Wallet or its licensors. These Terms do not transfer ownership of any intellectual property."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Acceptable Use"
+      },
+      {
+        "type": "paragraph",
+        "text": "Users must not abuse the Service, bypass payment or credit systems, reverse engineer the application, interfere with its operation, or use it for unlawful purposes."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Availability"
+      },
+      {
+        "type": "paragraph",
+        "text": "We strive to provide a reliable service but cannot guarantee uninterrupted availability."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Limitation of Liability"
+      },
+      {
+        "type": "paragraph",
+        "text": "To the fullest extent permitted by law, Calm Wallet is not liable for indirect, incidental, or consequential damages arising from use of the Service. Nothing in these Terms limits liability where such limitation is prohibited by law."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Force Majeure"
+      },
+      {
+        "type": "paragraph",
+        "text": "Calm Wallet is not responsible for delays or failures caused by events beyond reasonable control, including natural disasters, widespread internet outages, government actions, or major infrastructure failures."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Termination"
+      },
+      {
+        "type": "paragraph",
+        "text": "You may stop using Calm Wallet at any time. We may suspend or terminate accounts that violate these Terms or threaten the security or integrity of the Service."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Changes"
+      },
+      {
+        "type": "paragraph",
+        "text": "We may update these Terms. Significant changes receive a new version number and may require renewed acceptance before continued use. Where practical, a summary of important changes will be provided."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Severability"
+      },
+      {
+        "type": "paragraph",
+        "text": "If any provision of these Terms is found unenforceable, the remaining provisions continue in effect."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Governing Law"
+      },
+      {
+        "type": "paragraph",
+        "text": "These Terms are governed by the laws of Romania, without affecting mandatory rights available to consumers under applicable European Union law."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Contact"
+      },
+      {
+        "type": "paragraph",
+        "text": "Support contact details will be published inside Calm Wallet before public launch."
+      }
+    ]
+  },
+  "privacy": {
+    "en": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Welcome"
+      },
+      {
+        "type": "paragraph",
+        "text": "Your privacy matters to us. This Privacy Policy explains what information Calm Wallet collects, why we collect it, how it is used, and the choices available to you."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "In Short"
+      },
+      {
+        "type": "list",
+        "items": [
+          "We only collect information needed to provide and improve Calm Wallet.",
+          "We do not sell your personal data.",
+          "Payments are handled by Stripe or another authorized payment provider.",
+          "Anonymous analytics and crash reporting help us improve reliability.",
+          "You can request deletion of your account and personal data, subject to legal obligations."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Information We Collect"
+      },
+      {
+        "type": "paragraph",
+        "text": "We may collect account information, financial records you enter, preferences, notification settings, timezone, device information, and technical logs needed to operate the service."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "How We Use Information"
+      },
+      {
+        "type": "paragraph",
+        "text": "We use your information to provide the service, synchronize your data, operate the AI Assistant, manage credits and subscriptions, send notifications you have enabled, improve reliability, prevent abuse, and comply with legal obligations."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "AI Processing"
+      },
+      {
+        "type": "paragraph",
+        "text": "Information you choose to send to the AI Assistant may be processed to generate responses. We recommend avoiding unnecessary sensitive information in AI conversations."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Payments"
+      },
+      {
+        "type": "paragraph",
+        "text": "Payment transactions are processed by Stripe or another authorized provider. Calm Wallet does not store your full payment card details."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Analytics & Diagnostics"
+      },
+      {
+        "type": "paragraph",
+        "text": "We use anonymous or pseudonymous analytics, crash reporting, and performance monitoring to understand active users, subscribers, paying users, application reliability, and product usage trends. These metrics are used to improve the service and are not sold to advertisers."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Notifications"
+      },
+      {
+        "type": "paragraph",
+        "text": "If you grant permission, Calm Wallet may send reminders and service notifications. Reminder scheduling respects your local timezone. You can disable notifications at any time."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Data Retention"
+      },
+      {
+        "type": "paragraph",
+        "text": "We keep your information only as long as necessary to provide the service or comply with legal obligations. Where possible, deleted accounts result in deletion of associated personal information."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Your Rights"
+      },
+      {
+        "type": "paragraph",
+        "text": "Depending on applicable law, you may have the right to access, correct, export, or delete your personal information, and to object to or restrict certain processing activities."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Security"
+      },
+      {
+        "type": "paragraph",
+        "text": "We use reasonable technical and organizational measures to protect your information. No online service can guarantee absolute security."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "International Processing"
+      },
+      {
+        "type": "paragraph",
+        "text": "Your information may be processed in countries where our service providers operate, subject to appropriate safeguards where required by law."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Children"
+      },
+      {
+        "type": "paragraph",
+        "text": "Calm Wallet is intended for users aged 16 and older."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Changes"
+      },
+      {
+        "type": "paragraph",
+        "text": "We may update this Privacy Policy. Significant changes will receive a new version number and may require renewed acceptance before continued use."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Contact"
+      },
+      {
+        "type": "paragraph",
+        "text": "Support contact details will be published inside Calm Wallet before public launch."
+      }
+    ]
+  },
+  "refund": {
+    "en": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Welcome"
+      },
+      {
+        "type": "paragraph",
+        "text": "This Refund Policy explains how purchases made through Calm Wallet are handled. We believe in keeping our policies simple and transparent."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "In Short"
+      },
+      {
+        "type": "list",
+        "items": [
+          "Purchased credits never expire.",
+          "All credits are added to one shared balance.",
+          "Purchases are generally non-refundable.",
+          "Billing errors or duplicate charges will be investigated.",
+          "Subscription cancellations stop future renewals while access continues until the end of the paid billing period."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "1. Credit Purchases"
+      },
+      {
+        "type": "paragraph",
+        "text": "Credits purchased through Calm Wallet are virtual units used only within the application. Purchased credits never expire and remain available on your account unless your account is terminated in accordance with our Terms of Service."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "2. Refunds"
+      },
+      {
+        "type": "paragraph",
+        "text": "Because purchased credits never expire, purchases are generally non-refundable. Please consider your purchase carefully before completing payment."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "3. Billing Errors"
+      },
+      {
+        "type": "paragraph",
+        "text": "If you believe you were charged incorrectly, charged more than once, or experienced another payment error, contact us as soon as possible. We will investigate the issue and correct verified billing mistakes where appropriate."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "4. Unlimited Subscription"
+      },
+      {
+        "type": "paragraph",
+        "text": "Unlimited subscriptions renew automatically each year unless cancelled before renewal. Cancelling prevents future renewals but does not remove access from the current paid billing period."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "5. Payment Providers"
+      },
+      {
+        "type": "paragraph",
+        "text": "Payments are processed securely by Stripe or another authorized payment provider. Refunds or payment disputes may also be subject to the payment provider's procedures where applicable."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "6. Changes to this Policy"
+      },
+      {
+        "type": "paragraph",
+        "text": "We may update this Refund Policy from time to time. Significant changes receive a new version number and may require renewed acceptance before continued use of Calm Wallet."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "7. Contact"
+      },
+      {
+        "type": "paragraph",
+        "text": "If you have questions regarding billing or this Refund Policy, please contact us using the support options available within Calm Wallet."
+      }
+    ]
+  },
+  "ai": {
+    "en": [
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Welcome"
+      },
+      {
+        "type": "paragraph",
+        "text": "This AI Disclaimer explains the role and limitations of the Calm Wallet AI Assistant. We want you to understand what the Assistant can do—and what it cannot."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "In Short"
+      },
+      {
+        "type": "list",
+        "items": [
+          "The AI Assistant is designed to help you organize and understand your finances.",
+          "AI responses may be inaccurate, incomplete, or outdated.",
+          "Always review important financial information.",
+          "Calm Wallet does not provide financial, legal, tax, accounting, or investment advice.",
+          "You remain responsible for decisions you make based on AI-generated content."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "1. Purpose of the AI Assistant"
+      },
+      {
+        "type": "paragraph",
+        "text": "The AI Assistant is intended to help users record information, answer questions, summarize financial activity, explain concepts, and simplify the use of Calm Wallet."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "2. No Professional Advice"
+      },
+      {
+        "type": "paragraph",
+        "text": "Information generated by the AI Assistant is provided for general informational purposes only. It should not be treated as professional financial, investment, legal, accounting, medical, or tax advice."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "3. Accuracy"
+      },
+      {
+        "type": "paragraph",
+        "text": "Although we continually improve the Assistant, it may produce responses that are inaccurate, incomplete, inconsistent, or inappropriate for your particular situation. Always verify important information before acting on it."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "4. User Responsibility"
+      },
+      {
+        "type": "paragraph",
+        "text": "You remain solely responsible for decisions made using information provided by the AI Assistant. Calm Wallet recommends consulting qualified professionals when making significant financial, legal, tax, or investment decisions."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "5. AI Processing"
+      },
+      {
+        "type": "paragraph",
+        "text": "To generate responses, information you choose to submit may be processed by AI systems. Avoid sharing unnecessary sensitive information in conversations whenever possible."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "6. Availability"
+      },
+      {
+        "type": "paragraph",
+        "text": "AI features may change, improve, become temporarily unavailable, or be discontinued without affecting the remainder of the Calm Wallet service."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "7. Changes"
+      },
+      {
+        "type": "paragraph",
+        "text": "We may update this AI Disclaimer from time to time. Significant updates will receive a new version number and may require renewed acceptance before continued use."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "8. Contact"
+      },
+      {
+        "type": "paragraph",
+        "text": "If you have questions about the AI Assistant or this Disclaimer, please use the support options available within Calm Wallet."
+      }
+    ]
+  }
+}

@@ -174,6 +174,13 @@ describe("i18n helper", () => {
     expect(t("settings.legal.subtitle", "es")).toBe("Términos, privacidad, reembolsos e IA");
     expect(t("settings.about.title", "en")).toBe("About");
     expect(t("settings.about.subtitle", "ro")).toBe("Versiune, contact și mulțumiri");
+    expect(t("legal.canonicalEnglishNotice", "en")).toBe("The legal text is provided in English as the canonical version.");
+    expect(t("legal.canonicalEnglishNotice", "ro")).toBe("Textul legal este disponibil în engleză ca versiune canonică.");
+    expect(t("legal.canonicalEnglishNotice", "fr")).toBe("Le texte juridique est fourni en anglais comme version de référence.");
+    expect(t("legal.canonicalEnglishNotice", "es")).toBe("El texto legal se ofrece en inglés como versión canónica.");
+    expect(t("legal.changeSummaries.finalLaunchDocuments", "en")).toBe(
+      "Replaced placeholder legal text with the final launch documents.",
+    );
     expect(t("credits.addCredits", "en")).toBe("Add credits");
     expect(t("credits.addCredits", "ro")).toBe("Adaugă credite");
     expect(t("credits.addCredits", "fr")).toBe("Ajouter des crédits");
