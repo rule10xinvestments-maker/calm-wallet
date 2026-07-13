@@ -278,14 +278,13 @@ describe("protected shell PWA install affordance", () => {
     expect(settingsPanel).toHaveClass("overflow-y-auto");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
     const languageButton = screen.getByRole("button", { name: /Language/ });
-    const reportButton = screen.getByRole("button", { name: /Report a problem/ });
     const notificationsButton = screen.getByRole("button", { name: /Notifications/ });
-    expect(languageButton.compareDocumentPosition(reportButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(reportButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(languageButton).toHaveAttribute("aria-expanded", "false");
-    expect(notificationsButton).toHaveAttribute("aria-expanded", "false");
+    const creditsButton = screen.getByRole("button", { name: /Credits/ });
+    const reportButton = screen.getByRole("button", { name: /Report a problem/ });
+    expect(languageButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notificationsButton.compareDocumentPosition(creditsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(creditsButton.compareDocumentPosition(reportButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(settingsPanel).queryByText("Search Help")).not.toBeInTheDocument();
-    expect(screen.queryByText("App language")).not.toBeInTheDocument();
     expect(screen.queryByText("Allow Calm Wallet to send helpful reminders.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
     expect(screen.queryByText("Daily reminder")).not.toBeInTheDocument();
@@ -299,7 +298,8 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByRole("button", { name: "🇫🇷 Français" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "🇪🇸 Español" })).toBeInTheDocument();
 
-    fireEvent.click(notificationsButton);
+    fireEvent.click(screen.getByRole("button", { name: "Back to settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Notifications/ }));
 
     expect(screen.getByText("Allow Calm Wallet to send helpful reminders.")).toBeInTheDocument();
     expect(screen.getByText("Notifications are enabled.")).toBeInTheDocument();
@@ -308,7 +308,7 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByText("Monthly report")).toBeInTheDocument();
     expect(screen.getByText("Recurring entries")).toBeInTheDocument();
     expect(screen.getByText("Limit alerts")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Enable notifications" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Enable notifications" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close settings overlay" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save notification settings" })).toBeInTheDocument();
@@ -386,6 +386,39 @@ describe("protected shell PWA install affordance", () => {
     expect(within(settingsPanel).getByText("Legal version")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Support contact")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Acknowledgements")).toBeInTheDocument();
+  });
+
+  it("returns to Settings overview with a brief confirmation after saving language", async () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Language/ }));
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: "🇷🇴 Română" }));
+
+    await waitFor(() => expect(within(settingsPanel).getByRole("status")).toHaveTextContent("Limba a fost salvată."));
+    expect(within(settingsPanel).getByRole("button", { name: /Limbă/ })).toBeInTheDocument();
+    expect(within(settingsPanel).queryByRole("button", { name: "🇬🇧 English" })).not.toBeInTheDocument();
+  });
+
+  it("returns to Settings overview with a confirmation after saving notification preferences", async () => {
+    updateNotificationPreferencesAction.mockResolvedValueOnce({
+      status: "success",
+      message: "Notification settings updated.",
+      messageKey: "notifications.preferencesUpdated",
+      preferences: notificationPreferences,
+    });
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Notifications/ }));
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: "Save notification settings" }));
+
+    await waitFor(() => expect(updateNotificationPreferencesAction).toHaveBeenCalled());
+    await waitFor(() => expect(within(settingsPanel).getByRole("status")).toHaveTextContent("Notification settings saved."));
+    expect(within(settingsPanel).getByRole("button", { name: /Notifications/ })).toBeInTheDocument();
+    expect(within(settingsPanel).queryByText("Daily reminder")).not.toBeInTheDocument();
   });
 
   it("renders Sign out as the final destructive Settings row and confirms before calling the action", async () => {
@@ -630,7 +663,7 @@ describe("protected shell PWA install affordance", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Ajutor" })).toBeInTheDocument());
     expect(settingsPanel).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Limb/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Limb/ })).toBeInTheDocument());
     expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
   });
 
@@ -644,7 +677,7 @@ describe("protected shell PWA install affordance", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Aide" })).toBeInTheDocument());
     expect(settingsPanel).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Langue/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Langue/ })).toBeInTheDocument());
     expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
   });
 
@@ -658,7 +691,7 @@ describe("protected shell PWA install affordance", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Ajutor" })).toBeInTheDocument());
     expect(settingsPanel).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Limb/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Limb/ })).toBeInTheDocument());
     expect(screen.queryByText(/Application error|client-side exception/i)).not.toBeInTheDocument();
   });
 
@@ -672,10 +705,13 @@ describe("protected shell PWA install affordance", () => {
     expect(within(settingsPanel).getByText("Allow Calm Wallet to send helpful reminders.")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Notifications are enabled.")).toBeInTheDocument();
 
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: "Back to settings" }));
     fireEvent.click(within(settingsPanel).getByRole("button", { name: /Language/ }));
     fireEvent.click(within(settingsPanel).getByRole("button", { name: /Rom/ }));
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Ajutor" })).toBeInTheDocument());
+    await waitFor(() => expect(within(settingsPanel).getByRole("button", { name: /Notificări/ })).toBeInTheDocument());
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Notificări/ }));
     expect(within(settingsPanel).getByText("Permite aplicației Calm Wallet să trimită mementouri utile.")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Notificările sunt activate.")).toBeInTheDocument();
     expect(within(settingsPanel).getByRole("button", { name: "Activat" })).toHaveAttribute("aria-pressed", "true");
@@ -749,9 +785,8 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByRole("button", { name: "Dezactivat" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("Notificările sunt dezactivate.")).toBeInTheDocument();
     expect(screen.getByLabelText("Reminder zilnic")).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Notificări Dezactivat/ })).toBeInTheDocument();
     expect(screen.getByText("Reminder zilnic")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Activează notificările" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Activează notificările" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvează setările notificărilor" })).toBeInTheDocument();
   });
 

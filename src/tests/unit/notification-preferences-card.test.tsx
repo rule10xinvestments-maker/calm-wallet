@@ -74,7 +74,7 @@ describe("notification preferences card localization", () => {
     expect(screen.getByText("Permite aplicației Calm Wallet să trimită mementouri utile.")).toBeInTheDocument();
     expect(screen.getByText("Este necesară permisiunea")).toBeInTheDocument();
     expect(screen.getByText("Deschide setările browserului pentru a permite notificările.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Activează notificările" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Deschide setările telefonului" })).toBeDisabled();
   });
 
   it("renders Romanian unsupported-device notification copy", () => {
@@ -84,7 +84,19 @@ describe("notification preferences card localization", () => {
     fireEvent.click(screen.getByRole("button", { name: /Notificări/ }));
 
     expect(screen.getByText("Notificările nu sunt disponibile pe acest dispozitiv.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Activează notificările" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Activează notificările" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Permite notificările pe acest dispozitiv" })).not.toBeInTheDocument();
+  });
+
+  it("renders a distinct device permission action when permission is missing", () => {
+    setNotificationPermission("default");
+
+    renderCard("ro");
+    fireEvent.click(screen.getByRole("button", { name: /Notificări/ }));
+
+    expect(screen.getByText("Permite acestui dispozitiv să afișeze notificările Calm Wallet.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Permite notificările pe acest dispozitiv" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Activează notificările" })).not.toBeInTheDocument();
   });
 
   it("renders French and Spanish notification keys", () => {

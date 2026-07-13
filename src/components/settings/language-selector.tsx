@@ -15,6 +15,8 @@ type LanguageSelectorProps = {
     state: UserPreferencesActionState,
     formData: FormData,
   ) => Promise<UserPreferencesActionState>;
+  onSaved?: () => void;
+  variant?: "inline" | "focused";
 };
 
 const languageOptions: SupportedLocale[] = ["en", "ro", "fr", "es"];
@@ -26,11 +28,12 @@ const languageDisplayLabels: Record<SupportedLocale, string> = {
   es: "🇪🇸 Español",
 };
 
-export function LanguageSelector({ action }: LanguageSelectorProps) {
+export function LanguageSelector({ action, onSaved, variant = "inline" }: LanguageSelectorProps) {
   const { locale, savedLocale, setLocale } = useLocale();
   const [state, formAction, isPending] = useActionState(action, initialUserPreferencesActionState);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(variant === "focused");
   const selectedLabel = languageDisplayLabels[locale];
+  const isFocused = variant === "focused";
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
@@ -45,32 +48,35 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
   useEffect(() => {
     if (state.status === "success" && state.uiLocale) {
       setLocale(state.uiLocale);
+      onSaved?.();
     }
 
     if (state.status === "error") {
       setLocale(savedLocale ?? getBrowserResolvedLocale(navigator.language));
     }
-  }, [savedLocale, setLocale, state.status, state.uiLocale]);
+  }, [onSaved, savedLocale, setLocale, state.status, state.uiLocale]);
 
   return (
-    <form action={formAction} className="rounded-2xl border border-slate-200 bg-white" onSubmit={handleSubmit}>
-      <button
-        aria-expanded={isExpanded}
-        className="grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-3 py-3 text-left"
-        onClick={() => setIsExpanded((value) => !value)}
-        type="button"
-      >
-        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700">
-          <Globe2 aria-hidden="true" className="size-4" />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-medium text-slate-900">{t("settings.language", locale)}</span>
-          <span className="block truncate text-xs leading-5 text-slate-500">{selectedLabel}</span>
-        </span>
-        <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition ${isExpanded ? "rotate-180" : ""}`} />
-      </button>
+    <form action={formAction} className={isFocused ? "rounded-2xl border border-slate-200 bg-white p-3" : "rounded-2xl border border-slate-200 bg-white"} onSubmit={handleSubmit}>
+      {!isFocused ? (
+        <button
+          aria-expanded={isExpanded}
+          className="grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-3 py-3 text-left"
+          onClick={() => setIsExpanded((value) => !value)}
+          type="button"
+        >
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700">
+            <Globe2 aria-hidden="true" className="size-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-slate-900">{t("settings.language", locale)}</span>
+            <span className="block truncate text-xs leading-5 text-slate-500">{selectedLabel}</span>
+          </span>
+          <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition ${isExpanded ? "rotate-180" : ""}`} />
+        </button>
+      ) : null}
       {isExpanded ? (
-        <div className="border-t border-slate-100 px-3 pb-3 pt-2">
+        <div className={isFocused ? "" : "border-t border-slate-100 px-3 pb-3 pt-2"}>
           <p className="mb-2 text-xs leading-5 text-slate-500">{t("settings.languageHelper", locale)}</p>
           <div className="grid gap-1">
             {languageOptions.map((option) => {
@@ -94,7 +100,7 @@ export function LanguageSelector({ action }: LanguageSelectorProps) {
             })}
           </div>
           {isPending ? <p className="mt-2 text-xs text-slate-500">{t("settings.savingLanguage", locale)}</p> : null}
-          {state.message ? (
+          {state.message && (state.status === "error" || !onSaved) ? (
             <p className={state.status === "error" ? "mt-2 text-xs text-rose-600" : "mt-2 text-xs text-emerald-700"}>
               {state.status === "error" ? t("settings.languageSaveError", locale) : t("settings.languageSaved", locale)}
             </p>

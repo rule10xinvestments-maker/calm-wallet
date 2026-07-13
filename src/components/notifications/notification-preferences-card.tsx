@@ -22,6 +22,8 @@ type NotificationPreferencesCardProps = {
     state: NotificationPreferencesActionState,
     formData: FormData,
   ) => Promise<NotificationPreferencesActionState>;
+  onSaved?: () => void;
+  variant?: "inline" | "focused";
 };
 
 type BrowserNotificationStatus = "checking" | "unsupported" | "default" | "granted" | "denied";
@@ -103,7 +105,9 @@ function ToggleCard({
 export function NotificationPreferencesCard({
   preferences,
   action,
+  onSaved,
   registerPushSubscriptionAction,
+  variant = "inline",
 }: NotificationPreferencesCardProps) {
   const { locale } = useLocale();
   const [state, formAction, isPending] = useActionState(action, {
@@ -114,7 +118,7 @@ export function NotificationPreferencesCard({
   const [localPreferences, setLocalPreferences] = useState(current);
   const [browserStatus, setBrowserStatus] = useState<BrowserNotificationStatus>(() => getBrowserNotificationStatus());
   const [browserMessageKey, setBrowserMessageKey] = useState<NotificationMessageKey | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(variant === "focused");
   const [isBrowserPending, startBrowserTransition] = useTransition();
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const canUseNotifications = browserStatus !== "unsupported";
@@ -124,10 +128,17 @@ export function NotificationPreferencesCard({
     localPreferences.monthlyReviewEnabled ||
     localPreferences.recurringNotificationsEnabled ||
     localPreferences.limitAlertsEnabled;
+  const isFocused = variant === "focused";
 
   useEffect(() => {
     setLocalPreferences(current);
   }, [current]);
+
+  useEffect(() => {
+    if (state.status === "success" && state.messageKey === "notifications.preferencesUpdated") {
+      onSaved?.();
+    }
+  }, [onSaved, state.messageKey, state.status]);
 
   const permissionCopy = useMemo(() => {
     if (browserStatus === "unsupported") {
@@ -139,11 +150,11 @@ export function NotificationPreferencesCard({
     }
 
     if (browserStatus === "granted") {
-      return scheduledPushReady ? t("notifications.enabled", locale) : t("notifications.testEnabledScheduledNotReady", locale);
+      return t("notifications.allowedByDevice", locale);
     }
 
-    return t("notifications.permissionNeeded", locale);
-  }, [browserStatus, locale, scheduledPushReady]);
+    return t("notifications.devicePermissionHelper", locale);
+  }, [browserStatus, locale]);
 
   const notificationStatusLabel = notificationsEnabled ? t("notifications.enabledShort", locale) : t("notifications.disabled", locale);
   const notificationStateCopy = notificationsEnabled ? t("notifications.enabled", locale) : t("notifications.disabledHelper", locale);
@@ -240,29 +251,31 @@ export function NotificationPreferencesCard({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white">
-      <button
-        aria-expanded={isExpanded}
-        className="grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-3 py-3 text-left"
-        onClick={() => setIsExpanded((value) => !value)}
-        type="button"
-      >
-        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700">
-          {!notificationsEnabled || browserStatus === "denied" || browserStatus === "unsupported" ? (
-            <BellOff aria-hidden="true" className="size-4" />
-          ) : (
-            <Bell aria-hidden="true" className="size-4" />
-          )}
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-medium text-slate-900">{t("notifications.notifications", locale)}</span>
-          <span className="block truncate text-xs leading-5 text-slate-500">{notificationStatusLabel}</span>
-        </span>
-        <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition ${isExpanded ? "rotate-180" : ""}`} />
-      </button>
+    <div className={isFocused ? "rounded-2xl border border-slate-200 bg-white p-3" : "rounded-2xl border border-slate-200 bg-white"}>
+      {!isFocused ? (
+        <button
+          aria-expanded={isExpanded}
+          className="grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-3 py-3 text-left"
+          onClick={() => setIsExpanded((value) => !value)}
+          type="button"
+        >
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700">
+            {!notificationsEnabled || browserStatus === "denied" || browserStatus === "unsupported" ? (
+              <BellOff aria-hidden="true" className="size-4" />
+            ) : (
+              <Bell aria-hidden="true" className="size-4" />
+            )}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-slate-900">{t("notifications.notifications", locale)}</span>
+            <span className="block truncate text-xs leading-5 text-slate-500">{notificationStatusLabel}</span>
+          </span>
+          <ChevronDown aria-hidden="true" className={`size-4 text-slate-400 transition ${isExpanded ? "rotate-180" : ""}`} />
+        </button>
+      ) : null}
 
       {isExpanded ? (
-        <div className="space-y-3 border-t border-slate-100 px-3 pb-3 pt-2">
+        <div className={isFocused ? "space-y-3" : "space-y-3 border-t border-slate-100 px-3 pb-3 pt-2"}>
           <div className="rounded-2xl bg-slate-50 px-3 py-3">
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-3">
@@ -282,7 +295,10 @@ export function NotificationPreferencesCard({
                 </button>
               </div>
               <p className="text-xs leading-4 text-slate-500">{t("notifications.calmHelper", locale)}</p>
-              {browserStatus !== "granted" ? (
+              {browserStatus === "granted" ? (
+                <p className="text-xs leading-4 text-slate-500">{permissionCopy}</p>
+              ) : null}
+              {browserStatus === "default" || browserStatus === "denied" ? (
                 <div className="space-y-2">
                   <p className="text-xs leading-4 text-slate-500">{permissionCopy}</p>
                   {browserStatus === "denied" ? (
@@ -294,16 +310,17 @@ export function NotificationPreferencesCard({
                     onClick={handleEnableNotifications}
                     type="button"
                   >
-                    {t("notifications.enableNotifications", locale)}
+                    {browserStatus === "denied" ? t("notifications.openPhoneSettings", locale) : t("notifications.allowOnDevice", locale)}
                   </Button>
                 </div>
               ) : null}
+              {browserStatus === "unsupported" ? <p className="text-xs leading-4 text-slate-500">{permissionCopy}</p> : null}
               {browserMessage ? <p className="text-xs leading-4 text-sky-700">{browserMessage}</p> : null}
             </div>
           </div>
 
           <form action={formAction} className="space-y-2.5">
-            {actionMessage ? (
+            {actionMessage && (state.status === "error" || !onSaved) ? (
               <p className={`text-sm ${state.status === "error" ? "text-rose-600" : "text-sky-700"}`}>{actionMessage}</p>
             ) : null}
             <ToggleCard

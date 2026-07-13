@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronLeft, ChevronRight, Coins, FileText, Info, Settings, ShieldCheck } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronLeft, ChevronRight, Coins, FileText, Globe2, Info, Settings, ShieldCheck } from "lucide-react";
 import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
 import { CreditOptionsSheet, getCreditSettingsSubtitle, type CreditAccountSummary } from "@/components/credits/credit-options-sheet";
 import { useLocale } from "@/components/i18n/locale-provider";
@@ -47,7 +47,7 @@ type HeaderSettingsButtonProps = {
   isSupportAdmin?: boolean;
 };
 
-type SettingsPage = "main" | "support" | "legal" | "about";
+type SettingsPage = "main" | "language" | "notifications" | "support" | "legal" | "about";
 
 type SettingsRowProps = {
   icon: ReactNode;
@@ -85,6 +85,19 @@ function SettingsSubpageHeader({ locale, title, onBack }: { locale: string; titl
         <ChevronLeft aria-hidden="true" className="size-4" />
       </button>
       <p className="min-w-0 truncate text-sm font-semibold text-slate-900">{title}</p>
+    </div>
+  );
+}
+
+function SettingsSaveConfirmation({ message }: { message: string }) {
+  return (
+    <div
+      aria-live="polite"
+      className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-800"
+      role="status"
+    >
+      <Check aria-hidden="true" className="size-4 shrink-0" />
+      <span>{message}</span>
     </div>
   );
 }
@@ -168,7 +181,26 @@ export function HeaderSettingsButton({
   const [activePage, setActivePage] = useState<SettingsPage>("main");
   const [isCreditOptionsOpen, setIsCreditOptionsOpen] = useState(false);
   const [reportOpenToken, setReportOpenToken] = useState(0);
+  const [saveMessageKey, setSaveMessageKey] = useState<string | null>(null);
   const { locale } = useLocale();
+  const notificationsEnabled =
+    notificationPreferences.dailyReminderEnabled ||
+    notificationPreferences.monthlyReviewEnabled ||
+    notificationPreferences.recurringNotificationsEnabled ||
+    notificationPreferences.limitAlertsEnabled;
+
+  const showSavedMessage = useCallback((messageKey: string) => {
+    setActivePage("main");
+    setSaveMessageKey(messageKey);
+  }, []);
+
+  const handleLanguageSaved = useCallback(() => {
+    showSavedMessage("settings.languageSaved");
+  }, [showSavedMessage]);
+
+  const handleNotificationsSaved = useCallback(() => {
+    showSavedMessage("settings.notificationsSaved");
+  }, [showSavedMessage]);
 
   useEffect(() => {
     const openReport = () => {
@@ -185,8 +217,18 @@ export function HeaderSettingsButton({
     if (!isOpen) {
       setActivePage("main");
       setIsCreditOptionsOpen(false);
+      setSaveMessageKey(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!saveMessageKey) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setSaveMessageKey(null), 2800);
+    return () => window.clearTimeout(timeout);
+  }, [saveMessageKey]);
 
   return (
     <div className="relative">
@@ -225,7 +267,25 @@ export function HeaderSettingsButton({
               </div>
               {activePage === "main" ? (
                 <>
-                  <LanguageSelector action={userPreferencesAction} />
+                  {saveMessageKey ? <SettingsSaveConfirmation message={t(saveMessageKey, locale)} /> : null}
+                  <SettingsRow
+                    icon={<Globe2 aria-hidden="true" className="size-4" />}
+                    onClick={() => setActivePage("language")}
+                    subtitle={t("settings.languageHelper", locale)}
+                    title={t("settings.language", locale)}
+                  />
+                  <SettingsRow
+                    icon={<Bell aria-hidden="true" className="size-4" />}
+                    onClick={() => setActivePage("notifications")}
+                    subtitle={notificationsEnabled ? t("notifications.enabledShort", locale) : t("notifications.disabled", locale)}
+                    title={t("notifications.notifications", locale)}
+                  />
+                  <SettingsRow
+                    icon={<Coins aria-hidden="true" className="size-4" />}
+                    onClick={() => setIsCreditOptionsOpen(true)}
+                    subtitle={getCreditSettingsSubtitle(creditAccount, locale)}
+                    title={t("settings.credits.title", locale)}
+                  />
                   <SettingsRow
                     icon={<FileText aria-hidden="true" className="size-4" />}
                     onClick={() => {
@@ -234,17 +294,6 @@ export function HeaderSettingsButton({
                     }}
                     subtitle={t("settings.support.helper", locale)}
                     title={t("settings.support.title", locale)}
-                  />
-                  <NotificationPreferencesCard
-                    action={notificationPreferencesAction}
-                    preferences={notificationPreferences}
-                    registerPushSubscriptionAction={registerPushSubscriptionAction}
-                  />
-                  <SettingsRow
-                    icon={<Coins aria-hidden="true" className="size-4" />}
-                    onClick={() => setIsCreditOptionsOpen(true)}
-                    subtitle={getCreditSettingsSubtitle(creditAccount, locale)}
-                    title={t("settings.credits.title", locale)}
                   />
                   <SettingsRow
                     icon={<FileText aria-hidden="true" className="size-4" />}
@@ -257,6 +306,24 @@ export function HeaderSettingsButton({
                     onClick={() => setActivePage("about")}
                     subtitle={t("settings.about.subtitle", locale)}
                     title={t("settings.about.title", locale)}
+                  />
+                </>
+              ) : null}
+              {activePage === "language" ? (
+                <>
+                  <SettingsSubpageHeader locale={locale} title={t("settings.language", locale)} onBack={() => setActivePage("main")} />
+                  <LanguageSelector action={userPreferencesAction} onSaved={handleLanguageSaved} variant="focused" />
+                </>
+              ) : null}
+              {activePage === "notifications" ? (
+                <>
+                  <SettingsSubpageHeader locale={locale} title={t("notifications.notifications", locale)} onBack={() => setActivePage("main")} />
+                  <NotificationPreferencesCard
+                    action={notificationPreferencesAction}
+                    onSaved={handleNotificationsSaved}
+                    preferences={notificationPreferences}
+                    registerPushSubscriptionAction={registerPushSubscriptionAction}
+                    variant="focused"
                   />
                 </>
               ) : null}
