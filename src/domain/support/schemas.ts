@@ -10,6 +10,12 @@ export const createSupportTicketSchema = z.object({
   sourceRoute: z.string().trim().max(120).optional().nullable(),
   userAgent: z.string().trim().max(500).optional().nullable(),
   appVersion: z.string().trim().max(80).optional().nullable(),
+  viewportWidth: z.coerce.number().int().positive().max(10000).optional().nullable(),
+  viewportHeight: z.coerce.number().int().positive().max(10000).optional().nullable(),
+  platformSummary: z.string().trim().max(160).optional().nullable(),
+  pwaDisplayMode: z.enum(["standalone", "browser", "unknown"]).optional().nullable(),
+  timezone: z.string().trim().max(80).optional().nullable(),
+  onlineState: z.enum(["online", "offline", "unknown"]).optional().nullable(),
 });
 
 export const updateSupportTicketSchema = z.object({

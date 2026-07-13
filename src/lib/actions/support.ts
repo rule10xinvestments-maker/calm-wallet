@@ -189,6 +189,12 @@ export async function createSupportTicketAction(
       sourceRoute: stringValue(formData.get("sourceRoute")),
       userAgent: stringValue(formData.get("userAgent")) || headerStore.get("user-agent") || null,
       appVersion: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+      viewportWidth: stringValue(formData.get("viewportWidth")) || null,
+      viewportHeight: stringValue(formData.get("viewportHeight")) || null,
+      platformSummary: stringValue(formData.get("platformSummary")) || null,
+      pwaDisplayMode: stringValue(formData.get("pwaDisplayMode")) || null,
+      timezone: stringValue(formData.get("timezone")) || null,
+      onlineState: stringValue(formData.get("onlineState")) || null,
     });
     const uploadResult = await uploadSupportAttachments({
       formData,

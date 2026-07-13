@@ -42,6 +42,12 @@ export type SupportTicketRow = {
   source_route: string | null;
   user_agent: string | null;
   app_version: string | null;
+  viewport_width: number | null;
+  viewport_height: number | null;
+  platform_summary: string | null;
+  pwa_display_mode: string | null;
+  timezone: string | null;
+  online_state: string | null;
   admin_note: string | null;
   assigned_admin_id: string | null;
   created_at: string;
@@ -64,6 +70,12 @@ export type SupportTicket = {
   sourceRoute: string | null;
   userAgent: string | null;
   appVersion: string | null;
+  viewportWidth: number | null;
+  viewportHeight: number | null;
+  platformSummary: string | null;
+  pwaDisplayMode: string | null;
+  timezone: string | null;
+  onlineState: string | null;
   adminNote: string | null;
   assignedAdminId: string | null;
   createdAt: string;

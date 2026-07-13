@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/notifications";
 import { updateUserPreferencesAction, updateUserTimezoneAction } from "@/lib/actions/preferences";
 import { createSupportTicketAction } from "@/lib/actions/support";
+import { markAuthenticatedAppActivityAction } from "@/lib/actions/admin-support";
 import { getAccountHint } from "@/lib/auth/account-hint";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { createSupabaseNotificationService } from "@/domain/notifications/service";
@@ -98,6 +99,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
       registerPushSubscriptionAction={registerPushSubscriptionAction}
       sendTestPushNotificationAction={sendTestPushNotificationAction}
       supportTicketAction={createSupportTicketAction}
+      activityMarkerAction={markAuthenticatedAppActivityAction}
       isSupportAdmin={isSupportAdmin}
       onSignOut={signOutAction}
     >

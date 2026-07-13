@@ -1,5 +1,6 @@
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { ProtectedHeader } from "@/components/layout/protected-header";
+import { AuthenticatedActivityMarker } from "@/components/layout/authenticated-activity-marker";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { DeviceTimezoneSync } from "@/components/notifications/device-timezone-sync";
 import type { CreditAccountSummary } from "@/components/credits/credit-options-sheet";
@@ -39,6 +40,7 @@ type ProtectedShellProps = {
     state: SupportTicketActionState,
     formData: FormData,
   ) => Promise<SupportTicketActionState>;
+  activityMarkerAction?: () => Promise<void>;
   isSupportAdmin?: boolean;
 };
 
@@ -56,10 +58,12 @@ export function ProtectedShell({
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
   supportTicketAction,
+  activityMarkerAction,
   isSupportAdmin = false,
 }: ProtectedShellProps) {
   return (
     <LocaleProvider savedLocale={uiLocale}>
+      {activityMarkerAction ? <AuthenticatedActivityMarker action={activityMarkerAction} /> : null}
       <DeviceTimezoneSync savedTimezone={timezone} updateTimezoneAction={updateTimezoneAction} />
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:pt-6">
         <ProtectedHeader

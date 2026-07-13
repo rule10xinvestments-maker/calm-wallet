@@ -15,6 +15,12 @@ function makeTicket(overrides: Partial<SupportTicketRow> = {}): SupportTicketRow
     source_route: "/assistant",
     user_agent: "test-agent",
     app_version: null,
+    viewport_width: null,
+    viewport_height: null,
+    platform_summary: null,
+    pwa_display_mode: null,
+    timezone: null,
+    online_state: null,
     admin_note: null,
     assigned_admin_id: null,
     created_at: "2026-07-10T10:00:00.000Z",
@@ -85,6 +91,12 @@ describe("support service", () => {
       source_route: "/assistant",
       user_agent: "UA",
       app_version: null,
+      viewport_width: null,
+      viewport_height: null,
+      platform_summary: null,
+      pwa_display_mode: null,
+      timezone: null,
+      online_state: null,
     });
   });
 
@@ -94,6 +106,34 @@ describe("support service", () => {
 
     await expect(service.createTicket({ id: "user-1", email: "user@example.com" }, { category: "other_problem", message: "" })).rejects.toThrow();
     expect(adapter.createTicket).not.toHaveBeenCalled();
+  });
+
+  it("stores optional privacy-safe report diagnostics when provided", async () => {
+    const adapter = makeAdapter();
+    const service = createSupportService(adapter);
+
+    await service.createTicket(
+      { id: "user-1", email: "user@example.com" },
+      {
+        category: "app_bug",
+        message: "The sheet is stuck.",
+        viewportWidth: 390,
+        viewportHeight: 780,
+        platformSummary: "Android mobile",
+        pwaDisplayMode: "browser",
+        timezone: "Europe/Bucharest",
+        onlineState: "online",
+      },
+    );
+
+    expect(adapter.createTicket).toHaveBeenCalledWith(expect.objectContaining({
+      viewport_width: 390,
+      viewport_height: 780,
+      platform_summary: "Android mobile",
+      pwa_display_mode: "browser",
+      timezone: "Europe/Bucharest",
+      online_state: "online",
+    }));
   });
 
   it("rate limits duplicate support submissions", async () => {

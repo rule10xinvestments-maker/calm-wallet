@@ -38,6 +38,47 @@ export type Database = {
           created_at?: string;
         };
       };
+      admin_credit_actions: {
+        Row: {
+          id: string;
+          target_user_id: string;
+          acting_admin_id: string;
+          action_type: "credit_grant" | "unlimited_grant" | "unlimited_remove";
+          amount: number | null;
+          reason_category: string;
+          internal_note: string | null;
+          operation_key: string;
+          unlimited_until_before: string | null;
+          unlimited_until_after: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          target_user_id: string;
+          acting_admin_id: string;
+          action_type: "credit_grant" | "unlimited_grant" | "unlimited_remove";
+          amount?: number | null;
+          reason_category: string;
+          internal_note?: string | null;
+          operation_key: string;
+          unlimited_until_before?: string | null;
+          unlimited_until_after?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          target_user_id?: string;
+          acting_admin_id?: string;
+          action_type?: "credit_grant" | "unlimited_grant" | "unlimited_remove";
+          amount?: number | null;
+          reason_category?: string;
+          internal_note?: string | null;
+          operation_key?: string;
+          unlimited_until_before?: string | null;
+          unlimited_until_after?: string | null;
+          created_at?: string;
+        };
+      };
       profiles: {
         Row: {
           id: string;
@@ -49,6 +90,7 @@ export type Database = {
           accepted_refund_version: string | null;
           accepted_ai_version: string | null;
           legal_accepted_at: string | null;
+          last_active_on: string | null;
           default_currency: string;
           onboarding_state: OnboardingState;
           notifications_opt_in: boolean;
@@ -65,6 +107,7 @@ export type Database = {
           accepted_refund_version?: string | null;
           accepted_ai_version?: string | null;
           legal_accepted_at?: string | null;
+          last_active_on?: string | null;
           default_currency?: string;
           onboarding_state?: OnboardingState;
           notifications_opt_in?: boolean;
@@ -81,6 +124,7 @@ export type Database = {
           accepted_refund_version?: string | null;
           accepted_ai_version?: string | null;
           legal_accepted_at?: string | null;
+          last_active_on?: string | null;
           default_currency?: string;
           onboarding_state?: OnboardingState;
           notifications_opt_in?: boolean;
@@ -168,6 +212,12 @@ export type Database = {
           source_route: string | null;
           user_agent: string | null;
           app_version: string | null;
+          viewport_width: number | null;
+          viewport_height: number | null;
+          platform_summary: string | null;
+          pwa_display_mode: string | null;
+          timezone: string | null;
+          online_state: string | null;
           admin_note: string | null;
           assigned_admin_id: string | null;
           created_at: string;
@@ -188,6 +238,12 @@ export type Database = {
           source_route?: string | null;
           user_agent?: string | null;
           app_version?: string | null;
+          viewport_width?: number | null;
+          viewport_height?: number | null;
+          platform_summary?: string | null;
+          pwa_display_mode?: string | null;
+          timezone?: string | null;
+          online_state?: string | null;
           admin_note?: string | null;
           assigned_admin_id?: string | null;
           created_at?: string;
@@ -208,6 +264,12 @@ export type Database = {
           source_route?: string | null;
           user_agent?: string | null;
           app_version?: string | null;
+          viewport_width?: number | null;
+          viewport_height?: number | null;
+          platform_summary?: string | null;
+          pwa_display_mode?: string | null;
+          timezone?: string | null;
+          online_state?: string | null;
           admin_note?: string | null;
           assigned_admin_id?: string | null;
           created_at?: string;

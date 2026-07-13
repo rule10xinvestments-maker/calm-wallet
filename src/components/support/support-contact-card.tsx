@@ -112,6 +112,7 @@ export function SupportContactCard({ action, openToken = 0 }: SupportContactCard
   async function submitReport(formData: FormData) {
     formData.delete("screenshots");
     screenshots.forEach((item) => formData.append("screenshots", item.file, item.file.name));
+    appendSupportDiagnostics(formData);
     formAction(formData);
   }
 
@@ -316,4 +317,23 @@ function translateSupportActionMessage(message: string, locale: string) {
   };
   const key = keys[message];
   return key ? t(key, locale as never) : t("settings.support.errors.generic", locale as never);
+}
+
+function appendSupportDiagnostics(formData: FormData) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const standaloneQuery = window.matchMedia?.("(display-mode: standalone)")?.matches;
+  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean; userAgentData?: { platform?: string; mobile?: boolean } };
+  const platform = navigatorWithStandalone.userAgentData?.platform || navigator.platform || "unknown";
+  const mobile = navigatorWithStandalone.userAgentData?.mobile;
+  const platformSummary = `${platform}${typeof mobile === "boolean" ? mobile ? " mobile" : " desktop" : ""}`;
+
+  formData.set("viewportWidth", String(window.innerWidth));
+  formData.set("viewportHeight", String(window.innerHeight));
+  formData.set("platformSummary", platformSummary);
+  formData.set("pwaDisplayMode", standaloneQuery || navigatorWithStandalone.standalone ? "standalone" : "browser");
+  formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone || "");
+  formData.set("onlineState", navigator.onLine ? "online" : "offline");
 }

@@ -14,6 +14,12 @@ type SupportTicketInsertRow = {
   source_route: string | null;
   user_agent: string | null;
   app_version: string | null;
+  viewport_width: number | null;
+  viewport_height: number | null;
+  platform_summary: string | null;
+  pwa_display_mode: string | null;
+  timezone: string | null;
+  online_state: string | null;
 };
 
 type SupportTicketUpdateRow = {
@@ -73,6 +79,12 @@ function mapTicket(row: SupportTicketRow): SupportTicket {
     sourceRoute: row.source_route,
     userAgent: row.user_agent,
     appVersion: row.app_version,
+    viewportWidth: row.viewport_width,
+    viewportHeight: row.viewport_height,
+    platformSummary: row.platform_summary,
+    pwaDisplayMode: row.pwa_display_mode,
+    timezone: row.timezone,
+    onlineState: row.online_state,
     adminNote: row.admin_note,
     assignedAdminId: row.assigned_admin_id,
     createdAt: row.created_at,
@@ -95,6 +107,22 @@ function assertResult<T>(result: { data: T | null; error: unknown }, fallbackMes
 function cleanOptional(value: string | null | undefined) {
   const trimmed = value?.trim() ?? "";
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function withoutOptionalDiagnostics(row: SupportTicketInsertRow) {
+  const fallbackRow: Partial<SupportTicketInsertRow> = { ...row };
+  delete fallbackRow.viewport_width;
+  delete fallbackRow.viewport_height;
+  delete fallbackRow.platform_summary;
+  delete fallbackRow.pwa_display_mode;
+  delete fallbackRow.timezone;
+  delete fallbackRow.online_state;
+  return fallbackRow;
+}
+
+function isSchemaCompatibilityError(error: unknown) {
+  const message = typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+  return message.includes("viewport_width") || message.includes("platform_summary") || message.includes("schema cache");
 }
 
 export function createSupportService(adapter: SupportServiceAdapter) {
@@ -132,6 +160,12 @@ export function createSupportService(adapter: SupportServiceAdapter) {
           source_route: cleanOptional(parsed.sourceRoute),
           user_agent: cleanOptional(parsed.userAgent),
           app_version: cleanOptional(parsed.appVersion),
+          viewport_width: parsed.viewportWidth ?? null,
+          viewport_height: parsed.viewportHeight ?? null,
+          platform_summary: cleanOptional(parsed.platformSummary),
+          pwa_display_mode: parsed.pwaDisplayMode ?? null,
+          timezone: cleanOptional(parsed.timezone),
+          online_state: parsed.onlineState ?? null,
         }),
         "Unable to create support ticket.",
       );
@@ -194,7 +228,11 @@ export async function createSupabaseSupportService() {
         .maybeSingle();
     },
     async createTicket(row) {
-      return supabase.from("support_tickets").insert(row).select("*").single();
+      const result = await supabase.from("support_tickets").insert(row).select("*").single();
+      if (!result.error || !isSchemaCompatibilityError(result.error)) {
+        return result;
+      }
+      return supabase.from("support_tickets").insert(withoutOptionalDiagnostics(row)).select("*").single();
     },
     async listTickets(status) {
       let query = supabase

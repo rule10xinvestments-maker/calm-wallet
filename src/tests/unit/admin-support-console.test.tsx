@@ -18,6 +18,12 @@ const tickets: SupportTicket[] = [
     sourceRoute: "/assistant",
     userAgent: "Android Chrome",
     appVersion: "test",
+    viewportWidth: 390,
+    viewportHeight: 780,
+    platformSummary: "Android mobile",
+    pwaDisplayMode: "browser",
+    timezone: "Europe/Bucharest",
+    onlineState: "online",
     adminNote: "Existing note",
     assignedAdminId: null,
     createdAt: "2026-07-10T10:00:00.000Z",
@@ -39,6 +45,12 @@ const tickets: SupportTicket[] = [
     sourceRoute: "/insights",
     userAgent: "Desktop",
     appVersion: "test",
+    viewportWidth: null,
+    viewportHeight: null,
+    platformSummary: "Windows desktop",
+    pwaDisplayMode: "browser",
+    timezone: "Europe/Bucharest",
+    onlineState: "online",
     adminNote: null,
     assignedAdminId: null,
     createdAt: "2026-07-10T11:00:00.000Z",
@@ -84,12 +96,53 @@ function renderConsole(props: Partial<ComponentProps<typeof AdminSupportConsole>
 }
 
 describe("AdminSupportConsole", () => {
+  it("renders the owner dashboard with aggregate counts only", () => {
+    renderConsole({
+      activeSection: "dashboard",
+      dashboard: {
+        totalUsers: 12,
+        activeToday: 3,
+        active7Days: 5,
+        active30Days: 8,
+        activeUnlimitedUsers: 2,
+        refreshedAt: "2026-07-14T10:00:00.000Z",
+      },
+    });
+
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/admin/support?tab=dashboard");
+    expect(screen.getByText("Total registered users")).toBeInTheDocument();
+    expect(screen.getByText("Active Unlimited users")).toBeInTheDocument();
+    expect(screen.queryByText("user@example.com")).not.toBeInTheDocument();
+  });
+
+  it("renders exact-email user lookup and credit controls without a user directory", () => {
+    renderConsole({
+      activeSection: "users",
+      searchEmail: "user@example.com",
+      searchAttempted: true,
+      userLookup: {
+        userId: "11111111-1111-1111-1111-111111111111",
+        email: "user@example.com",
+        creditBalance: 30,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        unlimitedActive: false,
+        recentLedgerEvents: [],
+      },
+    });
+
+    expect(screen.getByLabelText("Exact email lookup")).toHaveValue("user@example.com");
+    expect(screen.getByText("30 credits")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add credits" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Grant Unlimited" })).toBeInTheDocument();
+  });
+
   it("starts in list mode with no selected ticket", () => {
     renderConsole();
 
     expect(screen.getByTestId("admin-support-ticket-list")).not.toHaveClass("hidden");
     expect(screen.getByTestId("admin-support-ticket-detail")).toHaveClass("hidden");
-    expect(screen.getByRole("link", { name: /Mobile issue/ })).toHaveAttribute("href", "/admin/support?ticket=ticket-1");
+    expect(screen.getByRole("link", { name: /Mobile issue/ })).toHaveAttribute("href", "/admin/support?tab=reports&ticket=ticket-1");
     expect(screen.queryByText("Ticket detail")).not.toBeInTheDocument();
   });
 
@@ -98,14 +151,14 @@ describe("AdminSupportConsole", () => {
 
     expect(screen.getByTestId("admin-support-ticket-list")).toHaveClass("hidden");
     expect(screen.getByTestId("admin-support-ticket-detail")).not.toHaveClass("hidden");
-    expect(screen.getByRole("link", { name: "Back to tickets" })).toHaveAttribute("href", "/admin/support");
+    expect(screen.getByRole("link", { name: "Back to tickets" })).toHaveAttribute("href", "/admin/support?tab=reports");
     expect(screen.getByText("Ticket detail")).toBeInTheDocument();
   });
 
   it("preserves the active filter when closing detail", () => {
     renderConsole({ activeStatus: "resolved", selectedTicket: tickets[0] });
 
-    expect(screen.getByRole("link", { name: "Back to tickets" })).toHaveAttribute("href", "/admin/support?status=resolved");
+    expect(screen.getByRole("link", { name: "Back to tickets" })).toHaveAttribute("href", "/admin/support?tab=reports&status=resolved");
   });
 
   it("uses an app-controlled status picker and submits the canonical status value", async () => {

@@ -48,6 +48,12 @@ describe("support actions", () => {
     formData.set("locale", "ro");
     formData.set("sourceRoute", "/assistant");
     formData.set("userAgent", "client-agent");
+    formData.set("viewportWidth", "390");
+    formData.set("viewportHeight", "780");
+    formData.set("platformSummary", "Android mobile");
+    formData.set("pwaDisplayMode", "browser");
+    formData.set("timezone", "Europe/Bucharest");
+    formData.set("onlineState", "online");
 
     const result = await createSupportTicketAction({ status: "idle", message: null }, formData);
 
@@ -60,6 +66,12 @@ describe("support actions", () => {
         locale: "ro",
         sourceRoute: "/assistant",
         userAgent: "client-agent",
+        viewportWidth: "390",
+        viewportHeight: "780",
+        platformSummary: "Android mobile",
+        pwaDisplayMode: "browser",
+        timezone: "Europe/Bucharest",
+        onlineState: "online",
       }),
     );
     expect(revalidatePath).toHaveBeenCalledWith("/admin/support");
