@@ -7,6 +7,7 @@ import { CalmDatePicker } from "@/components/ui/calm-date-picker";
 import { CompactCurrencyPicker } from "@/components/ui/compact-currency-picker";
 import type { OwedNote, OwedNoteDirection } from "@/domain/owed-notes/types";
 import { initialOwedNoteActionState, type OwedNoteActionState } from "@/lib/actions/owed-notes-state";
+import { formatDisplayDate } from "@/lib/display-formatting";
 import { t, type SupportedLocale } from "@/lib/i18n";
 
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
@@ -60,7 +61,7 @@ function formatOwedAmount(amount: number, currency: string, locale: SupportedLoc
 }
 
 function formatOwedDate(value: string, locale: SupportedLocale) {
-  return new Date(value).toLocaleDateString(getIntlLocale(locale), { month: "short", day: "numeric" });
+  return formatDisplayDate(value, locale, { month: "short", day: "numeric" });
 }
 
 function getDirectionLabel(direction: OwedNoteDirection, locale: SupportedLocale = "en") {

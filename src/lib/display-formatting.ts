@@ -27,7 +27,12 @@ export function formatDisplayDate(
   options: Intl.DateTimeFormatOptions,
 ) {
   const date = value instanceof Date ? value : new Date(value);
-  return new Intl.DateTimeFormat(getDisplayLocale(locale), options).format(date);
+  const formatter = new Intl.DateTimeFormat(getDisplayLocale(locale), options);
+
+  return formatter
+    .formatToParts(date)
+    .map((part) => (part.type === "month" ? capitalizeInitial(part.value) : part.value))
+    .join("");
 }
 
 export function formatDateKey(
@@ -45,4 +50,9 @@ export function formatDateKey(
   }
 
   return formatDisplayDate(date, locale, { timeZone: "UTC", ...options });
+}
+
+function capitalizeInitial(value: string) {
+  const [first = "", ...rest] = Array.from(value);
+  return `${first.toLocaleUpperCase()}${rest.join("")}`;
 }

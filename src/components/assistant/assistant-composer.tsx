@@ -49,7 +49,7 @@ import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { CSV_IMPORT_MAX_BYTES } from "@/lib/imports/storage";
 import type { AssistantActionState } from "@/lib/server/assistant";
 import { useLocale } from "@/components/i18n/locale-provider";
-import { formatDateKey, formatDisplayMoney } from "@/lib/display-formatting";
+import { formatDateKey, formatDisplayDate, formatDisplayMoney } from "@/lib/display-formatting";
 import { t } from "@/lib/i18n";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
@@ -455,10 +455,10 @@ export function AssistantComposer({
   );
   const manualRecurringCalendarMonthLabel = useMemo(
     () =>
-      new Intl.DateTimeFormat(locale, {
+      formatDisplayDate(new Date(manualRecurringCalendarMonth.year, manualRecurringCalendarMonth.monthIndex, 1), locale, {
         month: "long",
         year: "numeric",
-      }).format(new Date(manualRecurringCalendarMonth.year, manualRecurringCalendarMonth.monthIndex, 1)),
+      }),
     [locale, manualRecurringCalendarMonth],
   );
   const selectedLimitCategory = useMemo(

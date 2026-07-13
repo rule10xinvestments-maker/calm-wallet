@@ -442,7 +442,7 @@ describe("transactions overview", () => {
     expect(within(owedPanel).getByText(/100\s*USD de primit · 10\s*USD de plătit/)).toBeInTheDocument();
     expect(within(owedPanel).getAllByText("De primit").length).toBeGreaterThan(0);
     expect(within(owedPanel).getAllByText("De plătit").length).toBeGreaterThan(0);
-    expect(within(owedPanel).getAllByText(/Actualizat 1 iul/)).toHaveLength(2);
+    expect(within(owedPanel).getAllByText(/Actualizat 1 Iul/)).toHaveLength(2);
     expect(within(owedPanel).getByText(/Creează reminder/)).toBeInTheDocument();
     expect(within(owedPanel).queryByText(/owed to you|you owe|Owed to me|I owe|Updated Jul|Create owed note/i)).not.toBeInTheDocument();
   });
@@ -1124,7 +1124,7 @@ describe("transactions overview", () => {
       </LocaleProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /iulie 2026/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Iulie 2026/ }));
     fireEvent.click(screen.getByRole("button", { name: "Folosește interval personalizat" }));
     expect(screen.getByRole("button", { name: "De la Alege data" })).toHaveClass("bg-sky-600");
     expect(screen.getByRole("button", { name: "Până la Alege data" })).toBeInTheDocument();

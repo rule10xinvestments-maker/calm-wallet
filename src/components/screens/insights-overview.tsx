@@ -21,7 +21,7 @@ import type { BudgetActionState } from "@/lib/actions/budgets-state";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import { getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import { t } from "@/lib/i18n";
-import { formatDisplayMoney, formatDisplayNumber } from "@/lib/display-formatting";
+import { formatDisplayDate, formatDisplayMoney, formatDisplayNumber } from "@/lib/display-formatting";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 import { cn, formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -549,11 +549,11 @@ function formatSpendingDayLabel(bar: { key: string; label: string }, locale: str
     return bar.label;
   }
 
-  return new Intl.DateTimeFormat(locale, {
+  return formatDisplayDate(date, locale, {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
-  }).format(date);
+  });
 }
 
 function getBarsBucketLabel(bar: InsightsData["timeframeBars"][number], locale: string) {

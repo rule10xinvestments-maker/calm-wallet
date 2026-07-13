@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
-import { formatDateKey } from "@/lib/display-formatting";
+import { formatDateKey, formatDisplayDate } from "@/lib/display-formatting";
 import { t } from "@/lib/i18n";
 
 type CalmDatePickerProps = {
@@ -91,10 +91,10 @@ export function CalmDatePicker({ disabled = false, invalidMessage, label, onDraf
   const calendarDays = useMemo(() => getCalendarDays(calendarMonth.year, calendarMonth.monthIndex), [calendarMonth]);
   const monthLabel = useMemo(
     () =>
-      new Intl.DateTimeFormat(locale, {
+      formatDisplayDate(new Date(calendarMonth.year, calendarMonth.monthIndex, 1), locale, {
         month: "long",
         year: "numeric",
-      }).format(new Date(calendarMonth.year, calendarMonth.monthIndex, 1)),
+      }),
     [locale, calendarMonth],
   );
   const weekdayLabels = useMemo(
