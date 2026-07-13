@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
+import { formatDateKey } from "@/lib/display-formatting";
 import { t } from "@/lib/i18n";
 
 type CalmDatePickerProps = {
@@ -95,6 +96,13 @@ export function CalmDatePicker({ disabled = false, invalidMessage, label, onDraf
         year: "numeric",
       }).format(new Date(calendarMonth.year, calendarMonth.monthIndex, 1)),
     [locale, calendarMonth],
+  );
+  const weekdayLabels = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) =>
+        new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(new Date(Date.UTC(2026, 6, 5 + index))),
+      ),
+    [locale],
   );
   const todayKey = toLocalDateKey(new Date());
 
@@ -201,7 +209,7 @@ export function CalmDatePicker({ disabled = false, invalidMessage, label, onDraf
         </button>
       </div>
       <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-500">
-        {["S", "M", "T", "W", "T", "F", "S"].map((weekday, index) => (
+        {weekdayLabels.map((weekday, index) => (
           <span key={`${weekday}-${index}`}>{weekday}</span>
         ))}
       </div>
@@ -216,7 +224,7 @@ export function CalmDatePicker({ disabled = false, invalidMessage, label, onDraf
 
           return (
             <button
-              aria-label={day.dateKey}
+              aria-label={formatDateKey(day.dateKey, locale, { dateStyle: "long" }) ?? day.dateKey}
               aria-pressed={isSelected}
               className={`min-h-8 rounded-lg text-xs font-semibold transition ${
                 isSelected

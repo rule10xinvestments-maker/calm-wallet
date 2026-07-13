@@ -4,6 +4,7 @@ import { canReadUserTransactionSummaries, isReviewStateNeedingReview } from "@/d
 import { createSupabaseBudgetService } from "@/domain/budgets/service";
 import { selectCalmInsight, type CalmInsightResult } from "@/domain/insights/calm-insight";
 import { loadFxRatesForDisplay, type FxRate } from "@/lib/server/fx-rates";
+import { formatDisplayDate, formatDisplayMoney } from "@/lib/display-formatting";
 import type { Budget } from "@/domain/budgets/types";
 import type { ReviewState, Transaction } from "@/domain/transactions/types";
 import type { RecurringFrequency } from "@/lib/db/types";
@@ -397,24 +398,19 @@ export type AssistantFinancialQuestionAnswer = {
   }>;
 };
 
-export function formatMoney(amountMinor: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(amountMinor / 100);
+export function formatMoney(amountMinor: number, currency: string, locale?: SupportedLocale | null) {
+  return formatDisplayMoney(amountMinor, currency, locale ?? "en");
 }
 
-function formatInsightsMoney(amountMinor: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
+function formatInsightsMoney(amountMinor: number, currency: string, locale?: SupportedLocale | null) {
+  return formatDisplayMoney(amountMinor, currency, locale ?? "en", {
     minimumFractionDigits: amountMinor % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  });
 }
 
-export function formatSignedMoney(amountMinor: number, currency: string, tone: "income" | "expense") {
-  const formatted = formatMoney(amountMinor, currency);
+export function formatSignedMoney(amountMinor: number, currency: string, tone: "income" | "expense", locale?: SupportedLocale | null) {
+  const formatted = formatMoney(amountMinor, currency, locale);
   return tone === "income" ? `+${formatted}` : `-${formatted}`;
 }
 
@@ -530,12 +526,12 @@ export function mapTransactionsToListItems(
     return {
       id: transaction.id,
       title: getTransactionDisplayTitle(transaction),
-      subtitle: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+      subtitle: formatDisplayDate(transaction.occurredAt, locale ?? "en", {
         month: "short",
         day: "numeric",
       }),
       amountMinor: transaction.amountMinor,
-      amountDisplay: formatSignedMoney(transaction.amountMinor, transaction.currency || currencyFallback, transaction.transactionType),
+      amountDisplay: formatSignedMoney(transaction.amountMinor, transaction.currency || currencyFallback, transaction.transactionType, locale),
       amountTone: transaction.transactionType,
       currency: transaction.currency || currencyFallback,
       reviewLabel: reviewMeta.label,
@@ -648,8 +644,8 @@ function shiftMonth(date: Date, offset: number) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + offset, 1));
 }
 
-function formatMonthLabel(date: Date) {
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+function formatMonthLabel(date: Date, locale?: SupportedLocale | null) {
+  return formatDisplayDate(date, locale ?? "en", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function resolveLatestActivityMonth(transactions: Transaction[]) {
@@ -736,6 +732,7 @@ function buildInsightsTimeframeMonths(args: {
   endMonth: Date;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
+  locale?: SupportedLocale | null;
 }) {
   const months = buildTimeframeMonthDates(args.startMonth, args.endMonth);
   let cumulativeExpenseMinor = 0;
@@ -757,11 +754,11 @@ function buildInsightsTimeframeMonths(args: {
 
     return {
       month: toMonthKey(monthDate),
-      label: monthDate.toLocaleDateString("en-US", { month: "short", year: months.length > 6 ? "2-digit" : undefined }),
+      label: formatDisplayDate(monthDate, args.locale ?? "en", { month: "short", year: months.length > 6 ? "2-digit" : undefined, timeZone: "UTC" }),
       expenseMinor,
-      expenseDisplay: formatInsightsMoney(expenseMinor, args.displayCurrency),
+      expenseDisplay: formatInsightsMoney(expenseMinor, args.displayCurrency, args.locale),
       cumulativeExpenseMinor,
-      cumulativeExpenseDisplay: formatInsightsMoney(cumulativeExpenseMinor, args.displayCurrency),
+      cumulativeExpenseDisplay: formatInsightsMoney(cumulativeExpenseMinor, args.displayCurrency, args.locale),
       transactionCount: transactions.length,
     };
   });
@@ -775,14 +772,14 @@ function shiftDay(date: Date, offset: number) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + offset));
 }
 
-function formatCompactBucketDate(date: Date) {
-  return date.toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" });
+function formatCompactBucketDate(date: Date, locale?: SupportedLocale | null) {
+  return formatDisplayDate(date, locale ?? "en", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
-function formatBucketRangeLabel(start: Date, endExclusive: Date) {
+function formatBucketRangeLabel(start: Date, endExclusive: Date, locale?: SupportedLocale | null) {
   const endInclusive = shiftDay(endExclusive, -1);
-  const startMonth = start.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
-  const endMonth = endInclusive.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+  const startMonth = formatDisplayDate(start, locale ?? "en", { month: "short", timeZone: "UTC" });
+  const endMonth = formatDisplayDate(endInclusive, locale ?? "en", { month: "short", timeZone: "UTC" });
   const startDay = start.getUTCDate();
   const endDay = endInclusive.getUTCDate();
 
@@ -807,6 +804,7 @@ function buildInsightsTimeframeDailyBars(args: {
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
   recentEntryLimit?: number | null;
+  locale?: SupportedLocale | null;
 }) {
   const monthEnd = shiftMonth(args.monthStart, 1);
   const bars: InsightsTimeframeBar[] = [];
@@ -839,9 +837,9 @@ function buildInsightsTimeframeDailyBars(args: {
       key: toDayKey(dayStart),
       label: String(dayStart.getUTCDate()),
       amountMinor,
-      amountDisplay: formatInsightsMoney(amountMinor, args.displayCurrency),
+      amountDisplay: formatInsightsMoney(amountMinor, args.displayCurrency, args.locale),
       incomeAmountMinor,
-      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency),
+      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency, args.locale),
       transactionCount: expenseTransactions.length,
       granularity: "day",
       segments,
@@ -859,6 +857,7 @@ function buildInsightsTimeframeWeeklyBars(args: {
   categoryLabels: Record<string, string>;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
+  locale?: SupportedLocale | null;
 }) {
   const bars: InsightsTimeframeBar[] = [];
 
@@ -893,12 +892,12 @@ function buildInsightsTimeframeWeeklyBars(args: {
 
     bars.push({
       key: toDayKey(weekStart),
-      label: formatCompactBucketDate(weekStart),
-      rangeLabel: formatBucketRangeLabel(weekStart, weekEnd),
+      label: formatCompactBucketDate(weekStart, args.locale),
+      rangeLabel: formatBucketRangeLabel(weekStart, weekEnd, args.locale),
       amountMinor,
-      amountDisplay: formatInsightsMoney(amountMinor, args.displayCurrency),
+      amountDisplay: formatInsightsMoney(amountMinor, args.displayCurrency, args.locale),
       incomeAmountMinor,
-      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency),
+      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency, args.locale),
       transactionCount: transactions.length,
       granularity: "week",
       segments,
@@ -914,6 +913,7 @@ function buildInsightsBarCategorySegments(args: {
   categoryLabels: Record<string, string>;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
+  locale?: SupportedLocale | null;
 }): InsightsTimeframeBarSegment[] {
   const categoryTotals = new Map<
     string,
@@ -946,8 +946,8 @@ function buildInsightsBarCategorySegments(args: {
       label: value.label,
       amountMinor: value.amountMinor,
       amountDisplay: value.hasMissingRates
-        ? `${formatInsightsMoney(value.amountMinor, args.displayCurrency)} + rate unavailable`
-        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(args.displayCurrency) ? "≈ " : ""}${formatInsightsMoney(value.amountMinor, args.displayCurrency)}`,
+        ? `${formatInsightsMoney(value.amountMinor, args.displayCurrency, args.locale)} + rate unavailable`
+        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(args.displayCurrency) ? "≈ " : ""}${formatInsightsMoney(value.amountMinor, args.displayCurrency, args.locale)}`,
       transactionCount: value.transactionCount,
     }));
 }
@@ -958,6 +958,7 @@ function buildInsightsSelectedMonthTrendDays(args: {
   periodEnd: Date;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
+  locale?: SupportedLocale | null;
 }) {
   const days: InsightsMonthTrendDay[] = [];
   let cumulativeIncomeMinor = 0;
@@ -987,15 +988,15 @@ function buildInsightsSelectedMonthTrendDays(args: {
       key: toDayKey(dayStart),
       label: String(dayStart.getUTCDate()),
       incomeMinor,
-      incomeDisplay: formatInsightsMoney(incomeMinor, args.displayCurrency),
+      incomeDisplay: formatInsightsMoney(incomeMinor, args.displayCurrency, args.locale),
       expenseMinor,
-      expenseDisplay: formatInsightsMoney(expenseMinor, args.displayCurrency),
+      expenseDisplay: formatInsightsMoney(expenseMinor, args.displayCurrency, args.locale),
       cumulativeIncomeMinor,
-      cumulativeIncomeDisplay: formatInsightsMoney(cumulativeIncomeMinor, args.displayCurrency),
+      cumulativeIncomeDisplay: formatInsightsMoney(cumulativeIncomeMinor, args.displayCurrency, args.locale),
       cumulativeExpenseMinor,
-      cumulativeExpenseDisplay: formatInsightsMoney(cumulativeExpenseMinor, args.displayCurrency),
+      cumulativeExpenseDisplay: formatInsightsMoney(cumulativeExpenseMinor, args.displayCurrency, args.locale),
       netMinor,
-      netDisplay: formatInsightsMoney(netMinor, args.displayCurrency),
+      netDisplay: formatInsightsMoney(netMinor, args.displayCurrency, args.locale),
       transactionCount: transactions.length,
     });
   }
@@ -1012,6 +1013,7 @@ function buildInsightsTimeframeBars(args: {
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
   months: InsightsTimeframeMonth[];
+  locale?: SupportedLocale | null;
 }) {
   if (args.timeframe === "1M") {
     return buildInsightsTimeframeDailyBars({
@@ -1020,6 +1022,7 @@ function buildInsightsTimeframeBars(args: {
       categoryLabels: args.categoryLabels,
       displayCurrency: args.displayCurrency,
       rateLookup: args.rateLookup,
+      locale: args.locale,
     });
   }
 
@@ -1031,6 +1034,7 @@ function buildInsightsTimeframeBars(args: {
       categoryLabels: args.categoryLabels,
       displayCurrency: args.displayCurrency,
       rateLookup: args.rateLookup,
+      locale: args.locale,
     });
   }
 
@@ -1046,12 +1050,14 @@ function buildInsightsTimeframeBars(args: {
       categoryLabels: args.categoryLabels,
       displayCurrency: args.displayCurrency,
       rateLookup: args.rateLookup,
+      locale: args.locale,
     });
     const incomeSegments = buildInsightsBarCategorySegments({
       transactions: transactions.filter((transaction) => transaction.transactionType === "income"),
       categoryLabels: args.categoryLabels,
       displayCurrency: args.displayCurrency,
       rateLookup: args.rateLookup,
+      locale: args.locale,
     });
     const incomeAmountMinor = incomeSegments.reduce((sum, segment) => sum + segment.amountMinor, 0);
 
@@ -1061,7 +1067,7 @@ function buildInsightsTimeframeBars(args: {
       amountMinor: month.expenseMinor,
       amountDisplay: month.expenseDisplay,
       incomeAmountMinor,
-      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency),
+      incomeAmountDisplay: formatInsightsMoney(incomeAmountMinor, args.displayCurrency, args.locale),
       transactionCount: month.transactionCount,
       granularity: "month" as const,
       segments,
@@ -1122,6 +1128,7 @@ function buildInsightsMonthPickerYears(args: {
   currentMonthDate: Date;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
+  locale?: SupportedLocale | null;
 }) {
   const months = buildMonthRange(args.activeTransactions, args.currentMonthDate);
   const years = new Map<string, InsightsMonthPickerMonth[]>();
@@ -1147,7 +1154,7 @@ function buildInsightsMonthPickerYears(args: {
     const year = String(monthDate.getUTCFullYear());
     const item: InsightsMonthPickerMonth = {
       month: toMonthKey(monthDate),
-      label: monthDate.toLocaleDateString("en-US", { month: "short" }),
+      label: formatDisplayDate(monthDate, args.locale ?? "en", { month: "short", timeZone: "UTC" }),
       hasActivity: monthTransactions.length > 0,
       status: status.status,
       isApproximate: status.isApproximate,
@@ -1416,6 +1423,7 @@ function buildInsightsCategoryBreakdown(args: {
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
   recentEntryLimit?: number | null;
+  locale?: SupportedLocale | null;
 }) {
   const categoryTotals = new Map<
     string,
@@ -1459,8 +1467,8 @@ function buildInsightsCategoryBreakdown(args: {
       label: value.label,
       amountMinor: value.amountMinor,
       amountDisplay: value.hasMissingRates
-        ? `${formatInsightsMoney(value.amountMinor, args.displayCurrency)} + rate unavailable`
-        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(args.displayCurrency) ? "≈ " : ""}${formatInsightsMoney(value.amountMinor, args.displayCurrency)}`,
+        ? `${formatInsightsMoney(value.amountMinor, args.displayCurrency, args.locale)} + rate unavailable`
+        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(args.displayCurrency) ? "≈ " : ""}${formatInsightsMoney(value.amountMinor, args.displayCurrency, args.locale)}`,
       transactionCount: value.transactionCount,
       recentEntries: value.entries
         .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
@@ -1475,16 +1483,16 @@ function buildInsightsCategoryBreakdown(args: {
             id: transaction.id,
             title: getTransactionDisplayTitle(transaction),
             amountMinor: transaction.amountMinor,
-            amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency),
+            amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency, args.locale),
             displayAmountMinor,
             displayAmountDisplay:
               conversionRate === null
-                ? `${formatInsightsMoney(displayAmountMinor, args.displayCurrency)} + rate unavailable`
-                : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, args.displayCurrency)}`,
+                ? `${formatInsightsMoney(displayAmountMinor, args.displayCurrency, args.locale)} + rate unavailable`
+                : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, args.displayCurrency, args.locale)}`,
             displayAmountApproximate,
             displayAmountUnavailable: conversionRate === null,
             occurredAt: transaction.occurredAt,
-            occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+            occurredLabel: formatDisplayDate(transaction.occurredAt, args.locale ?? "en", {
               month: "short",
               day: "numeric",
             }),
@@ -1498,14 +1506,16 @@ function formatInsightsCategoryDisplay(args: {
   displayCurrency: string;
   originalCurrencies: Set<string>;
   hasMissingRates: boolean;
+  locale?: SupportedLocale | null;
 }) {
   if (args.hasMissingRates) {
-    return `${formatInsightsMoney(args.amountMinor, args.displayCurrency)} + rate unavailable`;
+    return `${formatInsightsMoney(args.amountMinor, args.displayCurrency, args.locale)} + rate unavailable`;
   }
 
   return `${args.originalCurrencies.size > 1 || !args.originalCurrencies.has(args.displayCurrency) ? "≈ " : ""}${formatInsightsMoney(
     args.amountMinor,
     args.displayCurrency,
+    args.locale,
   )}`;
 }
 
@@ -1514,6 +1524,7 @@ function buildInsightsTrendCategoryBreakdown(args: {
   categoryLabels: Record<string, string>;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
+  locale?: SupportedLocale | null;
 }) {
   const categoryTotals = new Map<
     string,
@@ -1575,6 +1586,7 @@ function buildInsightsTrendCategoryBreakdown(args: {
             displayCurrency: args.displayCurrency,
             originalCurrencies: value.incomeOriginalCurrencies,
             hasMissingRates: value.hasMissingIncomeRates,
+            locale: args.locale,
           })
         : isExpenseOnly
           ? formatInsightsCategoryDisplay({
@@ -1582,8 +1594,9 @@ function buildInsightsTrendCategoryBreakdown(args: {
               displayCurrency: args.displayCurrency,
               originalCurrencies: value.expenseOriginalCurrencies,
               hasMissingRates: value.hasMissingExpenseRates,
+              locale: args.locale,
             })
-          : `${netMinor >= 0 ? "" : "-"}${formatInsightsMoney(Math.abs(netMinor), args.displayCurrency)}`;
+          : `${netMinor >= 0 ? "" : "-"}${formatInsightsMoney(Math.abs(netMinor), args.displayCurrency, args.locale)}`;
 
       return {
         key,
@@ -1596,6 +1609,7 @@ function buildInsightsTrendCategoryBreakdown(args: {
           displayCurrency: args.displayCurrency,
           originalCurrencies: value.incomeOriginalCurrencies,
           hasMissingRates: value.hasMissingIncomeRates,
+          locale: args.locale,
         }),
         expenseMinor: value.expenseMinor,
         expenseDisplay: formatInsightsCategoryDisplay({
@@ -1603,6 +1617,7 @@ function buildInsightsTrendCategoryBreakdown(args: {
           displayCurrency: args.displayCurrency,
           originalCurrencies: value.expenseOriginalCurrencies,
           hasMissingRates: value.hasMissingExpenseRates,
+          locale: args.locale,
         }),
         netMinor,
         netDisplay: amountDisplay,
@@ -1633,17 +1648,17 @@ function buildInsightsTrendCategoryBreakdown(args: {
               title: getTransactionDisplayTitle(transaction),
               transactionType: transaction.transactionType,
               amountMinor: transaction.amountMinor,
-              amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency),
+              amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency, args.locale),
               displayAmountMinor,
               displayAmountDisplay:
                 conversionRate === null
-                  ? `${formatInsightsMoney(displayAmountMinor, args.displayCurrency)} + rate unavailable`
-                  : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, args.displayCurrency)}`,
+                  ? `${formatInsightsMoney(displayAmountMinor, args.displayCurrency, args.locale)} + rate unavailable`
+                  : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, args.displayCurrency, args.locale)}`,
               displayAmountApproximate,
               displayAmountUnavailable: conversionRate === null,
               isRecurring: Boolean(transaction.recurringRuleId),
               occurredAt: transaction.occurredAt,
-              occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+              occurredLabel: formatDisplayDate(transaction.occurredAt, args.locale ?? "en", {
                 month: "short",
                 day: "numeric",
               }),
@@ -1662,6 +1677,7 @@ function buildLargestInsightsEntries(args: {
   categoryLabels: Record<string, string>;
   displayCurrency: string;
   rateLookup: Map<string, FxRate>;
+  locale?: SupportedLocale | null;
 }): InsightsLargestEntry[] {
   return args.transactions
     .filter((transaction) => transaction.transactionType === args.transactionType)
@@ -1677,10 +1693,10 @@ function buildLargestInsightsEntries(args: {
         amountMinor,
         amountDisplay:
           conversionRate === null
-            ? `${formatInsightsMoney(amountMinor, args.displayCurrency)} + rate unavailable`
-            : `${isApproximate ? "≈ " : ""}${formatInsightsMoney(amountMinor, args.displayCurrency)}`,
+            ? `${formatInsightsMoney(amountMinor, args.displayCurrency, args.locale)} + rate unavailable`
+            : `${isApproximate ? "≈ " : ""}${formatInsightsMoney(amountMinor, args.displayCurrency, args.locale)}`,
         occurredAt: transaction.occurredAt,
-        occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+        occurredLabel: formatDisplayDate(transaction.occurredAt, args.locale ?? "en", {
           month: "short",
           day: "numeric",
         }),
@@ -1763,7 +1779,9 @@ export function buildInsightsData(
   requestedTimeframe?: string | null,
   requestedChartMode?: string | null,
   recurringRules: Record<string, RecurringRuleSummary> = {},
+  locale?: SupportedLocale | null,
 ): InsightsData {
+  const displayLocale = locale ?? "en";
   const activeTransactions = transactions.filter((transaction) => !transaction.deletedAt && !transaction.deletedForeverAt);
   const selectedTimeframe = normalizeInsightsTimeframe(requestedTimeframe);
   const selectedChartMode = normalizeInsightsChartMode(requestedChartMode);
@@ -1788,6 +1806,7 @@ export function buildInsightsData(
     currentMonthDate,
     displayCurrency,
     rateLookup,
+    locale: displayLocale,
   });
   const timeframeStartMonthDate = resolveTimeframeStartMonth({
     timeframe: selectedTimeframe,
@@ -1903,8 +1922,8 @@ export function buildInsightsData(
       label: getInsightsCategoryMeta(value.entries[0]!, categoryLabels).label,
       amountMinor: value.amountMinor,
       amountDisplay: value.hasMissingRates
-        ? `${formatInsightsMoney(value.amountMinor, displayCurrency)} + rate unavailable`
-        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(displayCurrency) ? "≈ " : ""}${formatInsightsMoney(value.amountMinor, displayCurrency)}`,
+        ? `${formatInsightsMoney(value.amountMinor, displayCurrency, displayLocale)} + rate unavailable`
+        : `${value.originalCurrencies.size > 1 || !value.originalCurrencies.has(displayCurrency) ? "≈ " : ""}${formatInsightsMoney(value.amountMinor, displayCurrency, displayLocale)}`,
       transactionCount: value.transactionCount,
       recentEntries: value.entries
         .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
@@ -1918,16 +1937,16 @@ export function buildInsightsData(
             id: transaction.id,
             title: getTransactionDisplayTitle(transaction),
             amountMinor: transaction.amountMinor,
-            amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || displayCurrency),
+            amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || displayCurrency, displayLocale),
             displayAmountMinor,
             displayAmountDisplay:
               conversionRate === null
-                ? `${formatInsightsMoney(displayAmountMinor, displayCurrency)} + rate unavailable`
-                : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, displayCurrency)}`,
+                ? `${formatInsightsMoney(displayAmountMinor, displayCurrency, displayLocale)} + rate unavailable`
+                : `${displayAmountApproximate ? "≈ " : ""}${formatInsightsMoney(displayAmountMinor, displayCurrency, displayLocale)}`,
             displayAmountApproximate,
             displayAmountUnavailable: conversionRate === null,
             occurredAt: transaction.occurredAt,
-            occurredLabel: new Date(transaction.occurredAt).toLocaleDateString("en-US", {
+            occurredLabel: formatDisplayDate(transaction.occurredAt, displayLocale, {
               month: "short",
               day: "numeric",
             }),
@@ -1942,6 +1961,7 @@ export function buildInsightsData(
     displayCurrency,
     rateLookup,
     recentEntryLimit: null,
+    locale: displayLocale,
   });
   const previousComparableCategoryBreakdown = previousComparableTransactions.length
     ? buildInsightsCategoryBreakdown({
@@ -1951,6 +1971,7 @@ export function buildInsightsData(
         displayCurrency,
         rateLookup,
         recentEntryLimit: null,
+        locale: displayLocale,
       })
     : [];
   const recurringExpenseDisplayMinor = selectedPeriodTransactions
@@ -1965,6 +1986,7 @@ export function buildInsightsData(
     endMonth: timeframeEndMonthDate,
     displayCurrency,
     rateLookup,
+    locale: displayLocale,
   });
   const timeframeCategoryBreakdown = buildInsightsCategoryBreakdown({
     transactions: timeframeTransactions,
@@ -1972,12 +1994,14 @@ export function buildInsightsData(
     categoryLabels,
     displayCurrency,
     rateLookup,
+    locale: displayLocale,
   });
   const trendCategoryBreakdown = buildInsightsTrendCategoryBreakdown({
     transactions: timeframeTransactions,
     categoryLabels,
     displayCurrency,
     rateLookup,
+    locale: displayLocale,
   });
   const timeframeBars = buildInsightsTimeframeBars({
     timeframe: selectedTimeframe,
@@ -1988,6 +2012,7 @@ export function buildInsightsData(
     displayCurrency,
     rateLookup,
     months: timeframeMonths,
+    locale: displayLocale,
   });
   const selectedMonthTrendDays = buildInsightsSelectedMonthTrendDays({
     transactions: selectedPeriodTransactions,
@@ -1995,6 +2020,7 @@ export function buildInsightsData(
     periodEnd: selectedTimeframe === "All" ? timeframeEnd : selectedTimeframe === "1M" ? monthEnd : timeframeEnd,
     displayCurrency,
     rateLookup,
+    locale: displayLocale,
   });
   const timeframeExpenseDisplayMinor = timeframeMonths.reduce((sum, month) => sum + month.expenseMinor, 0);
   const timeframeTransactionCount = timeframeTransactions.filter(
@@ -2007,6 +2033,7 @@ export function buildInsightsData(
     categoryLabels,
     displayCurrency,
     rateLookup,
+    locale: displayLocale,
   });
   const largestRecentIncome = buildLargestInsightsEntries({
     transactions: selectedPeriodTransactions,
@@ -2014,6 +2041,7 @@ export function buildInsightsData(
     categoryLabels,
     displayCurrency,
     rateLookup,
+    locale: displayLocale,
   });
 
   const budgetProgress = budgets
@@ -2036,11 +2064,11 @@ export function buildInsightsData(
         repeats: budget.repeats,
         isActive: budget.isActive,
         amountMinor: budget.amountMinor,
-        amountDisplay: formatInsightsMoney(budget.amountMinor, budget.currency),
+        amountDisplay: formatInsightsMoney(budget.amountMinor, budget.currency, displayLocale),
         spentMinor,
-        spentDisplay: formatInsightsMoney(spentMinor, budget.currency),
+        spentDisplay: formatInsightsMoney(spentMinor, budget.currency, displayLocale),
         remainingMinor,
-        remainingDisplay: formatInsightsMoney(Math.abs(remainingMinor), budget.currency),
+        remainingDisplay: formatInsightsMoney(Math.abs(remainingMinor), budget.currency, displayLocale),
         percentUsed,
         isOverBudget: spentMinor > budget.amountMinor,
         currency: budget.currency,
@@ -2054,6 +2082,7 @@ export function buildInsightsData(
     rateLookup,
     recurringRules,
     selectedPeriodTransactions: selectedPeriodTransactions.filter((transaction) => transaction.transactionType === "expense"),
+    locale: displayLocale,
   });
   const incomeCategorySignals = buildInsightsCategorySignals({
     budgetProgress: [],
@@ -2062,6 +2091,7 @@ export function buildInsightsData(
     rateLookup,
     recurringRules,
     selectedPeriodTransactions: selectedPeriodTransactions.filter((transaction) => transaction.transactionType === "income"),
+    locale: displayLocale,
   });
   const baseInsightsData: InsightsData = {
     trackedBalanceMinor,
@@ -2084,19 +2114,19 @@ export function buildInsightsData(
     rateSource: rateMeta?.source ?? null,
     hasConvertedCurrencies,
     hasMissingRates,
-    monthLabel: formatMonthLabel(monthStart),
+    monthLabel: formatMonthLabel(monthStart, displayLocale),
     selectedMonth: selectedMonthKey,
     selectedTimeframe,
     selectedChartMode,
     timeframePresets: insightsTimeframePresets,
     timeframeLabel:
       selectedTimeframe === "All"
-        ? `${formatMonthLabel(timeframeStartMonthDate)} to ${formatMonthLabel(timeframeEndMonthDate)}`
-        : `${selectedTimeframe} ending ${formatMonthLabel(timeframeEndMonthDate)}`,
+        ? `${formatMonthLabel(timeframeStartMonthDate, displayLocale)} to ${formatMonthLabel(timeframeEndMonthDate, displayLocale)}`
+        : `${selectedTimeframe} ending ${formatMonthLabel(timeframeEndMonthDate, displayLocale)}`,
     timeframeStartMonth: toMonthKey(timeframeStartMonthDate),
     timeframeEndMonth: toMonthKey(timeframeEndMonthDate),
     timeframeExpenseDisplayMinor,
-    timeframeExpenseDisplay: formatInsightsMoney(timeframeExpenseDisplayMinor, displayCurrency),
+    timeframeExpenseDisplay: formatInsightsMoney(timeframeExpenseDisplayMinor, displayCurrency, displayLocale),
     timeframeTransactionCount,
     timeframeMonths,
     timeframeBars,
@@ -2107,7 +2137,7 @@ export function buildInsightsData(
     previousMonth: toMonthKey(shiftMonth(monthStart, -1)),
     nextMonth: toMonthKey(shiftMonth(monthStart, 1)),
     latestActivityMonth,
-    latestActivityMonthLabel: latestActivityMonthDate ? formatMonthLabel(latestActivityMonthDate) : null,
+    latestActivityMonthLabel: latestActivityMonthDate ? formatMonthLabel(latestActivityMonthDate, displayLocale) : null,
     isSelectedMonthCurrent: selectedMonthKey === currentMonthKey,
     hasHistoricalActivity: activeTransactions.some((transaction) => transaction.occurredAt.slice(0, 7) < currentMonthKey),
     monthPickerYears,
@@ -2162,7 +2192,7 @@ function getBudgetSignalStatus(item: { isOverBudget: boolean; percentUsed: numbe
   return item.percentUsed >= 80 ? "near" : "on-track";
 }
 
-function formatRecurringSignalDate(dateKey: string | null | undefined) {
+function formatRecurringSignalDate(dateKey: string | null | undefined, locale?: SupportedLocale | null) {
   if (!dateKey) {
     return null;
   }
@@ -2173,9 +2203,10 @@ function formatRecurringSignalDate(dateKey: string | null | undefined) {
     return null;
   }
 
-  return date.toLocaleDateString("en-US", {
+  return formatDisplayDate(date, locale ?? "en", {
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -2198,6 +2229,7 @@ function buildInsightsCategorySignals(args: {
   rateLookup: Map<string, FxRate>;
   recurringRules: Record<string, RecurringRuleSummary>;
   selectedPeriodTransactions: Transaction[];
+  locale?: SupportedLocale | null;
 }): Record<string, InsightsCategorySignal> {
   const signals: Record<string, InsightsCategorySignal> = {};
 
@@ -2265,10 +2297,10 @@ function buildInsightsCategorySignals(args: {
         return {
           id: transaction.id,
           title: getTransactionDisplayTitle(transaction),
-          amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency),
+          amountDisplay: formatMoney(transaction.amountMinor, transaction.currency || args.displayCurrency, args.locale),
           tone: transaction.transactionType === "income" ? ("Income" as const) : ("Spend" as const),
           frequency,
-          nextDateLabel: formatRecurringSignalDate(transaction.recurringOccurrenceDate ?? rule?.startDate ?? transaction.occurredAt),
+          nextDateLabel: formatRecurringSignalDate(transaction.recurringOccurrenceDate ?? rule?.startDate ?? transaction.occurredAt, args.locale),
           status: isPaused ? ("Paused" as const) : ("Active" as const),
         };
       });
@@ -2279,7 +2311,7 @@ function buildInsightsCategorySignals(args: {
         activeCount,
         pausedCount,
         monthlyTotalMinor: Math.round(monthlyTotalMinor),
-        monthlyTotalDisplay: formatInsightsMoney(Math.round(monthlyTotalMinor), args.displayCurrency),
+        monthlyTotalDisplay: formatInsightsMoney(Math.round(monthlyTotalMinor), args.displayCurrency, args.locale),
         items,
       };
     }
@@ -2663,6 +2695,7 @@ export async function loadInsightsPageData(
   selectedMonth?: string | null,
   requestedTimeframe?: string | null,
   requestedChartMode?: string | null,
+  locale?: SupportedLocale | null,
 ) {
   const totalStartedAt = nowMs();
   const service = await createSupabaseTransactionService();
@@ -2714,6 +2747,7 @@ export async function loadInsightsPageData(
     requestedTimeframe,
     requestedChartMode,
     recurringRules,
+    locale,
   );
   logInsightsTiming("loadInsightsPageData.currentBuild", currentBuildStartedAt, {
     transactionCount: transactions.length,

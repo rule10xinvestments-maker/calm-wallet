@@ -399,7 +399,7 @@ describe("assistant composer", () => {
     fireEvent.change(dueDateInput, { target: { value: "20260710" } });
     expect(dueDateInput).toHaveValue("2026-07-10");
     expect(screen.getByText("July 2026")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "2026-07-10" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "July 10, 2026" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Due date" }));
     expect(screen.queryByLabelText("Due date")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Jul 10/ })).toBeInTheDocument();
@@ -1061,9 +1061,12 @@ describe("assistant composer", () => {
 
     const today = new Date();
     const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const todayLabel = new Intl.DateTimeFormat("en", { dateStyle: "long", timeZone: "UTC" }).format(
+      new Date(`${todayKey}T12:00:00.000Z`),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Date" }));
     expect(screen.getByLabelText("Date")).toHaveAttribute("inputmode", "numeric");
-    fireEvent.click(screen.getByRole("button", { name: todayKey }));
+    fireEvent.click(screen.getByRole("button", { name: todayLabel }));
     expect(screen.getByRole("button", { name: "Today" })).toBeInTheDocument();
 
     const forms = container.querySelectorAll("form");
@@ -1086,9 +1089,9 @@ describe("assistant composer", () => {
     fireEvent.change(dateInput, { target: { value: "20260709" } });
     expect(dateInput).toHaveValue("2026-07-09");
     expect(screen.getByText("July 2026")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "2026-07-09" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "July 9, 2026" })).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "2026-07-10" }));
+    fireEvent.click(screen.getByRole("button", { name: "July 10, 2026" }));
     expect(dateInput).toHaveValue("2026-07-10");
 
     fireEvent.change(dateInput, { target: { value: "20260231" } });
@@ -1121,7 +1124,7 @@ describe("assistant composer", () => {
     fireEvent.change(dueDateInput, { target: { value: "20261225" } });
     expect(dueDateInput).toHaveValue("2026-12-25");
     expect(screen.getByText("December 2026")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "2026-12-25" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "December 25, 2026" })).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.change(dueDateInput, { target: { value: "20260231" } });
     expect(dueDateInput).toHaveValue("2026-02-31");
@@ -1466,7 +1469,7 @@ describe("assistant composer", () => {
       expect(container.querySelector('input[type="date"]')).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: new RegExp(t("assistant.manual.startDate", locale)) })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: new RegExp(t("assistant.manual.endDate", locale)) })).toBeDisabled();
-      expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
+      expect(container.querySelectorAll("[aria-pressed]").length).toBeGreaterThan(0);
 
       if (locale === "fr") {
         expect(screen.queryByText("Setează")).not.toBeInTheDocument();
@@ -1493,7 +1496,7 @@ describe("assistant composer", () => {
       fireEvent.click(screen.getByRole("button", { name: "GBP" }));
       expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: GBP` })).toHaveAttribute("aria-expanded", "false");
       expect(screen.getAllByRole("button", { name: new RegExp(t("common.date", locale)) }).length).toBeGreaterThan(0);
-      expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
+      expect(manual.container.querySelectorAll("[aria-pressed]").length).toBeGreaterThan(0);
 
       if (locale === "fr") {
         expect(screen.queryByText("Setează")).not.toBeInTheDocument();
@@ -1521,7 +1524,7 @@ describe("assistant composer", () => {
       fireEvent.click(screen.getByRole("button", { name: "EUR" }));
       expect(screen.getByRole("button", { name: `${t("common.currency", locale)}: EUR` })).toHaveAttribute("aria-expanded", "false");
       expect(screen.getByLabelText(t("common.dueDate", locale))).toHaveAttribute("inputmode", "numeric");
-      expect(screen.getAllByRole("button", { name: /^\d{4}-\d{2}-\d{2}$/ }).length).toBeGreaterThan(0);
+      expect(owed.container.querySelectorAll("[aria-pressed]").length).toBeGreaterThan(0);
 
       if (locale === "fr") {
         expect(screen.queryByText("Setează")).not.toBeInTheDocument();

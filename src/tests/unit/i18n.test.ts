@@ -143,6 +143,10 @@ describe("i18n helper", () => {
     expect(t("activity.time.pickStartDate", "es")).toBe("Elige la fecha inicial");
     expect(t("activity.time.type", "ro")).toBe("Scrie");
     expect(t("activity.time.closeCustom", "fr")).toBe("Fermer la plage");
+    expect(t("activity.time.dateUnavailable", "en")).toBe("Date unavailable");
+    expect(t("activity.time.dateUnavailable", "ro")).toBe("Data nu este disponibil?");
+    expect(t("activity.time.dateNotSet", "fr")).toBe("Date non d?finie");
+    expect(t("imports.amountUnavailable", "es")).toBe("Importe no disponible");
     expect(t("activity.inspect.viewInActivity", "ro")).toBe("Vezi în Activitate");
     expect(t("activity.inspect.showingCategory", "es", { category: "Inversiones" })).toBe("Mostrando Inversiones");
     expect(t("common.clear", "fr")).toBe("Effacer");

@@ -851,7 +851,9 @@
       "enterValidDate": "Enter a valid date",
       "endDateMustBeAfterStartDate": "End date must be after start date",
       "from": "From",
-      "to": "To"
+      "to": "To",
+      "dateNotSet": "Date not set",
+      "dateUnavailable": "Date unavailable"
     },
     "summaryLabels": {
       "net": "Net",
@@ -1295,7 +1297,8 @@
     "amountRequiredBeforeSaving": "We couldn't read the total. Add amount before saving.",
     "noCandidatesYet": "No candidates yet.",
     "noPendingItems": "No pending items to review.",
-    "couldNotPrepare": "The import could not be prepared for review."
+    "couldNotPrepare": "The import could not be prepared for review.",
+    "amountUnavailable": "Amount unavailable"
   },
   "categories": {
     "housing": "Housing",

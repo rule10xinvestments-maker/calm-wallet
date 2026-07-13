@@ -21,6 +21,7 @@ import type { BudgetActionState } from "@/lib/actions/budgets-state";
 import { getCategoryVisualsByName } from "@/lib/category-icons";
 import { getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import { t } from "@/lib/i18n";
+import { formatDisplayMoney, formatDisplayNumber } from "@/lib/display-formatting";
 import type { InsightsData } from "@/lib/server/transactions-read-model";
 import { cn, formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -70,20 +71,18 @@ type InsightsOverviewProps = {
 
 const APPROXIMATE_SYMBOL = "≈";
 
-function formatMoney(amountMinor: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
+function formatMoney(amountMinor: number, currency: string, locale: string = "en") {
+  return formatDisplayMoney(amountMinor, currency, locale, {
     minimumFractionDigits: amountMinor % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  });
 }
 
-function formatOriginalCurrencyAmount(amountMinor: number, currency: string) {
-  const amount = new Intl.NumberFormat("en-US", {
+function formatOriginalCurrencyAmount(amountMinor: number, currency: string = "USD", locale: string = "en") {
+  const amount = formatDisplayNumber(amountMinor / 100, locale, {
     minimumFractionDigits: amountMinor % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  });
 
   return `${currency} ${amount}`;
 }
@@ -543,23 +542,23 @@ function SpendingSegmentControls({
   );
 }
 
-function formatSpendingDayLabel(bar: { key: string; label: string }) {
+function formatSpendingDayLabel(bar: { key: string; label: string }, locale: string) {
   const date = new Date(`${bar.key}T00:00:00.000Z`);
 
   if (Number.isNaN(date.getTime())) {
     return bar.label;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
   }).format(date);
 }
 
-function getBarsBucketLabel(bar: InsightsData["timeframeBars"][number]) {
+function getBarsBucketLabel(bar: InsightsData["timeframeBars"][number], locale: string) {
   if (bar.granularity === "day") {
-    return formatSpendingDayLabel(bar);
+    return formatSpendingDayLabel(bar, locale);
   }
 
   if (bar.granularity === "week") {
@@ -569,9 +568,9 @@ function getBarsBucketLabel(bar: InsightsData["timeframeBars"][number]) {
   return bar.label;
 }
 
-function getBarsBucketRangeLabel(bar: InsightsData["timeframeBars"][number]) {
+function getBarsBucketRangeLabel(bar: InsightsData["timeframeBars"][number], locale: string) {
   if (bar.granularity === "day") {
-    return formatSpendingDayLabel(bar);
+    return formatSpendingDayLabel(bar, locale);
   }
 
   return bar.rangeLabel ?? bar.label;
@@ -714,7 +713,7 @@ function TimeframeTrendChart({
           className="pointer-events-none absolute top-7 z-10 w-48 rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs shadow-lg"
           style={{ left: `${tooltipLeft}%`, transform: `translateX(${tooltipTranslate})` }}
         >
-          <p className="font-semibold text-slate-900">{formatSpendingDayLabel(selectedDay)}</p>
+          <p className="font-semibold text-slate-900">{formatSpendingDayLabel(selectedDay, locale)}</p>
           <p className="text-emerald-700">{t("insights.income", locale)}: {getApproxPrefix(data, selectedDay.cumulativeIncomeMinor)}{selectedDay.cumulativeIncomeDisplay}</p>
           <p className="text-rose-700">{t("insights.spending", locale)}: {getApproxPrefix(data, selectedDay.cumulativeExpenseMinor)}{selectedDay.cumulativeExpenseDisplay}</p>
           <p className={netTone}>{t("insights.net", locale)}: {formatTrendNetDisplay(data, selectedDay.netMinor)}</p>
@@ -804,13 +803,13 @@ function TimeframeTrendChart({
         />
         <div className="sr-only" aria-live="polite">
           {selectedDay
-            ? `${formatSpendingDayLabel(selectedDay)} trend point, income ${selectedDay.cumulativeIncomeDisplay}, spending ${selectedDay.cumulativeExpenseDisplay}, net ${selectedDay.netDisplay}`
+            ? `${formatSpendingDayLabel(selectedDay, locale)} trend point, income ${selectedDay.cumulativeIncomeDisplay}, spending ${selectedDay.cumulativeExpenseDisplay}, net ${selectedDay.netDisplay}`
             : ""}
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
-        <span className="whitespace-nowrap">{firstDay ? formatSpendingDayLabel(firstDay) : data.monthLabel}</span>
-        <span className="whitespace-nowrap">{lastDay ? formatSpendingDayLabel(lastDay) : data.monthLabel}</span>
+        <span className="whitespace-nowrap">{firstDay ? formatSpendingDayLabel(firstDay, locale) : data.monthLabel}</span>
+        <span className="whitespace-nowrap">{lastDay ? formatSpendingDayLabel(lastDay, locale) : data.monthLabel}</span>
       </div>
     </div>
   );
@@ -1457,7 +1456,7 @@ function TimeframeBarsChart({
             const amountDisplay = isIncome ? bar.incomeAmountDisplay : bar.amountDisplay;
             const segments = isIncome ? bar.incomeSegments : bar.segments;
             const width = `${Math.max(10, Math.round((amountMinor / bucketMax) * 100))}%`;
-            const label = getBarsBucketLabel(bar);
+            const label = getBarsBucketLabel(bar, locale);
             const isSelected = selectedDayKey === bar.key;
             const containsSelectedCategory = activeSelectedCategoryKey ? segments.some((segment) => segment.key === activeSelectedCategoryKey) : true;
             const isBarDimmed = Boolean(activeSelectedCategoryKey && !containsSelectedCategory);
@@ -1606,7 +1605,7 @@ function BarsDayBreakdownPanel({
   totalMinor: number;
 }) {
   const { locale } = useLocale();
-  const label = getBarsBucketRangeLabel(bar);
+  const label = getBarsBucketRangeLabel(bar, locale);
   const context = isIncome ? t("insights.incomeLower", locale) : t("insights.spendingLower", locale);
   const orderedSegments =
     selectedCategoryKey && segments.some((segment) => segment.key === selectedCategoryKey)
@@ -2115,7 +2114,7 @@ function TrendCategoryExplorer({
       : selectedHasMovement
         ? "text-rose-700"
         : "text-slate-500";
-  const selectedDayLabel = selectedDay ? formatSpendingDayLabel(selectedDay) : null;
+  const selectedDayLabel = selectedDay ? formatSpendingDayLabel(selectedDay, locale) : null;
   const selectedInspectCategory = selectedItem
     ? getInspectCategoryValue(selectedItem.key) ?? getInspectCategoryValue(selectedItem.label)
     : null;

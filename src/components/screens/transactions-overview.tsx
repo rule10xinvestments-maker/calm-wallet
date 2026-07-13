@@ -21,6 +21,7 @@ import type { TransactionMutationState } from "@/lib/server/transaction-mutation
 import type { OwedNote } from "@/domain/owed-notes/types";
 import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 import { t } from "@/lib/i18n";
+import { formatDisplayDate, formatDisplayMoney } from "@/lib/display-formatting";
 import { getCategoryDisplayLabel, getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
@@ -250,8 +251,8 @@ function formatTypedDateInput(value: string) {
   return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 }
 
-function getCalendarMonthLabel(year: number, monthIndex: number) {
-  return new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+function getCalendarMonthLabel(year: number, monthIndex: number, locale: string) {
+  return formatDisplayDate(new Date(year, monthIndex, 1), locale, {
     month: "long",
     year: "numeric",
   });
@@ -303,16 +304,16 @@ function filterTransactionsForPeriod(
   });
 }
 
-function getMonthLabel(year: number, monthIndex: number, format: "short" | "long" = "long") {
-  return new Date(year, monthIndex, 1).toLocaleDateString("en-US", {
+function getMonthLabel(year: number, monthIndex: number, locale: string, format: "short" | "long" = "long") {
+  return formatDisplayDate(new Date(year, monthIndex, 1), locale, {
     month: format,
     year: "numeric",
   });
 }
 
-function getPeriodLabel(period: ActivityPeriod, selectedYear: number, selectedMonthIndex: number) {
+function getPeriodLabel(period: ActivityPeriod, selectedYear: number, selectedMonthIndex: number, locale: string) {
   if (period === "month") {
-    return getMonthLabel(selectedYear, selectedMonthIndex);
+    return getMonthLabel(selectedYear, selectedMonthIndex, locale);
   }
 
   return "Custom range";
@@ -322,23 +323,20 @@ function normalizeCurrency(currency: string) {
   return currency.trim().toUpperCase();
 }
 
-function formatMoneyMinor(amountMinor: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(amountMinor / 100);
+function formatMoneyMinor(amountMinor: number, currency: string, locale: string) {
+  return formatDisplayMoney(amountMinor, currency, locale);
 }
 
-function formatDisplayAmount(amountMinor: number, currency: string, isConverted: boolean) {
-  return `${isConverted ? "≈ " : ""}${formatMoneyMinor(amountMinor, currency)}`;
+function formatDisplayAmount(amountMinor: number, currency: string, isConverted: boolean, locale: string) {
+  return `${isConverted ? "≈ " : ""}${formatMoneyMinor(amountMinor, currency, locale)}`;
 }
 
-function formatDisplaySignedAmount(amountMinor: number, currency: string, isConverted: boolean) {
+function formatDisplaySignedAmount(amountMinor: number, currency: string, isConverted: boolean, locale: string) {
   if (amountMinor < 0) {
-    return `${isConverted ? "≈ " : ""}-${formatMoneyMinor(Math.abs(amountMinor), currency)}`;
+    return `${isConverted ? "≈ " : ""}-${formatMoneyMinor(Math.abs(amountMinor), currency, locale)}`;
   }
 
-  return `${isConverted ? "≈ " : ""}${formatMoneyMinor(amountMinor, currency)}`;
+  return `${isConverted ? "≈ " : ""}${formatMoneyMinor(amountMinor, currency, locale)}`;
 }
 
 function createEurRateLookup(rates: DisplayFxRate[]) {
@@ -516,8 +514,8 @@ function getSummaryMode(view: ActivityFilterView): ActivitySummaryMode {
   return "all";
 }
 
-function formatImportDate(value: string) {
-  return new Date(value).toLocaleDateString("en-US", {
+function formatImportDate(value: string, locale: string) {
+  return formatDisplayDate(value, locale, {
     month: "short",
     day: "numeric",
   });
@@ -631,12 +629,12 @@ function flattenPendingCandidates(stagedImportDetails: Record<string, StagedImpo
   );
 }
 
-function formatActivityDate(value: string | null) {
+function formatActivityDate(value: string | null, locale: string) {
   if (!value) {
-    return "Date unavailable";
+    return t("activity.time.dateUnavailable", locale);
   }
 
-  return new Date(value).toLocaleDateString("en-US", {
+  return formatDisplayDate(value, locale, {
     month: "short",
     day: "numeric",
   });
@@ -646,11 +644,9 @@ function formatSignedMoney(args: {
   amountMinor: number;
   currency: string;
   transactionType: "expense" | "income";
+  locale: string;
 }) {
-  const formatted = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: args.currency,
-  }).format(args.amountMinor / 100);
+  const formatted = formatDisplayMoney(args.amountMinor, args.currency, args.locale);
 
   return args.transactionType === "income" ? `+${formatted}` : `-${formatted}`;
 }
@@ -658,6 +654,7 @@ function formatSignedMoney(args: {
 function buildTransactionListItemFromReviewResult(
   result: NonNullable<ImportCandidateReviewDecisionActionState["decisionResult"]>,
   categories: TransactionCategoryOption[],
+  locale: string,
 ): TransactionListItem | null {
   const transaction = result.transaction;
 
@@ -672,12 +669,13 @@ function buildTransactionListItemFromReviewResult(
   return {
     id: transaction.id,
     title,
-    subtitle: formatActivityDate(transaction.occurredAt),
+    subtitle: formatActivityDate(transaction.occurredAt, locale),
     amountMinor: transaction.amountMinor,
     amountDisplay: formatSignedMoney({
       amountMinor: transaction.amountMinor,
       currency: transaction.currency,
       transactionType: transaction.transactionType,
+      locale,
     }),
     amountTone,
     currency: transaction.currency,
@@ -1043,8 +1041,8 @@ function StagedImportCard({
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
         <span>{item.mimeType}</span>
-        <span>{t("imports.created", locale)} {formatImportDate(item.createdAt)}</span>
-        <span>{t("imports.updated", locale)} {formatImportDate(item.updatedAt)}</span>
+        <span>{t("imports.created", locale)} {formatImportDate(item.createdAt, locale)}</span>
+        <span>{t("imports.updated", locale)} {formatImportDate(item.updatedAt, locale)}</span>
         <span>{progressLabel}</span>
       </div>
       {importStatus === "failed" ? (
@@ -1066,10 +1064,10 @@ function StagedImportCard({
             <span className="font-medium text-slate-800">{t("imports.mimeType", locale)}:</span> {item.mimeType}
           </p>
           <p>
-            <span className="font-medium text-slate-800">{t("imports.created", locale)}:</span> {formatImportDate(item.createdAt)}
+            <span className="font-medium text-slate-800">{t("imports.created", locale)}:</span> {formatImportDate(item.createdAt, locale)}
           </p>
           <p>
-            <span className="font-medium text-slate-800">{t("imports.updated", locale)}:</span> {formatImportDate(item.updatedAt)}
+            <span className="font-medium text-slate-800">{t("imports.updated", locale)}:</span> {formatImportDate(item.updatedAt, locale)}
           </p>
           <p>
             <span className="font-medium text-slate-800">{t("imports.candidates", locale)}:</span> {reviewProgress.totalCandidateCount}
@@ -1384,8 +1382,8 @@ export function TransactionsOverview({
   const hasMixedCurrencies = activitySummary.length > 1;
   const summaryMode = getSummaryMode(activeView);
   const shouldShowSummaryControl = summaryMode !== "context" && activeView !== "recurring";
-  const periodLabel = activePeriod === "month" ? getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex) : t("activity.time.customRange", locale);
-  const compactPeriodLabel = activePeriod === "month" ? getMonthLabel(selectedMonth.year, selectedMonth.monthIndex, "short") : t("activity.time.customRangeCompact", locale);
+  const periodLabel = activePeriod === "month" ? getPeriodLabel(activePeriod, selectedMonth.year, selectedMonth.monthIndex, locale) : t("activity.time.customRange", locale);
+  const compactPeriodLabel = activePeriod === "month" ? getMonthLabel(selectedMonth.year, selectedMonth.monthIndex, locale, "short") : t("activity.time.customRangeCompact", locale);
   const hasCustomDraft = customDraftFrom.trim().length > 0 || customDraftTo.trim().length > 0;
   const hasAppliedCustomRange = activePeriod === "custom" && customFrom.trim().length > 0 && customTo.trim().length > 0;
   const isCustomDraftFromValid = isValidDateInput(customDraftFrom);
@@ -1402,22 +1400,22 @@ export function TransactionsOverview({
     () => getCalendarDays(customCalendarMonth.year, customCalendarMonth.monthIndex),
     [customCalendarMonth.monthIndex, customCalendarMonth.year],
   );
-  const customCalendarMonthLabel = getCalendarMonthLabel(customCalendarMonth.year, customCalendarMonth.monthIndex);
+  const customCalendarMonthLabel = getCalendarMonthLabel(customCalendarMonth.year, customCalendarMonth.monthIndex, locale);
   const currentMonthKey = getCurrentMonthKey(currentDate);
   const selectedMonthKey = getMonthKey(selectedMonth.year, selectedMonth.monthIndex);
   const monthOptions = useMemo(
     () =>
       Array.from({ length: 12 }, (_, monthIndex) => {
-        const fullLabel = getMonthLabel(visiblePickerYear, monthIndex);
+        const fullLabel = getMonthLabel(visiblePickerYear, monthIndex, locale);
         return {
           monthIndex,
-          shortLabel: new Date(visiblePickerYear, monthIndex, 1).toLocaleDateString("en-US", { month: "short" }),
+          shortLabel: getMonthLabel(visiblePickerYear, monthIndex, locale, "short"),
           fullLabel,
           monthKey: getMonthKey(visiblePickerYear, monthIndex),
           tone: getMonthNetTone(activeItems, visiblePickerYear, monthIndex, activeDisplayCurrency, fxRates),
         };
       }),
-    [activeDisplayCurrency, activeItems, fxRates, visiblePickerYear],
+    [activeDisplayCurrency, activeItems, fxRates, locale, visiblePickerYear],
   );
   const showPreviousCustomCalendarMonth = () => {
     setCustomCalendarMonth((month) => {
@@ -1557,7 +1555,7 @@ export function TransactionsOverview({
       ),
     );
 
-    const transactionItem = buildTransactionListItemFromReviewResult(result, categories);
+    const transactionItem = buildTransactionListItemFromReviewResult(result, categories, locale);
 
     if (transactionItem) {
       setActiveItems((current) => [transactionItem, ...current.filter((item) => item.id !== transactionItem.id)]);
@@ -2003,19 +2001,19 @@ export function TransactionsOverview({
                             {(summaryMode === "all" || summaryMode === "spend") ? (
                               <div className="flex items-center justify-between gap-3">
                                 <span className="text-slate-500">{t("common.spend", locale)}</span>
-                                <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted)}</span>
+                                <span className="text-rose-700">{formatDisplayAmount(summary.spend, summary.currency, isConverted, locale)}</span>
                               </div>
                             ) : null}
                             {(summaryMode === "all" || summaryMode === "income") ? (
                               <div className="flex items-center justify-between gap-3">
                                 <span className="text-slate-500">{t("common.income", locale)}</span>
-                                <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted)}</span>
+                                <span className="text-emerald-700">{formatDisplayAmount(summary.income, summary.currency, isConverted, locale)}</span>
                               </div>
                             ) : null}
                             {summaryMode === "all" ? (
                               <div className="flex items-center justify-between gap-3">
                                 <span className="text-slate-500">{t("activity.summaryLabels.net", locale)}</span>
-                                <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted)}</span>
+                                <span className={netTone}>{formatDisplaySignedAmount(summary.net, summary.currency, isConverted, locale)}</span>
                               </div>
                             ) : null}
                           </div>

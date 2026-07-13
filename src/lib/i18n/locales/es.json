@@ -851,7 +851,9 @@
       "enterValidDate": "Introduce una fecha válida",
       "endDateMustBeAfterStartDate": "La fecha final debe ser posterior a la inicial",
       "from": "Desde",
-      "to": "Hasta"
+      "to": "Hasta",
+      "dateNotSet": "Fecha sin definir",
+      "dateUnavailable": "Fecha no disponible"
     },
     "summaryLabels": {
       "net": "Neto",
@@ -1295,7 +1297,8 @@
     "titleLabel": "Título",
     "totalPlaceholder": "Total",
     "receiptEntry": "Entrada de recibo",
-    "noCandidatesYet": "Aún no hay candidatos."
+    "noCandidatesYet": "Aún no hay candidatos.",
+    "amountUnavailable": "Importe no disponible"
   },
   "categories": {
     "housing": "Vivienda",

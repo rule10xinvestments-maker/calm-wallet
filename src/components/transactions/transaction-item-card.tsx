@@ -22,6 +22,7 @@ import { getCategoryIconByName, getCategoryVisualsByName } from "@/lib/category-
 import { getCategoryDisplayLabel, getCategoryLabel, getCategoryLabelKey } from "@/lib/categories/category-labels";
 import type { TransactionMutationState } from "@/lib/server/transaction-mutations";
 import { t } from "@/lib/i18n";
+import { formatDateKey, formatDisplayMoney } from "@/lib/display-formatting";
 import { formatTransactionTitleForDisplay } from "@/lib/utils";
 
 type TransactionActionHandler = (state: TransactionMutationState, formData: FormData) => Promise<TransactionMutationState>;
@@ -61,34 +62,21 @@ function formatAmountInput(amountMinor: number) {
   return (amountMinor / 100).toFixed(2);
 }
 
-function formatMoney(amountMinor: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(amountMinor / 100);
+function formatMoney(amountMinor: number, currency: string, locale: string) {
+  return formatDisplayMoney(amountMinor, currency, locale);
 }
 
-function formatSignedAmount(amountMinor: number, currency: string, tone: TransactionListItem["amountTone"]) {
-  const formatted = formatMoney(amountMinor, currency);
+function formatSignedAmount(amountMinor: number, currency: string, tone: TransactionListItem["amountTone"], locale: string) {
+  const formatted = formatMoney(amountMinor, currency, locale);
   return tone === "income" ? `+${formatted}` : `-${formatted}`;
 }
 
-function formatReadableDate(dateKey: string | null | undefined) {
-  if (!dateKey) {
-    return "date not set";
-  }
-
-  const date = new Date(`${dateKey.slice(0, 10)}T12:00:00.000Z`);
-
-  if (Number.isNaN(date.getTime())) {
-    return "date not set";
-  }
-
-  return date.toLocaleDateString("en-US", {
+function formatReadableDate(dateKey: string | null | undefined, locale: string) {
+  return formatDateKey(dateKey, locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
-  });
+  }) ?? t("activity.time.dateNotSet", locale);
 }
 
 function getRecurringFrequencyLabel(frequency: TransactionListItem["recurringFrequency"], locale = "en") {
@@ -105,12 +93,12 @@ function getRecurringFrequencyLabel(frequency: TransactionListItem["recurringFre
 
 function getRecurringDetailsText(item: TransactionListItem, locale: string) {
   const frequencyLabel = getRecurringFrequencyLabel(item.recurringFrequency, locale);
-  const startLabel = formatReadableDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10));
+  const startLabel = formatReadableDate(item.recurringStartDate ?? item.recurringOccurrenceDate ?? item.occurredAt.slice(0, 10), locale);
   const endLabel = item.recurringEndDate
-    ? `${t("activity.recurring.ends", locale)} ${formatReadableDate(item.recurringEndDate)}`
+    ? `${t("activity.recurring.ends", locale)} ${formatReadableDate(item.recurringEndDate, locale)}`
     : t("activity.recurring.untilOff", locale);
 
-  return `${frequencyLabel} · Starts ${startLabel} · ${endLabel}`;
+  return `${frequencyLabel} · ${t("activity.recurring.starts", locale)} ${startLabel} · ${endLabel}`;
 }
 
 function getRowMetadata(item: TransactionListItem, recurringMode: boolean, locale: string) {
@@ -523,14 +511,14 @@ export function TransactionItemCard({
     const nextItem: TransactionListItem = {
       ...displayItem,
       amountMinor,
-      amountDisplay: formatSignedAmount(amountMinor, currency, transactionType),
+      amountDisplay: formatSignedAmount(amountMinor, currency, transactionType, locale),
       amountTone: transactionType,
       currency,
       title: itemName || displayItem.title || "Unnamed transaction",
-      subtitle: new Date(occurredAt).toLocaleDateString("en-US", {
+      subtitle: formatDateKey(occurredAt.slice(0, 10), locale, {
         month: "short",
         day: "numeric",
-      }),
+      }) ?? occurredAt.slice(0, 10),
       categoryLabel: categoryId ? categories.find((category) => category.id === categoryId)?.label ?? displayItem.categoryLabel : "Uncategorized",
       itemName,
       merchant,

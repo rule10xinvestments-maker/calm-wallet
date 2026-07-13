@@ -49,6 +49,7 @@ import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { CSV_IMPORT_MAX_BYTES } from "@/lib/imports/storage";
 import type { AssistantActionState } from "@/lib/server/assistant";
 import { useLocale } from "@/components/i18n/locale-provider";
+import { formatDateKey, formatDisplayMoney } from "@/lib/display-formatting";
 import { t } from "@/lib/i18n";
 
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
@@ -604,7 +605,7 @@ export function AssistantComposer({
       return t("common.today", locale);
     }
 
-    return new Date(`${manualDate}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return formatDateKey(manualDate, locale, { month: "short", day: "numeric" }) ?? manualDate;
   }
 
   function getTodayDateKey() {
@@ -640,12 +641,10 @@ export function AssistantComposer({
   }
 
   function formatLimitAmount(limit: Budget) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: limit.currency,
+    return formatDisplayMoney(limit.amountMinor, limit.currency, locale, {
       minimumFractionDigits: limit.amountMinor % 100 === 0 ? 0 : 2,
       maximumFractionDigits: 2,
-    }).format(limit.amountMinor / 100);
+    });
   }
 
   function getMerchantButtonLabel() {

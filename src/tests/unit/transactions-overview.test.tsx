@@ -1124,7 +1124,7 @@ describe("transactions overview", () => {
       </LocaleProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: currentMonthLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: /iulie 2026/i }));
     fireEvent.click(screen.getByRole("button", { name: "Folosește interval personalizat" }));
     expect(screen.getByRole("button", { name: "De la Alege data" })).toHaveClass("bg-sky-600");
     expect(screen.getByRole("button", { name: "Până la Alege data" })).toBeInTheDocument();

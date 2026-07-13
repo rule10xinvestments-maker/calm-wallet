@@ -20,7 +20,8 @@ import { generateDueRecurringTransactionsForUserSafely } from "@/domain/recurrin
 import { createSupabaseOwedNotesService } from "@/domain/owed-notes/service";
 import { createSupabaseUserPreferencesService } from "@/domain/preferences/service";
 import type { OwedNote } from "@/domain/owed-notes/types";
-import type { SupportedLocale } from "@/lib/i18n";
+import { t, type SupportedLocale } from "@/lib/i18n";
+import { formatDisplayDate, formatDisplayMoney } from "@/lib/display-formatting";
 import { areImportsEnabled } from "@/lib/imports/feature-flags";
 import { loadAuthenticatedStagedImportBundle } from "@/lib/server/imports-loader";
 import { loadStagedImportList } from "@/lib/server/imports-list";
@@ -64,23 +65,20 @@ function formatCandidateStateSummary<TState extends string>(
     .join(", ");
 }
 
-function formatCandidateAmount(candidate: StagedImportCandidateItem): string {
+function formatCandidateAmount(candidate: StagedImportCandidateItem, locale: SupportedLocale | null): string {
   if (candidate.amountMinor === null || !candidate.currency) {
-    return "Amount unavailable";
+    return t("imports.amountUnavailable", locale);
   }
 
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: candidate.currency,
-  }).format(candidate.amountMinor / 100);
+  return formatDisplayMoney(candidate.amountMinor, candidate.currency, locale ?? "en");
 }
 
-function formatCandidateDate(candidate: StagedImportCandidateItem): string {
+function formatCandidateDate(candidate: StagedImportCandidateItem, locale: SupportedLocale | null): string {
   if (!candidate.occurredAt) {
-    return "Date unavailable";
+    return t("activity.time.dateUnavailable", locale);
   }
 
-  return new Date(candidate.occurredAt).toLocaleDateString("en-US", {
+  return formatDisplayDate(candidate.occurredAt, locale ?? "en", {
     month: "short",
     day: "numeric",
   });
@@ -174,11 +172,11 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
           importRecordId: candidate.importRecordId ?? item.importRecordId,
           importType: item.importType,
           originalFilename: item.originalFilename,
-          amountDisplay: formatCandidateAmount(candidate),
+          amountDisplay: formatCandidateAmount(candidate, uiLocale),
           amountMinor: candidate.amountMinor,
           currency: candidate.currency,
           occurredAt: candidate.occurredAt,
-          dateLabel: formatCandidateDate(candidate),
+          dateLabel: formatCandidateDate(candidate, uiLocale),
           description: candidate.description ?? "No description provided",
           merchantGuess: candidate.merchantGuess ?? "No merchant guess",
           categoryId: candidate.categoryId,

@@ -203,6 +203,21 @@ describe("transactions read model", () => {
     expect(items[0]?.categoryLabel).toBe("Uncategorized");
   });
 
+  it("formats Activity dates and money with the selected app locale", () => {
+    const [item] = mapTransactionsToListItems(
+      [makeTransaction({ amountMinor: 123450, currency: "RON", occurredAt: "2026-07-13T12:00:00.000Z" })],
+      {},
+      "RON",
+      {},
+      new Set(),
+      new Map(),
+      "ro",
+    );
+
+    expect(item?.subtitle.toLocaleLowerCase("ro")).toContain("iul.");
+    expect(item?.amountDisplay).toContain("1.234,50");
+  });
+
   it("keeps recurring status separate from the Activity date label", () => {
     const items = mapTransactionsToListItems(
       [
@@ -216,6 +231,36 @@ describe("transactions read model", () => {
 
     expect(items[0]?.subtitle).toBe("Apr 10");
     expect(items[0]?.isRecurring).toBe(true);
+  });
+
+  it("formats Insights periods, month picker labels, and money with the selected app locale", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({
+          amountMinor: 123450,
+          currency: "RON",
+          occurredAt: "2026-07-13T12:00:00.000Z",
+          categoryId: "food",
+        }),
+      ],
+      { food: "Food" },
+      "RON",
+      new Date("2026-07-20T12:00:00.000Z"),
+      [],
+      [],
+      [],
+      null,
+      "2026-07",
+      "1M",
+      "mix",
+      {},
+      "ro",
+    );
+
+    expect(data.monthLabel.toLocaleLowerCase("ro")).toContain("iulie");
+    expect(data.monthPickerYears[0]?.months.find((month) => month.month === "2026-07")?.label.toLocaleLowerCase("ro")).toContain("iul.");
+    expect(data.categoryBreakdown[0]?.amountDisplay).toContain("1.234,50");
+    expect(data.categoryBreakdown[0]?.recentEntries[0]?.occurredLabel.toLocaleLowerCase("ro")).toContain("iul.");
   });
 
   it("maps recurring rule details when the Activity loader provides them", () => {

@@ -851,7 +851,9 @@
       "enterValidDate": "Introdu o dată validă",
       "endDateMustBeAfterStartDate": "Data de sfârșit trebuie să fie după început",
       "from": "De la",
-      "to": "Până la"
+      "to": "Până la",
+      "dateNotSet": "Data nu este setat?",
+      "dateUnavailable": "Data nu este disponibil?"
     },
     "summaryLabels": {
       "net": "Net",
@@ -1295,7 +1297,8 @@
     "titleLabel": "Titlu",
     "totalPlaceholder": "Total",
     "receiptEntry": "Intrare bon",
-    "noCandidatesYet": "Nu există candidați încă."
+    "noCandidatesYet": "Nu există candidați încă.",
+    "amountUnavailable": "Suma nu este disponibil?"
   },
   "categories": {
     "housing": "Locuință",
