@@ -189,13 +189,17 @@ describe("i18n helper", () => {
     expect(t("credits.balance.many", "ro", { count: 8 })).toBe("8 credite disponibile");
     expect(t("credits.options.balanceLabel", "en")).toBe("Current balance");
     expect(t("credits.options.launchPricing.label", "en")).toBe("Launch pricing");
+    expect(t("credits.options.launchPricing.helper", "en")).toBe(
+      "Introductory pricing during Calm Wallet’s first year. Prices may change later.",
+    );
     expect(t("credits.options.launchPricing.helper", "ro")).toBe(
-      "Ești alături de Calm Wallet în primul an. Bucură-te de prețul introductiv cât timp aplicația crește. Prețurile se pot schimba în actualizări viitoare.",
+      "Preț introductiv în primul an Calm Wallet. Prețurile se pot schimba mai târziu.",
     );
     expect(t("credits.options.savings", "es", { percent: 33 })).toBe("Ahorra 33%");
     expect(t("credits.options.bestValue", "fr")).toBe("Meilleur prix");
     expect(t("credits.options.earn.title", "fr")).toBe("Recevoir 5 crédits");
     expect(t("credits.options.small.title", "es")).toBe("50 créditos");
+    expect(t("credits.options.small.helper", "en")).toBe("Simple refill");
     expect(t("credits.options.small.price", "es", { price: 1.49 })).toBe("1.49 US$");
     expect(t("credits.options.unlimited.renewal", "ro")).toBe("Se reînnoiește automat anual până la anulare.");
     expect(t("assistant.feedback.recurringSaved", "ro", { frequency: t("assistant.feedback.frequencies.monthly", "ro") })).toBe(

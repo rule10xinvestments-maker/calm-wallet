@@ -958,7 +958,7 @@ export function AssistantComposer({
               data-testid="credit-options-scroll-area"
             >
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 ring-1 ring-sky-100">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 ring-1 ring-sky-100">
                 <Wallet aria-hidden="true" className="size-4" />
               </span>
               <div className="min-w-0">
@@ -967,8 +967,8 @@ export function AssistantComposer({
               </div>
             </div>
             <div className="mt-3 flex items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50/70 px-3 py-2.5">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-sky-700 ring-1 ring-sky-100">
-                <Sprout aria-hidden="true" className="size-4" />
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-white/80 text-sky-700 ring-1 ring-sky-100">
+                <Sprout aria-hidden="true" className="size-3.5" />
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-900">{t("credits.options.launchPricing.label", locale)}</p>
@@ -992,8 +992,8 @@ export function AssistantComposer({
                   Icon: Coins,
                   title: t("credits.options.small.title", locale),
                   price: t("credits.options.small.price", locale, { price: CREDIT_PACKS.small.priceUsd }),
-                  helper: t("credits.options.small.helper", locale),
-                  secondary: null,
+                  helper: null,
+                  secondary: t("credits.options.small.helper", locale),
                   badge: null,
                   enabled: creditPacksEnabled && providerActionsImplemented,
                 },
@@ -1014,7 +1014,7 @@ export function AssistantComposer({
                   Icon: Wallet,
                   title: t("credits.options.unlimited.title", locale),
                   price: t("credits.options.unlimited.price", locale, { price: CREDIT_PACKS.unlimitedYearly.priceUsd }),
-                  helper: t("credits.options.unlimited.helper", locale),
+                  helper: null,
                   secondary: t("credits.options.unlimited.renewal", locale),
                   badge: null,
                   enabled: yearlyUnlimitedEnabled && providerActionsImplemented,
@@ -1030,7 +1030,7 @@ export function AssistantComposer({
                     key={option.id}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200">
                         <OptionIcon aria-hidden="true" className="size-4" />
                       </span>
                       <div className="min-w-0 flex-1">
@@ -1044,7 +1044,12 @@ export function AssistantComposer({
                         </div>
                         <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                           {option.price ? <p className="text-sm font-semibold text-sky-800">{option.price}</p> : null}
-                          {option.secondary ? <p className="text-xs font-medium text-slate-500">{option.secondary}</p> : null}
+                          {option.secondary ? (
+                            <p className="text-xs font-medium text-slate-500">
+                              {option.price ? <span aria-hidden="true">· </span> : null}
+                              <span>{option.secondary}</span>
+                            </p>
+                          ) : null}
                         </div>
                         {option.helper ? <p className="mt-0.5 truncate text-xs text-slate-600">{option.helper}</p> : null}
                       </div>
