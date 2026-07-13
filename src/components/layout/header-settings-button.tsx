@@ -3,9 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Bell, BookOpen, Check, ChevronLeft, ChevronRight, Coins, FileText, Globe2, Info, Settings, ShieldCheck } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronLeft, ChevronRight, Coins, FileText, Globe2, Infinity, Info, Settings, ShieldCheck } from "lucide-react";
 import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
-import { CreditOptionsSheet, getCreditSettingsSubtitle, type CreditAccountSummary } from "@/components/credits/credit-options-sheet";
+import {
+  CreditOptionsSheet,
+  getCreditSettingsSubtitle,
+  getUnlimitedExpiryDisplay,
+  isUnlimitedActive,
+  type CreditAccountSummary,
+} from "@/components/credits/credit-options-sheet";
 import { useLocale } from "@/components/i18n/locale-provider";
 import { LegalSettingsPage } from "@/components/legal/legal-settings-section";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
@@ -53,10 +59,11 @@ type SettingsRowProps = {
   icon: ReactNode;
   title: string;
   subtitle: string;
+  secondarySubtitle?: string | null;
   onClick: () => void;
 };
 
-function SettingsRow({ icon, title, subtitle, onClick }: SettingsRowProps) {
+function SettingsRow({ icon, title, subtitle, secondarySubtitle = null, onClick }: SettingsRowProps) {
   return (
     <button
       className="grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left transition hover:bg-slate-50"
@@ -67,6 +74,7 @@ function SettingsRow({ icon, title, subtitle, onClick }: SettingsRowProps) {
       <span className="min-w-0">
         <span className="block text-sm font-medium text-slate-900">{title}</span>
         <span className="mt-0.5 block truncate text-xs leading-5 text-slate-500">{subtitle}</span>
+        {secondarySubtitle ? <span className="block truncate text-xs leading-5 text-slate-400">{secondarySubtitle}</span> : null}
       </span>
       <ChevronRight aria-hidden="true" className="size-4 text-slate-400" />
     </button>
@@ -183,6 +191,8 @@ export function HeaderSettingsButton({
   const [reportOpenToken, setReportOpenToken] = useState(0);
   const [saveMessageKey, setSaveMessageKey] = useState<string | null>(null);
   const { locale } = useLocale();
+  const unlimitedActive = isUnlimitedActive(creditAccount?.unlimitedUntil);
+  const unlimitedExpiry = getUnlimitedExpiryDisplay(creditAccount?.unlimitedUntil, locale);
   const notificationsEnabled =
     notificationPreferences.dailyReminderEnabled ||
     notificationPreferences.monthlyReviewEnabled ||
@@ -281,8 +291,15 @@ export function HeaderSettingsButton({
                     title={t("notifications.notifications", locale)}
                   />
                   <SettingsRow
-                    icon={<Coins aria-hidden="true" className="size-4" />}
+                    icon={
+                      unlimitedActive ? (
+                        <Infinity aria-hidden="true" className="size-4" />
+                      ) : (
+                        <Coins aria-hidden="true" className="size-4" />
+                      )
+                    }
                     onClick={() => setIsCreditOptionsOpen(true)}
+                    secondarySubtitle={unlimitedActive ? t("settings.credits.unlimitedUntil", locale, { date: unlimitedExpiry }) : null}
                     subtitle={getCreditSettingsSubtitle(creditAccount, locale)}
                     title={t("settings.credits.title", locale)}
                   />

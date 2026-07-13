@@ -229,7 +229,8 @@
     "back": "Retour aux paramètres",
     "credits": {
       "title": "Crédits",
-      "unlimitedActive": "Illimité actif"
+      "unlimitedActive": "Illimité actif",
+      "unlimitedUntil": "Les entrées sont illimitées jusqu’au {date}."
     },
     "legal": {
       "subtitle": "Conditions, confidentialité, remboursements et IA"
@@ -720,6 +721,11 @@
     "balance": {
       "one": "{count} crédit disponible",
       "many": "{count} crédits disponibles"
+    },
+    "unlimited": {
+      "active": "Illimité actif",
+      "until": "Les entrées sont illimitées jusqu’au {date}.",
+      "savedCreditsRemain": "Vos crédits enregistrés restent disponibles à la fin de l’Illimité."
     },
     "insufficient": {
       "title": "Ajoutez des crédits pour enregistrer cette entrée",

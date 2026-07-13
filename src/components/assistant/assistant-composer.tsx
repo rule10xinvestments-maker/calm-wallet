@@ -21,7 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
-import { CreditOptionsSheet } from "@/components/credits/credit-options-sheet";
+import { CreditOptionsSheet, isUnlimitedActive } from "@/components/credits/credit-options-sheet";
 import { Button } from "@/components/ui/button";
 import { CalmDatePicker } from "@/components/ui/calm-date-picker";
 import { CompactCurrencyPicker } from "@/components/ui/compact-currency-picker";
@@ -394,8 +394,9 @@ export function AssistantComposer({
   const [transientPanelSuccess, setTransientPanelSuccess] = useState<TransientPanelSuccess | null>(null);
   const [hideManualActionMessage, setHideManualActionMessage] = useState(false);
   const effectiveCreditBalance = latestCreditBalance ?? creditAccount?.creditBalance ?? null;
+  const unlimitedActive = isUnlimitedActive(creditAccount?.unlimitedUntil);
   const lowCreditThreshold = getCreditNoticeThreshold(effectiveCreditBalance);
-  const showLowCreditHelper = lowCreditThreshold !== null;
+  const showLowCreditHelper = !unlimitedActive && lowCreditThreshold !== null;
   const lowCreditDisplayBalance = effectiveCreditBalance ?? lowCreditThreshold ?? 0;
   const assistantMessageDisplay = getAssistantMessageDisplay(state, locale);
   const latestReviewLabel = getReviewStateDisplayLabel(state.latestTransaction?.reviewState, locale);

@@ -230,7 +230,8 @@
     "back": "Volver a ajustes",
     "credits": {
       "title": "Créditos",
-      "unlimitedActive": "Ilimitado activo"
+      "unlimitedActive": "Ilimitado activo",
+      "unlimitedUntil": "Los registros son ilimitados hasta el {date}."
     },
     "legal": {
       "subtitle": "Términos, privacidad, reembolsos e IA"
@@ -720,6 +721,11 @@
     "balance": {
       "one": "{count} crédito disponible",
       "many": "{count} créditos disponibles"
+    },
+    "unlimited": {
+      "active": "Ilimitado activo",
+      "until": "Los registros son ilimitados hasta el {date}.",
+      "savedCreditsRemain": "Tus créditos guardados seguirán disponibles cuando termine Ilimitado."
     },
     "insufficient": {
       "title": "Añade créditos para guardar este registro",

@@ -210,6 +210,15 @@ describe("i18n helper", () => {
     expect(t("credits.low.openOptions", "en", { count: 8 })).toBe("8 credits left. Tap to refill credits.");
     expect(t("credits.insufficient.title", "ro")).toBe("Adaugă credite pentru a salva intrarea");
     expect(t("credits.balance.many", "ro", { count: 8 })).toBe("8 credite disponibile");
+    expect(t("credits.unlimited.active", "en")).toBe("Unlimited active");
+    expect(t("credits.unlimited.active", "ro")).toBe("Unlimited activ");
+    expect(t("credits.unlimited.active", "fr")).toBe("Illimité actif");
+    expect(t("credits.unlimited.active", "es")).toBe("Ilimitado activo");
+    expect(t("credits.unlimited.until", "en", { date: "July 14, 2099" })).toBe("Entries are unlimited until July 14, 2099.");
+    expect(t("credits.unlimited.savedCreditsRemain", "en")).toBe("Your saved credits remain available when Unlimited ends.");
+    expect(t("settings.credits.unlimitedUntil", "en", { date: "July 14, 2099" })).toBe(
+      "Entries are unlimited until July 14, 2099.",
+    );
     expect(t("credits.options.balanceLabel", "en")).toBe("Current balance");
     expect(t("credits.options.launchPricing.label", "en")).toBe("Launch pricing");
     expect(t("credits.options.launchPricing.helper", "en")).toBe(

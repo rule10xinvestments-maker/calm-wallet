@@ -229,7 +229,8 @@
     "back": "Back to settings",
     "credits": {
       "title": "Credits",
-      "unlimitedActive": "Unlimited active"
+      "unlimitedActive": "Unlimited active",
+      "unlimitedUntil": "Entries are unlimited until {date}."
     },
     "legal": {
       "subtitle": "Terms, Privacy, Refunds & AI"
@@ -720,6 +721,11 @@
     "balance": {
       "one": "{count} credit available",
       "many": "{count} credits available"
+    },
+    "unlimited": {
+      "active": "Unlimited active",
+      "until": "Entries are unlimited until {date}.",
+      "savedCreditsRemain": "Your saved credits remain available when Unlimited ends."
     },
     "insufficient": {
       "title": "Add entry credits to save this entry",

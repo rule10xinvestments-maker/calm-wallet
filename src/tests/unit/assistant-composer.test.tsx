@@ -1941,6 +1941,26 @@ describe("assistant composer", () => {
     expect(screen.getByLabelText("Message")).toHaveValue("Coffee 12");
   });
 
+  it("does not show low-credit refill prompts while Unlimited is active", () => {
+    renderComposer(
+      undefined,
+      [],
+      undefined,
+      [],
+      false,
+      {
+        creditBalance: 0,
+        recurringGraceDebt: 0,
+        unlimitedUntil: "2099-07-14T00:00:00.000Z",
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    expect(screen.queryByRole("button", { name: "0 credits left. Tap to refill credits." })).not.toBeInTheDocument();
+    expect(screen.queryByText("0 credits left")).not.toBeInTheDocument();
+  });
+
   it("localizes Romanian recurring success without leaking canonical states", () => {
     renderComposerWithLocale("ro", {
       status: "success",

@@ -229,7 +229,8 @@
     "back": "Înapoi la setări",
     "credits": {
       "title": "Credite",
-      "unlimitedActive": "Unlimited activ"
+      "unlimitedActive": "Unlimited activ",
+      "unlimitedUntil": "Intrările sunt nelimitate până la {date}."
     },
     "legal": {
       "subtitle": "Termeni, confidențialitate, rambursări și AI"
@@ -720,6 +721,11 @@
     "balance": {
       "one": "{count} credit disponibil",
       "many": "{count} credite disponibile"
+    },
+    "unlimited": {
+      "active": "Unlimited activ",
+      "until": "Intrările sunt nelimitate până la {date}.",
+      "savedCreditsRemain": "Creditele salvate rămân disponibile când Unlimited se încheie."
     },
     "insufficient": {
       "title": "Adaugă credite pentru a salva intrarea",

@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Coins, Gift, Sprout, Wallet, type LucideIcon } from "lucide-react";
+import { Coins, Gift, Infinity, Sprout, Wallet, type LucideIcon } from "lucide-react";
 import { useLocale } from "@/components/i18n/locale-provider";
 import {
   areCreditPacksEnabled,
@@ -11,6 +11,7 @@ import {
   getCreditPackSavingsMeta,
   isYearlyUnlimitedEnabled,
 } from "@/lib/credits/config";
+import { formatDisplayDate } from "@/lib/display-formatting";
 import { t } from "@/lib/i18n";
 
 export type CreditAccountSummary = {
@@ -53,13 +54,25 @@ function getCreditBalanceDisplay(creditBalance: number | null, locale: string) {
   return t(count === 1 ? "credits.balance.one" : "credits.balance.many", locale, { count });
 }
 
-function isUnlimitedActive(unlimitedUntil: string | null | undefined) {
+export function isUnlimitedActive(unlimitedUntil: string | null | undefined) {
   if (!unlimitedUntil) {
     return false;
   }
 
   const expiresAt = new Date(unlimitedUntil);
   return !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
+}
+
+export function getUnlimitedExpiryDisplay(unlimitedUntil: string | null | undefined, locale: string) {
+  if (!unlimitedUntil) {
+    return "";
+  }
+
+  return formatDisplayDate(unlimitedUntil, locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export function getCreditSettingsSubtitle(creditAccount: CreditAccountSummary | null | undefined, locale: string) {
@@ -80,6 +93,8 @@ export function CreditOptionsSheet({
   const { locale } = useLocale();
   const effectiveBalance = creditBalance ?? creditAccount?.creditBalance ?? null;
   const currentCreditBalanceDisplay = getCreditBalanceDisplay(effectiveBalance, locale);
+  const unlimitedActive = isUnlimitedActive(creditAccount?.unlimitedUntil);
+  const unlimitedExpiry = getUnlimitedExpiryDisplay(creditAccount?.unlimitedUntil, locale);
   const launchPricingLines = useMemo(() => {
     const helper = t("credits.options.launchPricing.helper", locale);
     const [firstSentence, ...remainingSentences] = helper.split(". ");
@@ -233,11 +248,22 @@ export function CreditOptionsSheet({
           >
             <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 ring-1 ring-sky-100">
-                <Wallet aria-hidden="true" className="size-4" />
+                {unlimitedActive ? <Infinity aria-hidden="true" className="size-4" /> : <Wallet aria-hidden="true" className="size-4" />}
               </span>
               <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{t("credits.options.balanceLabel", locale)}</p>
-                <p className="truncate text-sm font-semibold text-slate-900">{currentCreditBalanceDisplay}</p>
+                {unlimitedActive ? (
+                  <>
+                    <p className="truncate text-sm font-semibold text-slate-900">{t("credits.unlimited.active", locale)}</p>
+                    <p className="text-xs leading-5 text-slate-500">
+                      {t("credits.unlimited.until", locale, { date: unlimitedExpiry })}
+                    </p>
+                    <p className="text-xs leading-5 text-slate-500">{t("credits.unlimited.savedCreditsRemain", locale)}</p>
+                    <p className="text-xs leading-5 text-slate-400">{currentCreditBalanceDisplay}</p>
+                  </>
+                ) : (
+                  <p className="truncate text-sm font-semibold text-slate-900">{currentCreditBalanceDisplay}</p>
+                )}
               </div>
             </div>
             <div className="mt-2 flex items-start gap-2.5 rounded-2xl border border-sky-100 bg-sky-50/70 px-3 py-2">

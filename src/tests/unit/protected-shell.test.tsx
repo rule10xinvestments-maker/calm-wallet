@@ -27,6 +27,7 @@ const creditAccount = {
   lowBalanceNotice10ShownAt: null,
   lowBalanceNotice3ShownAt: null,
 };
+type TestCreditAccount = Omit<typeof creditAccount, "unlimitedUntil"> & { unlimitedUntil: string | null };
 
 const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
@@ -65,13 +66,13 @@ function setNavigatorValue(name: "maxTouchPoints" | "platform" | "standalone" | 
   });
 }
 
-function renderProtectedShell(options: { onSignOut?: () => Promise<void> } = {}) {
+function renderProtectedShell(options: { onSignOut?: () => Promise<void>; creditAccount?: TestCreditAccount } = {}) {
   return render(
     <PwaInstallProvider>
       <ProtectedShell
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
-        creditAccount={creditAccount}
+        creditAccount={options.creditAccount ?? creditAccount}
         uiLocale={null}
         timezone={testDeviceTimezone}
         userPreferencesAction={updateUserPreferencesAction}
@@ -386,6 +387,30 @@ describe("protected shell PWA install affordance", () => {
     expect(within(settingsPanel).getByText("Legal version")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Support contact")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Acknowledgements")).toBeInTheDocument();
+  });
+
+  it("shows Unlimited as the primary Credits status when the entitlement is active", () => {
+    renderProtectedShell({
+      creditAccount: {
+        ...creditAccount,
+        creditBalance: 0,
+        unlimitedUntil: "2099-07-14T00:00:00.000Z",
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+
+    expect(within(settingsPanel).getByRole("button", { name: /Credits Unlimited active/ })).toBeInTheDocument();
+    expect(within(settingsPanel).getByText(/Entries are unlimited until/)).toBeInTheDocument();
+    expect(within(settingsPanel).queryByRole("button", { name: /Credits 0 credits available/ })).not.toBeInTheDocument();
+
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Credits Unlimited active/ }));
+    const creditDialog = screen.getByRole("dialog", { name: "Add credits" });
+    expect(within(creditDialog).getByText("Unlimited active")).toBeInTheDocument();
+    expect(within(creditDialog).getByText(/Entries are unlimited until/)).toBeInTheDocument();
+    expect(within(creditDialog).getByText("Your saved credits remain available when Unlimited ends.")).toBeInTheDocument();
+    expect(within(creditDialog).getByText("0 credits available")).toBeInTheDocument();
   });
 
   it("returns to Settings overview with a brief confirmation after saving language", async () => {
