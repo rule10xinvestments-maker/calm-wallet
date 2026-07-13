@@ -348,7 +348,8 @@
         "badge": "Necesita revisión",
         "edit": "Editar categoría",
         "update": "Insights se actualiza",
-        "caption": "La incertidumbre se muestra con claridad, y las correcciones actualizan tus informes."
+        "caption": "La verificación convierte la incertidumbre en Insights más claros.",
+        "suggestion": "Sugerencia de IA"
       },
       "activity": {
         "merchant": "Café",
@@ -428,6 +429,24 @@
           "4": {
             "question": "¿Y si faltan detalles?",
             "answer": "Puede guardar una entrada útil si el importe y el sentido básico están claros. Puedes corregir comercio, nota, categoría o fecha en Actividad."
+          }
+        }
+      },
+      "credits": {
+        "title": "Créditos",
+        "questions": {
+          "1": {
+            "question": "Cómo funcionan los créditos",
+            "answer": "Los créditos te permiten usar AI Assistant. Cada cuenta tiene un único saldo de créditos compartido. Los créditos comprados y los créditos obtenidos se suman juntos. Los créditos solo se usan cuando AI Assistant procesa una solicitud. Los créditos nunca caducan. Puedes recargar tu saldo en cualquier momento. Si te suscribes a Unlimited, las solicitudes de IA dejan de consumir créditos mientras la suscripción esté activa."
+          }
+        }
+      },
+      "unlimited": {
+        "title": "Unlimited",
+        "questions": {
+          "1": {
+            "question": "Unlimited",
+            "answer": "Unlimited elimina los límites de créditos mientras la suscripción está activa. En lugar de gastar créditos por cada solicitud de IA, puedes usar Assistant sin consumir tu saldo. Unlimited se renueva cada año hasta que se cancele. Si cancelas, la suscripción permanece activa hasta el final del periodo pagado actual. Después, Calm Wallet vuelve automáticamente a usar tus créditos restantes."
           }
         }
       },

@@ -348,7 +348,8 @@
         "badge": "Needs review",
         "edit": "Edit category",
         "update": "Insights update",
-        "caption": "Uncertainty is shown clearly, and corrections update your reports."
+        "caption": "Verification turns uncertainty into clearer Insights.",
+        "suggestion": "AI suggestion"
       },
       "activity": {
         "merchant": "Coffee",
@@ -428,6 +429,24 @@
           "4": {
             "question": "What if some details are missing?",
             "answer": "Calm Wallet can still save a useful entry when the amount and basic meaning are clear. You can fix the merchant, note, category, or date later in Activity."
+          }
+        }
+      },
+      "credits": {
+        "title": "Credits",
+        "questions": {
+          "1": {
+            "question": "How credits work",
+            "answer": "Credits let you use the AI Assistant. Every account has one shared credit balance. Purchased credits and earned credits are added together. Credits are only used when the AI Assistant processes a request. Credits never expire. You can refill your balance at any time. If you subscribe to Unlimited, AI requests no longer consume credits while your subscription is active."
+          }
+        }
+      },
+      "unlimited": {
+        "title": "Unlimited",
+        "questions": {
+          "1": {
+            "question": "Unlimited",
+            "answer": "Unlimited removes credit limits while your subscription is active. Instead of spending credits for every AI request, you can use the Assistant without consuming your balance. Unlimited renews yearly until cancelled. If you cancel, your subscription remains active until the end of the current paid period. After it ends, Calm Wallet automatically resumes using your remaining credits."
           }
         }
       },

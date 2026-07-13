@@ -569,6 +569,12 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.change(searchInput, { target: { value: "cheltuieli" } });
     expect(screen.getByRole("button", { name: "Ce mă ajută Mix să înțeleg?" })).toBeInTheDocument();
 
+    fireEvent.change(searchInput, { target: { value: "credite" } });
+    expect(screen.getByRole("button", { name: "Cum funcționează creditele" })).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "abonament" } });
+    expect(screen.getByRole("button", { name: "Unlimited" })).toBeInTheDocument();
+
     fireEvent.change(searchInput, { target: { value: "banca" } });
     expect(screen.getByRole("button", { name: "Calm Wallet se conectează la banca mea?" })).toBeInTheDocument();
 
@@ -578,6 +584,25 @@ describe("protected shell PWA install affordance", () => {
 
     fireEvent.change(searchInput, { target: { value: "" } });
     expect(screen.getByRole("button", { name: "Ce este Calm Wallet?" })).toBeInTheDocument();
+  });
+
+  it("surfaces credits and Unlimited Guide articles from launch search terms", () => {
+    renderProtectedShellWithLocale("en");
+
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+    const searchInput = screen.getByRole("textbox", { name: "Search Help" });
+
+    ["credit", "credits", "balance", "AI", "assistant"].forEach((term) => {
+      fireEvent.change(searchInput, { target: { value: term } });
+      expect(screen.getByRole("button", { name: "How credits work" })).toBeInTheDocument();
+    });
+
+    ["unlimited", "subscription"].forEach((term) => {
+      fireEvent.change(searchInput, { target: { value: term } });
+      expect(screen.getByRole("button", { name: "Unlimited" })).toBeInTheDocument();
+    });
+
+    expect(window.location.pathname).toBe("/assistant");
   });
 
   it("updates Help content after switching the app language", async () => {

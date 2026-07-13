@@ -1,6 +1,23 @@
 "use client";
 
-import { AlertTriangle, CalendarDays, CheckCircle2, Coffee, Landmark, NotebookText, Pencil, ReceiptText, Repeat2, RotateCcw, StickyNote, Tag, Trash2, Utensils } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  Coffee,
+  Landmark,
+  NotebookText,
+  Pencil,
+  ReceiptText,
+  Repeat2,
+  RotateCcw,
+  Sparkles,
+  StickyNote,
+  Tag,
+  Trash2,
+  Utensils,
+} from "lucide-react";
 import { t } from "@/lib/i18n";
 import type { ReactNode } from "react";
 import type { SupportedLocale } from "@/lib/i18n";
@@ -122,19 +139,13 @@ function QuickAddVisual({ locale }: { locale: SupportedLocale }) {
 
 function NeedsReviewVisual({ locale }: { locale: SupportedLocale }) {
   return (
-    <div className="space-y-2 text-[0.64rem] font-semibold text-slate-600">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <VisualPill>{t("help.visuals.needsReview.saved", locale)}</VisualPill>
-        <Arrow />
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-center text-amber-700">
-          {t("help.visuals.needsReview.badge", locale)}
-        </span>
-      </div>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <VisualPill>{t("help.visuals.needsReview.edit", locale)}</VisualPill>
-        <Arrow />
-        <VisualPill>{t("help.visuals.needsReview.update", locale)}</VisualPill>
-      </div>
+    <div className="relative mx-auto max-w-[13.5rem] text-[0.62rem] font-semibold text-slate-600" data-testid="guide-needs-review-journey">
+      <div className="absolute left-4 top-6 h-[calc(100%-3rem)] border-l border-dashed border-sky-200" />
+      <JourneyStep icon={<ReceiptText aria-hidden="true" className="size-3.5" />} label={t("help.visuals.needsReview.saved", locale)} tone="blue" />
+      <JourneyStep icon={<Sparkles aria-hidden="true" className="size-3.5" />} label={t("help.visuals.needsReview.suggestion", locale)} tone="neutral" />
+      <JourneyStep icon={<AlertTriangle aria-hidden="true" className="size-3.5" />} label={t("help.visuals.needsReview.badge", locale)} tone="amber" />
+      <JourneyStep icon={<Pencil aria-hidden="true" className="size-3.5" />} label={t("help.visuals.needsReview.edit", locale)} tone="neutral" />
+      <JourneyStep icon={<BarChart3 aria-hidden="true" className="size-3.5" />} label={t("help.visuals.needsReview.update", locale)} tone="green" />
     </div>
   );
 }
@@ -312,18 +323,36 @@ function InterpretationChip({ icon, label }: { icon: ReactNode; label: string })
   );
 }
 
+function JourneyStep({
+  icon,
+  label,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  tone: "amber" | "blue" | "green" | "neutral";
+}) {
+  const toneClass =
+    tone === "amber"
+      ? "border-amber-100 bg-amber-50 text-amber-700"
+      : tone === "green"
+        ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+        : tone === "blue"
+          ? "border-sky-100 bg-sky-50 text-sky-700"
+          : "border-slate-100 bg-white text-slate-600";
+
+  return (
+    <div className="relative z-10 flex items-center gap-2 py-1">
+      <span className={`inline-flex size-8 shrink-0 items-center justify-center rounded-full border shadow-sm ${toneClass}`}>{icon}</span>
+      <span className="min-w-0 flex-1 rounded-xl border border-slate-100 bg-white px-2.5 py-1.5 leading-4 shadow-sm">{label}</span>
+    </div>
+  );
+}
+
 function Connector() {
   return (
     <div className="flex justify-center text-sky-500" aria-hidden="true">
       <span className="h-3 border-l border-dashed border-sky-300" />
     </div>
   );
-}
-
-function VisualPill({ children }: { children: ReactNode }) {
-  return <span className="min-w-0 break-words rounded-xl border border-sky-100 bg-white px-2 py-2 shadow-sm">{children}</span>;
-}
-
-function Arrow() {
-  return <span className="text-sky-500">-&gt;</span>;
 }

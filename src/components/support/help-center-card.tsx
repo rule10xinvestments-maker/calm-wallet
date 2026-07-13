@@ -26,6 +26,8 @@ type HelpCenterCardProps = {
 const helpSections: HelpSection[] = [
   section("started", 3),
   section("assistant", 4, "quickAdd"),
+  section("credits", 1),
+  section("unlimited", 1),
   section("manual", 2),
   section("review", 3, "needsReview"),
   section("activity", 5, "activity"),

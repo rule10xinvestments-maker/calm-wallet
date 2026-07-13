@@ -181,6 +181,12 @@ describe("i18n helper", () => {
     expect(t("legal.changeSummaries.finalLaunchDocuments", "en")).toBe(
       "Replaced placeholder legal text with the final launch documents.",
     );
+    expect(t("help.sections.credits.questions.1.question", "en")).toBe("How credits work");
+    expect(t("help.sections.credits.questions.1.question", "ro")).toBe("Cum funcționează creditele");
+    expect(t("help.sections.credits.questions.1.question", "fr")).toBe("Comment fonctionnent les crédits");
+    expect(t("help.sections.credits.questions.1.question", "es")).toBe("Cómo funcionan los créditos");
+    expect(t("help.sections.unlimited.questions.1.question", "en")).toBe("Unlimited");
+    expect(t("help.sections.unlimited.questions.1.answer", "es")).toContain("suscripción");
     expect(t("credits.addCredits", "en")).toBe("Add credits");
     expect(t("credits.addCredits", "ro")).toBe("Adaugă credite");
     expect(t("credits.addCredits", "fr")).toBe("Ajouter des crédits");

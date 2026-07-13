@@ -68,6 +68,20 @@ describe("GuideIllustration", () => {
     expect(within(activity).getByTestId("guide-activity-restore-callout")).toHaveTextContent("Restaurează");
   });
 
+  it("renders Needs Review as one verification journey", () => {
+    render(<GuideIllustration kind="needsReview" locale="en" />);
+
+    const needsReview = screen.getByTestId("guide-illustration-needsReview");
+    const journey = within(needsReview).getByTestId("guide-needs-review-journey");
+    expect(journey).toHaveTextContent("Entry saved");
+    expect(journey).toHaveTextContent("AI suggestion");
+    expect(journey).toHaveTextContent("Needs review");
+    expect(journey).toHaveTextContent("Edit category");
+    expect(journey).toHaveTextContent("Insights update");
+    expect(within(needsReview).getByText("Verification turns uncertainty into clearer Insights.")).toBeInTheDocument();
+    expect(needsReview.querySelector(".grid-cols-\\[1fr_auto_1fr\\]")).toBeNull();
+  });
+
   it("renders Recurring as repeated future entries without bank-transfer cues", () => {
     const { container } = render(<GuideIllustration kind="recurring" locale="en" />);
 
@@ -96,7 +110,6 @@ describe("GuideIllustration", () => {
 
   it("keeps the other guide illustration variants rendering with their existing captions", () => {
     const unchangedVariants: Array<[GuideIllustrationKind, string]> = [
-      ["needsReview", "Uncertainty is shown clearly, and corrections update your reports."],
       ["mix", "See where your money goes."],
       ["bars", "Compare different parts of the selected period."],
       ["trend", "See how your habits change over time."],

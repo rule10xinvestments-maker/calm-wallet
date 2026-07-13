@@ -348,7 +348,8 @@
         "badge": "Necesită verificare",
         "edit": "Editezi categoria",
         "update": "Perspectivele se actualizează",
-        "caption": "Incertitudinea este vizibilă, iar corecțiile actualizează rapoartele."
+        "caption": "Verificarea transformă incertitudinea în Perspective mai clare.",
+        "suggestion": "Sugestie AI"
       },
       "activity": {
         "merchant": "Cafea",
@@ -428,6 +429,24 @@
           "4": {
             "question": "Ce se întâmplă când lipsesc detalii?",
             "answer": "Calm Wallet poate salva o intrare utilă când suma și sensul de bază sunt clare. Poți corecta comerciantul, nota, categoria sau data mai târziu în Activitate."
+          }
+        }
+      },
+      "credits": {
+        "title": "Credite",
+        "questions": {
+          "1": {
+            "question": "Cum funcționează creditele",
+            "answer": "Creditele îți permit să folosești AI Assistant. Fiecare cont are un singur sold comun de credite. Creditele cumpărate și cele câștigate se adaugă împreună. Creditele sunt folosite doar când AI Assistant procesează o cerere. Creditele nu expiră niciodată. Îți poți reîncărca soldul oricând. Dacă te abonezi la Unlimited, cererile AI nu mai consumă credite cât timp abonamentul este activ."
+          }
+        }
+      },
+      "unlimited": {
+        "title": "Unlimited",
+        "questions": {
+          "1": {
+            "question": "Unlimited",
+            "answer": "Unlimited elimină limitele de credite cât timp abonamentul este activ. În loc să folosești credite pentru fiecare cerere AI, poți folosi Assistant fără să consumi soldul. Unlimited se reînnoiește anual până la anulare. Dacă anulezi, abonamentul rămâne activ până la finalul perioadei plătite curente. După ce se încheie, Calm Wallet reia automat folosirea creditelor rămase."
           }
         }
       },
