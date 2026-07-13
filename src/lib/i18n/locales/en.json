@@ -273,6 +273,62 @@
       }
     }
   },
+  "legal": {
+    "settingsTitle": "Legal",
+    "version": "Version",
+    "lastUpdated": "Last updated",
+    "effectiveDate": "Effective date",
+    "read": "Read",
+    "closeDocument": "Close legal document",
+    "whatChanged": "What changed",
+    "productFacts": "Product facts for the final document",
+    "acceptance": {
+      "title": "We've updated our legal documents",
+      "helper": "We've made changes to one or more legal documents. Please review and accept the latest versions to continue using Calm Wallet.",
+      "checkbox": "I have read and accept the current legal documents.",
+      "button": "Accept and continue",
+      "accepting": "Accepting...",
+      "error": "We could not save your acceptance. Please try again."
+    },
+    "documents": {
+      "terms": {
+        "title": "Terms of Service",
+        "placeholder": "Placeholder for the production Terms of Service. This document will be written separately and should cover the product facts below."
+      },
+      "privacy": {
+        "title": "Privacy Policy",
+        "placeholder": "Placeholder for the production Privacy Policy. This document will be written separately and should cover the product facts below."
+      },
+      "refund": {
+        "title": "Refund Policy",
+        "placeholder": "Placeholder for the production Refund Policy. This document will be written separately and should cover the product facts below."
+      },
+      "ai": {
+        "title": "AI Disclaimer",
+        "placeholder": "Placeholder for the production AI Disclaimer. This document will be written separately and should cover the product facts below."
+      }
+    },
+    "productFactItems": {
+      "creditsNeverExpire": "Credits never expire.",
+      "creditsSingleBalance": "All credits share one account balance.",
+      "creditsNonTransferable": "Credits are non-transferable.",
+      "creditsNoCashValue": "Credits have no cash value.",
+      "noRefunds": "No refunds after purchase.",
+      "billingMistakes": "Billing mistakes may be investigated and corrected.",
+      "unlimitedRenews": "Unlimited auto-renews yearly.",
+      "cancelRenewal": "Users may cancel renewal at any time.",
+      "accessUntilPeriodEnds": "Access continues until the paid period ends.",
+      "aiMistakes": "AI may make mistakes.",
+      "noAdvice": "Calm Wallet does not provide financial, tax, legal, or investment advice.",
+      "minimumAge": "Minimum age is 16.",
+      "analyticsCrash": "Anonymous analytics and crash reporting are used.",
+      "stripePayments": "Payments are handled through Stripe.",
+      "noFullCards": "Calm Wallet does not store full payment card information.",
+      "accountDeletion": "Users may delete their account.",
+      "legalRetention": "Data is retained only where legally required.",
+      "sponsoredOptional": "Sponsored credits are optional. Watching sponsored content is never required."
+    }
+  },
   "help": {
     "search": "Search Help",
     "noResults": "No answers found.",

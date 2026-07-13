@@ -329,6 +329,26 @@ describe("protected shell PWA install affordance", () => {
     expect(screen.getByRole("button", { name: "Send report" })).toBeInTheDocument();
   });
 
+  it("shows Legal documents in Settings and opens the current document", () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+
+    expect(within(settingsPanel).getByText("Legal")).toBeInTheDocument();
+    expect(within(settingsPanel).getByText("Terms of Service")).toBeInTheDocument();
+    expect(within(settingsPanel).getByText("Privacy Policy")).toBeInTheDocument();
+    expect(within(settingsPanel).getByText("Refund Policy")).toBeInTheDocument();
+    expect(within(settingsPanel).getByText("AI Disclaimer")).toBeInTheDocument();
+
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Terms of Service/ }));
+
+    const dialog = screen.getByRole("dialog", { name: "Terms of Service" });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText(/Version 1.0/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Placeholder for the production Terms of Service/)).toBeInTheDocument();
+  });
+
   it("renders Sign out as the final destructive Settings row and confirms before calling the action", async () => {
     const signOut = vi.fn(async () => undefined);
     const confirmSpy = vi.spyOn(window, "confirm");

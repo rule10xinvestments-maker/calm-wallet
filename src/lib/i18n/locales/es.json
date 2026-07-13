@@ -273,6 +273,62 @@
       "error": "No pudimos cerrar tu sesión. Inténtalo de nuevo."
     }
   },
+  "legal": {
+    "settingsTitle": "Legal",
+    "version": "Versión",
+    "lastUpdated": "Última actualización",
+    "effectiveDate": "Fecha de entrada en vigor",
+    "read": "Leer",
+    "closeDocument": "Cerrar documento legal",
+    "whatChanged": "Qué cambió",
+    "productFacts": "Datos del producto para el documento final",
+    "acceptance": {
+      "title": "Hemos actualizado nuestros documentos legales",
+      "helper": "Hemos hecho cambios en uno o más documentos legales. Revisa y acepta las versiones más recientes para seguir usando Calm Wallet.",
+      "checkbox": "He leído y acepto los documentos legales actuales.",
+      "button": "Aceptar y continuar",
+      "accepting": "Aceptando...",
+      "error": "No pudimos guardar tu aceptación. Inténtalo de nuevo."
+    },
+    "documents": {
+      "terms": {
+        "title": "Términos de servicio",
+        "placeholder": "Marcador de posición para los Términos de servicio de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+      },
+      "privacy": {
+        "title": "Política de privacidad",
+        "placeholder": "Marcador de posición para la Política de privacidad de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+      },
+      "refund": {
+        "title": "Política de reembolso",
+        "placeholder": "Marcador de posición para la Política de reembolso de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+      },
+      "ai": {
+        "title": "Aviso sobre IA",
+        "placeholder": "Marcador de posición para el Aviso sobre IA de producción. Este documento se redactará por separado y deberá cubrir los datos del producto que aparecen abajo."
+      }
+    },
+    "productFactItems": {
+      "creditsNeverExpire": "Los créditos nunca caducan.",
+      "creditsSingleBalance": "Todos los créditos comparten un único saldo de cuenta.",
+      "creditsNonTransferable": "Los créditos no son transferibles.",
+      "creditsNoCashValue": "Los créditos no tienen valor en efectivo.",
+      "noRefunds": "No hay reembolsos después de la compra.",
+      "billingMistakes": "Los errores de facturación pueden investigarse y corregirse.",
+      "unlimitedRenews": "Unlimited se renueva anualmente.",
+      "cancelRenewal": "Los usuarios pueden cancelar la renovación en cualquier momento.",
+      "accessUntilPeriodEnds": "El acceso continúa hasta que termine el periodo pagado.",
+      "aiMistakes": "La IA puede cometer errores.",
+      "noAdvice": "Calm Wallet no ofrece asesoramiento financiero, fiscal, legal ni de inversión.",
+      "minimumAge": "La edad mínima es 16 años.",
+      "analyticsCrash": "Se usan analíticas anónimas e informes de fallos.",
+      "stripePayments": "Los pagos se procesan mediante Stripe.",
+      "noFullCards": "Calm Wallet no almacena la información completa de las tarjetas de pago.",
+      "accountDeletion": "Los usuarios pueden eliminar su cuenta.",
+      "legalRetention": "Los datos se conservan solo cuando la ley lo exige.",
+      "sponsoredOptional": "Los créditos patrocinados son opcionales. Ver contenido patrocinado nunca es obligatorio."
+    }
+  },
   "help": {
     "search": "Buscar en Ayuda",
     "noResults": "No se encontraron respuestas.",

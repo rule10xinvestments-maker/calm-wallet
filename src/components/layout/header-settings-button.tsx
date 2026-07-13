@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BookOpen, Settings, ShieldCheck } from "lucide-react";
 import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
 import { useLocale } from "@/components/i18n/locale-provider";
+import { LegalSettingsSection } from "@/components/legal/legal-settings-section";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
 import { LanguageSelector } from "@/components/settings/language-selector";
 import { HelpCenterCard } from "@/components/support/help-center-card";
@@ -145,6 +146,7 @@ export function HeaderSettingsButton({
                 preferences={notificationPreferences}
                 registerPushSubscriptionAction={registerPushSubscriptionAction}
               />
+              <LegalSettingsSection />
               {isSupportAdmin ? (
                 <Link
                   className="grid w-full grid-cols-[2.25rem_1fr_auto] items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-3 py-3 text-left transition hover:bg-sky-100"

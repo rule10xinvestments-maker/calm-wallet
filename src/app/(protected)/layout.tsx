@@ -1,4 +1,6 @@
 import { ProtectedShell } from "@/components/layout/protected-shell";
+import { LegalAcceptanceScreen } from "@/components/legal/legal-acceptance-screen";
+import { acceptLegalDocumentsAction } from "@/lib/actions/legal";
 import { signOutAction } from "@/lib/auth/actions";
 import {
   registerPushSubscriptionAction,
@@ -11,6 +13,7 @@ import { getAccountHint } from "@/lib/auth/account-hint";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
 import { createSupabaseNotificationService } from "@/domain/notifications/service";
 import { createSupabaseUserPreferencesService } from "@/domain/preferences/service";
+import { createSupabaseLegalAcceptanceService, hasAcceptedCurrentLegalDocuments } from "@/domain/legal/service";
 import { createSupabaseSupportService } from "@/domain/support/service";
 import {
   getFallbackNotificationPreferences,
@@ -38,22 +41,30 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   let uiLocale: SupportedLocale | null = null;
   let timezone: string | null = null;
   let isSupportAdmin = false;
+  let legalAccepted = false;
 
   try {
-    const [notificationService, preferencesService] = await Promise.all([
+    const [notificationService, preferencesService, legalService] = await Promise.all([
       createSupabaseNotificationService(),
       createSupabaseUserPreferencesService(),
+      createSupabaseLegalAcceptanceService(),
     ]);
-    const [loadedNotificationPreferences, loadedUserPreferences] = await Promise.all([
+    const [loadedNotificationPreferences, loadedUserPreferences, loadedLegalAcceptance] = await Promise.all([
       notificationService.getNotificationPreferences(user.id),
       preferencesService.getUserPreferences(user.id),
+      legalService.getLegalAcceptance(user.id),
     ]);
 
     notificationPreferences = loadedNotificationPreferences;
     uiLocale = loadedUserPreferences.uiLocale;
     timezone = loadedUserPreferences.timezone;
+    legalAccepted = hasAcceptedCurrentLegalDocuments(loadedLegalAcceptance);
   } catch (error) {
     logProtectedRouteLoadFailure("assistant", error);
+  }
+
+  if (!legalAccepted) {
+    return <LegalAcceptanceScreen action={acceptLegalDocumentsAction} savedLocale={uiLocale} />;
   }
 
   try {

@@ -44,6 +44,11 @@ export type Database = {
           locale: string;
           ui_locale: string | null;
           timezone: string;
+          accepted_terms_version: string | null;
+          accepted_privacy_version: string | null;
+          accepted_refund_version: string | null;
+          accepted_ai_version: string | null;
+          legal_accepted_at: string | null;
           default_currency: string;
           onboarding_state: OnboardingState;
           notifications_opt_in: boolean;
@@ -55,6 +60,11 @@ export type Database = {
           locale?: string;
           ui_locale?: string | null;
           timezone?: string;
+          accepted_terms_version?: string | null;
+          accepted_privacy_version?: string | null;
+          accepted_refund_version?: string | null;
+          accepted_ai_version?: string | null;
+          legal_accepted_at?: string | null;
           default_currency?: string;
           onboarding_state?: OnboardingState;
           notifications_opt_in?: boolean;
@@ -66,6 +76,11 @@ export type Database = {
           locale?: string;
           ui_locale?: string | null;
           timezone?: string;
+          accepted_terms_version?: string | null;
+          accepted_privacy_version?: string | null;
+          accepted_refund_version?: string | null;
+          accepted_ai_version?: string | null;
+          legal_accepted_at?: string | null;
           default_currency?: string;
           onboarding_state?: OnboardingState;
           notifications_opt_in?: boolean;

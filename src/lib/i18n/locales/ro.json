@@ -273,6 +273,62 @@
       "error": "Nu te-am putut deconecta. Încearcă din nou."
     }
   },
+  "legal": {
+    "settingsTitle": "Legal",
+    "version": "Versiunea",
+    "lastUpdated": "Ultima actualizare",
+    "effectiveDate": "Data intrării în vigoare",
+    "read": "Citește",
+    "closeDocument": "Închide documentul legal",
+    "whatChanged": "Ce s-a schimbat",
+    "productFacts": "Fapte despre produs pentru documentul final",
+    "acceptance": {
+      "title": "Am actualizat documentele legale",
+      "helper": "Am făcut modificări în unul sau mai multe documente legale. Te rugăm să citești și să accepți cele mai recente versiuni pentru a continua să folosești Calm Wallet.",
+      "checkbox": "Am citit și accept documentele legale curente.",
+      "button": "Acceptă și continuă",
+      "accepting": "Se acceptă...",
+      "error": "Nu am putut salva acceptarea. Încearcă din nou."
+    },
+    "documents": {
+      "terms": {
+        "title": "Termeni și condiții",
+        "placeholder": "Spațiu rezervat pentru Termenii și condițiile de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+      },
+      "privacy": {
+        "title": "Politica de confidențialitate",
+        "placeholder": "Spațiu rezervat pentru Politica de confidențialitate de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+      },
+      "refund": {
+        "title": "Politica de rambursare",
+        "placeholder": "Spațiu rezervat pentru Politica de rambursare de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+      },
+      "ai": {
+        "title": "Declinarea responsabilității AI",
+        "placeholder": "Spațiu rezervat pentru Declinarea responsabilității AI de producție. Documentul va fi scris separat și trebuie să acopere faptele despre produs de mai jos."
+      }
+    },
+    "productFactItems": {
+      "creditsNeverExpire": "Creditele nu expiră niciodată.",
+      "creditsSingleBalance": "Toate creditele folosesc un singur sold al contului.",
+      "creditsNonTransferable": "Creditele nu pot fi transferate.",
+      "creditsNoCashValue": "Creditele nu au valoare în numerar.",
+      "noRefunds": "Nu există rambursări după cumpărare.",
+      "billingMistakes": "Erorile de facturare pot fi investigate și corectate.",
+      "unlimitedRenews": "Unlimited se reînnoiește anual.",
+      "cancelRenewal": "Utilizatorii pot anula reînnoirea oricând.",
+      "accessUntilPeriodEnds": "Accesul continuă până la finalul perioadei plătite.",
+      "aiMistakes": "AI poate face greșeli.",
+      "noAdvice": "Calm Wallet nu oferă consultanță financiară, fiscală, juridică sau de investiții.",
+      "minimumAge": "Vârsta minimă este 16 ani.",
+      "analyticsCrash": "Se folosesc analize anonime și raportări de erori.",
+      "stripePayments": "Plățile sunt procesate prin Stripe.",
+      "noFullCards": "Calm Wallet nu stochează informațiile complete ale cardului.",
+      "accountDeletion": "Utilizatorii își pot șterge contul.",
+      "legalRetention": "Datele sunt păstrate doar unde este cerut de lege.",
+      "sponsoredOptional": "Creditele sponsorizate sunt opționale. Vizionarea conținutului sponsorizat nu este niciodată obligatorie."
+    }
+  },
   "help": {
     "search": "Caută în Ajutor",
     "noResults": "Nu am găsit răspunsuri.",
