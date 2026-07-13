@@ -1759,11 +1759,10 @@ describe("assistant composer", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Add credits" });
     expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("Current balance")).toBeInTheDocument();
     expect(within(dialog).getByText("8 credits available")).toBeInTheDocument();
-    expect(within(dialog).getByText("Introductory pricing")).toBeInTheDocument();
-    expect(
-      within(dialog).getByText("Introductory pricing during Calm Wallet’s first year. Prices may change in the future."),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Launch pricing")).toBeInTheDocument();
+    expect(within(dialog).getByText(/joining Calm Wallet during its first year/)).toBeInTheDocument();
     expect(within(dialog).getByText("Earn 5 credits")).toBeInTheDocument();
     expect(within(dialog).getByText("50 credits")).toBeInTheDocument();
     expect(within(dialog).getByText("$1.49")).toBeInTheDocument();
@@ -1774,6 +1773,7 @@ describe("assistant composer", () => {
     expect(within(dialog).getByText("Unlimited entries")).toBeInTheDocument();
     expect(within(dialog).getByText("$19.99/year")).toBeInTheDocument();
     expect(within(dialog).getByText("Renews yearly until cancelled.")).toBeInTheDocument();
+    expect(within(dialog).queryByText("We are preparing this option.")).not.toBeInTheDocument();
 
     const options = Array.from(container.querySelectorAll("[data-credit-option]")).map((option) =>
       option.getAttribute("data-credit-option"),

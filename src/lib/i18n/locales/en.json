@@ -646,10 +646,11 @@
     "options": {
       "heading": "Add credits",
       "body": "Choose the option that fits you.",
+      "balanceLabel": "Current balance",
       "buy": "Buy",
       "bestValue": "Best value",
       "savings": "Save {percent}%",
-      "launchPricing": { "label": "Introductory pricing", "helper": "Introductory pricing during Calm Wallet’s first year. Prices may change in the future." },
+      "launchPricing": { "label": "Launch pricing", "helper": "You’re joining Calm Wallet during its first year. Enjoy introductory pricing while it grows. Prices may change in future updates." },
       "comingSoon": { "title": "Coming soon", "helper": "We are preparing this option." },
       "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message.", "secondary": "No forced ads.", "action": "View message" },
       "small": { "title": "50 credits", "price": "${price}", "helper": "A simple refill." },

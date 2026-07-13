@@ -646,10 +646,11 @@
     "options": {
       "heading": "Ajouter des crédits",
       "body": "Choisissez l’option qui vous convient.",
+      "balanceLabel": "Solde actuel",
       "buy": "Acheter",
       "bestValue": "Meilleur prix",
       "savings": "Économisez {percent} %",
-      "launchPricing": { "label": "Tarif de lancement", "helper": "Tarif de lancement pendant la première année de Calm Wallet. Les prix pourront changer à l’avenir." },
+      "launchPricing": { "label": "Tarif de lancement", "helper": "Vous rejoignez Calm Wallet pendant sa première année. Profitez du tarif de lancement pendant que l’app grandit. Les prix pourront changer lors de futures mises à jour." },
       "comingSoon": { "title": "Bientôt", "helper": "Nous préparons cette option." },
       "earn": { "title": "Recevoir 5 crédits", "helper": "Regardez un court message sponsorisé.", "secondary": "Aucune publicité forcée.", "action": "Voir le message" },
       "small": { "title": "50 crédits", "price": "{price} $", "helper": "Une recharge simple." },
