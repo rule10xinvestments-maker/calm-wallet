@@ -7,6 +7,34 @@ export const CREDIT_PACKS = {
   unlimitedYearly: { priceUsd: "19.99" },
 } as const;
 
+export function calculateCreditPackSavingsPercent(
+  referencePack: { credits: number; priceUsd: string },
+  candidatePack: { credits: number; priceUsd: string },
+) {
+  const referencePrice = Number.parseFloat(referencePack.priceUsd);
+  const candidatePrice = Number.parseFloat(candidatePack.priceUsd);
+
+  if (
+    !Number.isFinite(referencePrice) ||
+    !Number.isFinite(candidatePrice) ||
+    referencePrice <= 0 ||
+    candidatePrice <= 0 ||
+    referencePack.credits <= 0 ||
+    candidatePack.credits <= 0
+  ) {
+    return null;
+  }
+
+  const referenceCostPerCredit = referencePrice / referencePack.credits;
+  const candidateCostPerCredit = candidatePrice / candidatePack.credits;
+
+  if (candidateCostPerCredit >= referenceCostPerCredit) {
+    return null;
+  }
+
+  return Math.round((1 - candidateCostPerCredit / referenceCostPerCredit) * 100);
+}
+
 export function isCreditEnforcementEnabled() {
   return process.env.CALM_WALLET_CREDITS_ENFORCEMENT_ENABLED === "true";
 }

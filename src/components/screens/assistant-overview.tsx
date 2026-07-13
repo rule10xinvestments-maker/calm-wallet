@@ -10,7 +10,6 @@ import type { OwedNoteActionState } from "@/lib/actions/owed-notes-state";
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
-type CreditNoticeDismissAction = (formData: FormData) => Promise<void>;
 
 const noopBudgetAction: BudgetActionHandler = async (state) => state;
 const noopOwedNoteAction: OwedNoteActionHandler = async (state) => state;
@@ -31,7 +30,6 @@ type AssistantOverviewProps = {
   adjustOwedNoteAmountAction?: OwedNoteActionHandler;
   updateOwedNoteNoteAction?: OwedNoteActionHandler;
   settleOwedNoteAction?: OwedNoteActionHandler;
-  dismissCreditNoticeAction?: CreditNoticeDismissAction;
   loadError?: boolean;
   creditAccount?: {
     creditBalance: number;
@@ -51,7 +49,6 @@ export function AssistantOverview({
   createOwedNoteAction = noopOwedNoteAction,
   deleteLimitAction = noopBudgetAction,
   defaultCurrency = "USD",
-  dismissCreditNoticeAction,
   owedNotes = [],
   pauseLimitAction = noopBudgetAction,
   recentTransactions,
@@ -74,7 +71,6 @@ export function AssistantOverview({
       createOwedNoteAction={createOwedNoteAction}
       deleteLimitAction={deleteLimitAction}
       defaultCurrency={defaultCurrency}
-      dismissCreditNoticeAction={dismissCreditNoticeAction}
       initialState={initialState}
       loadError={loadError}
       owedNotes={owedNotes}

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCreditsService, getEntryOperationKey } from "@/domain/credits/service";
+import { calculateCreditPackSavingsPercent, CREDIT_PACKS } from "@/lib/credits/config";
 import { mapTransactionRowToDomain } from "@/domain/transactions/mappers";
 import { createTransactionService, type TransactionServiceAdapter } from "@/domain/transactions/service";
 import type { TransactionRow } from "@/domain/transactions/types";
@@ -100,6 +101,12 @@ describe("credit operation keys", () => {
 });
 
 describe("credits service", () => {
+  it("calculates bulk pack savings against the smallest credit pack", () => {
+    expect(calculateCreditPackSavingsPercent(CREDIT_PACKS.small, CREDIT_PACKS.large)).toBe(33);
+    expect(calculateCreditPackSavingsPercent(CREDIT_PACKS.large, CREDIT_PACKS.small)).toBeNull();
+    expect(calculateCreditPackSavingsPercent(CREDIT_PACKS.small, { credits: 100, priceUsd: "not-a-price" })).toBeNull();
+  });
+
   it("sends entry creation through the atomic credit RPC", async () => {
     const rpc = vi.fn(async () => ({
       data: {

@@ -15,7 +15,6 @@ import type { ControlledCategoryOption } from "@/lib/server/transactions-read-mo
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
-type CreditNoticeDismissAction = (formData: FormData) => Promise<void>;
 
 type AssistantOverviewContentProps = {
   action: AssistantActionHandler;
@@ -33,7 +32,6 @@ type AssistantOverviewContentProps = {
   adjustOwedNoteAmountAction: OwedNoteActionHandler;
   updateOwedNoteNoteAction: OwedNoteActionHandler;
   settleOwedNoteAction: OwedNoteActionHandler;
-  dismissCreditNoticeAction?: CreditNoticeDismissAction;
   loadError: boolean;
   creditAccount?: {
     creditBalance: number;
@@ -52,7 +50,6 @@ export function AssistantOverviewContent({
   createOwedNoteAction,
   deleteLimitAction,
   defaultCurrency,
-  dismissCreditNoticeAction,
   initialState,
   loadError,
   owedNotes,
@@ -99,7 +96,6 @@ export function AssistantOverviewContent({
             createOwedNoteAction={createOwedNoteAction}
             deleteLimitAction={deleteLimitAction}
             defaultCurrency={defaultCurrency}
-            dismissCreditNoticeAction={dismissCreditNoticeAction}
             initialState={initialState}
             owedNotes={owedNotes}
             pauseLimitAction={pauseLimitAction}

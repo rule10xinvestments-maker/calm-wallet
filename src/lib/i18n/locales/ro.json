@@ -634,7 +634,7 @@
     "addCredits": "Adaugă credite",
     "low10": { "title": "Mai ai 10 credite pentru intrări" },
     "low3": { "title": "Mai ai câteva credite pentru intrări" },
-    "low": { "title": "Mai ai {count} credite", "helper": "Obține gratuit sau alege un pachet." },
+    "low": { "title": "Mai ai {count} credite", "helper": "Atinge pentru reîncărcare", "openOptions": "Mai ai {count} credite. Atinge pentru reîncărcare." },
     "balance": {
       "one": "{count} credit disponibil",
       "many": "{count} credite disponibile"
@@ -647,6 +647,9 @@
       "heading": "Adaugă credite",
       "body": "Alege varianta potrivită pentru tine.",
       "buy": "Cumpără",
+      "bestValue": "Cel mai bun preț",
+      "savings": "Economisești {percent}%",
+      "launchPricing": { "label": "Preț introductiv", "helper": "Preț introductiv în primul an Calm Wallet. Prețurile se pot schimba în viitor." },
       "comingSoon": { "title": "În curând", "helper": "Pregătim această opțiune." },
       "earn": { "title": "Primește 5 credite", "helper": "Vezi un mesaj sponsorizat scurt.", "secondary": "Fără reclame forțate.", "action": "Vezi mesajul" },
       "small": { "title": "50 de credite", "price": "${price}", "helper": "O reîncărcare simplă." },

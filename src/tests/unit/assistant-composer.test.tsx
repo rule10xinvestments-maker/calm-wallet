@@ -1706,11 +1706,7 @@ describe("assistant composer", () => {
     expect(screen.queryByText("9 credits left")).not.toBeInTheDocument();
   });
 
-  it("renders the Romanian low-credit notice as exactly two compact text lines with icon actions", async () => {
-    const dismissCreditNoticeAction = vi.fn(async (formData: FormData) => {
-      void formData;
-    });
-
+  it("renders the Romanian low-credit helper as one tappable two-line row without plus or dismiss controls", () => {
     render(
       <LocaleProvider savedLocale="ro">
         <AssistantComposer
@@ -1719,38 +1715,30 @@ describe("assistant composer", () => {
             creditBalance: 8,
             recurringGraceDebt: 0,
             unlimitedUntil: null,
-            lowBalanceNotice10ShownAt: null,
+            lowBalanceNotice10ShownAt: "2026-07-13T00:00:00.000Z",
             lowBalanceNotice3ShownAt: null,
           }}
-          dismissCreditNoticeAction={dismissCreditNoticeAction}
           initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
           recentItems={[]}
         />
       </LocaleProvider>,
     );
 
-    const title = screen.getByText("Mai ai 8 credite");
-    const notice = title.closest(".rounded-xl");
+    const helper = screen.getByRole("button", { name: "Mai ai 8 credite. Atinge pentru reîncărcare." });
+    const title = within(helper).getByText("Mai ai 8 credite");
 
+    expect(helper).toBeInTheDocument();
     expect(title).toBeInTheDocument();
-    expect(screen.getByText("Obține gratuit sau alege un pachet.")).toBeInTheDocument();
-    expect(notice).toHaveClass("px-2.5", "py-1.5", "text-xs");
+    expect(within(helper).getByText("Atinge pentru reîncărcare")).toBeInTheDocument();
+    expect(helper).toHaveClass("min-h-12", "px-3", "py-2");
     expect(title).toHaveClass("truncate", "leading-4");
-    expect(screen.getByText("Obține gratuit sau alege un pachet.")).toHaveClass("truncate", "leading-4");
-
-    const addCreditsButton = screen.getByRole("button", { name: "Adaugă credite" });
-    const closeButton = screen.getByRole("button", { name: "Închide" });
-    expect(addCreditsButton).toHaveTextContent("");
-    expect(closeButton).toHaveTextContent("");
-    expect(screen.queryByText("Adaugă credite")).not.toBeInTheDocument();
-    expect(screen.queryByText("Închide")).not.toBeInTheDocument();
-
-    fireEvent.click(closeButton);
-    await waitFor(() => expect(dismissCreditNoticeAction).toHaveBeenCalledTimes(1));
-    expect(dismissCreditNoticeAction.mock.calls[0]![0].get("threshold")).toBe("10");
+    expect(within(helper).getByText("Atinge pentru reîncărcare")).toHaveClass("truncate", "leading-4");
+    expect(within(helper).getByTestId("low-credit-chevron")).toHaveClass("shrink-0", "self-center");
+    expect(screen.queryByRole("button", { name: "Adaugă credite" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Închide" })).not.toBeInTheDocument();
   });
 
-  it("opens the shared credit options sheet from the low-credit Add credits action", () => {
+  it("opens the shared credit options sheet from the low-credit helper row", () => {
     const { container } = renderComposer(
       undefined,
       [],
@@ -1766,16 +1754,22 @@ describe("assistant composer", () => {
       },
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Add credits" }));
+    fireEvent.click(screen.getByRole("button", { name: "8 credits left. Tap to refill credits." }));
 
     const dialog = screen.getByRole("dialog", { name: "Add credits" });
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText("8 credits available")).toBeInTheDocument();
+    expect(within(dialog).getByText("Introductory pricing")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Introductory pricing during Calm Wallet’s first year. Prices may change in the future."),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText("Earn 5 credits")).toBeInTheDocument();
     expect(within(dialog).getByText("50 credits")).toBeInTheDocument();
     expect(within(dialog).getByText("$1.49")).toBeInTheDocument();
     expect(within(dialog).getByText("500 credits")).toBeInTheDocument();
     expect(within(dialog).getByText("$9.99")).toBeInTheDocument();
+    expect(within(dialog).getByText("Save 33%")).toBeInTheDocument();
+    expect(within(dialog).getByText("Best value")).toBeInTheDocument();
     expect(within(dialog).getByText("Unlimited entries")).toBeInTheDocument();
     expect(within(dialog).getByText("$19.99/year")).toBeInTheDocument();
     expect(within(dialog).getByText("Renews yearly until cancelled.")).toBeInTheDocument();
@@ -1810,7 +1804,7 @@ describe("assistant composer", () => {
       },
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Add credits" }));
+    fireEvent.click(screen.getByRole("button", { name: "3 credits left. Tap to refill credits." }));
 
     const comingSoonButtons = within(screen.getByRole("dialog")).getAllByRole("button", { name: "Coming soon" });
     expect(comingSoonButtons).toHaveLength(4);
@@ -1838,7 +1832,7 @@ describe("assistant composer", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Coffee 12" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add credits" }));
+    fireEvent.click(screen.getByRole("button", { name: "3 credits left. Tap to refill credits." }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }));
 
     expect(screen.getByLabelText("Message")).toHaveValue("Coffee 12");

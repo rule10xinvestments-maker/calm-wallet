@@ -18,7 +18,6 @@ import {
   StickyNote,
   Store,
   Wallet,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
@@ -32,6 +31,7 @@ import type { ControlledCategoryOption } from "@/lib/server/transactions-read-mo
 import {
   areCreditPacksEnabled,
   areRewardedCreditsEnabled,
+  calculateCreditPackSavingsPercent,
   CREDIT_PACKS,
   isYearlyUnlimitedEnabled,
 } from "@/lib/credits/config";
@@ -60,7 +60,6 @@ import { t } from "@/lib/i18n";
 type AssistantActionHandler = (state: AssistantActionState, formData: FormData) => Promise<AssistantActionState>;
 type BudgetActionHandler = (state: BudgetActionState, formData: FormData) => Promise<BudgetActionState>;
 type OwedNoteActionHandler = (state: OwedNoteActionState, formData: FormData) => Promise<OwedNoteActionState>;
-type CreditNoticeDismissAction = (formData: FormData) => Promise<void>;
 
 type AssistantComposerProps = {
   action: AssistantActionHandler;
@@ -78,7 +77,6 @@ type AssistantComposerProps = {
   adjustOwedNoteAmountAction?: OwedNoteActionHandler;
   updateOwedNoteNoteAction?: OwedNoteActionHandler;
   settleOwedNoteAction?: OwedNoteActionHandler;
-  dismissCreditNoticeAction?: CreditNoticeDismissAction;
   importsEnabled?: boolean;
   creditAccount?: {
     creditBalance: number;
@@ -361,7 +359,6 @@ export function AssistantComposer({
   pauseLimitAction = noopBudgetAction,
   resumeLimitAction = noopBudgetAction,
   deleteLimitAction = noopBudgetAction,
-  dismissCreditNoticeAction,
   owedNotes = [],
   createOwedNoteAction = noopOwedNoteAction,
   adjustOwedNoteAmountAction = noopOwedNoteAction,
@@ -403,22 +400,13 @@ export function AssistantComposer({
   const [quickAddOperationKey, setQuickAddOperationKey] = useState(() => createClientOperationKey());
   const [manualOperationKey, setManualOperationKey] = useState(() => createClientOperationKey());
   const [isCreditOptionsOpen, setIsCreditOptionsOpen] = useState(false);
-  const [dismissedLowCreditThreshold, setDismissedLowCreditThreshold] = useState<10 | 3 | null>(null);
   const [latestCreditBalance, setLatestCreditBalance] = useState<number | null>(creditAccount?.creditBalance ?? null);
   const [transientPanelSuccess, setTransientPanelSuccess] = useState<TransientPanelSuccess | null>(null);
   const [hideManualActionMessage, setHideManualActionMessage] = useState(false);
   const effectiveCreditBalance = latestCreditBalance ?? creditAccount?.creditBalance ?? null;
   const lowCreditThreshold = getCreditNoticeThreshold(effectiveCreditBalance);
-  const lowCreditNoticeAlreadyShown =
-    lowCreditThreshold === 10
-      ? creditAccount?.lowBalanceNotice10ShownAt
-      : lowCreditThreshold === 3
-        ? creditAccount?.lowBalanceNotice3ShownAt
-        : null;
-  const visibleLowCreditThreshold =
-    lowCreditThreshold && !lowCreditNoticeAlreadyShown && lowCreditThreshold !== dismissedLowCreditThreshold
-      ? lowCreditThreshold
-      : null;
+  const showLowCreditHelper = lowCreditThreshold !== null;
+  const lowCreditDisplayBalance = effectiveCreditBalance ?? lowCreditThreshold ?? 0;
   const assistantMessageDisplay = getAssistantMessageDisplay(state, locale);
   const latestReviewLabel = getReviewStateDisplayLabel(state.latestTransaction?.reviewState, locale);
   const currentCreditBalanceDisplay = getCreditBalanceDisplay(effectiveCreditBalance, locale);
@@ -426,6 +414,7 @@ export function AssistantComposer({
   const creditPacksEnabled = areCreditPacksEnabled();
   const yearlyUnlimitedEnabled = isYearlyUnlimitedEnabled();
   const providerActionsImplemented = false;
+  const largePackSavingsPercent = calculateCreditPackSavingsPercent(CREDIT_PACKS.small, CREDIT_PACKS.large);
   const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
   const [pauseState, pauseFormAction] = useActionState<BudgetActionState, FormData>(pauseLimitAction, initialBudgetActionState);
   const [resumeState, resumeFormAction] = useActionState<BudgetActionState, FormData>(resumeLimitAction, initialBudgetActionState);
@@ -898,44 +887,6 @@ export function AssistantComposer({
         </div>
       ) : null}
 
-      {visibleLowCreditThreshold ? (
-        <div className="rounded-xl border border-sky-100 bg-sky-50 px-2.5 py-1.5 text-xs text-sky-800">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold leading-4">
-                {t("credits.low.title", locale, { count: effectiveCreditBalance ?? (visibleLowCreditThreshold === 10 ? 10 : 3) })}
-              </p>
-              <p className="truncate leading-4 text-slate-600">{t("credits.low.helper", locale)}</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                aria-label={t("credits.addCredits", locale)}
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                onClick={() => setIsCreditOptionsOpen(true)}
-                type="button"
-              >
-                <Plus aria-hidden="true" className="size-4" strokeWidth={2.3} />
-              </button>
-              <form
-                action={(formData) => {
-                  setDismissedLowCreditThreshold(visibleLowCreditThreshold);
-                  void dismissCreditNoticeAction?.(formData);
-                }}
-              >
-                <input name="threshold" type="hidden" value={visibleLowCreditThreshold} />
-                <button
-                  aria-label={t("common.close", locale)}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-100 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                  type="submit"
-                >
-                  <X aria-hidden="true" className="size-3.5" strokeWidth={2.4} />
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {isCreditOptionsOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/25 px-3 py-4 backdrop-blur-sm sm:items-center" role="presentation">
           <div
@@ -964,6 +915,10 @@ export function AssistantComposer({
                 {t("common.close", locale)}
               </button>
             </div>
+            <div className="mt-3 rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2">
+              <p className="text-xs font-semibold text-sky-800">{t("credits.options.launchPricing.label", locale)}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{t("credits.options.launchPricing.helper", locale)}</p>
+            </div>
             <div className="mt-3 grid gap-2">
               {[
                 {
@@ -972,6 +927,7 @@ export function AssistantComposer({
                   price: null,
                   helper: t("credits.options.earn.helper", locale),
                   secondary: t("credits.options.earn.secondary", locale),
+                  badge: null,
                   action: t("credits.options.earn.action", locale),
                   enabled: rewardedCreditsEnabled && providerActionsImplemented,
                 },
@@ -981,6 +937,7 @@ export function AssistantComposer({
                   price: t("credits.options.small.price", locale, { price: CREDIT_PACKS.small.priceUsd }),
                   helper: t("credits.options.small.helper", locale),
                   secondary: null,
+                  badge: null,
                   action: t("credits.options.buy", locale),
                   enabled: creditPacksEnabled && providerActionsImplemented,
                 },
@@ -989,7 +946,10 @@ export function AssistantComposer({
                   title: t("credits.options.large.title", locale),
                   price: t("credits.options.large.price", locale, { price: CREDIT_PACKS.large.priceUsd }),
                   helper: t("credits.options.large.helper", locale),
-                  secondary: null,
+                  secondary: largePackSavingsPercent
+                    ? t("credits.options.savings", locale, { percent: largePackSavingsPercent })
+                    : null,
+                  badge: t("credits.options.bestValue", locale),
                   action: t("credits.options.buy", locale),
                   enabled: creditPacksEnabled && providerActionsImplemented,
                 },
@@ -999,6 +959,7 @@ export function AssistantComposer({
                   price: t("credits.options.unlimited.price", locale, { price: CREDIT_PACKS.unlimitedYearly.priceUsd }),
                   helper: t("credits.options.unlimited.helper", locale),
                   secondary: t("credits.options.unlimited.renewal", locale),
+                  badge: null,
                   action: t("credits.options.unlimited.action", locale),
                   enabled: yearlyUnlimitedEnabled && providerActionsImplemented,
                 },
@@ -1006,7 +967,14 @@ export function AssistantComposer({
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" data-credit-option={option.id} key={option.id}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="break-words text-sm font-semibold text-slate-900">{option.title}</p>
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <p className="break-words text-sm font-semibold text-slate-900">{option.title}</p>
+                        {option.badge ? (
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-100">
+                            {option.badge}
+                          </span>
+                        ) : null}
+                      </div>
                       {option.price ? <p className="mt-0.5 text-sm font-semibold text-sky-800">{option.price}</p> : null}
                       <p className="mt-1 text-xs leading-5 text-slate-600">{option.helper}</p>
                       {option.secondary ? <p className="mt-1 text-xs leading-5 text-slate-500">{option.secondary}</p> : null}
@@ -1047,6 +1015,28 @@ export function AssistantComposer({
             value={quickAddDraft}
           />
         </label>
+
+        {showLowCreditHelper ? (
+          <button
+            aria-label={t("credits.low.openOptions", locale, { count: lowCreditDisplayBalance })}
+            className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-left text-xs text-sky-800 transition hover:bg-sky-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            onClick={() => setIsCreditOptionsOpen(true)}
+            type="button"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold leading-4">
+                {t("credits.low.title", locale, { count: lowCreditDisplayBalance })}
+              </span>
+              <span className="block truncate leading-4 text-slate-600">{t("credits.low.helper", locale)}</span>
+            </span>
+            <ChevronRight
+              aria-hidden="true"
+              className="size-4 shrink-0 self-center text-slate-400"
+              data-testid="low-credit-chevron"
+              strokeWidth={2.2}
+            />
+          </button>
+        ) : null}
 
         <Button className="w-full" disabled={isPending} type="submit">
           {isPending ? t("assistant.quickAdd.working", locale) : t("assistant.quickAdd.send", locale)}

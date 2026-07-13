@@ -180,12 +180,19 @@ describe("i18n helper", () => {
     expect(t("credits.low.title", "ro", { count: 8 })).toBe("Mai ai 8 credite");
     expect(t("credits.low.title", "fr", { count: 8 })).toBe("Il vous reste 8 crédits");
     expect(t("credits.low.title", "es", { count: 8 })).toBe("Te quedan 8 créditos");
-    expect(t("credits.low.helper", "en")).toBe("Earn more free or choose a pack.");
-    expect(t("credits.low.helper", "ro")).toBe("Obține gratuit sau alege un pachet.");
-    expect(t("credits.low.helper", "fr")).toBe("Obtenez-en gratuitement ou choisissez un lot.");
-    expect(t("credits.low.helper", "es")).toBe("Consigue más gratis o elige un paquete.");
+    expect(t("credits.low.helper", "en")).toBe("Tap to refill credits");
+    expect(t("credits.low.helper", "ro")).toBe("Atinge pentru reîncărcare");
+    expect(t("credits.low.helper", "fr")).toBe("Touchez pour recharger");
+    expect(t("credits.low.helper", "es")).toBe("Toca para recargar");
+    expect(t("credits.low.openOptions", "en", { count: 8 })).toBe("8 credits left. Tap to refill credits.");
     expect(t("credits.insufficient.title", "ro")).toBe("Adaugă credite pentru a salva intrarea");
     expect(t("credits.balance.many", "ro", { count: 8 })).toBe("8 credite disponibile");
+    expect(t("credits.options.launchPricing.label", "en")).toBe("Introductory pricing");
+    expect(t("credits.options.launchPricing.helper", "ro")).toBe(
+      "Preț introductiv în primul an Calm Wallet. Prețurile se pot schimba în viitor.",
+    );
+    expect(t("credits.options.savings", "es", { percent: 33 })).toBe("Ahorra 33%");
+    expect(t("credits.options.bestValue", "fr")).toBe("Meilleur prix");
     expect(t("credits.options.earn.title", "fr")).toBe("Recevoir 5 crédits");
     expect(t("credits.options.small.title", "es")).toBe("50 créditos");
     expect(t("credits.options.small.price", "es", { price: 1.49 })).toBe("1.49 US$");

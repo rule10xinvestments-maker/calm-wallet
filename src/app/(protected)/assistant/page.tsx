@@ -1,7 +1,6 @@
 import { AssistantOverview } from "@/components/screens/assistant-overview";
 import { assistantAction } from "@/lib/actions/assistant";
 import { initialAssistantActionState } from "@/lib/actions/assistant-state";
-import { markCreditNoticeShownAction } from "@/lib/actions/credits";
 import { pauseCategoryLimitAction, resumeCategoryLimitAction, deleteMonthlyCategoryBudgetAction, upsertCategoryLimitAction } from "@/lib/actions/budgets";
 import {
   adjustOwedNoteAmountAction,
@@ -82,7 +81,6 @@ export default async function AssistantPage() {
       createOwedNoteAction={createOwedNoteAction}
       deleteLimitAction={deleteMonthlyCategoryBudgetAction}
       defaultCurrency={defaultCurrency}
-      dismissCreditNoticeAction={markCreditNoticeShownAction}
       owedNotes={owedNotes}
       recentTransactions={recentTransactions}
       pauseLimitAction={pauseCategoryLimitAction}

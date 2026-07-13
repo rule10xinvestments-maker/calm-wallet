@@ -634,7 +634,7 @@
     "addCredits": "Add credits",
     "low10": { "title": "10 entry credits left" },
     "low3": { "title": "A few entry credits left" },
-    "low": { "title": "{count} credits left", "helper": "Earn more free or choose a pack." },
+    "low": { "title": "{count} credits left", "helper": "Tap to refill credits", "openOptions": "{count} credits left. Tap to refill credits." },
     "balance": {
       "one": "{count} credit available",
       "many": "{count} credits available"
@@ -647,6 +647,9 @@
       "heading": "Add credits",
       "body": "Choose the option that fits you.",
       "buy": "Buy",
+      "bestValue": "Best value",
+      "savings": "Save {percent}%",
+      "launchPricing": { "label": "Introductory pricing", "helper": "Introductory pricing during Calm Wallet’s first year. Prices may change in the future." },
       "comingSoon": { "title": "Coming soon", "helper": "We are preparing this option." },
       "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message.", "secondary": "No forced ads.", "action": "View message" },
       "small": { "title": "50 credits", "price": "${price}", "helper": "A simple refill." },

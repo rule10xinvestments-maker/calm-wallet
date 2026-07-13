@@ -634,7 +634,7 @@
     "addCredits": "Ajouter des crédits",
     "low10": { "title": "10 crédits d’entrée restants" },
     "low3": { "title": "Encore quelques crédits d’entrée" },
-    "low": { "title": "Il vous reste {count} crédits", "helper": "Obtenez-en gratuitement ou choisissez un lot." },
+    "low": { "title": "Il vous reste {count} crédits", "helper": "Touchez pour recharger", "openOptions": "Il vous reste {count} crédits. Touchez pour recharger." },
     "balance": {
       "one": "{count} crédit disponible",
       "many": "{count} crédits disponibles"
@@ -647,6 +647,9 @@
       "heading": "Ajouter des crédits",
       "body": "Choisissez l’option qui vous convient.",
       "buy": "Acheter",
+      "bestValue": "Meilleur prix",
+      "savings": "Économisez {percent} %",
+      "launchPricing": { "label": "Tarif de lancement", "helper": "Tarif de lancement pendant la première année de Calm Wallet. Les prix pourront changer à l’avenir." },
       "comingSoon": { "title": "Bientôt", "helper": "Nous préparons cette option." },
       "earn": { "title": "Recevoir 5 crédits", "helper": "Regardez un court message sponsorisé.", "secondary": "Aucune publicité forcée.", "action": "Voir le message" },
       "small": { "title": "50 crédits", "price": "{price} $", "helper": "Une recharge simple." },
