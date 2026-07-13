@@ -1706,7 +1706,11 @@ describe("assistant composer", () => {
     expect(screen.queryByText("9 credits left")).not.toBeInTheDocument();
   });
 
-  it("renders the Romanian low-credit notice as compact dynamic copy", () => {
+  it("renders the Romanian low-credit notice as exactly two compact text lines with icon actions", async () => {
+    const dismissCreditNoticeAction = vi.fn(async (formData: FormData) => {
+      void formData;
+    });
+
     render(
       <LocaleProvider savedLocale="ro">
         <AssistantComposer
@@ -1718,6 +1722,7 @@ describe("assistant composer", () => {
             lowBalanceNotice10ShownAt: null,
             lowBalanceNotice3ShownAt: null,
           }}
+          dismissCreditNoticeAction={dismissCreditNoticeAction}
           initialState={{ status: "idle", message: null, reviewState: null, latestTransaction: null, recentItems: [] }}
           recentItems={[]}
         />
@@ -1728,9 +1733,21 @@ describe("assistant composer", () => {
     const notice = title.closest(".rounded-xl");
 
     expect(title).toBeInTheDocument();
-    expect(screen.getByText("Poți adăuga altele mai târziu.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Adaugă credite" })).toBeInTheDocument();
-    expect(notice).toHaveClass("px-3", "py-2", "text-xs");
+    expect(screen.getByText("Obține gratuit sau alege un pachet.")).toBeInTheDocument();
+    expect(notice).toHaveClass("px-2.5", "py-1.5", "text-xs");
+    expect(title).toHaveClass("truncate", "leading-4");
+    expect(screen.getByText("Obține gratuit sau alege un pachet.")).toHaveClass("truncate", "leading-4");
+
+    const addCreditsButton = screen.getByRole("button", { name: "Adaugă credite" });
+    const closeButton = screen.getByRole("button", { name: "Închide" });
+    expect(addCreditsButton).toHaveTextContent("");
+    expect(closeButton).toHaveTextContent("");
+    expect(screen.queryByText("Adaugă credite")).not.toBeInTheDocument();
+    expect(screen.queryByText("Închide")).not.toBeInTheDocument();
+
+    fireEvent.click(closeButton);
+    await waitFor(() => expect(dismissCreditNoticeAction).toHaveBeenCalledTimes(1));
+    expect(dismissCreditNoticeAction.mock.calls[0]![0].get("threshold")).toBe("10");
   });
 
   it("opens the shared credit options sheet from the low-credit Add credits action", () => {

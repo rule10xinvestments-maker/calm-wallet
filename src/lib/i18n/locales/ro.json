@@ -634,7 +634,7 @@
     "addCredits": "Adaugă credite",
     "low10": { "title": "Mai ai 10 credite pentru intrări" },
     "low3": { "title": "Mai ai câteva credite pentru intrări" },
-    "low": { "title": "Mai ai {count} credite", "helper": "Poți adăuga altele mai târziu." },
+    "low": { "title": "Mai ai {count} credite", "helper": "Obține gratuit sau alege un pachet." },
     "balance": {
       "one": "{count} credit disponibil",
       "many": "{count} credite disponibile"

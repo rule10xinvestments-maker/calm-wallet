@@ -634,7 +634,7 @@
     "addCredits": "Ajouter des crédits",
     "low10": { "title": "10 crédits d’entrée restants" },
     "low3": { "title": "Encore quelques crédits d’entrée" },
-    "low": { "title": "{count} crédits restants", "helper": "Vous pourrez en ajouter plus tard." },
+    "low": { "title": "Il vous reste {count} crédits", "helper": "Obtenez-en gratuitement ou choisissez un lot." },
     "balance": {
       "one": "{count} crédit disponible",
       "many": "{count} crédits disponibles"

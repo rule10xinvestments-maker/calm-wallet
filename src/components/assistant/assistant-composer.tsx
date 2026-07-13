@@ -18,6 +18,7 @@ import {
   StickyNote,
   Store,
   Wallet,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { CategoryIconGridPicker } from "@/components/category/category-icon-grid-picker";
@@ -898,23 +899,22 @@ export function AssistantComposer({
       ) : null}
 
       {visibleLowCreditThreshold ? (
-        <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-800">
-          <div className="flex flex-col gap-2 min-[360px]:flex-row min-[360px]:items-start min-[360px]:justify-between">
+        <div className="rounded-xl border border-sky-100 bg-sky-50 px-2.5 py-1.5 text-xs text-sky-800">
+          <div className="flex min-w-0 items-center gap-2">
             <div className="min-w-0 flex-1">
-              <p className="font-semibold">
-                {visibleLowCreditThreshold === 10
-                  ? t("credits.low.title", locale, { count: effectiveCreditBalance ?? 10 })
-                  : t("credits.low3.title", locale)}
+              <p className="truncate font-semibold leading-4">
+                {t("credits.low.title", locale, { count: effectiveCreditBalance ?? (visibleLowCreditThreshold === 10 ? 10 : 3) })}
               </p>
-              <p className="mt-0.5 leading-5 text-slate-600">{t("credits.low.helper", locale)}</p>
+              <p className="truncate leading-4 text-slate-600">{t("credits.low.helper", locale)}</p>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2 min-[360px]:justify-end">
+            <div className="flex shrink-0 items-center gap-1">
               <button
-                className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                aria-label={t("credits.addCredits", locale)}
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 onClick={() => setIsCreditOptionsOpen(true)}
                 type="button"
               >
-                {t("credits.addCredits", locale)}
+                <Plus aria-hidden="true" className="size-4" strokeWidth={2.3} />
               </button>
               <form
                 action={(formData) => {
@@ -923,8 +923,12 @@ export function AssistantComposer({
                 }}
               >
                 <input name="threshold" type="hidden" value={visibleLowCreditThreshold} />
-                <button className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600" type="submit">
-                  {t("common.close", locale)}
+                <button
+                  aria-label={t("common.close", locale)}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-100 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                  type="submit"
+                >
+                  <X aria-hidden="true" className="size-3.5" strokeWidth={2.4} />
                 </button>
               </form>
             </div>
