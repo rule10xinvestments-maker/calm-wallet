@@ -24,11 +24,13 @@ const updateNotificationPreferencesAction = vi.fn(async () => initialNotificatio
 const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const sendTestPushNotificationAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const supportTicketAction = vi.fn(async () => initialSupportTicketActionState);
+const updateTimezoneAction = vi.fn(async () => undefined);
 const updateUserPreferencesAction = vi.fn(async (_state: UserPreferencesActionState, formData: FormData) => ({
   status: "success" as const,
   message: "Language saved.",
   uiLocale: formData.get("uiLocale") as "en" | "ro" | "fr" | "es",
 }));
+const testDeviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
 
 function setDisplayMode(standaloneMatches: boolean, fullscreenMatches = false) {
   Object.defineProperty(window, "matchMedia", {
@@ -62,7 +64,9 @@ function renderProtectedShell(options: { onSignOut?: () => Promise<void> } = {})
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
         uiLocale={null}
+        timezone={testDeviceTimezone}
         userPreferencesAction={updateUserPreferencesAction}
+        updateTimezoneAction={updateTimezoneAction}
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
@@ -82,7 +86,9 @@ function renderProtectedShellWithLocale(uiLocale: string | null, options: { onSi
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
         uiLocale={uiLocale as never}
+        timezone={testDeviceTimezone}
         userPreferencesAction={updateUserPreferencesAction}
+        updateTimezoneAction={updateTimezoneAction}
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
@@ -113,7 +119,9 @@ function ControlledLocaleShell({ initialLocale = "fr" }: { initialLocale?: "en" 
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
         uiLocale={uiLocale}
+        timezone={testDeviceTimezone}
         userPreferencesAction={action}
+        updateTimezoneAction={updateTimezoneAction}
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
@@ -141,7 +149,9 @@ function renderAdminProtectedShell(options: { onSignOut?: () => Promise<void> } 
         accountHint="admin@example.com"
         notificationPreferences={notificationPreferences}
         uiLocale={null}
+        timezone={testDeviceTimezone}
         userPreferencesAction={updateUserPreferencesAction}
+        updateTimezoneAction={updateTimezoneAction}
         notificationPreferencesAction={updateNotificationPreferencesAction}
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
@@ -169,6 +179,36 @@ describe("protected shell PWA install affordance", () => {
   afterEach(() => {
     window.localStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  it("syncs the detected device timezone when the saved timezone is missing or stale", async () => {
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      timeZone: "Europe/Bucharest",
+    } as Intl.ResolvedDateTimeFormatOptions);
+
+    render(
+      <PwaInstallProvider>
+        <ProtectedShell
+          accountHint="paul@example.com"
+          notificationPreferences={notificationPreferences}
+          uiLocale={null}
+          timezone="UTC"
+          userPreferencesAction={updateUserPreferencesAction}
+          updateTimezoneAction={updateTimezoneAction}
+          notificationPreferencesAction={updateNotificationPreferencesAction}
+          registerPushSubscriptionAction={registerPushSubscriptionAction}
+          sendTestPushNotificationAction={sendTestPushNotificationAction}
+          supportTicketAction={supportTicketAction}
+          onSignOut={vi.fn(async () => undefined)}
+        >
+          <div>Assistant content</div>
+        </ProtectedShell>
+      </PwaInstallProvider>,
+    );
+
+    await waitFor(() => {
+      expect(updateTimezoneAction).toHaveBeenCalledWith("Europe/Bucharest");
+    });
   });
 
   it("shows Help and Settings in the header without a header sign-out action", () => {

@@ -15,6 +15,8 @@ import type {
 
 type QueryResult<T> = Promise<{ data: T | null; error: { message: string } | null }>;
 
+export const DEFAULT_DAILY_REMINDER_HOUR = 19;
+
 export type NotificationServiceAdapter = {
   getPreferences(userId: string): QueryResult<NotificationPreferencesRow>;
   insertPreferences(userId: string): QueryResult<NotificationPreferencesRow>;
@@ -103,7 +105,7 @@ export function evaluateDailyReminderEligibility(input: NotificationEligibilityI
 
   const local = getLocalParts(input.now, input.timezone);
 
-  if (local.hour < 20 || local.hour > 21) {
+  if (local.hour < DEFAULT_DAILY_REMINDER_HOUR || local.hour > DEFAULT_DAILY_REMINDER_HOUR + 1) {
     return { eligible: false, reason: "outside_window" };
   }
 

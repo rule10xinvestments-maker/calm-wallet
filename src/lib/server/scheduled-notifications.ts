@@ -105,6 +105,8 @@ export type NotificationRunCounts = {
 };
 
 const UTC_FALLBACK_TIMEZONE = "UTC";
+export const DEFAULT_DAILY_REMINDER_HOUR = 19;
+export const DEFAULT_MONTHLY_REVIEW_HOUR = 10;
 const SCHEMA_ERROR_CODES = new Set(["42P01", "42703", "PGRST200", "PGRST201", "PGRST202", "PGRST204", "PGRST205"]);
 
 function emptyCounts(): NotificationRunCounts {
@@ -211,8 +213,8 @@ export function getNotificationSchedule(now: Date, timezone?: string | null) {
     local,
     dayKey,
     monthKey,
-    dailyDue: local.hour === 20,
-    monthlyDue: local.day === 1 && local.hour === 10,
+    dailyDue: local.hour === DEFAULT_DAILY_REMINDER_HOUR,
+    monthlyDue: local.day === 1 && local.hour === DEFAULT_MONTHLY_REVIEW_HOUR,
   };
 }
 

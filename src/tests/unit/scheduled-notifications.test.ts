@@ -24,7 +24,7 @@ vi.mock("@/lib/server/scheduled-notifications", async (importOriginal) => {
   };
 });
 
-const now = new Date("2026-05-01T17:05:00.000Z");
+const now = new Date("2026-05-01T16:05:00.000Z");
 const monthlyNow = new Date("2026-05-01T07:05:00.000Z");
 
 function makeSubscription(overrides: Partial<PushSubscriptionRow> = {}): PushSubscriptionRow {
@@ -122,7 +122,7 @@ describe("scheduled notification runner", () => {
       makeCandidate(),
       makeCandidate({
         userId: "user-2",
-        timezone: "America/Los_Angeles",
+        timezone: "America/Denver",
         dailyReminderEnabled: false,
         subscriptions: [makeSubscription({ id: "sub-2", user_id: "user-2", endpoint: "https://push.example.test/subscription-2" })],
       }),
@@ -173,6 +173,30 @@ describe("scheduled notification runner", () => {
         notificationType: "daily_reminder",
       }),
     );
+  });
+
+  it.each([
+    ["Europe/Bucharest", "2026-05-01T16:05:00.000Z"],
+    ["America/New_York", "2026-05-01T23:05:00.000Z"],
+    ["Asia/Tokyo", "2026-05-01T10:05:00.000Z"],
+  ])("marks the daily reminder due at 19:00 local time for %s", async (timezone, isoNow) => {
+    const { getNotificationSchedule } = await import("@/lib/server/scheduled-notifications");
+
+    const schedule = getNotificationSchedule(new Date(isoNow), timezone);
+
+    expect(schedule.dailyDue).toBe(true);
+    expect(schedule.local.hour).toBe(19);
+  });
+
+  it("keeps the daily reminder at 19:00 local time across DST changes", async () => {
+    const { getNotificationSchedule } = await import("@/lib/server/scheduled-notifications");
+    const beforeDst = getNotificationSchedule(new Date("2026-03-07T00:05:00.000Z"), "America/New_York");
+    const afterDst = getNotificationSchedule(new Date("2026-03-08T23:05:00.000Z"), "America/New_York");
+
+    expect(beforeDst.dailyDue).toBe(true);
+    expect(beforeDst.local.hour).toBe(19);
+    expect(afterDst.dailyDue).toBe(true);
+    expect(afterDst.local.hour).toBe(19);
   });
 
   it("sends a daily reminder when the user has no tracked transaction today", async () => {
@@ -240,7 +264,7 @@ describe("scheduled notification runner", () => {
       { activitySpy },
     );
 
-    await runScheduledNotifications(adapter, { now: new Date("2026-05-02T03:05:00.000Z") });
+    await runScheduledNotifications(adapter, { now: new Date("2026-05-02T02:05:00.000Z") });
 
     expect(activitySpy).toHaveBeenCalledWith("user-1", "2026-05-01T07:00:00.000Z", "2026-05-02T07:00:00.000Z");
   });
@@ -254,7 +278,7 @@ describe("scheduled notification runner", () => {
       { activitySpy },
     );
 
-    await runScheduledNotifications(adapter, { now: new Date("2026-03-09T00:05:00.000Z") });
+    await runScheduledNotifications(adapter, { now: new Date("2026-03-08T23:05:00.000Z") });
 
     expect(activitySpy).toHaveBeenCalledWith("user-1", "2026-03-08T05:00:00.000Z", "2026-03-09T04:00:00.000Z");
   });
@@ -268,7 +292,7 @@ describe("scheduled notification runner", () => {
       { activitySpy },
     );
 
-    await runScheduledNotifications(adapter, { now: new Date("2026-05-01T20:05:00.000Z") });
+    await runScheduledNotifications(adapter, { now: new Date("2026-05-01T19:05:00.000Z") });
 
     expect(activitySpy).toHaveBeenCalledWith("user-1", "2026-05-01T00:00:00.000Z", "2026-05-02T00:00:00.000Z");
   });
@@ -315,7 +339,7 @@ describe("scheduled notification runner", () => {
 
   it("sends daily reminders only when enabled", async () => {
     const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
-    const { adapter } = makeAdapter([makeCandidate({ timezone: "America/Los_Angeles", dailyReminderEnabled: false })]);
+    const { adapter } = makeAdapter([makeCandidate({ timezone: "America/Denver", dailyReminderEnabled: false })]);
 
     const summary = await runScheduledNotifications(adapter, { now });
 
@@ -435,7 +459,7 @@ describe("scheduled notification runner", () => {
   });
 
   it("uses UTC as a clear fallback when timezone is missing", async () => {
-    const utcNow = new Date("2026-05-01T20:05:00.000Z");
+    const utcNow = new Date("2026-05-01T19:05:00.000Z");
     const { runScheduledNotifications } = await import("@/lib/server/scheduled-notifications");
     const { adapter } = makeAdapter([makeCandidate({ timezone: null, monthlyReviewEnabled: false })]);
 
@@ -457,7 +481,7 @@ describe("scheduled notification runner", () => {
       }),
     ]);
 
-    const summary = await runScheduledNotifications(adapter, { now: new Date("2026-05-01T20:05:00.000Z") });
+    const summary = await runScheduledNotifications(adapter, { now: new Date("2026-05-01T19:05:00.000Z") });
 
     expect(summary).toMatchObject({
       ok: true,

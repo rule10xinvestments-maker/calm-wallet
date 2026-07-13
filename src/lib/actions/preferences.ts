@@ -61,3 +61,19 @@ export async function updateUserPreferencesAction(
     };
   }
 }
+
+export async function updateUserTimezoneAction(timezone: string): Promise<void> {
+  const auth = await requireAuthenticatedSession();
+  const user = auth.user;
+
+  if (!user) {
+    return;
+  }
+
+  try {
+    const service = await createSupabaseUserPreferencesService();
+    await service.updateUserTimezone(user.id, { timezone });
+  } catch {
+    // Timezone sync is best effort; reminders can still fall back safely.
+  }
+}

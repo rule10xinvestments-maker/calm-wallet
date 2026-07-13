@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { ProtectedHeader } from "@/components/layout/protected-header";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
+import { DeviceTimezoneSync } from "@/components/notifications/device-timezone-sync";
 import type { signOutAction } from "@/lib/auth/actions";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
@@ -14,10 +15,12 @@ type ProtectedShellProps = {
   onSignOut: typeof signOutAction;
   notificationPreferences: NotificationPreferences;
   uiLocale: SupportedLocale | null;
+  timezone: string | null;
   userPreferencesAction: (
     state: UserPreferencesActionState,
     formData: FormData,
   ) => Promise<UserPreferencesActionState>;
+  updateTimezoneAction: (timezone: string) => Promise<void>;
   notificationPreferencesAction: (
     state: NotificationPreferencesActionState,
     formData: FormData,
@@ -43,7 +46,9 @@ export function ProtectedShell({
   onSignOut,
   notificationPreferences,
   uiLocale,
+  timezone,
   userPreferencesAction,
+  updateTimezoneAction,
   notificationPreferencesAction,
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
@@ -52,6 +57,7 @@ export function ProtectedShell({
 }: ProtectedShellProps) {
   return (
     <LocaleProvider savedLocale={uiLocale}>
+      <DeviceTimezoneSync savedTimezone={timezone} updateTimezoneAction={updateTimezoneAction} />
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:pt-6">
         <ProtectedHeader
           accountHint={accountHint}

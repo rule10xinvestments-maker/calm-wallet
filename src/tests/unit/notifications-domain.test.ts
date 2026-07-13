@@ -149,7 +149,7 @@ describe("notification domain", () => {
     const preferences = { dailyReminderEnabled: true, monthlyReviewEnabled: true };
     const eligible = evaluateDailyReminderEligibility({
       preferences,
-      now: new Date("2026-05-03T17:30:00.000Z"),
+      now: new Date("2026-05-03T16:30:00.000Z"),
       timezone: "Europe/Bucharest",
     });
 
@@ -157,14 +157,14 @@ describe("notification domain", () => {
     expect(
       evaluateDailyReminderEligibility({
         preferences: { ...preferences, dailyReminderEnabled: false },
-        now: new Date("2026-05-03T17:30:00.000Z"),
+        now: new Date("2026-05-03T16:30:00.000Z"),
         timezone: "Europe/Bucharest",
       }),
     ).toEqual({ eligible: false, reason: "disabled" });
     expect(
       evaluateDailyReminderEligibility({
         preferences,
-        now: new Date("2026-05-03T17:30:00.000Z"),
+        now: new Date("2026-05-03T16:30:00.000Z"),
         timezone: "Europe/Bucharest",
         lastSentAt: "2026-05-03T16:00:00.000Z",
       }),
@@ -172,7 +172,7 @@ describe("notification domain", () => {
     expect(
       evaluateDailyReminderEligibility({
         preferences,
-        now: new Date("2026-05-03T17:30:00.000Z"),
+        now: new Date("2026-05-03T16:30:00.000Z"),
         timezone: "Europe/Bucharest",
         hasActivityToday: true,
       }),

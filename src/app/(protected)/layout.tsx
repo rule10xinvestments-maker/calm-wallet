@@ -5,7 +5,7 @@ import {
   sendTestPushNotificationAction,
   updateNotificationPreferencesAction,
 } from "@/lib/actions/notifications";
-import { updateUserPreferencesAction } from "@/lib/actions/preferences";
+import { updateUserPreferencesAction, updateUserTimezoneAction } from "@/lib/actions/preferences";
 import { createSupportTicketAction } from "@/lib/actions/support";
 import { getAccountHint } from "@/lib/auth/account-hint";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
@@ -36,6 +36,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   const accountHint = getAccountHint(user);
   let notificationPreferences = getFallbackNotificationPreferences(user.id);
   let uiLocale: SupportedLocale | null = null;
+  let timezone: string | null = null;
   let isSupportAdmin = false;
 
   try {
@@ -50,6 +51,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 
     notificationPreferences = loadedNotificationPreferences;
     uiLocale = loadedUserPreferences.uiLocale;
+    timezone = loadedUserPreferences.timezone;
   } catch (error) {
     logProtectedRouteLoadFailure("assistant", error);
   }
@@ -67,7 +69,9 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
       accountHint={accountHint}
       notificationPreferences={notificationPreferences}
       uiLocale={uiLocale}
+      timezone={timezone}
       userPreferencesAction={updateUserPreferencesAction}
+      updateTimezoneAction={updateUserTimezoneAction}
       notificationPreferencesAction={updateNotificationPreferencesAction}
       registerPushSubscriptionAction={registerPushSubscriptionAction}
       sendTestPushNotificationAction={sendTestPushNotificationAction}
