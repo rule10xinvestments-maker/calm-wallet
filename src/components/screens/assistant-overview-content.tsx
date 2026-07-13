@@ -79,7 +79,7 @@ export function AssistantOverviewContent({
         </Card>
       ) : null}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle>{t("assistant.quickAdd.title", locale)}</CardTitle>
           <CardDescription>
             <span className="block">{t("assistant.quickAdd.helper", locale)}</span>

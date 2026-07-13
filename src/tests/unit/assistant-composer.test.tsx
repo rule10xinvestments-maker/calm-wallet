@@ -1731,6 +1731,7 @@ describe("assistant composer", () => {
     expect(title).toBeInTheDocument();
     expect(within(helper).getByText("Atinge pentru reîncărcare")).toBeInTheDocument();
     expect(helper).toHaveClass("min-h-12", "px-3", "py-2", "hover:bg-sky-100/70", "active:bg-sky-100");
+    expect(helper.compareDocumentPosition(screen.getByText("Mesaj"))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(title).toHaveClass("truncate", "leading-4");
     expect(within(helper).getByText("Atinge pentru reîncărcare")).toHaveClass("truncate", "leading-4");
     expect(within(helper).getByTestId("low-credit-chevron")).toHaveClass("shrink-0", "self-center");

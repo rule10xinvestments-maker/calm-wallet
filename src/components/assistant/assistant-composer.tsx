@@ -996,6 +996,28 @@ export function AssistantComposer({
         </div>
       ) : null}
 
+      {showLowCreditHelper ? (
+        <button
+          aria-label={t("credits.low.openOptions", locale, { count: lowCreditDisplayBalance })}
+          className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2 text-left text-xs text-sky-800 transition hover:bg-sky-100/70 active:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          onClick={() => setIsCreditOptionsOpen(true)}
+          type="button"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold leading-4">
+              {t("credits.low.title", locale, { count: lowCreditDisplayBalance })}
+            </span>
+            <span className="block truncate leading-4 text-slate-600">{t("credits.low.helper", locale)}</span>
+          </span>
+          <ChevronRight
+            aria-hidden="true"
+            className="size-4 shrink-0 self-center text-slate-400"
+            data-testid="low-credit-chevron"
+            strokeWidth={2.2}
+          />
+        </button>
+      ) : null}
+
       <form
         action={(formData) => {
           setHideManualActionMessage(false);
@@ -1015,28 +1037,6 @@ export function AssistantComposer({
             value={quickAddDraft}
           />
         </label>
-
-        {showLowCreditHelper ? (
-          <button
-            aria-label={t("credits.low.openOptions", locale, { count: lowCreditDisplayBalance })}
-            className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-left text-xs text-sky-800 transition hover:bg-sky-100/70 active:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            onClick={() => setIsCreditOptionsOpen(true)}
-            type="button"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold leading-4">
-                {t("credits.low.title", locale, { count: lowCreditDisplayBalance })}
-              </span>
-              <span className="block truncate leading-4 text-slate-600">{t("credits.low.helper", locale)}</span>
-            </span>
-            <ChevronRight
-              aria-hidden="true"
-              className="size-4 shrink-0 self-center text-slate-400"
-              data-testid="low-credit-chevron"
-              strokeWidth={2.2}
-            />
-          </button>
-        ) : null}
 
         <Button className="w-full" disabled={isPending} type="submit">
           {isPending ? t("assistant.quickAdd.working", locale) : t("assistant.quickAdd.send", locale)}
