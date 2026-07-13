@@ -650,11 +650,11 @@
       "buy": "Cumpără",
       "bestValue": "Cel mai bun preț",
       "savings": "Economisești {percent}%",
-      "launchPricing": { "label": "Preț de lansare", "helper": "Preț introductiv în primul an Calm Wallet. Prețurile se pot schimba mai târziu." },
+      "launchPricing": { "label": "Preț de lansare", "helper": "Preț introductiv în primul an. Prețurile se pot schimba mai târziu." },
       "earn": { "title": "Primește 5 credite", "helper": "Vezi un mesaj sponsorizat scurt.", "secondary": "Fără reclame forțate.", "action": "Vezi mesajul" },
       "small": { "title": "50 de credite", "price": "${price}", "helper": "Reîncărcare simplă" },
       "large": { "title": "500 de credite", "price": "${price}", "helper": "Cel mai bun preț pentru utilizare regulată." },
-      "unlimited": { "title": "Intrări nelimitate", "price": "${price} / an", "helper": "Adaugă intrări fără să te gândești la credite.", "renewal": "Se reînnoiește automat anual până la anulare.", "action": "Alege nelimitat" },
+      "unlimited": { "title": "Intrări nelimitate", "price": "${price} / an", "helper": "Adaugă intrări fără să te gândești la credite.", "renewal": "Reînnoire anuală", "action": "Alege nelimitat" },
       "footer": "Opțiunile cu furnizori rămân oprite până verificăm recompensele și plățile reale."
     }
   },

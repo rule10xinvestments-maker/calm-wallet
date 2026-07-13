@@ -931,10 +931,10 @@ export function AssistantComposer({
           <div
             aria-labelledby="credit-options-title"
             aria-modal="true"
-            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl"
+            className="flex h-[90dvh] max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl"
             role="dialog"
           >
-            <div className="shrink-0 border-b border-slate-100 p-4 pb-3">
+            <div className="shrink-0 border-b border-slate-100 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-900" id="credit-options-title">
@@ -954,10 +954,10 @@ export function AssistantComposer({
               </div>
             </div>
             <div
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 [-webkit-overflow-scrolling:touch]"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 [-webkit-overflow-scrolling:touch]"
               data-testid="credit-options-scroll-area"
             >
-            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 ring-1 ring-sky-100">
                 <Wallet aria-hidden="true" className="size-4" />
               </span>
@@ -966,7 +966,7 @@ export function AssistantComposer({
                 <p className="truncate text-sm font-semibold text-slate-900">{currentCreditBalanceDisplay}</p>
               </div>
             </div>
-            <div className="mt-3 flex items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50/70 px-3 py-2.5">
+            <div className="mt-2 flex items-start gap-2.5 rounded-2xl border border-sky-100 bg-sky-50/70 px-3 py-2">
               <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-white/80 text-sky-700 ring-1 ring-sky-100">
                 <Sprout aria-hidden="true" className="size-3.5" />
               </span>
@@ -975,7 +975,7 @@ export function AssistantComposer({
                 <p className="mt-0.5 text-xs leading-5 text-slate-600">{t("credits.options.launchPricing.helper", locale)}</p>
               </div>
             </div>
-            <div className="mt-3 grid gap-2">
+            <div className="mt-2 grid gap-1.5">
               {[
                 {
                   id: "earn",
@@ -1024,7 +1024,7 @@ export function AssistantComposer({
 
                 return (
                   <div
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left"
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-left"
                     data-credit-option={option.id}
                     data-provider-enabled={option.enabled ? "true" : "false"}
                     key={option.id}

@@ -1767,7 +1767,7 @@ describe("assistant composer", () => {
     expect(within(dialog).getByText("Current balance")).toBeInTheDocument();
     expect(within(dialog).getByText("8 credits available")).toBeInTheDocument();
     expect(within(dialog).getByText("Launch pricing")).toBeInTheDocument();
-    expect(within(dialog).getByText("Introductory pricing during Calm Wallet’s first year. Prices may change later.")).toBeInTheDocument();
+    expect(within(dialog).getByText("First-year introductory pricing. Prices may change later.")).toBeInTheDocument();
     expect(within(dialog).getByText("Earn 5 credits")).toBeInTheDocument();
     expect(within(dialog).getByText("50 credits")).toBeInTheDocument();
     const smallPack = container.querySelector('[data-credit-option="small"]');
@@ -1783,8 +1783,14 @@ describe("assistant composer", () => {
     expect(within(dialog).getByText("Save 33%")).toBeInTheDocument();
     expect(within(dialog).getByText("Best value")).toBeInTheDocument();
     expect(within(dialog).getByText("Unlimited entries")).toBeInTheDocument();
-    expect(within(dialog).getByText("$19.99/year")).toBeInTheDocument();
-    expect(within(dialog).getByText("Renews yearly until cancelled.")).toBeInTheDocument();
+    const unlimitedPack = container.querySelector('[data-credit-option="unlimited"]');
+    expect(unlimitedPack).not.toBeNull();
+    const unlimitedPrice = within(unlimitedPack as HTMLElement).getByText("$19.99/year");
+    const unlimitedHelper = within(unlimitedPack as HTMLElement).getByText("Renews yearly");
+    expect(unlimitedPrice).toHaveClass("text-sm", "font-semibold", "text-sky-800");
+    expect(unlimitedHelper.closest("p")).toHaveClass("text-xs", "font-medium", "text-slate-500");
+    expect(unlimitedPrice.closest("div")).toContainElement(unlimitedHelper);
+    expect(within(dialog).queryByText("Renews yearly until cancelled.")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("We are preparing this option.")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("Coming soon")).not.toBeInTheDocument();
     expect(within(dialog).queryAllByRole("button", { name: "Coming soon" })).toHaveLength(0);
@@ -1825,8 +1831,8 @@ describe("assistant composer", () => {
     expect(document.body.style.top).toBe("-140px");
     expect(document.body.style.width).toBe("100%");
     expect(document.documentElement.style.overscrollBehavior).toBe("none");
-    expect(dialog).toHaveClass("overflow-hidden", "max-h-[calc(100dvh-2rem)]");
-    expect(scrollArea).toHaveClass("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain");
+    expect(dialog).toHaveClass("overflow-hidden", "h-[90dvh]", "max-h-[90dvh]", "rounded-t-3xl", "rounded-b-none", "sm:rounded-3xl");
+    expect(scrollArea).toHaveClass("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain", "pt-2");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
 

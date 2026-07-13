@@ -650,11 +650,11 @@
       "buy": "Buy",
       "bestValue": "Best value",
       "savings": "Save {percent}%",
-      "launchPricing": { "label": "Launch pricing", "helper": "Introductory pricing during Calm Wallet’s first year. Prices may change later." },
+      "launchPricing": { "label": "Launch pricing", "helper": "First-year introductory pricing. Prices may change later." },
       "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message.", "secondary": "No forced ads.", "action": "View message" },
       "small": { "title": "50 credits", "price": "${price}", "helper": "Simple refill" },
       "large": { "title": "500 credits", "price": "${price}", "helper": "Best price for regular use." },
-      "unlimited": { "title": "Unlimited entries", "price": "${price}/year", "helper": "Add entries without thinking about credits.", "renewal": "Renews yearly until cancelled.", "action": "Choose unlimited" },
+      "unlimited": { "title": "Unlimited entries", "price": "${price}/year", "helper": "Add entries without thinking about credits.", "renewal": "Renews yearly", "action": "Choose unlimited" },
       "footer": "Provider-backed options stay off until real rewards and billing are verified."
     }
   },
