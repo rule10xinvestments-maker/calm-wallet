@@ -651,11 +651,11 @@
       "bestValue": "Mejor precio",
       "savings": "Ahorra {percent}%",
       "launchPricing": { "label": "Precio de lanzamiento", "helper": "Precio introductorio el primer año. Los precios pueden cambiar más adelante." },
+      "sections": { "earn": "Ganar créditos", "buy": "Comprar créditos", "unlimited": "Ilimitado" },
       "earn": { "title": "Recibe 5 créditos", "helper": "Ve un mensaje patrocinado breve.", "secondary": "Sin anuncios forzados.", "action": "Ver mensaje" },
       "small": { "title": "50 créditos", "price": "{price} US$", "helper": "Recarga sencilla" },
       "large": { "title": "500 créditos", "price": "{price} US$", "helper": "Mejor precio para uso regular." },
-      "unlimited": { "title": "Registros ilimitados", "price": "{price} US$/año", "helper": "Añade registros sin pensar en créditos.", "renewal": "Renovación anual", "action": "Elegir ilimitado" },
-      "footer": "Las opciones con proveedor permanecen desactivadas hasta verificar recompensas y pagos reales."
+      "unlimited": { "title": "Registros ilimitados", "price": "{price} US$/año", "helper": "Añade registros sin pensar en créditos.", "renewal": "Renovación anual", "action": "Elegir ilimitado" }
     }
   },
   "transactions": {

@@ -931,7 +931,7 @@ export function AssistantComposer({
           <div
             aria-labelledby="credit-options-title"
             aria-modal="true"
-            className="flex h-[90dvh] max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-xl sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl"
+            className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl"
             role="dialog"
           >
             <div className="shrink-0 border-b border-slate-100 px-4 py-3">
@@ -975,90 +975,116 @@ export function AssistantComposer({
                 <p className="mt-0.5 text-xs leading-5 text-slate-600">{t("credits.options.launchPricing.helper", locale)}</p>
               </div>
             </div>
-            <div className="mt-2 grid gap-1.5">
+            <div className="mt-4 space-y-4">
               {[
                 {
                   id: "earn",
-                  Icon: Gift,
-                  title: t("credits.options.earn.title", locale),
-                  price: null,
-                  helper: t("credits.options.earn.helper", locale),
-                  secondary: null,
-                  badge: null,
-                  enabled: rewardedCreditsEnabled && providerActionsImplemented,
+                  label: t("credits.options.sections.earn", locale),
+                  options: [
+                    {
+                      id: "earn",
+                      Icon: Gift,
+                      title: t("credits.options.earn.title", locale),
+                      price: null,
+                      helper: t("credits.options.earn.helper", locale),
+                      secondary: null,
+                      badge: null,
+                      enabled: rewardedCreditsEnabled && providerActionsImplemented,
+                    },
+                  ],
                 },
                 {
-                  id: "small",
-                  Icon: Coins,
-                  title: t("credits.options.small.title", locale),
-                  price: t("credits.options.small.price", locale, { price: CREDIT_PACKS.small.priceUsd }),
-                  helper: null,
-                  secondary: t("credits.options.small.helper", locale),
-                  badge: null,
-                  enabled: creditPacksEnabled && providerActionsImplemented,
-                },
-                {
-                  id: "large",
-                  Icon: Coins,
-                  title: t("credits.options.large.title", locale),
-                  price: t("credits.options.large.price", locale, { price: CREDIT_PACKS.large.priceUsd }),
-                  helper: null,
-                  secondary: creditPackSavingsMeta.large?.savingsPercent
-                    ? t("credits.options.savings", locale, { percent: creditPackSavingsMeta.large.savingsPercent })
-                    : null,
-                  badge: creditPackSavingsMeta.large?.isBestValue ? t("credits.options.bestValue", locale) : null,
-                  enabled: creditPacksEnabled && providerActionsImplemented,
+                  id: "buy",
+                  label: t("credits.options.sections.buy", locale),
+                  options: [
+                    {
+                      id: "small",
+                      Icon: Coins,
+                      title: t("credits.options.small.title", locale),
+                      price: t("credits.options.small.price", locale, { price: CREDIT_PACKS.small.priceUsd }),
+                      helper: null,
+                      secondary: t("credits.options.small.helper", locale),
+                      badge: null,
+                      enabled: creditPacksEnabled && providerActionsImplemented,
+                    },
+                    {
+                      id: "large",
+                      Icon: Coins,
+                      title: t("credits.options.large.title", locale),
+                      price: t("credits.options.large.price", locale, { price: CREDIT_PACKS.large.priceUsd }),
+                      helper: null,
+                      secondary: creditPackSavingsMeta.large?.savingsPercent
+                        ? t("credits.options.savings", locale, { percent: creditPackSavingsMeta.large.savingsPercent })
+                        : null,
+                      badge: creditPackSavingsMeta.large?.isBestValue ? t("credits.options.bestValue", locale) : null,
+                      enabled: creditPacksEnabled && providerActionsImplemented,
+                    },
+                  ],
                 },
                 {
                   id: "unlimited",
-                  Icon: Wallet,
-                  title: t("credits.options.unlimited.title", locale),
-                  price: t("credits.options.unlimited.price", locale, { price: CREDIT_PACKS.unlimitedYearly.priceUsd }),
-                  helper: null,
-                  secondary: t("credits.options.unlimited.renewal", locale),
-                  badge: null,
-                  enabled: yearlyUnlimitedEnabled && providerActionsImplemented,
+                  label: t("credits.options.sections.unlimited", locale),
+                  options: [
+                    {
+                      id: "unlimited",
+                      Icon: Wallet,
+                      title: t("credits.options.unlimited.title", locale),
+                      price: t("credits.options.unlimited.price", locale, { price: CREDIT_PACKS.unlimitedYearly.priceUsd }),
+                      helper: null,
+                      secondary: t("credits.options.unlimited.renewal", locale),
+                      badge: null,
+                      enabled: yearlyUnlimitedEnabled && providerActionsImplemented,
+                    },
+                  ],
                 },
-              ].map((option) => {
-                const OptionIcon = option.Icon;
+              ].map((section) => (
+                <section aria-labelledby={`credit-options-${section.id}-label`} key={section.id}>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400" id={`credit-options-${section.id}-label`}>
+                    {section.label}
+                  </p>
+                  <div className="grid gap-1.5">
+                    {section.options.map((option) => {
+                      const OptionIcon = option.Icon;
 
-                return (
-                  <div
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-left"
-                    data-credit-option={option.id}
-                    data-provider-enabled={option.enabled ? "true" : "false"}
-                    key={option.id}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200">
-                        <OptionIcon aria-hidden="true" className="size-4" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <p className="min-w-0 truncate text-sm font-semibold text-slate-900">{option.title}</p>
-                          {option.badge ? (
-                            <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-100">
-                              {option.badge}
+                      return (
+                        <div
+                          className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-left"
+                          data-credit-option={option.id}
+                          data-provider-enabled={option.enabled ? "true" : "false"}
+                          key={option.id}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200">
+                              <OptionIcon aria-hidden="true" className="size-4" />
                             </span>
-                          ) : null}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 items-center gap-1.5">
+                                <p className="min-w-0 truncate text-sm font-semibold text-slate-900">{option.title}</p>
+                                {option.badge ? (
+                                  <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-100">
+                                    {option.badge}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                                {option.price ? <p className="text-sm font-semibold text-sky-800">{option.price}</p> : null}
+                                {option.secondary ? (
+                                  <p className="text-xs font-medium text-slate-500">
+                                    {option.price ? <span aria-hidden="true">· </span> : null}
+                                    <span>{option.secondary}</span>
+                                  </p>
+                                ) : null}
+                              </div>
+                              {option.helper ? <p className="mt-0.5 truncate text-xs text-slate-600">{option.helper}</p> : null}
+                            </div>
+                          </div>
                         </div>
-                        <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                          {option.price ? <p className="text-sm font-semibold text-sky-800">{option.price}</p> : null}
-                          {option.secondary ? (
-                            <p className="text-xs font-medium text-slate-500">
-                              {option.price ? <span aria-hidden="true">· </span> : null}
-                              <span>{option.secondary}</span>
-                            </p>
-                          ) : null}
-                        </div>
-                        {option.helper ? <p className="mt-0.5 truncate text-xs text-slate-600">{option.helper}</p> : null}
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </section>
+              ))}
             </div>
-            <p className="mt-3 text-xs leading-5 text-slate-500">{t("credits.options.footer", locale)}</p>
             </div>
           </div>
         </div>

@@ -195,6 +195,9 @@ describe("i18n helper", () => {
     expect(t("credits.options.launchPricing.helper", "ro")).toBe(
       "Preț introductiv în primul an. Prețurile se pot schimba mai târziu.",
     );
+    expect(t("credits.options.sections.earn", "en")).toBe("Earn credits");
+    expect(t("credits.options.sections.buy", "ro")).toBe("Cumpără credite");
+    expect(t("credits.options.sections.unlimited", "es")).toBe("Ilimitado");
     expect(t("credits.options.savings", "es", { percent: 33 })).toBe("Ahorra 33%");
     expect(t("credits.options.bestValue", "fr")).toBe("Meilleur prix");
     expect(t("credits.options.earn.title", "fr")).toBe("Recevoir 5 crédits");

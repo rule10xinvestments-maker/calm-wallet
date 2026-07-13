@@ -1768,7 +1768,9 @@ describe("assistant composer", () => {
     expect(within(dialog).getByText("8 credits available")).toBeInTheDocument();
     expect(within(dialog).getByText("Launch pricing")).toBeInTheDocument();
     expect(within(dialog).getByText("First-year introductory pricing. Prices may change later.")).toBeInTheDocument();
+    expect(within(dialog).getByText("Earn credits")).toBeInTheDocument();
     expect(within(dialog).getByText("Earn 5 credits")).toBeInTheDocument();
+    expect(within(dialog).getByText("Buy credits")).toBeInTheDocument();
     expect(within(dialog).getByText("50 credits")).toBeInTheDocument();
     const smallPack = container.querySelector('[data-credit-option="small"]');
     expect(smallPack).not.toBeNull();
@@ -1782,6 +1784,7 @@ describe("assistant composer", () => {
     expect(within(dialog).getByText("$9.99")).toBeInTheDocument();
     expect(within(dialog).getByText("Save 33%")).toBeInTheDocument();
     expect(within(dialog).getByText("Best value")).toBeInTheDocument();
+    expect(within(dialog).getByText("Unlimited")).toBeInTheDocument();
     expect(within(dialog).getByText("Unlimited entries")).toBeInTheDocument();
     const unlimitedPack = container.querySelector('[data-credit-option="unlimited"]');
     expect(unlimitedPack).not.toBeNull();
@@ -1792,6 +1795,7 @@ describe("assistant composer", () => {
     expect(unlimitedPrice.closest("div")).toContainElement(unlimitedHelper);
     expect(within(dialog).queryByText("Renews yearly until cancelled.")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("We are preparing this option.")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Provider-backed options stay off until real rewards and billing are verified.")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("Coming soon")).not.toBeInTheDocument();
     expect(within(dialog).queryAllByRole("button", { name: "Coming soon" })).toHaveLength(0);
 
@@ -1831,7 +1835,8 @@ describe("assistant composer", () => {
     expect(document.body.style.top).toBe("-140px");
     expect(document.body.style.width).toBe("100%");
     expect(document.documentElement.style.overscrollBehavior).toBe("none");
-    expect(dialog).toHaveClass("overflow-hidden", "h-[90dvh]", "max-h-[90dvh]", "rounded-t-3xl", "rounded-b-none", "sm:rounded-3xl");
+    expect(dialog).toHaveClass("overflow-hidden", "max-h-[90dvh]", "rounded-t-3xl", "rounded-b-none", "sm:rounded-3xl");
+    expect(dialog).not.toHaveClass("h-[90dvh]");
     expect(scrollArea).toHaveClass("min-h-0", "flex-1", "overflow-y-auto", "overscroll-contain", "pt-2");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));

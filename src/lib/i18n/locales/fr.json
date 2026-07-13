@@ -651,11 +651,11 @@
       "bestValue": "Meilleur prix",
       "savings": "Économisez {percent} %",
       "launchPricing": { "label": "Tarif de lancement", "helper": "Tarif de lancement la première année. Les prix pourront changer plus tard." },
+      "sections": { "earn": "Gagner des crédits", "buy": "Acheter des crédits", "unlimited": "Illimité" },
       "earn": { "title": "Recevoir 5 crédits", "helper": "Regardez un court message sponsorisé.", "secondary": "Aucune publicité forcée.", "action": "Voir le message" },
       "small": { "title": "50 crédits", "price": "{price} $", "helper": "Recharge simple" },
       "large": { "title": "500 crédits", "price": "{price} $", "helper": "Le meilleur prix pour une utilisation régulière." },
-      "unlimited": { "title": "Entrées illimitées", "price": "{price} $/an", "helper": "Ajoutez des entrées sans penser aux crédits.", "renewal": "Renouvellement annuel", "action": "Choisir l’illimité" },
-      "footer": "Les options avec fournisseur restent désactivées jusqu’à vérification des récompenses et paiements réels."
+      "unlimited": { "title": "Entrées illimitées", "price": "{price} $/an", "helper": "Ajoutez des entrées sans penser aux crédits.", "renewal": "Renouvellement annuel", "action": "Choisir l’illimité" }
     }
   },
   "transactions": {
