@@ -368,6 +368,7 @@ describe("assistant server integration", () => {
       { actorType: "ai" },
     );
     expect(result.message).toBe("Saved and set to repeat monthly.");
+    expect(result.recurringFrequency).toBe("monthly");
   });
 
   it("does not create an unmarked transaction when recurring metadata insert fails", async () => {

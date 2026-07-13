@@ -120,7 +120,13 @@
     },
     "feedback": {
       "latestItem": "Último elemento",
-      "savedWith": "guardado con"
+      "savedWith": "guardado con",
+      "recurringSaved": "Guardado. Se repetirá {frequency}.",
+      "frequencies": {
+        "weekly": "semanalmente",
+        "monthly": "mensualmente",
+        "yearly": "anualmente"
+      }
     },
     "manual": {
       "title": "Manual",
@@ -620,22 +626,33 @@
       }
     }
   },
+  "reviewStates": {
+    "reviewed": "Revisado",
+    "needsReview": "Por revisar"
+  },
   "credits": {
+    "addCredits": "Añadir créditos",
     "low10": { "title": "Te quedan 10 créditos de registro" },
     "low3": { "title": "Te quedan pocos créditos de registro" },
     "low": { "title": "Te quedan {count} créditos", "helper": "Puedes añadir más después." },
+    "balance": {
+      "one": "{count} crédito disponible",
+      "many": "{count} créditos disponibles"
+    },
     "insufficient": {
       "title": "Añade créditos para guardar este registro",
       "helper": "Tus registros e Insights existentes seguirán disponibles."
     },
     "options": {
-      "heading": "Sigue registrando tu dinero",
-      "body": "Cada nuevo gasto o ingreso usa 1 crédito. Todo lo que ya guardaste seguirá disponible.",
-      "earn": { "title": "Ganar 5 créditos", "helper": "Ver un mensaje patrocinado breve. Próximamente." },
-      "small": { "title": "50 créditos — 1,49 US$", "helper": "Una recarga pequeña. Próximamente." },
-      "large": { "title": "500 créditos — 9,99 US$", "helper": "Mejor valor. Próximamente." },
-      "unlimited": { "title": "Registros ilimitados — 19,99 US$/año", "helper": "Registra sin pensar en créditos." },
-      "footer": "Sin anuncios forzados. Ilimitado se renueva cada año hasta que se cancele."
+      "heading": "Añadir créditos",
+      "body": "Elige la opción que mejor encaje contigo.",
+      "buy": "Comprar",
+      "comingSoon": { "title": "Próximamente", "helper": "Estamos preparando esta opción." },
+      "earn": { "title": "Recibe 5 créditos", "helper": "Ve un mensaje patrocinado breve.", "secondary": "Sin anuncios forzados.", "action": "Ver mensaje" },
+      "small": { "title": "50 créditos", "price": "{price} US$", "helper": "Una recarga sencilla." },
+      "large": { "title": "500 créditos", "price": "{price} US$", "helper": "Mejor precio para uso regular." },
+      "unlimited": { "title": "Registros ilimitados", "price": "{price} US$/año", "helper": "Añade registros sin pensar en créditos.", "renewal": "Se renueva automáticamente cada año hasta que se cancele.", "action": "Elegir ilimitado" },
+      "footer": "Las opciones con proveedor permanecen desactivadas hasta verificar recompensas y pagos reales."
     }
   },
   "transactions": {

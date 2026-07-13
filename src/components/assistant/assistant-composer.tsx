@@ -29,6 +29,12 @@ import { getCategoryVisualsByName } from "@/lib/category-icons";
 import { getCategoryDisplayLabel } from "@/lib/categories/category-labels";
 import type { ControlledCategoryOption } from "@/lib/server/transactions-read-model";
 import {
+  areCreditPacksEnabled,
+  areRewardedCreditsEnabled,
+  CREDIT_PACKS,
+  isYearlyUnlimitedEnabled,
+} from "@/lib/credits/config";
+import {
   buildCategoryPickerOptions,
   type CategoryPickerOption,
 } from "@/lib/category-picker-options";
@@ -139,6 +145,33 @@ function getCreditNoticeThreshold(creditBalance: number | null | undefined): 10 
   }
 
   return null;
+}
+
+function getReviewStateDisplayLabel(reviewState: string | null | undefined, locale: string) {
+  if (reviewState === "reviewed") {
+    return t("reviewStates.reviewed", locale);
+  }
+
+  if (reviewState === "needs_attention" || reviewState === "pending_review") {
+    return t("reviewStates.needsReview", locale);
+  }
+
+  return t("reviewStates.needsReview", locale);
+}
+
+function getAssistantMessageDisplay(state: AssistantActionState, locale: string) {
+  if (state.status === "success" && state.recurringFrequency) {
+    return t("assistant.feedback.recurringSaved", locale, {
+      frequency: t(`assistant.feedback.frequencies.${state.recurringFrequency}`, locale),
+    });
+  }
+
+  return state.message;
+}
+
+function getCreditBalanceDisplay(creditBalance: number | null, locale: string) {
+  const count = creditBalance ?? 0;
+  return t(count === 1 ? "credits.balance.one" : "credits.balance.many", locale, { count });
 }
 
 function toLocalDateKey(value: Date) {
@@ -365,6 +398,7 @@ export function AssistantComposer({
   });
   const [manualFeedback, setManualFeedback] = useState<ManualFeedback>({ status: "idle", message: null });
   const [manualLastSubmitted, setManualLastSubmitted] = useState(false);
+  const [quickAddDraft, setQuickAddDraft] = useState("");
   const [quickAddOperationKey, setQuickAddOperationKey] = useState(() => createClientOperationKey());
   const [manualOperationKey, setManualOperationKey] = useState(() => createClientOperationKey());
   const [isCreditOptionsOpen, setIsCreditOptionsOpen] = useState(false);
@@ -384,6 +418,13 @@ export function AssistantComposer({
     lowCreditThreshold && !lowCreditNoticeAlreadyShown && lowCreditThreshold !== dismissedLowCreditThreshold
       ? lowCreditThreshold
       : null;
+  const assistantMessageDisplay = getAssistantMessageDisplay(state, locale);
+  const latestReviewLabel = getReviewStateDisplayLabel(state.latestTransaction?.reviewState, locale);
+  const currentCreditBalanceDisplay = getCreditBalanceDisplay(effectiveCreditBalance, locale);
+  const rewardedCreditsEnabled = areRewardedCreditsEnabled();
+  const creditPacksEnabled = areCreditPacksEnabled();
+  const yearlyUnlimitedEnabled = isYearlyUnlimitedEnabled();
+  const providerActionsImplemented = false;
   const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
   const [pauseState, pauseFormAction] = useActionState<BudgetActionState, FormData>(pauseLimitAction, initialBudgetActionState);
   const [resumeState, resumeFormAction] = useActionState<BudgetActionState, FormData>(resumeLimitAction, initialBudgetActionState);
@@ -511,7 +552,11 @@ export function AssistantComposer({
     }
 
     if (state.status === "success") {
-      const message = state.message?.startsWith("Saved and set") ? state.message : t("transactions.saved", locale);
+      const message = state.recurringFrequency
+        ? t("assistant.feedback.recurringSaved", locale, {
+            frequency: t(`assistant.feedback.frequencies.${state.recurringFrequency}`, locale),
+          })
+        : t("transactions.saved", locale);
       setManualFeedback({ status: "idle", message: null });
       setTransientPanelSuccess({ id: Date.now(), message });
       setHideManualActionMessage(true);
@@ -538,7 +583,7 @@ export function AssistantComposer({
       });
       setManualLastSubmitted(false);
     }
-  }, [locale, manualLastSubmitted, state.message, state.status]);
+  }, [locale, manualLastSubmitted, state.recurringFrequency, state.status]);
 
   useEffect(() => {
     if (state.status === "success" && state.latestTransaction) {
@@ -546,6 +591,7 @@ export function AssistantComposer({
       setManualOperationKey(createClientOperationKey());
       if (!manualLastSubmitted) {
         setHideManualActionMessage(false);
+        setQuickAddDraft("");
       }
     }
 
@@ -833,7 +879,7 @@ export function AssistantComposer({
 
   return (
     <div className="space-y-4">
-      {state.message && !hideManualActionMessage ? (
+      {assistantMessageDisplay && !hideManualActionMessage ? (
         <div
           className={`rounded-2xl border px-4 py-3 text-sm ${
             state.status === "error"
@@ -841,11 +887,11 @@ export function AssistantComposer({
               : "border-sky-200 bg-sky-50 text-sky-700"
           }`}
         >
-          <p className="font-medium">{state.message}</p>
+          <p className="font-medium">{assistantMessageDisplay}</p>
           {state.latestTransaction ? (
             <p className="mt-1 text-xs text-slate-600">
               {t("assistant.feedback.latestItem", locale)}: {state.latestTransaction.itemName || state.latestTransaction.merchant || t("transactions.transaction", locale)}{" "}
-              {t("assistant.feedback.savedWith", locale)} {state.latestTransaction.reviewState}.
+              <span aria-hidden="true">·</span> {latestReviewLabel}
             </p>
           ) : null}
         </div>
@@ -853,8 +899,8 @@ export function AssistantComposer({
 
       {visibleLowCreditThreshold ? (
         <div className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs text-sky-800">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+          <div className="flex flex-col gap-2 min-[360px]:flex-row min-[360px]:items-start min-[360px]:justify-between">
+            <div className="min-w-0 flex-1">
               <p className="font-semibold">
                 {visibleLowCreditThreshold === 10
                   ? t("credits.low.title", locale, { count: effectiveCreditBalance ?? 10 })
@@ -862,55 +908,119 @@ export function AssistantComposer({
               </p>
               <p className="mt-0.5 leading-5 text-slate-600">{t("credits.low.helper", locale)}</p>
             </div>
-            <form
-              action={(formData) => {
-                setDismissedLowCreditThreshold(visibleLowCreditThreshold);
-                void dismissCreditNoticeAction?.(formData);
-              }}
-            >
-              <input name="threshold" type="hidden" value={visibleLowCreditThreshold} />
-              <button className="shrink-0 rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600" type="submit">
-                {t("common.close", locale)}
+            <div className="flex shrink-0 flex-wrap gap-2 min-[360px]:justify-end">
+              <button
+                className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100 transition hover:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                onClick={() => setIsCreditOptionsOpen(true)}
+                type="button"
+              >
+                {t("credits.addCredits", locale)}
               </button>
-            </form>
+              <form
+                action={(formData) => {
+                  setDismissedLowCreditThreshold(visibleLowCreditThreshold);
+                  void dismissCreditNoticeAction?.(formData);
+                }}
+              >
+                <input name="threshold" type="hidden" value={visibleLowCreditThreshold} />
+                <button className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-600" type="submit">
+                  {t("common.close", locale)}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       ) : null}
 
       {isCreditOptionsOpen ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900">
-                {state.creditStatus === "insufficient_credits" ? t("credits.insufficient.title", locale) : t("credits.options.heading", locale)}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                {state.creditStatus === "insufficient_credits" ? t("credits.insufficient.helper", locale) : t("credits.options.body", locale)}
-              </p>
-            </div>
-            <button className="shrink-0 rounded-xl bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600" onClick={() => setIsCreditOptionsOpen(false)} type="button">
-              {t("common.close", locale)}
-            </button>
-          </div>
-          <div className="mt-3 grid gap-2">
-            {[
-              ["credits.options.earn.title", "credits.options.earn.helper"],
-              ["credits.options.small.title", "credits.options.small.helper"],
-              ["credits.options.large.title", "credits.options.large.helper"],
-              ["credits.options.unlimited.title", "credits.options.unlimited.helper"],
-            ].map(([titleKey, helperKey]) => (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/25 px-3 py-4 backdrop-blur-sm sm:items-center" role="presentation">
+          <div
+            aria-labelledby="credit-options-title"
+            aria-modal="true"
+            className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-xl"
+            role="dialog"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900" id="credit-options-title">
+                  {state.creditStatus === "insufficient_credits" ? t("credits.insufficient.title", locale) : t("credits.options.heading", locale)}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  {state.creditStatus === "insufficient_credits" ? t("credits.insufficient.helper", locale) : t("credits.options.body", locale)}
+                </p>
+                <p className="mt-2 inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
+                  {currentCreditBalanceDisplay}
+                </p>
+              </div>
               <button
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-500"
-                disabled
-                key={titleKey}
+                className="shrink-0 rounded-xl bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                onClick={() => setIsCreditOptionsOpen(false)}
                 type="button"
               >
-                <span className="block font-semibold text-slate-700">{t(titleKey, locale)}</span>
-                <span className="block text-xs leading-5">{t(helperKey, locale)}</span>
+                {t("common.close", locale)}
               </button>
-            ))}
+            </div>
+            <div className="mt-3 grid gap-2">
+              {[
+                {
+                  id: "earn",
+                  title: t("credits.options.earn.title", locale),
+                  price: null,
+                  helper: t("credits.options.earn.helper", locale),
+                  secondary: t("credits.options.earn.secondary", locale),
+                  action: t("credits.options.earn.action", locale),
+                  enabled: rewardedCreditsEnabled && providerActionsImplemented,
+                },
+                {
+                  id: "small",
+                  title: t("credits.options.small.title", locale),
+                  price: t("credits.options.small.price", locale, { price: CREDIT_PACKS.small.priceUsd }),
+                  helper: t("credits.options.small.helper", locale),
+                  secondary: null,
+                  action: t("credits.options.buy", locale),
+                  enabled: creditPacksEnabled && providerActionsImplemented,
+                },
+                {
+                  id: "large",
+                  title: t("credits.options.large.title", locale),
+                  price: t("credits.options.large.price", locale, { price: CREDIT_PACKS.large.priceUsd }),
+                  helper: t("credits.options.large.helper", locale),
+                  secondary: null,
+                  action: t("credits.options.buy", locale),
+                  enabled: creditPacksEnabled && providerActionsImplemented,
+                },
+                {
+                  id: "unlimited",
+                  title: t("credits.options.unlimited.title", locale),
+                  price: t("credits.options.unlimited.price", locale, { price: CREDIT_PACKS.unlimitedYearly.priceUsd }),
+                  helper: t("credits.options.unlimited.helper", locale),
+                  secondary: t("credits.options.unlimited.renewal", locale),
+                  action: t("credits.options.unlimited.action", locale),
+                  enabled: yearlyUnlimitedEnabled && providerActionsImplemented,
+                },
+              ].map((option) => (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left" data-credit-option={option.id} key={option.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-semibold text-slate-900">{option.title}</p>
+                      {option.price ? <p className="mt-0.5 text-sm font-semibold text-sky-800">{option.price}</p> : null}
+                      <p className="mt-1 text-xs leading-5 text-slate-600">{option.helper}</p>
+                      {option.secondary ? <p className="mt-1 text-xs leading-5 text-slate-500">{option.secondary}</p> : null}
+                      {!option.enabled ? <p className="mt-1 text-xs font-medium text-slate-500">{t("credits.options.comingSoon.helper", locale)}</p> : null}
+                    </div>
+                    <button
+                      className="shrink-0 rounded-xl bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 ring-1 ring-slate-200"
+                      disabled
+                      type="button"
+                    >
+                      {option.enabled ? option.action : t("credits.options.comingSoon.title", locale)}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs leading-5 text-slate-500">{t("credits.options.footer", locale)}</p>
           </div>
-          <p className="mt-3 text-xs leading-5 text-slate-500">{t("credits.options.footer", locale)}</p>
         </div>
       ) : null}
 
@@ -928,7 +1038,9 @@ export function AssistantComposer({
           <textarea
             className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none"
             name="naturalLanguageInput"
+            onChange={(event) => setQuickAddDraft(event.currentTarget.value)}
             placeholder={t("assistant.quickAdd.placeholder", locale)}
+            value={quickAddDraft}
           />
         </label>
 

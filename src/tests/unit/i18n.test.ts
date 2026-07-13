@@ -168,6 +168,10 @@ describe("i18n helper", () => {
   });
 
   it("returns credit UX copy in supported locales", () => {
+    expect(t("credits.addCredits", "en")).toBe("Add credits");
+    expect(t("credits.addCredits", "ro")).toBe("Adaugă credite");
+    expect(t("credits.addCredits", "fr")).toBe("Ajouter des crédits");
+    expect(t("credits.addCredits", "es")).toBe("Añadir créditos");
     expect(t("credits.low10.title", "en")).toBe("10 entry credits left");
     expect(t("credits.low10.title", "ro")).toBe("Mai ai 10 credite pentru intrări");
     expect(t("credits.low10.title", "fr")).toBe("10 crédits d’entrée restants");
@@ -178,8 +182,15 @@ describe("i18n helper", () => {
     expect(t("credits.low.title", "es", { count: 8 })).toBe("Te quedan 8 créditos");
     expect(t("credits.low.helper", "en")).toBe("You can add more later.");
     expect(t("credits.insufficient.title", "ro")).toBe("Adaugă credite pentru a salva intrarea");
-    expect(t("credits.options.earn.title", "fr")).toBe("Gagner 5 crédits");
-    expect(t("credits.options.small.title", "es")).toBe("50 créditos — 1,49 US$");
+    expect(t("credits.balance.many", "ro", { count: 8 })).toBe("8 credite disponibile");
+    expect(t("credits.options.earn.title", "fr")).toBe("Recevoir 5 crédits");
+    expect(t("credits.options.small.title", "es")).toBe("50 créditos");
+    expect(t("credits.options.small.price", "es", { price: 1.49 })).toBe("1.49 US$");
+    expect(t("credits.options.unlimited.renewal", "ro")).toBe("Se reînnoiește automat anual până la anulare.");
+    expect(t("assistant.feedback.recurringSaved", "ro", { frequency: t("assistant.feedback.frequencies.monthly", "ro") })).toBe(
+      "Salvat. Se va repeta lunar.",
+    );
+    expect(t("reviewStates.reviewed", "ro")).toBe("Verificat");
     expect(t("assistant.manual.recurringHelper", "en")).toContain("uses 1 credit");
     expect(t("assistant.manual.recurringHelper", "ro")).toContain("1 credit");
   });

@@ -78,6 +78,7 @@ export type AssistantActionState = {
   creditStatus?: "ok" | "insufficient_credits" | "low_balance";
   creditBalance?: number | null;
   lowCreditThreshold?: 10 | 3 | null;
+  recurringFrequency?: RecurringFrequency | null;
   recentItems: Array<{
     id: string;
     title: string;
@@ -735,6 +736,7 @@ export async function runAssistantCommand(args: {
     return {
       ...result,
       message: `Saved and set to repeat ${args.input.recurringFrequency}.`,
+      recurringFrequency: args.input.recurringFrequency,
     };
   }
 
@@ -1045,6 +1047,7 @@ function summarizeMultiCreateResults(results: AssistantActionState[]) {
     creditStatus: successes.at(-1)?.creditStatus ?? undefined,
     creditBalance: successes.at(-1)?.creditBalance ?? null,
     lowCreditThreshold: successes.at(-1)?.lowCreditThreshold ?? null,
+    recurringFrequency: successes.at(-1)?.recurringFrequency ?? null,
   };
 }
 

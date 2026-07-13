@@ -120,7 +120,13 @@
     },
     "feedback": {
       "latestItem": "Latest item",
-      "savedWith": "saved with"
+      "savedWith": "saved with",
+      "recurringSaved": "Saved. It will repeat {frequency}.",
+      "frequencies": {
+        "weekly": "weekly",
+        "monthly": "monthly",
+        "yearly": "yearly"
+      }
     },
     "manual": {
       "title": "Manual",
@@ -620,22 +626,33 @@
       }
     }
   },
+  "reviewStates": {
+    "reviewed": "Reviewed",
+    "needsReview": "Needs review"
+  },
   "credits": {
+    "addCredits": "Add credits",
     "low10": { "title": "10 entry credits left" },
     "low3": { "title": "A few entry credits left" },
     "low": { "title": "{count} credits left", "helper": "You can add more later." },
+    "balance": {
+      "one": "{count} credit available",
+      "many": "{count} credits available"
+    },
     "insufficient": {
       "title": "Add entry credits to save this entry",
       "helper": "Your existing entries and Insights remain available."
     },
     "options": {
-      "heading": "Keep logging your money",
-      "body": "Each new expense or income uses 1 credit. Everything you already saved remains available.",
-      "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message. Coming soon." },
-      "small": { "title": "50 credits — $1.49", "helper": "A small refill. Coming soon." },
-      "large": { "title": "500 credits — $9.99", "helper": "Best value. Coming soon." },
-      "unlimited": { "title": "Unlimited entries — $19.99/year", "helper": "Log freely without thinking about credits." },
-      "footer": "No forced ads. Renews yearly until cancelled for Unlimited."
+      "heading": "Add credits",
+      "body": "Choose the option that fits you.",
+      "buy": "Buy",
+      "comingSoon": { "title": "Coming soon", "helper": "We are preparing this option." },
+      "earn": { "title": "Earn 5 credits", "helper": "View a short sponsored message.", "secondary": "No forced ads.", "action": "View message" },
+      "small": { "title": "50 credits", "price": "${price}", "helper": "A simple refill." },
+      "large": { "title": "500 credits", "price": "${price}", "helper": "Best price for regular use." },
+      "unlimited": { "title": "Unlimited entries", "price": "${price}/year", "helper": "Add entries without thinking about credits.", "renewal": "Renews yearly until cancelled.", "action": "Choose unlimited" },
+      "footer": "Provider-backed options stay off until real rewards and billing are verified."
     }
   },
   "transactions": {

@@ -120,7 +120,13 @@
     },
     "feedback": {
       "latestItem": "Ultimul element",
-      "savedWith": "salvat cu"
+      "savedWith": "salvat cu",
+      "recurringSaved": "Salvat. Se va repeta {frequency}.",
+      "frequencies": {
+        "weekly": "săptămânal",
+        "monthly": "lunar",
+        "yearly": "anual"
+      }
     },
     "manual": {
       "title": "Manual",
@@ -620,22 +626,33 @@
       }
     }
   },
+  "reviewStates": {
+    "reviewed": "Verificat",
+    "needsReview": "De verificat"
+  },
   "credits": {
+    "addCredits": "Adaugă credite",
     "low10": { "title": "Mai ai 10 credite pentru intrări" },
     "low3": { "title": "Mai ai câteva credite pentru intrări" },
     "low": { "title": "Mai ai {count} credite", "helper": "Poți adăuga altele mai târziu." },
+    "balance": {
+      "one": "{count} credit disponibil",
+      "many": "{count} credite disponibile"
+    },
     "insufficient": {
       "title": "Adaugă credite pentru a salva intrarea",
       "helper": "Intrările și Perspectivele existente rămân disponibile."
     },
     "options": {
-      "heading": "Continuă să notezi banii",
-      "body": "Fiecare cheltuială sau venit nou folosește 1 credit. Tot ce ai salvat deja rămâne disponibil.",
-      "earn": { "title": "Câștigă 5 credite", "helper": "Vezi un mesaj sponsorizat scurt. În curând." },
-      "small": { "title": "50 credite — $1.49", "helper": "O reîncărcare mică. În curând." },
-      "large": { "title": "500 credite — $9.99", "helper": "Cea mai bună valoare. În curând." },
-      "unlimited": { "title": "Intrări nelimitate — $19.99/an", "helper": "Notezi liber, fără să te gândești la credite." },
-      "footer": "Fără reclame forțate. Nelimitat se reînnoiește anual până la anulare."
+      "heading": "Adaugă credite",
+      "body": "Alege varianta potrivită pentru tine.",
+      "buy": "Cumpără",
+      "comingSoon": { "title": "În curând", "helper": "Pregătim această opțiune." },
+      "earn": { "title": "Primește 5 credite", "helper": "Vezi un mesaj sponsorizat scurt.", "secondary": "Fără reclame forțate.", "action": "Vezi mesajul" },
+      "small": { "title": "50 de credite", "price": "${price}", "helper": "O reîncărcare simplă." },
+      "large": { "title": "500 de credite", "price": "${price}", "helper": "Cel mai bun preț pentru utilizare regulată." },
+      "unlimited": { "title": "Intrări nelimitate", "price": "${price} / an", "helper": "Adaugă intrări fără să te gândești la credite.", "renewal": "Se reînnoiește automat anual până la anulare.", "action": "Alege nelimitat" },
+      "footer": "Opțiunile cu furnizori rămân oprite până verificăm recompensele și plățile reale."
     }
   },
   "transactions": {

@@ -120,7 +120,13 @@
     },
     "feedback": {
       "latestItem": "Dernier élément",
-      "savedWith": "enregistré avec"
+      "savedWith": "enregistré avec",
+      "recurringSaved": "Enregistré. Répétition {frequency}.",
+      "frequencies": {
+        "weekly": "hebdomadaire",
+        "monthly": "mensuelle",
+        "yearly": "annuelle"
+      }
     },
     "manual": {
       "title": "Manuel",
@@ -620,22 +626,33 @@
       }
     }
   },
+  "reviewStates": {
+    "reviewed": "Vérifié",
+    "needsReview": "À vérifier"
+  },
   "credits": {
+    "addCredits": "Ajouter des crédits",
     "low10": { "title": "10 crédits d’entrée restants" },
     "low3": { "title": "Encore quelques crédits d’entrée" },
     "low": { "title": "{count} crédits restants", "helper": "Vous pourrez en ajouter plus tard." },
+    "balance": {
+      "one": "{count} crédit disponible",
+      "many": "{count} crédits disponibles"
+    },
     "insufficient": {
       "title": "Ajoutez des crédits pour enregistrer cette entrée",
       "helper": "Vos entrées et vos Insights existants restent disponibles."
     },
     "options": {
-      "heading": "Continuez à noter votre argent",
-      "body": "Chaque nouvelle dépense ou entrée d’argent utilise 1 crédit. Tout ce que vous avez déjà enregistré reste disponible.",
-      "earn": { "title": "Gagner 5 crédits", "helper": "Voir un court message sponsorisé. Bientôt disponible." },
-      "small": { "title": "50 crédits — 1,49 $", "helper": "Une petite recharge. Bientôt disponible." },
-      "large": { "title": "500 crédits — 9,99 $", "helper": "Le meilleur rapport. Bientôt disponible." },
-      "unlimited": { "title": "Entrées illimitées — 19,99 $/an", "helper": "Notez librement, sans penser aux crédits." },
-      "footer": "Aucune publicité forcée. L’illimité se renouvelle chaque année jusqu’à annulation."
+      "heading": "Ajouter des crédits",
+      "body": "Choisissez l’option qui vous convient.",
+      "buy": "Acheter",
+      "comingSoon": { "title": "Bientôt", "helper": "Nous préparons cette option." },
+      "earn": { "title": "Recevoir 5 crédits", "helper": "Regardez un court message sponsorisé.", "secondary": "Aucune publicité forcée.", "action": "Voir le message" },
+      "small": { "title": "50 crédits", "price": "{price} $", "helper": "Une recharge simple." },
+      "large": { "title": "500 crédits", "price": "{price} $", "helper": "Le meilleur prix pour une utilisation régulière." },
+      "unlimited": { "title": "Entrées illimitées", "price": "{price} $/an", "helper": "Ajoutez des entrées sans penser aux crédits.", "renewal": "Renouvellement annuel automatique jusqu’à annulation.", "action": "Choisir l’illimité" },
+      "footer": "Les options avec fournisseur restent désactivées jusqu’à vérification des récompenses et paiements réels."
     }
   },
   "transactions": {

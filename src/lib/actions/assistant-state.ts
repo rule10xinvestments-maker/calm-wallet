@@ -8,5 +8,6 @@ export const initialAssistantActionState: AssistantActionState = {
   creditStatus: "ok",
   creditBalance: null,
   lowCreditThreshold: null,
+  recurringFrequency: null,
   recentItems: [],
 };

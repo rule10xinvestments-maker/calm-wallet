@@ -1729,7 +1729,150 @@ describe("assistant composer", () => {
 
     expect(title).toBeInTheDocument();
     expect(screen.getByText("Poți adăuga altele mai târziu.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Adaugă credite" })).toBeInTheDocument();
     expect(notice).toHaveClass("px-3", "py-2", "text-xs");
+  });
+
+  it("opens the shared credit options sheet from the low-credit Add credits action", () => {
+    const { container } = renderComposer(
+      undefined,
+      [],
+      undefined,
+      [],
+      false,
+      {
+        creditBalance: 8,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add credits" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Add credits" });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("8 credits available")).toBeInTheDocument();
+    expect(within(dialog).getByText("Earn 5 credits")).toBeInTheDocument();
+    expect(within(dialog).getByText("50 credits")).toBeInTheDocument();
+    expect(within(dialog).getByText("$1.49")).toBeInTheDocument();
+    expect(within(dialog).getByText("500 credits")).toBeInTheDocument();
+    expect(within(dialog).getByText("$9.99")).toBeInTheDocument();
+    expect(within(dialog).getByText("Unlimited entries")).toBeInTheDocument();
+    expect(within(dialog).getByText("$19.99/year")).toBeInTheDocument();
+    expect(within(dialog).getByText("Renews yearly until cancelled.")).toBeInTheDocument();
+
+    const options = Array.from(container.querySelectorAll("[data-credit-option]")).map((option) =>
+      option.getAttribute("data-credit-option"),
+    );
+    expect(options).toEqual(["earn", "small", "large", "unlimited"]);
+  });
+
+  it("keeps provider-backed credit options disabled without granting credits", () => {
+    const action = vi.fn(async (): Promise<AssistantActionState> => ({
+      status: "idle",
+      message: null,
+      reviewState: null,
+      latestTransaction: null,
+      recentItems: [],
+    }));
+
+    renderComposer(
+      undefined,
+      [],
+      action,
+      [],
+      false,
+      {
+        creditBalance: 3,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add credits" }));
+
+    const comingSoonButtons = within(screen.getByRole("dialog")).getAllByRole("button", { name: "Coming soon" });
+    expect(comingSoonButtons).toHaveLength(4);
+    comingSoonButtons.forEach((button) => {
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    });
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("preserves the Quick Add draft when the credit sheet opens and closes", () => {
+    renderComposer(
+      undefined,
+      [],
+      undefined,
+      [],
+      false,
+      {
+        creditBalance: 3,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Coffee 12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add credits" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }));
+
+    expect(screen.getByLabelText("Message")).toHaveValue("Coffee 12");
+  });
+
+  it("opens the same credit options sheet for a zero-credit blocked save", async () => {
+    const action = vi.fn(async (): Promise<AssistantActionState> => ({
+      status: "error",
+      message: "Add entry credits to save this entry",
+      reviewState: null,
+      latestTransaction: null,
+      recentItems: [],
+      creditStatus: "insufficient_credits",
+      creditBalance: 0,
+    }));
+
+    renderComposer(undefined, [], action);
+
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Coffee 12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Add entry credits to save this entry" });
+    expect(within(dialog).getByText("Your existing entries and Insights remain available.")).toBeInTheDocument();
+    expect(within(dialog).getByText("0 credits available")).toBeInTheDocument();
+    expect(within(dialog).getByText("Earn 5 credits")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.getByLabelText("Message")).toHaveValue("Coffee 12");
+  });
+
+  it("localizes Romanian recurring success without leaking canonical states", () => {
+    renderComposerWithLocale("ro", {
+      status: "success",
+      message: "Saved and set to repeat monthly.",
+      reviewState: null,
+      recurringFrequency: "monthly",
+      latestTransaction: {
+        id: "txn-recurring",
+        amountMinor: 1200,
+        currency: "RON",
+        merchant: null,
+        itemName: "Gw",
+        reviewState: "reviewed",
+      },
+      recentItems: [],
+    });
+
+    expect(screen.getByText("Salvat. Se va repeta lunar.")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) => element?.textContent?.replace(/\s+/g, " ").trim() === "Ultimul element: Gw · Verificat"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/monthly|reviewed|Saved and set to repeat/i)).not.toBeInTheDocument();
   });
 
   it("submits the selected type-aware Manual category when saving", async () => {
