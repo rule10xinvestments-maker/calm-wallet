@@ -15,6 +15,7 @@ import { createSupabaseNotificationService } from "@/domain/notifications/servic
 import { createSupabaseUserPreferencesService } from "@/domain/preferences/service";
 import { createSupabaseLegalAcceptanceService, hasAcceptedCurrentLegalDocuments } from "@/domain/legal/service";
 import { createSupabaseSupportService } from "@/domain/support/service";
+import { createSupabaseCreditsService } from "@/domain/credits/service";
 import {
   getFallbackNotificationPreferences,
   logProtectedRouteLoadFailure,
@@ -42,6 +43,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   let timezone: string | null = null;
   let isSupportAdmin = false;
   let legalAccepted = false;
+  let creditAccount: Awaited<ReturnType<Awaited<ReturnType<typeof createSupabaseCreditsService>>["getAccount"]>> | null = null;
 
   try {
     const [notificationService, preferencesService, legalService] = await Promise.all([
@@ -59,6 +61,14 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     uiLocale = loadedUserPreferences.uiLocale;
     timezone = loadedUserPreferences.timezone;
     legalAccepted = hasAcceptedCurrentLegalDocuments(loadedLegalAcceptance);
+
+    try {
+      const creditsService = await createSupabaseCreditsService();
+      creditAccount = await creditsService.getAccount(user.id);
+    } catch (error) {
+      logProtectedRouteLoadFailure("assistant", error);
+      creditAccount = null;
+    }
   } catch (error) {
     logProtectedRouteLoadFailure("assistant", error);
   }
@@ -79,6 +89,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     <ProtectedShell
       accountHint={accountHint}
       notificationPreferences={notificationPreferences}
+      creditAccount={creditAccount}
       uiLocale={uiLocale}
       timezone={timezone}
       userPreferencesAction={updateUserPreferencesAction}

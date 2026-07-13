@@ -2,6 +2,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { ProtectedHeader } from "@/components/layout/protected-header";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { DeviceTimezoneSync } from "@/components/notifications/device-timezone-sync";
+import type { CreditAccountSummary } from "@/components/credits/credit-options-sheet";
 import type { signOutAction } from "@/lib/auth/actions";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
@@ -14,6 +15,7 @@ type ProtectedShellProps = {
   accountHint: string;
   onSignOut: typeof signOutAction;
   notificationPreferences: NotificationPreferences;
+  creditAccount?: CreditAccountSummary | null;
   uiLocale: SupportedLocale | null;
   timezone: string | null;
   userPreferencesAction: (
@@ -45,6 +47,7 @@ export function ProtectedShell({
   accountHint,
   onSignOut,
   notificationPreferences,
+  creditAccount = null,
   uiLocale,
   timezone,
   userPreferencesAction,
@@ -62,6 +65,7 @@ export function ProtectedShell({
         <ProtectedHeader
           accountHint={accountHint}
           notificationPreferences={notificationPreferences}
+          creditAccount={creditAccount}
           userPreferencesAction={userPreferencesAction}
           notificationPreferencesAction={notificationPreferencesAction}
           registerPushSubscriptionAction={registerPushSubscriptionAction}

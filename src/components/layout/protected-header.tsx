@@ -3,6 +3,7 @@
 import { useLocale } from "@/components/i18n/locale-provider";
 import { HeaderHelpButton, HeaderSettingsButton } from "@/components/layout/header-settings-button";
 import { PwaInstallHeaderIcon } from "@/components/pwa-install-button";
+import type { CreditAccountSummary } from "@/components/credits/credit-options-sheet";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
@@ -14,6 +15,7 @@ type ProtectedHeaderProps = {
   accountHint: string;
   onSignOut: typeof signOutAction;
   notificationPreferences: NotificationPreferences;
+  creditAccount?: CreditAccountSummary | null;
   userPreferencesAction: (
     state: UserPreferencesActionState,
     formData: FormData,
@@ -41,6 +43,7 @@ export function ProtectedHeader({
   accountHint,
   onSignOut,
   notificationPreferences,
+  creditAccount = null,
   userPreferencesAction,
   notificationPreferencesAction,
   registerPushSubscriptionAction,
@@ -66,6 +69,7 @@ export function ProtectedHeader({
         <HeaderHelpButton />
         <HeaderSettingsButton
           notificationPreferences={notificationPreferences}
+          creditAccount={creditAccount}
           userPreferencesAction={userPreferencesAction}
           notificationPreferencesAction={notificationPreferencesAction}
           registerPushSubscriptionAction={registerPushSubscriptionAction}

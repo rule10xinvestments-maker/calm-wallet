@@ -224,6 +224,24 @@
     "savingLanguage": "Se salvează limba...",
     "languageSaved": "Limba a fost salvată.",
     "languageSaveError": "Limba nu a putut fi salvată.",
+    "back": "Înapoi la setări",
+    "credits": {
+      "title": "Credite",
+      "unlimitedActive": "Unlimited activ"
+    },
+    "legal": {
+      "subtitle": "Termeni, confidențialitate, rambursări și AI"
+    },
+    "about": {
+      "title": "Despre",
+      "subtitle": "Versiune, contact și mulțumiri",
+      "appVersion": "Versiunea aplicației",
+      "legalVersion": "Versiunea legală",
+      "supportContact": "Contact suport",
+      "supportContactHelper": "Folosește Raportează o problemă din Setări pentru a contacta suportul Calm Wallet.",
+      "acknowledgements": "Mulțumiri",
+      "acknowledgementsPlaceholder": "Mulțumirile pentru open-source și servicii vor apărea aici."
+    },
     "signOut": "Deconectare",
     "support": {
       "title": "Raporteaza o problema",

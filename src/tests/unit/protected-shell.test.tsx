@@ -20,6 +20,14 @@ const notificationPreferences = {
   updatedAt: "2026-05-03T00:00:00.000Z",
 };
 
+const creditAccount = {
+  creditBalance: 12,
+  recurringGraceDebt: 0,
+  unlimitedUntil: null,
+  lowBalanceNotice10ShownAt: null,
+  lowBalanceNotice3ShownAt: null,
+};
+
 const updateNotificationPreferencesAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const sendTestPushNotificationAction = vi.fn(async () => initialNotificationPreferencesActionState);
@@ -63,6 +71,7 @@ function renderProtectedShell(options: { onSignOut?: () => Promise<void> } = {})
       <ProtectedShell
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
+        creditAccount={creditAccount}
         uiLocale={null}
         timezone={testDeviceTimezone}
         userPreferencesAction={updateUserPreferencesAction}
@@ -85,6 +94,7 @@ function renderProtectedShellWithLocale(uiLocale: string | null, options: { onSi
       <ProtectedShell
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
+        creditAccount={creditAccount}
         uiLocale={uiLocale as never}
         timezone={testDeviceTimezone}
         userPreferencesAction={updateUserPreferencesAction}
@@ -118,6 +128,7 @@ function ControlledLocaleShell({ initialLocale = "fr" }: { initialLocale?: "en" 
       <ProtectedShell
         accountHint="paul@example.com"
         notificationPreferences={notificationPreferences}
+        creditAccount={creditAccount}
         uiLocale={uiLocale}
         timezone={testDeviceTimezone}
         userPreferencesAction={action}
@@ -148,6 +159,7 @@ function renderAdminProtectedShell(options: { onSignOut?: () => Promise<void> } 
       <ProtectedShell
         accountHint="admin@example.com"
         notificationPreferences={notificationPreferences}
+        creditAccount={creditAccount}
         uiLocale={null}
         timezone={testDeviceTimezone}
         userPreferencesAction={updateUserPreferencesAction}
@@ -335,7 +347,11 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     const settingsPanel = screen.getByTestId("header-settings-panel");
 
-    expect(within(settingsPanel).getByText("Legal")).toBeInTheDocument();
+    expect(within(settingsPanel).getByRole("button", { name: /Legal Terms, Privacy, Refunds & AI/ })).toBeInTheDocument();
+    expect(within(settingsPanel).queryByText("Terms of Service")).not.toBeInTheDocument();
+
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Legal Terms, Privacy, Refunds & AI/ }));
+
     expect(within(settingsPanel).getByText("Terms of Service")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Privacy Policy")).toBeInTheDocument();
     expect(within(settingsPanel).getByText("Refund Policy")).toBeInTheDocument();
@@ -347,6 +363,28 @@ describe("protected shell PWA install affordance", () => {
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText(/Version 1.0/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Placeholder for the production Terms of Service/)).toBeInTheDocument();
+  });
+
+  it("shows Credits and About rows from Settings", () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    const settingsPanel = screen.getByTestId("header-settings-panel");
+
+    expect(within(settingsPanel).getByRole("button", { name: /Credits 12 credits available/ })).toBeInTheDocument();
+    expect(within(settingsPanel).getByRole("button", { name: /About Version, contact & acknowledgements/ })).toBeInTheDocument();
+
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Credits 12 credits available/ }));
+    const creditDialog = screen.getByRole("dialog", { name: "Add credits" });
+    expect(creditDialog).toBeInTheDocument();
+    expect(within(creditDialog).getByText("12 credits available")).toBeInTheDocument();
+    fireEvent.click(within(creditDialog).getByRole("button", { name: "Close" }));
+
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: /About Version, contact & acknowledgements/ }));
+    expect(within(settingsPanel).getByText("App version")).toBeInTheDocument();
+    expect(within(settingsPanel).getByText("Legal version")).toBeInTheDocument();
+    expect(within(settingsPanel).getByText("Support contact")).toBeInTheDocument();
+    expect(within(settingsPanel).getByText("Acknowledgements")).toBeInTheDocument();
   });
 
   it("renders Sign out as the final destructive Settings row and confirms before calling the action", async () => {

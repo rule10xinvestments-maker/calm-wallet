@@ -224,6 +224,24 @@
     "savingLanguage": "Saving language...",
     "languageSaved": "Language saved.",
     "languageSaveError": "Language could not be saved.",
+    "back": "Back to settings",
+    "credits": {
+      "title": "Credits",
+      "unlimitedActive": "Unlimited active"
+    },
+    "legal": {
+      "subtitle": "Terms, Privacy, Refunds & AI"
+    },
+    "about": {
+      "title": "About",
+      "subtitle": "Version, contact & acknowledgements",
+      "appVersion": "App version",
+      "legalVersion": "Legal version",
+      "supportContact": "Support contact",
+      "supportContactHelper": "Use Report a problem in Settings to reach Calm Wallet support.",
+      "acknowledgements": "Acknowledgements",
+      "acknowledgementsPlaceholder": "Open-source and service acknowledgements will appear here."
+    },
     "signOut": "Sign out",
     "signOutHelper": "End this session on this device.",
     "signOutConfirm": {

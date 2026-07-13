@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpen, Settings, ShieldCheck } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Coins, FileText, Info, Settings, ShieldCheck } from "lucide-react";
 import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
+import { CreditOptionsSheet, getCreditSettingsSubtitle, type CreditAccountSummary } from "@/components/credits/credit-options-sheet";
 import { useLocale } from "@/components/i18n/locale-provider";
-import { LegalSettingsSection } from "@/components/legal/legal-settings-section";
+import { LegalSettingsPage } from "@/components/legal/legal-settings-section";
 import { NotificationPreferencesCard } from "@/components/notifications/notification-preferences-card";
 import { LanguageSelector } from "@/components/settings/language-selector";
 import { HelpCenterCard } from "@/components/support/help-center-card";
 import { SupportContactCard } from "@/components/support/support-contact-card";
+import { currentLegalVersions } from "@/domain/legal/config";
 import { t } from "@/lib/i18n";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
@@ -40,8 +43,78 @@ type HeaderSettingsButtonProps = {
     formData: FormData,
   ) => Promise<SupportTicketActionState>;
   signOut: typeof signOutAction;
+  creditAccount?: CreditAccountSummary | null;
   isSupportAdmin?: boolean;
 };
+
+type SettingsPage = "main" | "support" | "legal" | "about";
+
+type SettingsRowProps = {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+};
+
+function SettingsRow({ icon, title, subtitle, onClick }: SettingsRowProps) {
+  return (
+    <button
+      className="grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left transition hover:bg-slate-50"
+      onClick={onClick}
+      type="button"
+    >
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-500">{icon}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-slate-900">{title}</span>
+        <span className="mt-0.5 block truncate text-xs leading-5 text-slate-500">{subtitle}</span>
+      </span>
+      <ChevronRight aria-hidden="true" className="size-4 text-slate-400" />
+    </button>
+  );
+}
+
+function SettingsSubpageHeader({ locale, title, onBack }: { locale: string; title: string; onBack: () => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        aria-label={t("settings.back", locale)}
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-500 transition hover:bg-slate-100"
+        onClick={onBack}
+        type="button"
+      >
+        <ChevronLeft aria-hidden="true" className="size-4" />
+      </button>
+      <p className="min-w-0 truncate text-sm font-semibold text-slate-900">{title}</p>
+    </div>
+  );
+}
+
+function AboutSettingsPage() {
+  const { locale } = useLocale();
+  const legalVersions = Array.from(new Set(Object.values(currentLegalVersions))).join(", ");
+  const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || "0.1.0";
+
+  return (
+    <section className="space-y-2">
+      <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("settings.about.appVersion", locale)}</p>
+        <p className="mt-1 text-sm font-medium text-slate-900">{appVersion}</p>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("settings.about.legalVersion", locale)}</p>
+        <p className="mt-1 text-sm font-medium text-slate-900">{legalVersions}</p>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("settings.about.supportContact", locale)}</p>
+        <p className="mt-1 text-sm leading-5 text-slate-700">{t("settings.about.supportContactHelper", locale)}</p>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("settings.about.acknowledgements", locale)}</p>
+        <p className="mt-1 text-sm leading-5 text-slate-700">{t("settings.about.acknowledgementsPlaceholder", locale)}</p>
+      </div>
+    </section>
+  );
+}
 
 export function HeaderHelpButton() {
   const [isOpen, setIsOpen] = useState(false);
@@ -88,21 +161,32 @@ export function HeaderSettingsButton({
   registerPushSubscriptionAction,
   supportTicketAction,
   signOut,
+  creditAccount = null,
   isSupportAdmin = false,
 }: HeaderSettingsButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [activePage, setActivePage] = useState<SettingsPage>("main");
+  const [isCreditOptionsOpen, setIsCreditOptionsOpen] = useState(false);
   const [reportOpenToken, setReportOpenToken] = useState(0);
   const { locale } = useLocale();
 
   useEffect(() => {
     const openReport = () => {
       setIsOpen(true);
+      setActivePage("support");
       setReportOpenToken((value) => value + 1);
     };
 
     window.addEventListener("calm-wallet:open-report-problem", openReport);
     return () => window.removeEventListener("calm-wallet:open-report-problem", openReport);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setActivePage("main");
+      setIsCreditOptionsOpen(false);
+    }
+  }, [isOpen]);
 
   return (
     <div className="relative">
@@ -139,15 +223,62 @@ export function HeaderSettingsButton({
                   {t("common.close", locale)}
                 </button>
               </div>
-              <LanguageSelector action={userPreferencesAction} />
-              <SupportContactCard action={supportTicketAction} openToken={reportOpenToken} />
-              <NotificationPreferencesCard
-                action={notificationPreferencesAction}
-                preferences={notificationPreferences}
-                registerPushSubscriptionAction={registerPushSubscriptionAction}
-              />
-              <LegalSettingsSection />
-              {isSupportAdmin ? (
+              {activePage === "main" ? (
+                <>
+                  <LanguageSelector action={userPreferencesAction} />
+                  <SettingsRow
+                    icon={<FileText aria-hidden="true" className="size-4" />}
+                    onClick={() => {
+                      setActivePage("support");
+                      setReportOpenToken((value) => value + 1);
+                    }}
+                    subtitle={t("settings.support.helper", locale)}
+                    title={t("settings.support.title", locale)}
+                  />
+                  <NotificationPreferencesCard
+                    action={notificationPreferencesAction}
+                    preferences={notificationPreferences}
+                    registerPushSubscriptionAction={registerPushSubscriptionAction}
+                  />
+                  <SettingsRow
+                    icon={<Coins aria-hidden="true" className="size-4" />}
+                    onClick={() => setIsCreditOptionsOpen(true)}
+                    subtitle={getCreditSettingsSubtitle(creditAccount, locale)}
+                    title={t("settings.credits.title", locale)}
+                  />
+                  <SettingsRow
+                    icon={<FileText aria-hidden="true" className="size-4" />}
+                    onClick={() => setActivePage("legal")}
+                    subtitle={t("settings.legal.subtitle", locale)}
+                    title={t("legal.settingsTitle", locale)}
+                  />
+                  <SettingsRow
+                    icon={<Info aria-hidden="true" className="size-4" />}
+                    onClick={() => setActivePage("about")}
+                    subtitle={t("settings.about.subtitle", locale)}
+                    title={t("settings.about.title", locale)}
+                  />
+                </>
+              ) : null}
+              {activePage === "support" ? (
+                <>
+                  <SettingsSubpageHeader locale={locale} title={t("settings.support.title", locale)} onBack={() => setActivePage("main")} />
+                  <SupportContactCard action={supportTicketAction} openToken={reportOpenToken} />
+                </>
+              ) : null}
+              {activePage === "legal" ? (
+                <>
+                  <SettingsSubpageHeader locale={locale} title={t("legal.settingsTitle", locale)} onBack={() => setActivePage("main")} />
+                  <LegalSettingsPage />
+                </>
+              ) : null}
+              {activePage === "about" ? (
+                <>
+                  <SettingsSubpageHeader locale={locale} title={t("settings.about.title", locale)} onBack={() => setActivePage("main")} />
+                  <AboutSettingsPage />
+                </>
+              ) : null}
+              {activePage === "main" && isSupportAdmin ? (
                 <Link
                   className="grid w-full grid-cols-[2.25rem_1fr_auto] items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-3 py-3 text-left transition hover:bg-sky-100"
                   href="/admin/support"
@@ -165,9 +296,10 @@ export function HeaderSettingsButton({
                   </span>
                 </Link>
               ) : null}
-              <SettingsSignOutRow action={signOut} />
+              {activePage === "main" ? <SettingsSignOutRow action={signOut} /> : null}
             </div>
           </div>
+          <CreditOptionsSheet creditAccount={creditAccount} onClose={() => setIsCreditOptionsOpen(false)} open={isCreditOptionsOpen} />
         </div>
       ) : null}
     </div>

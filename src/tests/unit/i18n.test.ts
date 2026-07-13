@@ -168,6 +168,12 @@ describe("i18n helper", () => {
   });
 
   it("returns credit UX copy in supported locales", () => {
+    expect(t("settings.credits.title", "en")).toBe("Credits");
+    expect(t("settings.credits.title", "ro")).toBe("Credite");
+    expect(t("settings.credits.unlimitedActive", "fr")).toBe("Illimité actif");
+    expect(t("settings.legal.subtitle", "es")).toBe("Términos, privacidad, reembolsos e IA");
+    expect(t("settings.about.title", "en")).toBe("About");
+    expect(t("settings.about.subtitle", "ro")).toBe("Versiune, contact și mulțumiri");
     expect(t("credits.addCredits", "en")).toBe("Add credits");
     expect(t("credits.addCredits", "ro")).toBe("Adaugă credite");
     expect(t("credits.addCredits", "fr")).toBe("Ajouter des crédits");
