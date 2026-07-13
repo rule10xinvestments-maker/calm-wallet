@@ -31,8 +31,8 @@ import type { ControlledCategoryOption } from "@/lib/server/transactions-read-mo
 import {
   areCreditPacksEnabled,
   areRewardedCreditsEnabled,
-  calculateCreditPackSavingsPercent,
   CREDIT_PACKS,
+  getCreditPackSavingsMeta,
   isYearlyUnlimitedEnabled,
 } from "@/lib/credits/config";
 import {
@@ -414,7 +414,7 @@ export function AssistantComposer({
   const creditPacksEnabled = areCreditPacksEnabled();
   const yearlyUnlimitedEnabled = isYearlyUnlimitedEnabled();
   const providerActionsImplemented = false;
-  const largePackSavingsPercent = calculateCreditPackSavingsPercent(CREDIT_PACKS.small, CREDIT_PACKS.large);
+  const creditPackSavingsMeta = getCreditPackSavingsMeta(CREDIT_PACKS);
   const [limitState, limitFormAction, isLimitPending] = useActionState<BudgetActionState, FormData>(upsertLimitAction, initialBudgetActionState);
   const [pauseState, pauseFormAction] = useActionState<BudgetActionState, FormData>(pauseLimitAction, initialBudgetActionState);
   const [resumeState, resumeFormAction] = useActionState<BudgetActionState, FormData>(resumeLimitAction, initialBudgetActionState);
@@ -946,10 +946,10 @@ export function AssistantComposer({
                   title: t("credits.options.large.title", locale),
                   price: t("credits.options.large.price", locale, { price: CREDIT_PACKS.large.priceUsd }),
                   helper: t("credits.options.large.helper", locale),
-                  secondary: largePackSavingsPercent
-                    ? t("credits.options.savings", locale, { percent: largePackSavingsPercent })
+                  secondary: creditPackSavingsMeta.large?.savingsPercent
+                    ? t("credits.options.savings", locale, { percent: creditPackSavingsMeta.large.savingsPercent })
                     : null,
-                  badge: t("credits.options.bestValue", locale),
+                  badge: creditPackSavingsMeta.large?.isBestValue ? t("credits.options.bestValue", locale) : null,
                   action: t("credits.options.buy", locale),
                   enabled: creditPacksEnabled && providerActionsImplemented,
                 },
@@ -1019,7 +1019,7 @@ export function AssistantComposer({
         {showLowCreditHelper ? (
           <button
             aria-label={t("credits.low.openOptions", locale, { count: lowCreditDisplayBalance })}
-            className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-left text-xs text-sky-800 transition hover:bg-sky-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-left text-xs text-sky-800 transition hover:bg-sky-100/70 active:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             onClick={() => setIsCreditOptionsOpen(true)}
             type="button"
           >
