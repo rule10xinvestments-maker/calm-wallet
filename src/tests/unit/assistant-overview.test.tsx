@@ -58,9 +58,12 @@ function expectCompactQuickAddWithoutCreditNotice() {
   const quickAddHeader = screen.getByTestId("assistant-quick-add-header");
   const quickAddContent = screen.getByTestId("assistant-quick-add-content");
   const composerStack = screen.getByTestId("assistant-composer-stack");
+  const helper = screen.getByText("Type what happened. We'll organize it.").closest("p");
 
-  expect(quickAddHeader).toHaveClass("pb-1");
-  expect(quickAddContent).toHaveClass("pt-0");
+  expect(quickAddHeader).toHaveClass("pb-2");
+  expect(quickAddContent).toHaveClass("space-y-3", "pt-0");
+  expect(helper?.parentElement).toBe(quickAddContent);
+  expect(helper?.nextElementSibling).toBe(composerStack);
   expect(screen.queryByTestId("assistant-credit-notice")).not.toBeInTheDocument();
   expect(composerStack.firstElementChild?.tagName).toBe("FORM");
   expect(screen.getByLabelText("Message")).toBeInTheDocument();

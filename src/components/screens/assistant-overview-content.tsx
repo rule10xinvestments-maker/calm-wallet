@@ -79,14 +79,14 @@ export function AssistantOverviewContent({
         </Card>
       ) : null}
       <Card data-testid="assistant-quick-add-card">
-        <CardHeader className="pb-1" data-testid="assistant-quick-add-header">
+        <CardHeader className="pb-2" data-testid="assistant-quick-add-header">
           <CardTitle>{t("assistant.quickAdd.title", locale)}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 px-6 pb-6 pt-0" data-testid="assistant-quick-add-content">
           <CardDescription>
             <span className="block">{t("assistant.quickAdd.helper", locale)}</span>
             <span className="block">{t("assistant.quickAdd.examples", locale)}</span>
           </CardDescription>
-        </CardHeader>
-        <CardContent className="px-6 pb-6 pt-0" data-testid="assistant-quick-add-content">
           <AssistantComposer
             action={action}
             adjustOwedNoteAmountAction={adjustOwedNoteAmountAction}

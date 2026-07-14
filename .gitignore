@@ -15,3 +15,7 @@ xw-sprint-*-ready/
 xw-sprint-*-ready.zip
 
 .vercel
+.android-tooling/
+android-commandlinetools.zip
+temurin17.zip
+.codex-remote-attachments/
