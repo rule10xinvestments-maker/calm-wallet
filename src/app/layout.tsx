@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { CapacitorShellRuntime } from "@/components/capacitor-shell-runtime";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
 import "./globals.css";
 
@@ -33,7 +34,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body className="font-sans">
-        <PwaInstallProvider>{children}</PwaInstallProvider>
+        <PwaInstallProvider>
+          <CapacitorShellRuntime />
+          {children}
+        </PwaInstallProvider>
       </body>
     </html>
   );

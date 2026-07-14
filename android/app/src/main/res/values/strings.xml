@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Calm Wallet</string>
+    <string name="title_activity_main">Calm Wallet</string>
+    <string name="package_name">com.calmwallet.app</string>
+    <string name="custom_url_scheme">com.calmwallet.app</string>
+</resources>

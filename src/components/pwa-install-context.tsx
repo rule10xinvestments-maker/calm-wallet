@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -19,9 +20,17 @@ type PwaInstallContextValue = {
 const PwaInstallContext = createContext<PwaInstallContextValue | null>(null);
 const isDevelopment = process.env.NODE_ENV === "development";
 
+function isNativeCapacitorShell() {
+  return Capacitor.isNativePlatform();
+}
+
 function isStandaloneDisplay() {
   if (typeof window === "undefined") {
     return false;
+  }
+
+  if (isNativeCapacitorShell()) {
+    return true;
   }
 
   const standaloneNavigator = navigator as Navigator & { standalone?: boolean };
@@ -152,6 +161,14 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
   const [isStandalone, setIsStandalone] = useState(() => isStandaloneDisplay());
 
   useEffect(() => {
+    if (isNativeCapacitorShell()) {
+      deferredPromptRef.current = null;
+      setCanPrompt(false);
+      setGuidance(null);
+      setIsStandalone(true);
+      return;
+    }
+
     let beforeInstallPromptFired = false;
     let appInstalledFired = false;
     let isMounted = true;
