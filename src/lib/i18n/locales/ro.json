@@ -39,6 +39,48 @@
     "person": "Persoană",
     "merchant": "Comerciant"
   },
+  "accountDeletion": {
+    "settingsTitle": "Șterge contul",
+    "settingsHelper": "Șterge definitiv contul și datele salvate.",
+    "title": "Șterge contul",
+    "permanent": "Ștergerea contului este definitivă și, de obicei, nu poate fi anulată.",
+    "whatDeleted": {
+      "title": "Ce va fi șters",
+      "financial": "Tranzacțiile salvate, regulile recurente, limitele și mementourile de datorii vor fi eliminate.",
+      "product": "Preferințele, setările de notificări, capturile trimise la suport, importurile și datele legate de cont vor fi eliminate.",
+      "credits": "Creditele și bonusurile promoționale nu au valoare în bani și se vor pierde.",
+      "unlimited": "Accesul Unlimited activ se va încheia."
+    },
+    "retained": {
+      "title": "Ce poate fi păstrat",
+      "body": "Anumite înregistrări minime pot fi păstrate când sunt necesare pentru facturare, prevenirea fraudelor, securitate, dispute sau obligații legale."
+    },
+    "confirmCheckbox": "Înțeleg că această acțiune nu poate fi anulată.",
+    "typeToContinue": "Scrie {confirmation} pentru a continua",
+    "deleteButton": "Șterge contul meu",
+    "processing": "Se șterge contul...",
+    "error": "Nu am putut finaliza ștergerea. Încearcă din nou.",
+    "public": {
+      "heading": "Ștergerea contului Calm Wallet",
+      "helper": "Cere ștergerea fără să reinstalezi aplicația sau să fii conectat.",
+      "title": "Cere ștergerea contului",
+      "body": "Introdu adresa de email folosită pentru Calm Wallet. Vom trimite un link de verificare dacă emailul aparține unui cont.",
+      "deleted": "După verificare, datele financiare ale contului și preferințele aplicației sunt șterse sau anonimizate.",
+      "retained": "Înregistrări minime pot fi păstrate doar pentru facturare, prevenirea fraudelor, securitate, dispute, obligații legale sau audit.",
+      "verify": "Dacă nu mai ai acces la emailul inițial, contactează suportul de pe adresa pe care o poți folosi acum.",
+      "verificationSent": "Dacă emailul este legat de un cont Calm Wallet, a fost trimis un link de verificare.",
+      "unavailable": "Cererile de ștergere nu sunt disponibile până când migrarea bazei de date este aplicată.",
+      "requestLink": "Cere link de ștergere",
+      "sending": "Se trimite...",
+      "expired": "Linkul de verificare a expirat.",
+      "requestAnother": "Cere alt link"
+    },
+    "deleted": {
+      "title": "Cont șters",
+      "body": "Ștergerea contului Calm Wallet este finalizată. Ai fost deconectat.",
+      "done": "Gata"
+    }
+  },
   "nav": {
     "assistant": "Asistent",
     "activity": "Activitate",

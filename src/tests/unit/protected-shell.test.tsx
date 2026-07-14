@@ -5,6 +5,7 @@ import { ProtectedShell } from "@/components/layout/protected-shell";
 import { PwaInstallProvider } from "@/components/pwa-install-context";
 import { initialNotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import { initialSupportTicketActionState } from "@/lib/actions/support-state";
+import { initialAccountDeletionActionState } from "@/lib/actions/account-deletion-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 
 const notificationPreferences = {
@@ -33,6 +34,7 @@ const updateNotificationPreferencesAction = vi.fn(async () => initialNotificatio
 const registerPushSubscriptionAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const sendTestPushNotificationAction = vi.fn(async () => initialNotificationPreferencesActionState);
 const supportTicketAction = vi.fn(async () => initialSupportTicketActionState);
+const deleteAccountAction = vi.fn(async () => initialAccountDeletionActionState);
 const updateTimezoneAction = vi.fn(async () => undefined);
 const updateUserPreferencesAction = vi.fn(async (_state: UserPreferencesActionState, formData: FormData) => ({
   status: "success" as const,
@@ -81,6 +83,8 @@ function renderProtectedShell(options: { onSignOut?: () => Promise<void>; credit
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
         supportTicketAction={supportTicketAction}
+        deleteAccountAction={deleteAccountAction}
+        accountDeletionEnabled
         onSignOut={options.onSignOut ?? vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
@@ -104,6 +108,8 @@ function renderProtectedShellWithLocale(uiLocale: string | null, options: { onSi
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
         supportTicketAction={supportTicketAction}
+        deleteAccountAction={deleteAccountAction}
+        accountDeletionEnabled
         onSignOut={options.onSignOut ?? vi.fn(async () => undefined)}
       >
         <div>Assistant content</div>
@@ -138,6 +144,8 @@ function ControlledLocaleShell({ initialLocale = "fr" }: { initialLocale?: "en" 
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
         supportTicketAction={supportTicketAction}
+        deleteAccountAction={deleteAccountAction}
+        accountDeletionEnabled
         onSignOut={vi.fn(async () => undefined)}
       >
         <div>
@@ -169,6 +177,8 @@ function renderAdminProtectedShell(options: { onSignOut?: () => Promise<void> } 
         registerPushSubscriptionAction={registerPushSubscriptionAction}
         sendTestPushNotificationAction={sendTestPushNotificationAction}
         supportTicketAction={supportTicketAction}
+        deleteAccountAction={deleteAccountAction}
+        accountDeletionEnabled
         isSupportAdmin
         onSignOut={options.onSignOut ?? vi.fn(async () => undefined)}
       >
@@ -212,6 +222,8 @@ describe("protected shell PWA install affordance", () => {
           registerPushSubscriptionAction={registerPushSubscriptionAction}
           sendTestPushNotificationAction={sendTestPushNotificationAction}
           supportTicketAction={supportTicketAction}
+          deleteAccountAction={deleteAccountAction}
+          accountDeletionEnabled
           onSignOut={vi.fn(async () => undefined)}
         >
           <div>Assistant content</div>
@@ -284,9 +296,13 @@ describe("protected shell PWA install affordance", () => {
     const languageButton = screen.getByRole("button", { name: /Language/ });
     const notificationsButton = screen.getByRole("button", { name: /Notifications/ });
     const reportButton = screen.getByRole("button", { name: /Report a problem/ });
+    const deleteAccountButton = screen.getByRole("button", { name: /Delete account/ });
+    const signOutRow = screen.getByTestId("settings-sign-out-row");
     expect(creditsButton.compareDocumentPosition(languageButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(languageButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(notificationsButton.compareDocumentPosition(reportButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(deleteAccountButton.compareDocumentPosition(signOutRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(languageButton).getByText("🇬🇧")).toBeInTheDocument();
     expect(within(settingsPanel).queryByText("Search Help")).not.toBeInTheDocument();
     expect(screen.queryByText("Allow Calm Wallet to send helpful reminders.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
@@ -431,6 +447,7 @@ describe("protected shell PWA install affordance", () => {
 
     await waitFor(() => expect(within(settingsPanel).getByRole("status")).toHaveTextContent("Limba a fost salvată."));
     expect(within(settingsPanel).getByRole("button", { name: /Limbă/ })).toBeInTheDocument();
+    expect(within(settingsPanel).getByRole("button", { name: /Limbă/ })).toHaveTextContent("🇷🇴");
     expect(within(settingsPanel).queryByRole("button", { name: "🇬🇧 English" })).not.toBeInTheDocument();
   });
 
@@ -454,7 +471,7 @@ describe("protected shell PWA install affordance", () => {
     expect(within(settingsPanel).queryByText("Daily reminder")).not.toBeInTheDocument();
   });
 
-  it("renders Sign out as the final destructive Settings row and confirms before calling the action", async () => {
+  it("renders Delete account above the final Sign out row and confirms sign-out before calling the action", async () => {
     const signOut = vi.fn(async () => undefined);
     const confirmSpy = vi.spyOn(window, "confirm");
     renderProtectedShell({ onSignOut: signOut });
@@ -462,9 +479,12 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     const settingsPanel = screen.getByTestId("header-settings-panel");
     const buttons = settingsPanel.querySelectorAll("button");
+    const deleteAccountRow = screen.getByRole("button", { name: /Delete account Permanently delete your account and saved data/ });
     const signOutRow = screen.getByTestId("settings-sign-out-row");
 
     expect(buttons[buttons.length - 1]).toBe(signOutRow);
+    expect(deleteAccountRow.compareDocumentPosition(signOutRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(deleteAccountRow).toHaveClass("border-rose-100", "bg-rose-50/60");
     expect(signOutRow).toHaveClass("border-rose-100");
     expect(signOutRow).toHaveClass("bg-rose-50");
 
@@ -484,6 +504,25 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(within(screen.getByRole("dialog", { name: "Sign out?" })).getByRole("button", { name: "Sign out" }));
 
     await waitFor(() => expect(signOut).toHaveBeenCalledOnce());
+  });
+
+  it("opens the in-app account deletion panel and requires explicit confirmation", () => {
+    renderProtectedShell();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Delete account Permanently delete your account and saved data/ }));
+
+    const panel = screen.getByTestId("account-deletion-panel");
+    expect(within(panel).getByText("Account deletion is permanent and cannot normally be undone.")).toBeInTheDocument();
+    expect(within(panel).getByText("What will be deleted")).toBeInTheDocument();
+    expect(within(panel).getByText("What may be retained")).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Delete my account" })).toBeDisabled();
+
+    fireEvent.click(within(panel).getByLabelText("I understand this action cannot be undone."));
+    expect(within(panel).getByRole("button", { name: "Delete my account" })).toBeDisabled();
+
+    fireEvent.change(within(panel).getByLabelText("Type DELETE to continue"), { target: { value: "DELETE" } });
+    expect(within(panel).getByRole("button", { name: "Delete my account" })).toBeEnabled();
   });
 
   it("prevents duplicate sign-out requests while confirmation is running", async () => {
@@ -562,6 +601,11 @@ describe("protected shell PWA install affordance", () => {
     expect(
       screen
         .getByRole("link", { name: /Admin Support Review and manage user reports. Admin/ })
+        .compareDocumentPosition(screen.getByRole("button", { name: /Delete account Permanently delete your account and saved data/ })) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: /Delete account Permanently delete your account and saved data/ })
         .compareDocumentPosition(screen.getByTestId("settings-sign-out-row")) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(panel.querySelectorAll("button")[panel.querySelectorAll("button").length - 1]).toBe(screen.getByTestId("settings-sign-out-row"));

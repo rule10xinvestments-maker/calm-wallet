@@ -1,6 +1,7 @@
 import { ProtectedShell } from "@/components/layout/protected-shell";
 import { LegalAcceptanceScreen } from "@/components/legal/legal-acceptance-screen";
 import { acceptLegalDocumentsAction } from "@/lib/actions/legal";
+import { deleteSignedInAccountAction } from "@/lib/actions/account-deletion";
 import { signOutAction } from "@/lib/auth/actions";
 import {
   registerPushSubscriptionAction,
@@ -17,6 +18,7 @@ import { createSupabaseUserPreferencesService } from "@/domain/preferences/servi
 import { createSupabaseLegalAcceptanceService, hasAcceptedCurrentLegalDocuments } from "@/domain/legal/service";
 import { createSupabaseSupportService } from "@/domain/support/service";
 import { createSupabaseCreditsService } from "@/domain/credits/service";
+import { isAccountDeletionSchemaAvailable } from "@/domain/account-deletion/service";
 import {
   getFallbackNotificationPreferences,
   logProtectedRouteLoadFailure,
@@ -44,6 +46,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   let timezone: string | null = null;
   let isSupportAdmin = false;
   let legalAccepted = false;
+  let accountDeletionEnabled = false;
   let creditAccount: Awaited<ReturnType<Awaited<ReturnType<typeof createSupabaseCreditsService>>["getAccount"]>> | null = null;
 
   try {
@@ -80,10 +83,16 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
 
   try {
     const supportService = await createSupabaseSupportService();
-    isSupportAdmin = await supportService.isAdmin(user.id);
+    const [loadedIsSupportAdmin, loadedAccountDeletionEnabled] = await Promise.all([
+      supportService.isAdmin(user.id),
+      isAccountDeletionSchemaAvailable(),
+    ]);
+    isSupportAdmin = loadedIsSupportAdmin;
+    accountDeletionEnabled = loadedAccountDeletionEnabled;
   } catch (error) {
     logProtectedRouteLoadFailure("assistant", error);
     isSupportAdmin = false;
+    accountDeletionEnabled = false;
   }
 
   return (
@@ -99,6 +108,8 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
       registerPushSubscriptionAction={registerPushSubscriptionAction}
       sendTestPushNotificationAction={sendTestPushNotificationAction}
       supportTicketAction={createSupportTicketAction}
+      deleteAccountAction={deleteSignedInAccountAction}
+      accountDeletionEnabled={accountDeletionEnabled}
       activityMarkerAction={markAuthenticatedAppActivityAction}
       isSupportAdmin={isSupportAdmin}
       onSignOut={signOutAction}

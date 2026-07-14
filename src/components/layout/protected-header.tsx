@@ -8,6 +8,7 @@ import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 import type { SupportTicketActionState } from "@/lib/actions/support-state";
+import type { AccountDeletionActionState } from "@/lib/actions/account-deletion-state";
 import type { signOutAction } from "@/lib/auth/actions";
 import { t } from "@/lib/i18n";
 
@@ -36,6 +37,11 @@ type ProtectedHeaderProps = {
     state: SupportTicketActionState,
     formData: FormData,
   ) => Promise<SupportTicketActionState>;
+  deleteAccountAction: (
+    state: AccountDeletionActionState,
+    formData: FormData,
+  ) => Promise<AccountDeletionActionState>;
+  accountDeletionEnabled?: boolean;
   isSupportAdmin?: boolean;
 };
 
@@ -49,6 +55,8 @@ export function ProtectedHeader({
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
   supportTicketAction,
+  deleteAccountAction,
+  accountDeletionEnabled = false,
   isSupportAdmin = false,
 }: ProtectedHeaderProps) {
   const { locale } = useLocale();
@@ -75,6 +83,8 @@ export function ProtectedHeader({
           registerPushSubscriptionAction={registerPushSubscriptionAction}
           sendTestPushNotificationAction={sendTestPushNotificationAction}
           supportTicketAction={supportTicketAction}
+          deleteAccountAction={deleteAccountAction}
+          accountDeletionEnabled={accountDeletionEnabled}
           signOut={onSignOut}
           isSupportAdmin={isSupportAdmin}
         />

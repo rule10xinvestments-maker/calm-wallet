@@ -39,6 +39,48 @@
     "person": "Person",
     "merchant": "Merchant"
   },
+  "accountDeletion": {
+    "settingsTitle": "Delete account",
+    "settingsHelper": "Permanently delete your account and saved data.",
+    "title": "Delete account",
+    "permanent": "Account deletion is permanent and cannot normally be undone.",
+    "whatDeleted": {
+      "title": "What will be deleted",
+      "financial": "Saved transactions, recurring rules, limits, and owed reminders will be removed.",
+      "product": "Preferences, notification settings, support screenshots, imports, and account-linked product data will be removed.",
+      "credits": "Credits and promotional grants have no cash value and will be lost.",
+      "unlimited": "Active Unlimited access will end."
+    },
+    "retained": {
+      "title": "What may be retained",
+      "body": "Certain minimal records may be retained where required for billing, fraud prevention, security, dispute handling, or law."
+    },
+    "confirmCheckbox": "I understand this action cannot be undone.",
+    "typeToContinue": "Type {confirmation} to continue",
+    "deleteButton": "Delete my account",
+    "processing": "Deleting account...",
+    "error": "We could not complete deletion. Please try again.",
+    "public": {
+      "heading": "Calm Wallet account deletion",
+      "helper": "Request deletion without reinstalling or signing in to the app.",
+      "title": "Request account deletion",
+      "body": "Enter the email used for your Calm Wallet account. We will send a verification link if that email belongs to an account.",
+      "deleted": "After verification, account-owned financial data and app preferences are deleted or anonymized.",
+      "retained": "Minimal records may be retained only for billing, fraud prevention, security, dispute handling, legal duties, or audit.",
+      "verify": "If you cannot access the original email, contact support from the email address you can currently use.",
+      "verificationSent": "If the email is linked to a Calm Wallet account, a verification link has been sent.",
+      "unavailable": "Account deletion requests are not available until the deletion database migration is applied.",
+      "requestLink": "Request deletion link",
+      "sending": "Sending...",
+      "expired": "Verification link expired.",
+      "requestAnother": "Request another link"
+    },
+    "deleted": {
+      "title": "Account deleted",
+      "body": "Your Calm Wallet account deletion is complete. You have been signed out.",
+      "done": "Done"
+    }
+  },
   "nav": {
     "assistant": "Assistant",
     "activity": "Activity",

@@ -39,6 +39,48 @@
     "person": "Personne",
     "merchant": "Magasin"
   },
+  "accountDeletion": {
+    "settingsTitle": "Supprimer le compte",
+    "settingsHelper": "Supprimer définitivement votre compte et vos données.",
+    "title": "Supprimer le compte",
+    "permanent": "La suppression du compte est permanente et ne peut généralement pas être annulée.",
+    "whatDeleted": {
+      "title": "Ce qui sera supprimé",
+      "financial": "Les transactions enregistrées, règles récurrentes, limites et rappels de dettes seront supprimés.",
+      "product": "Les préférences, paramètres de notification, captures d’écran de support, imports et données liées au compte seront supprimés.",
+      "credits": "Les crédits et offres promotionnelles n’ont aucune valeur monétaire et seront perdus.",
+      "unlimited": "L’accès Unlimited actif prendra fin."
+    },
+    "retained": {
+      "title": "Ce qui peut être conservé",
+      "body": "Certains enregistrements minimaux peuvent être conservés si nécessaire pour la facturation, la prévention de la fraude, la sécurité, les litiges ou la loi."
+    },
+    "confirmCheckbox": "Je comprends que cette action ne peut pas être annulée.",
+    "typeToContinue": "Saisissez {confirmation} pour continuer",
+    "deleteButton": "Supprimer mon compte",
+    "processing": "Suppression du compte...",
+    "error": "Nous n’avons pas pu terminer la suppression. Réessayez.",
+    "public": {
+      "heading": "Suppression du compte Calm Wallet",
+      "helper": "Demandez la suppression sans réinstaller l’application ni vous connecter.",
+      "title": "Demander la suppression du compte",
+      "body": "Saisissez l’e-mail utilisé pour votre compte Calm Wallet. Nous enverrons un lien de vérification si cet e-mail appartient à un compte.",
+      "deleted": "Après vérification, les données financières du compte et les préférences de l’application sont supprimées ou anonymisées.",
+      "retained": "Des enregistrements minimaux peuvent être conservés uniquement pour la facturation, la prévention de la fraude, la sécurité, les litiges, les obligations légales ou l’audit.",
+      "verify": "Si vous n’avez plus accès à l’e-mail d’origine, contactez le support avec une adresse que vous pouvez utiliser.",
+      "verificationSent": "Si l’e-mail est lié à un compte Calm Wallet, un lien de vérification a été envoyé.",
+      "unavailable": "Les demandes de suppression ne sont pas disponibles tant que la migration de base de données n’est pas appliquée.",
+      "requestLink": "Demander le lien de suppression",
+      "sending": "Envoi...",
+      "expired": "Le lien de vérification a expiré.",
+      "requestAnother": "Demander un autre lien"
+    },
+    "deleted": {
+      "title": "Compte supprimé",
+      "body": "La suppression de votre compte Calm Wallet est terminée. Vous avez été déconnecté.",
+      "done": "Terminé"
+    }
+  },
   "nav": {
     "assistant": "Assistant",
     "activity": "Activité",

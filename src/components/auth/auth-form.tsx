@@ -11,6 +11,7 @@ import { PwaInstallButton } from "@/components/pwa-install-button";
 import { EMAIL_PASSWORD_AUTH_ENABLED } from "@/lib/auth/features";
 import { type AuthFormState, initialAuthFormState } from "@/lib/auth/form-state";
 import { normalizeLocale, supportedLocales, t, type SupportedLocale } from "@/lib/i18n";
+import { getLocaleFlagLabel } from "@/lib/locale-flags";
 
 type AuthFormProps = {
   title: string;
@@ -276,17 +277,10 @@ function PasswordField({
   );
 }
 
-const languageDisplayLabels: Record<SupportedLocale, { code: string; flag: string; name: string }> = {
-  en: { code: "EN", flag: "🇬🇧", name: "English" },
-  ro: { code: "RO", flag: "🇷🇴", name: "Română" },
-  fr: { code: "FR", flag: "🇫🇷", name: "Français" },
-  es: { code: "ES", flag: "🇪🇸", name: "Español" },
-};
-
 function AuthLanguageSelector() {
   const { locale, setLocale } = useLocale();
   const [isExpanded, setIsExpanded] = useState(false);
-  const selectedLanguage = languageDisplayLabels[locale];
+  const selectedLanguage = getLocaleFlagLabel(locale);
 
   return (
     <div className="relative shrink-0">
@@ -306,7 +300,7 @@ function AuthLanguageSelector() {
           {supportedLocales.map((option) => {
             const normalizedOption = normalizeLocale(option);
             const isSelected = normalizedOption === locale;
-            const language = languageDisplayLabels[normalizedOption];
+            const language = getLocaleFlagLabel(normalizedOption);
 
             return (
               <button

@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeLocale, resolveLocalePreference, t } from "@/lib/i18n";
+import { getLocaleFlagLabel } from "@/lib/locale-flags";
 
 function flattenShape(dictionary: Record<string, unknown>, prefix = "", output: Record<string, string> = {}) {
   Object.entries(dictionary).forEach(([key, value]) => {
@@ -43,6 +44,14 @@ describe("i18n helper", () => {
 
   it("falls back to English for unsupported locales", () => {
     expect(t("common.save", "de")).toBe("Save");
+  });
+
+  it("returns Settings language flags with English fallback", () => {
+    expect(getLocaleFlagLabel("en").flag).toBe("🇬🇧");
+    expect(getLocaleFlagLabel("ro").flag).toBe("🇷🇴");
+    expect(getLocaleFlagLabel("fr").flag).toBe("🇫🇷");
+    expect(getLocaleFlagLabel("es").flag).toBe("🇪🇸");
+    expect(getLocaleFlagLabel("de").flag).toBe("🇬🇧");
   });
 
   it("falls back safely for missing keys", () => {
@@ -243,6 +252,14 @@ describe("i18n helper", () => {
     expect(t("reviewStates.reviewed", "ro")).toBe("Verificat");
     expect(t("assistant.manual.recurringHelper", "en")).toContain("uses 1 credit");
     expect(t("assistant.manual.recurringHelper", "ro")).toContain("1 credit");
+  });
+
+  it("returns account deletion copy in supported locales", () => {
+    expect(t("accountDeletion.settingsTitle", "en")).toBe("Delete account");
+    expect(t("accountDeletion.settingsHelper", "ro")).toBe("Șterge definitiv contul și datele salvate.");
+    expect(t("accountDeletion.typeToContinue", "fr", { confirmation: "SUPPRIMER" })).toBe("Saisissez SUPPRIMER pour continuer");
+    expect(t("accountDeletion.public.verificationSent", "es")).toContain("enlace de verificación");
+    expect(t("accountDeletion.deleted.title", "en")).toBe("Account deleted");
   });
 
   it("returns Calm Insight rule copy in supported locales", () => {

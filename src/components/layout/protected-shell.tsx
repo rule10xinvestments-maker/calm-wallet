@@ -9,6 +9,7 @@ import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
 import type { SupportTicketActionState } from "@/lib/actions/support-state";
+import type { AccountDeletionActionState } from "@/lib/actions/account-deletion-state";
 import type { SupportedLocale } from "@/lib/i18n";
 
 type ProtectedShellProps = {
@@ -40,6 +41,11 @@ type ProtectedShellProps = {
     state: SupportTicketActionState,
     formData: FormData,
   ) => Promise<SupportTicketActionState>;
+  deleteAccountAction: (
+    state: AccountDeletionActionState,
+    formData: FormData,
+  ) => Promise<AccountDeletionActionState>;
+  accountDeletionEnabled?: boolean;
   activityMarkerAction?: () => Promise<void>;
   isSupportAdmin?: boolean;
 };
@@ -58,6 +64,8 @@ export function ProtectedShell({
   registerPushSubscriptionAction,
   sendTestPushNotificationAction,
   supportTicketAction,
+  deleteAccountAction,
+  accountDeletionEnabled = false,
   activityMarkerAction,
   isSupportAdmin = false,
 }: ProtectedShellProps) {
@@ -75,6 +83,8 @@ export function ProtectedShell({
           registerPushSubscriptionAction={registerPushSubscriptionAction}
           sendTestPushNotificationAction={sendTestPushNotificationAction}
           supportTicketAction={supportTicketAction}
+          deleteAccountAction={deleteAccountAction}
+          accountDeletionEnabled={accountDeletionEnabled}
           isSupportAdmin={isSupportAdmin}
           onSignOut={onSignOut}
         />

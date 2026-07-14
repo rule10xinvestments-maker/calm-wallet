@@ -39,6 +39,48 @@
     "person": "Persona",
     "merchant": "Comercio"
   },
+  "accountDeletion": {
+    "settingsTitle": "Eliminar cuenta",
+    "settingsHelper": "Elimina permanentemente tu cuenta y los datos guardados.",
+    "title": "Eliminar cuenta",
+    "permanent": "La eliminación de la cuenta es permanente y normalmente no se puede deshacer.",
+    "whatDeleted": {
+      "title": "Qué se eliminará",
+      "financial": "Se eliminarán las transacciones guardadas, reglas recurrentes, límites y recordatorios de dinero pendiente.",
+      "product": "Se eliminarán las preferencias, ajustes de notificaciones, capturas enviadas a soporte, importaciones y datos vinculados a la cuenta.",
+      "credits": "Los créditos y promociones no tienen valor en efectivo y se perderán.",
+      "unlimited": "El acceso Unlimited activo terminará."
+    },
+    "retained": {
+      "title": "Qué puede conservarse",
+      "body": "Algunos registros mínimos pueden conservarse cuando sean necesarios para facturación, prevención de fraude, seguridad, disputas o requisitos legales."
+    },
+    "confirmCheckbox": "Entiendo que esta acción no se puede deshacer.",
+    "typeToContinue": "Escribe {confirmation} para continuar",
+    "deleteButton": "Eliminar mi cuenta",
+    "processing": "Eliminando cuenta...",
+    "error": "No pudimos completar la eliminación. Inténtalo de nuevo.",
+    "public": {
+      "heading": "Eliminación de cuenta de Calm Wallet",
+      "helper": "Solicita la eliminación sin reinstalar la app ni iniciar sesión.",
+      "title": "Solicitar eliminación de cuenta",
+      "body": "Introduce el email usado para tu cuenta de Calm Wallet. Enviaremos un enlace de verificación si ese email pertenece a una cuenta.",
+      "deleted": "Tras la verificación, los datos financieros de la cuenta y las preferencias de la app se eliminan o anonimizan.",
+      "retained": "Solo pueden conservarse registros mínimos para facturación, prevención de fraude, seguridad, disputas, obligaciones legales o auditoría.",
+      "verify": "Si no puedes acceder al email original, contacta con soporte desde una dirección que sí puedas usar.",
+      "verificationSent": "Si el email está vinculado a una cuenta de Calm Wallet, se ha enviado un enlace de verificación.",
+      "unavailable": "Las solicitudes de eliminación no están disponibles hasta que se aplique la migración de base de datos.",
+      "requestLink": "Solicitar enlace de eliminación",
+      "sending": "Enviando...",
+      "expired": "El enlace de verificación ha caducado.",
+      "requestAnother": "Solicitar otro enlace"
+    },
+    "deleted": {
+      "title": "Cuenta eliminada",
+      "body": "La eliminación de tu cuenta de Calm Wallet se ha completado. Se ha cerrado tu sesión.",
+      "done": "Listo"
+    }
+  },
   "nav": {
     "assistant": "Asistente",
     "activity": "Actividad",

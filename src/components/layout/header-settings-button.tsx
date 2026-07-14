@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Bell, BookOpen, Check, ChevronLeft, ChevronRight, Coins, FileText, Globe2, Infinity, Info, Settings, ShieldCheck } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronLeft, ChevronRight, Coins, FileText, Infinity, Info, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { AccountDeletionPanel } from "@/components/account/account-deletion-panel";
 import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
 import {
   CreditOptionsSheet,
@@ -19,6 +20,8 @@ import { HelpCenterCard } from "@/components/support/help-center-card";
 import { SupportContactCard } from "@/components/support/support-contact-card";
 import { currentLegalVersions } from "@/domain/legal/config";
 import { t } from "@/lib/i18n";
+import { getLocaleFlagLabel } from "@/lib/locale-flags";
+import type { AccountDeletionActionState } from "@/lib/actions/account-deletion-state";
 import type { NotificationPreferences } from "@/domain/notifications/types";
 import type { NotificationPreferencesActionState } from "@/lib/actions/notifications-state";
 import type { UserPreferencesActionState } from "@/lib/actions/preferences-state";
@@ -47,29 +50,37 @@ type HeaderSettingsButtonProps = {
     state: SupportTicketActionState,
     formData: FormData,
   ) => Promise<SupportTicketActionState>;
+  deleteAccountAction: (
+    state: AccountDeletionActionState,
+    formData: FormData,
+  ) => Promise<AccountDeletionActionState>;
+  accountDeletionEnabled?: boolean;
   signOut: typeof signOutAction;
   creditAccount?: CreditAccountSummary | null;
   isSupportAdmin?: boolean;
 };
 
-type SettingsPage = "main" | "language" | "notifications" | "support" | "legal" | "about";
+type SettingsPage = "main" | "language" | "notifications" | "support" | "legal" | "about" | "deleteAccount";
 
 type SettingsRowProps = {
   icon: ReactNode;
   title: string;
   subtitle: string;
   onClick: () => void;
-  variant?: "default" | "account";
+  variant?: "default" | "account" | "destructive";
 };
 
 function SettingsRow({ icon, title, subtitle, onClick, variant = "default" }: SettingsRowProps) {
   const isAccount = variant === "account";
+  const isDestructive = variant === "destructive";
 
   return (
     <button
       className={`grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
         isAccount
           ? "border-sky-100 bg-sky-50/70 hover:bg-sky-50"
+          : isDestructive
+            ? "border-rose-100 bg-rose-50/60 hover:bg-rose-50"
           : "border-slate-200 bg-white hover:bg-slate-50"
       }`}
       onClick={onClick}
@@ -77,14 +88,22 @@ function SettingsRow({ icon, title, subtitle, onClick, variant = "default" }: Se
     >
       <span
         className={`inline-flex size-9 shrink-0 items-center justify-center rounded-2xl ${
-          isAccount ? "bg-white text-sky-700 ring-1 ring-sky-100" : "bg-slate-50 text-slate-500"
+          isAccount
+            ? "bg-white text-sky-700 ring-1 ring-sky-100"
+            : isDestructive
+              ? "bg-white text-rose-600 ring-1 ring-rose-100"
+              : "bg-slate-50 text-slate-500"
         }`}
       >
         {icon}
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-medium text-slate-900">{title}</span>
-        <span className={`mt-0.5 block truncate text-xs leading-5 ${isAccount ? "font-medium text-sky-800" : "text-slate-500"}`}>
+        <span
+          className={`mt-0.5 block truncate text-xs leading-5 ${
+            isAccount ? "font-medium text-sky-800" : isDestructive ? "text-rose-600" : "text-slate-500"
+          }`}
+        >
           {subtitle}
         </span>
       </span>
@@ -193,6 +212,8 @@ export function HeaderSettingsButton({
   notificationPreferencesAction,
   registerPushSubscriptionAction,
   supportTicketAction,
+  deleteAccountAction,
+  accountDeletionEnabled = false,
   signOut,
   creditAccount = null,
   isSupportAdmin = false,
@@ -207,6 +228,7 @@ export function HeaderSettingsButton({
   const creditSettingsSubtitle = unlimitedActive
     ? `∞ ${t("settings.credits.unlimitedActive", locale)}`
     : getCreditSettingsSubtitle(creditAccount, locale);
+  const selectedLanguage = getLocaleFlagLabel(locale);
   const notificationsEnabled =
     notificationPreferences.dailyReminderEnabled ||
     notificationPreferences.monthlyReviewEnabled ||
@@ -306,7 +328,7 @@ export function HeaderSettingsButton({
                     variant="account"
                   />
                   <SettingsRow
-                    icon={<Globe2 aria-hidden="true" className="size-4" />}
+                    icon={<span aria-hidden="true" className="text-base leading-none">{selectedLanguage.flag}</span>}
                     onClick={() => setActivePage("language")}
                     subtitle={t("settings.languageHelper", locale)}
                     title={t("settings.language", locale)}
@@ -376,6 +398,12 @@ export function HeaderSettingsButton({
                   <AboutSettingsPage />
                 </>
               ) : null}
+              {activePage === "deleteAccount" ? (
+                <>
+                  <SettingsSubpageHeader locale={locale} title={t("accountDeletion.title", locale)} onBack={() => setActivePage("main")} />
+                  <AccountDeletionPanel action={deleteAccountAction} source="in_app" onBack={() => setActivePage("main")} />
+                </>
+              ) : null}
               {activePage === "main" && isSupportAdmin ? (
                 <Link
                   className="grid w-full grid-cols-[2.25rem_1fr_auto] items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-3 py-3 text-left transition hover:bg-sky-100"
@@ -393,6 +421,15 @@ export function HeaderSettingsButton({
                     Admin
                   </span>
                 </Link>
+              ) : null}
+              {activePage === "main" && accountDeletionEnabled ? (
+                <SettingsRow
+                  icon={<Trash2 aria-hidden="true" className="size-4" />}
+                  onClick={() => setActivePage("deleteAccount")}
+                  subtitle={t("accountDeletion.settingsHelper", locale)}
+                  title={t("accountDeletion.settingsTitle", locale)}
+                  variant="destructive"
+                />
               ) : null}
               {activePage === "main" ? <SettingsSignOutRow action={signOut} /> : null}
             </div>
