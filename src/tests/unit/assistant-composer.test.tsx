@@ -1942,7 +1942,7 @@ describe("assistant composer", () => {
   });
 
   it("does not show low-credit refill prompts while Unlimited is active", () => {
-    renderComposer(
+    const { container } = renderComposer(
       undefined,
       [],
       undefined,
@@ -1959,6 +1959,68 @@ describe("assistant composer", () => {
 
     expect(screen.queryByRole("button", { name: "0 credits left. Tap to refill credits." })).not.toBeInTheDocument();
     expect(screen.queryByText("0 credits left")).not.toBeInTheDocument();
+    expect(container.firstElementChild?.firstElementChild?.tagName).toBe("FORM");
+  });
+
+  it("renders the credit notice only for inactive low-balance users without reserving space otherwise", () => {
+    const activeUnlimited = renderComposer(
+      undefined,
+      [],
+      undefined,
+      [],
+      false,
+      {
+        creditBalance: 0,
+        recurringGraceDebt: 0,
+        unlimitedUntil: "2099-07-14T00:00:00.000Z",
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    expect(activeUnlimited.container.firstElementChild?.firstElementChild?.tagName).toBe("FORM");
+    expect(screen.getByLabelText("Message")).toBeInTheDocument();
+    expect(screen.queryByText("0 credits left")).not.toBeInTheDocument();
+    activeUnlimited.unmount();
+
+    const normalCredits = renderComposer(
+      undefined,
+      [],
+      undefined,
+      [],
+      false,
+      {
+        creditBalance: 42,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    expect(normalCredits.container.firstElementChild?.firstElementChild?.tagName).toBe("FORM");
+    expect(screen.getByLabelText("Message")).toBeInTheDocument();
+    expect(screen.queryByText("42 credits left")).not.toBeInTheDocument();
+    normalCredits.unmount();
+
+    const zeroCredits = renderComposer(
+      undefined,
+      [],
+      undefined,
+      [],
+      false,
+      {
+        creditBalance: 0,
+        recurringGraceDebt: 0,
+        unlimitedUntil: null,
+        lowBalanceNotice10ShownAt: null,
+        lowBalanceNotice3ShownAt: null,
+      },
+    );
+
+    expect(zeroCredits.container.firstElementChild?.firstElementChild?.tagName).toBe("BUTTON");
+    expect(screen.getByRole("button", { name: "0 credits left. Tap to refill credits." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Message")).toBeInTheDocument();
   });
 
   it("localizes Romanian recurring success without leaking canonical states", () => {

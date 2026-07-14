@@ -8,7 +8,6 @@ import { SettingsSignOutRow } from "@/components/auth/sign-out-button";
 import {
   CreditOptionsSheet,
   getCreditSettingsSubtitle,
-  getUnlimitedExpiryDisplay,
   isUnlimitedActive,
   type CreditAccountSummary,
 } from "@/components/credits/credit-options-sheet";
@@ -59,22 +58,35 @@ type SettingsRowProps = {
   icon: ReactNode;
   title: string;
   subtitle: string;
-  secondarySubtitle?: string | null;
   onClick: () => void;
+  variant?: "default" | "account";
 };
 
-function SettingsRow({ icon, title, subtitle, secondarySubtitle = null, onClick }: SettingsRowProps) {
+function SettingsRow({ icon, title, subtitle, onClick, variant = "default" }: SettingsRowProps) {
+  const isAccount = variant === "account";
+
   return (
     <button
-      className="grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left transition hover:bg-slate-50"
+      className={`grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+        isAccount
+          ? "border-sky-100 bg-sky-50/70 hover:bg-sky-50"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      }`}
       onClick={onClick}
       type="button"
     >
-      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-500">{icon}</span>
+      <span
+        className={`inline-flex size-9 shrink-0 items-center justify-center rounded-2xl ${
+          isAccount ? "bg-white text-sky-700 ring-1 ring-sky-100" : "bg-slate-50 text-slate-500"
+        }`}
+      >
+        {icon}
+      </span>
       <span className="min-w-0">
         <span className="block text-sm font-medium text-slate-900">{title}</span>
-        <span className="mt-0.5 block truncate text-xs leading-5 text-slate-500">{subtitle}</span>
-        {secondarySubtitle ? <span className="block truncate text-xs leading-5 text-slate-400">{secondarySubtitle}</span> : null}
+        <span className={`mt-0.5 block truncate text-xs leading-5 ${isAccount ? "font-medium text-sky-800" : "text-slate-500"}`}>
+          {subtitle}
+        </span>
       </span>
       <ChevronRight aria-hidden="true" className="size-4 text-slate-400" />
     </button>
@@ -192,7 +204,9 @@ export function HeaderSettingsButton({
   const [saveMessageKey, setSaveMessageKey] = useState<string | null>(null);
   const { locale } = useLocale();
   const unlimitedActive = isUnlimitedActive(creditAccount?.unlimitedUntil);
-  const unlimitedExpiry = getUnlimitedExpiryDisplay(creditAccount?.unlimitedUntil, locale);
+  const creditSettingsSubtitle = unlimitedActive
+    ? `∞ ${t("settings.credits.unlimitedActive", locale)}`
+    : getCreditSettingsSubtitle(creditAccount, locale);
   const notificationsEnabled =
     notificationPreferences.dailyReminderEnabled ||
     notificationPreferences.monthlyReviewEnabled ||
@@ -254,13 +268,13 @@ export function HeaderSettingsButton({
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-[120] bg-slate-950/25 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
+          className="fixed inset-0 z-[120] bg-slate-950/25 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
           data-testid="header-settings-overlay"
         >
           <button aria-label={t("settings.closeOverlay", locale)} className="absolute inset-0 h-full w-full cursor-default" onClick={() => setIsOpen(false)} type="button" />
           <div className="relative z-10 mx-auto w-full max-w-md">
             <div
-              className="ml-auto max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xl sm:w-80"
+              className="ml-auto max-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl sm:w-80"
               data-testid="header-settings-panel"
             >
               <div className="flex items-start justify-between gap-3">
@@ -279,6 +293,19 @@ export function HeaderSettingsButton({
                 <>
                   {saveMessageKey ? <SettingsSaveConfirmation message={t(saveMessageKey, locale)} /> : null}
                   <SettingsRow
+                    icon={
+                      unlimitedActive ? (
+                        <Infinity aria-hidden="true" className="size-4" />
+                      ) : (
+                        <Coins aria-hidden="true" className="size-4" />
+                      )
+                    }
+                    onClick={() => setIsCreditOptionsOpen(true)}
+                    subtitle={creditSettingsSubtitle}
+                    title={t("settings.credits.title", locale)}
+                    variant="account"
+                  />
+                  <SettingsRow
                     icon={<Globe2 aria-hidden="true" className="size-4" />}
                     onClick={() => setActivePage("language")}
                     subtitle={t("settings.languageHelper", locale)}
@@ -289,19 +316,6 @@ export function HeaderSettingsButton({
                     onClick={() => setActivePage("notifications")}
                     subtitle={notificationsEnabled ? t("notifications.enabledShort", locale) : t("notifications.disabled", locale)}
                     title={t("notifications.notifications", locale)}
-                  />
-                  <SettingsRow
-                    icon={
-                      unlimitedActive ? (
-                        <Infinity aria-hidden="true" className="size-4" />
-                      ) : (
-                        <Coins aria-hidden="true" className="size-4" />
-                      )
-                    }
-                    onClick={() => setIsCreditOptionsOpen(true)}
-                    secondarySubtitle={unlimitedActive ? t("settings.credits.unlimitedUntil", locale, { date: unlimitedExpiry }) : null}
-                    subtitle={getCreditSettingsSubtitle(creditAccount, locale)}
-                    title={t("settings.credits.title", locale)}
                   />
                   <SettingsRow
                     icon={<FileText aria-hidden="true" className="size-4" />}

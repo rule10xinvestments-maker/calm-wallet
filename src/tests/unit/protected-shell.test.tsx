@@ -275,16 +275,18 @@ describe("protected shell PWA install affordance", () => {
     expect(settingsOverlay).toHaveClass("z-[120]");
     expect(settingsOverlay).toHaveClass("bg-slate-950/25");
     expect(settingsOverlay.className).toContain("env(safe-area-inset-top)");
-    expect(settingsPanel).toHaveClass("max-h-[calc(100dvh-6.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]");
+    expect(settingsOverlay).toHaveClass("pb-[calc(7rem+env(safe-area-inset-bottom))]");
+    expect(settingsPanel).toHaveClass("max-h-[calc(100dvh-8rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]");
     expect(settingsPanel).toHaveClass("overflow-y-auto");
+    expect(settingsPanel).toHaveClass("pb-[calc(1.25rem+env(safe-area-inset-bottom))]");
     expect(settingsButton).toHaveAttribute("aria-expanded", "true");
+    const creditsButton = screen.getByRole("button", { name: /Credits/ });
     const languageButton = screen.getByRole("button", { name: /Language/ });
     const notificationsButton = screen.getByRole("button", { name: /Notifications/ });
-    const creditsButton = screen.getByRole("button", { name: /Credits/ });
     const reportButton = screen.getByRole("button", { name: /Report a problem/ });
+    expect(creditsButton.compareDocumentPosition(languageButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(languageButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(notificationsButton.compareDocumentPosition(creditsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(creditsButton.compareDocumentPosition(reportButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notificationsButton.compareDocumentPosition(reportButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(settingsPanel).queryByText("Search Help")).not.toBeInTheDocument();
     expect(screen.queryByText("Allow Calm Wallet to send helpful reminders.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "🇷🇴 Română" })).not.toBeInTheDocument();
@@ -373,7 +375,10 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     const settingsPanel = screen.getByTestId("header-settings-panel");
 
-    expect(within(settingsPanel).getByRole("button", { name: /Credits 12 credits available/ })).toBeInTheDocument();
+    const creditsButton = within(settingsPanel).getByRole("button", { name: /Credits 12 credits available/ });
+    expect(creditsButton).toBeInTheDocument();
+    expect(creditsButton).toHaveClass("border-sky-100", "bg-sky-50/70");
+    expect(creditsButton.querySelectorAll("span.block")).toHaveLength(2);
     expect(within(settingsPanel).getByRole("button", { name: /About Version, contact & acknowledgements/ })).toBeInTheDocument();
 
     fireEvent.click(within(settingsPanel).getByRole("button", { name: /Credits 12 credits available/ }));
@@ -401,11 +406,14 @@ describe("protected shell PWA install affordance", () => {
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     const settingsPanel = screen.getByTestId("header-settings-panel");
 
-    expect(within(settingsPanel).getByRole("button", { name: /Credits Unlimited active/ })).toBeInTheDocument();
-    expect(within(settingsPanel).getByText(/Entries are unlimited until/)).toBeInTheDocument();
+    const creditsButton = within(settingsPanel).getByRole("button", { name: /Credits ∞ Unlimited active/ });
+    expect(creditsButton).toBeInTheDocument();
+    expect(creditsButton.querySelectorAll("span.block")).toHaveLength(2);
+    expect(within(creditsButton).getByText("∞ Unlimited active")).toBeInTheDocument();
+    expect(within(settingsPanel).queryByText(/Entries are unlimited until/)).not.toBeInTheDocument();
     expect(within(settingsPanel).queryByRole("button", { name: /Credits 0 credits available/ })).not.toBeInTheDocument();
 
-    fireEvent.click(within(settingsPanel).getByRole("button", { name: /Credits Unlimited active/ }));
+    fireEvent.click(creditsButton);
     const creditDialog = screen.getByRole("dialog", { name: "Add credits" });
     expect(within(creditDialog).getByText("Unlimited active")).toBeInTheDocument();
     expect(within(creditDialog).getByText(/Entries are unlimited until/)).toBeInTheDocument();
