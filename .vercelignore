@@ -1,0 +1,15 @@
+.android-tooling/
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android-commandlinetools.zip
+temurin17.zip
+.codex-remote-attachments/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
