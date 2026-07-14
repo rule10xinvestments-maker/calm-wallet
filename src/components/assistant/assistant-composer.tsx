@@ -851,7 +851,7 @@ export function AssistantComposer({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="assistant-composer-stack">
       {assistantMessageDisplay && !hideManualActionMessage ? (
         <div
           className={`rounded-2xl border px-4 py-3 text-sm ${
@@ -883,6 +883,7 @@ export function AssistantComposer({
         <button
           aria-label={t("credits.low.openOptions", locale, { count: lowCreditDisplayBalance })}
           className="flex min-h-12 w-full min-w-0 items-center gap-2 rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2 text-left text-xs text-sky-800 transition hover:bg-sky-100/70 active:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          data-testid="assistant-credit-notice"
           onClick={() => setIsCreditOptionsOpen(true)}
           type="button"
         >

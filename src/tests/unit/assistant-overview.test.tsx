@@ -36,6 +36,36 @@ const recentTransaction: Transaction = {
   updatedAt: "2026-05-27T10:00:00.000Z",
 };
 
+function renderOverviewWithCredits(creditAccount: {
+  creditBalance: number;
+  recurringGraceDebt: number;
+  unlimitedUntil: string | null;
+  lowBalanceNotice10ShownAt: string | null;
+  lowBalanceNotice3ShownAt: string | null;
+}) {
+  return render(
+    <AssistantOverview
+      action={noopAssistantAction}
+      categoryOptions={[]}
+      creditAccount={creditAccount}
+      initialState={initialAssistantActionState}
+      recentTransactions={[]}
+    />,
+  );
+}
+
+function expectCompactQuickAddWithoutCreditNotice() {
+  const quickAddHeader = screen.getByTestId("assistant-quick-add-header");
+  const quickAddContent = screen.getByTestId("assistant-quick-add-content");
+  const composerStack = screen.getByTestId("assistant-composer-stack");
+
+  expect(quickAddHeader).toHaveClass("pb-1");
+  expect(quickAddContent).toHaveClass("pt-0");
+  expect(screen.queryByTestId("assistant-credit-notice")).not.toBeInTheDocument();
+  expect(composerStack.firstElementChild?.tagName).toBe("FORM");
+  expect(screen.getByLabelText("Message")).toBeInTheDocument();
+}
+
 describe("assistant overview", () => {
   it("renders default English Assistant copy", () => {
     render(
@@ -214,6 +244,53 @@ describe("assistant overview", () => {
     expect(screen.getByRole("button", { name: /Create a limit/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Manage limits/ })).toBeInTheDocument();
     expect(screen.queryByText("Set a limit")).not.toBeInTheDocument();
+  });
+
+  it("keeps Quick Add compact without reserved credit-notice layout across credit states", () => {
+    const activeUnlimited = renderOverviewWithCredits({
+      creditBalance: 0,
+      recurringGraceDebt: 0,
+      unlimitedUntil: "2099-07-14T00:00:00.000Z",
+      lowBalanceNotice10ShownAt: null,
+      lowBalanceNotice3ShownAt: null,
+    });
+    expectCompactQuickAddWithoutCreditNotice();
+    activeUnlimited.unmount();
+
+    const normalCredits = renderOverviewWithCredits({
+      creditBalance: 42,
+      recurringGraceDebt: 0,
+      unlimitedUntil: null,
+      lowBalanceNotice10ShownAt: null,
+      lowBalanceNotice3ShownAt: null,
+    });
+    expectCompactQuickAddWithoutCreditNotice();
+    normalCredits.unmount();
+
+    const zeroCredits = renderOverviewWithCredits({
+      creditBalance: 0,
+      recurringGraceDebt: 0,
+      unlimitedUntil: null,
+      lowBalanceNotice10ShownAt: null,
+      lowBalanceNotice3ShownAt: null,
+    });
+    const zeroComposerStack = screen.getByTestId("assistant-composer-stack");
+    expect(screen.getByTestId("assistant-credit-notice")).toHaveTextContent("0 credits left");
+    expect(zeroComposerStack.firstElementChild).toBe(screen.getByTestId("assistant-credit-notice"));
+    expect(screen.getByTestId("assistant-credit-notice").compareDocumentPosition(screen.getByLabelText("Message")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    zeroCredits.unmount();
+
+    renderOverviewWithCredits({
+      creditBalance: 8,
+      recurringGraceDebt: 0,
+      unlimitedUntil: null,
+      lowBalanceNotice10ShownAt: null,
+      lowBalanceNotice3ShownAt: null,
+    });
+    const lowComposerStack = screen.getByTestId("assistant-composer-stack");
+    expect(screen.getByTestId("assistant-credit-notice")).toHaveTextContent("8 credits left");
+    expect(lowComposerStack.firstElementChild).toBe(screen.getByTestId("assistant-credit-notice"));
+    expect(screen.getByTestId("assistant-credit-notice").compareDocumentPosition(screen.getByLabelText("Message")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("uses only the in-card recent items toggle instead of a separate recent card", () => {
