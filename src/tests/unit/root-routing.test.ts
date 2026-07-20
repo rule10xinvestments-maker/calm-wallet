@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import capacitorConfig from "../../../capacitor.config";
-import { getCapacitorNavigationIntent, getNativeAuthCallbackPath } from "@/components/capacitor-shell-runtime";
+import { getCapacitorNavigationIntent, getNativeAuthCallbackParams, getNativeAuthCallbackPath } from "@/components/capacitor-shell-runtime";
 
 const redirect = vi.fn((path: string) => {
   throw new Error(`redirect:${path}`);
@@ -54,5 +54,18 @@ describe("root routing", () => {
       "/auth/callback?code=oauth-code&next=%2Fassistant",
     );
     expect(getNativeAuthCallbackPath("https://calm-wallet.vercel.app/auth/callback?code=oauth-code")).toBeNull();
+  });
+
+  it("preserves native OAuth callback query parameters for client-side exchange", () => {
+    expect(getNativeAuthCallbackParams("com.calmwallet.app://auth/callback?code=oauth-code&state=opaque&next=%2Fassistant")).toEqual({
+      code: "oauth-code",
+      error: null,
+      next: "/assistant",
+    });
+    expect(getNativeAuthCallbackParams("com.calmwallet.app://auth/callback?error=access_denied&next=%2Finsights")).toEqual({
+      code: null,
+      error: "access_denied",
+      next: "/insights",
+    });
   });
 });

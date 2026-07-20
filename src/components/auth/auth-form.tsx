@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { Check, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, type FormEvent } from "react";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PwaInstallButton } from "@/components/pwa-install-button";
 import { EMAIL_PASSWORD_AUTH_ENABLED } from "@/lib/auth/features";
+import { createSupabaseBrowserClient } from "@/lib/auth/browser-client";
 import { type AuthFormState, initialAuthFormState } from "@/lib/auth/form-state";
 import { buildGoogleOAuthRedirectTo } from "@/lib/auth/oauth-redirect";
 import { normalizeLocale, supportedLocales, t, type SupportedLocale } from "@/lib/i18n";
@@ -63,6 +65,7 @@ export function AuthForm({
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   const [googleOAuthRedirectTo, setGoogleOAuthRedirectTo] = useState<string | null>(null);
+  const [isGooglePending, setIsGooglePending] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const resolvedTitle = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.title`, locale) : title;
   const resolvedDescription = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.description`, locale) : description;
@@ -108,6 +111,38 @@ export function AuthForm({
     }
   }
 
+  async function handleGoogleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!googleOAuthRedirectTo?.startsWith("com.calmwallet.app://")) {
+      return;
+    }
+
+    event.preventDefault();
+    setClientError(null);
+    setIsGooglePending(true);
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: googleOAuthRedirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error || !data.url) {
+        setClientError("We couldn't complete your sign-in. Please try again.");
+        setIsGooglePending(false);
+        return;
+      }
+
+      await Browser.open({ url: data.url });
+    } catch {
+      setClientError("We couldn't complete your sign-in. Please try again.");
+      setIsGooglePending(false);
+    }
+  }
+
   return (
     <Card className="w-full border-white/70 bg-white/85 shadow-calm backdrop-blur">
       <CardHeader className="space-y-3">
@@ -123,12 +158,12 @@ export function AuthForm({
       <CardContent>
         {googleAction ? (
           <>
-            <form action={googleAction}>
+            <form action={googleAction} onSubmit={handleGoogleSubmit}>
               {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
               {googleOAuthRedirectTo ? <input name="oauthRedirectTo" type="hidden" value={googleOAuthRedirectTo} /> : null}
               <Button
                 className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-                disabled={!googleOAuthRedirectTo}
+                disabled={!googleOAuthRedirectTo || isGooglePending}
                 type="submit"
               >
                 <span
@@ -136,9 +171,14 @@ export function AuthForm({
                   className="size-5 shrink-0 bg-contain bg-center bg-no-repeat"
                   style={{ backgroundImage: "url('/icons/google-g.svg')" }}
                 />
-                <span className="min-w-0 truncate">{t("auth.continueWithGoogle", locale)}</span>
+                <span className="min-w-0 truncate">{isGooglePending ? t("auth.pleaseWait", locale) : t("auth.continueWithGoogle", locale)}</span>
               </Button>
             </form>
+            {clientError ? (
+              <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {translateAuthMessage(clientError, locale)}
+              </p>
+            ) : null}
             <div className="my-5 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
               <span className="h-px flex-1 bg-slate-200" />
               <span>{t("auth.or", locale)}</span>
@@ -198,7 +238,7 @@ export function AuthForm({
                 />
               ) : null}
 
-              {clientError || state.error ? (
+              {emailPasswordAuthEnabled && (clientError || state.error) ? (
                 <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   {translateAuthMessage(clientError ?? state.error, locale)}
                 </p>

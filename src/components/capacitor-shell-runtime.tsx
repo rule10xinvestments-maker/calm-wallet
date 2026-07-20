@@ -6,6 +6,8 @@ import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { Network } from "@capacitor/network";
+import { createSupabaseBrowserClient } from "@/lib/auth/browser-client";
+import { buildSignInRedirectUrl, getAuthCallbackErrorMessage, resolvePostAuthRedirect } from "@/lib/auth/redirects";
 
 const HOSTED_APP_HOST = "calm-wallet.vercel.app";
 const NATIVE_AUTH_CALLBACK_HOST = "auth";
@@ -52,6 +54,21 @@ export function getNativeAuthCallbackPath(url: string) {
   return `/auth/callback${callbackUrl.search}`;
 }
 
+export function getNativeAuthCallbackParams(url: string) {
+  const callbackPath = getNativeAuthCallbackPath(url);
+
+  if (!callbackPath) {
+    return null;
+  }
+
+  const callbackUrl = new URL(callbackPath, "https://calm-wallet.vercel.app");
+  return {
+    code: callbackUrl.searchParams.get("code"),
+    error: callbackUrl.searchParams.get("error"),
+    next: resolvePostAuthRedirect(callbackUrl.searchParams.get("next")),
+  };
+}
+
 export function CapacitorShellRuntime() {
   useEffect(() => {
     if (!isNativeShell()) {
@@ -77,14 +94,38 @@ export function CapacitorShellRuntime() {
       await App.exitApp();
     });
     const appUrlOpenListener = App.addListener("appUrlOpen", async (event) => {
-      const callbackPath = getNativeAuthCallbackPath(event.url);
+      const callbackParams = getNativeAuthCallbackParams(event.url);
 
-      if (!callbackPath) {
+      if (!callbackParams) {
         return;
       }
 
       await Browser.close().catch(() => undefined);
-      window.location.assign(callbackPath);
+
+      if (callbackParams.error || !callbackParams.code) {
+        window.location.assign(
+          buildSignInRedirectUrl({
+            next: callbackParams.next,
+            error: getAuthCallbackErrorMessage(),
+          }),
+        );
+        return;
+      }
+
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(callbackParams.code);
+
+      if (error) {
+        window.location.assign(
+          buildSignInRedirectUrl({
+            next: callbackParams.next,
+            error: getAuthCallbackErrorMessage(),
+          }),
+        );
+        return;
+      }
+
+      window.location.assign(callbackParams.next);
     });
 
     function handleDocumentClick(event: MouseEvent) {

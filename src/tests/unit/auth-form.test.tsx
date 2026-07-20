@@ -6,9 +6,37 @@ import { PwaInstallProvider } from "@/components/pwa-install-context";
 import { initialAuthFormState, type AuthFormState } from "@/lib/auth/form-state";
 import { signUpSchema } from "@/lib/auth/validation";
 
+const capacitorMocks = vi.hoisted(() => ({
+  browserOpen: vi.fn(),
+  signInWithOAuth: vi.fn(),
+  isNativePlatform: vi.fn(() => false),
+  getPlatform: vi.fn(() => "web"),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: vi.fn(),
+  }),
+}));
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    getPlatform: capacitorMocks.getPlatform,
+    isNativePlatform: capacitorMocks.isNativePlatform,
+  },
+}));
+
+vi.mock("@capacitor/browser", () => ({
+  Browser: {
+    open: capacitorMocks.browserOpen,
+  },
+}));
+
+vi.mock("@/lib/auth/browser-client", () => ({
+  createSupabaseBrowserClient: () => ({
+    auth: {
+      signInWithOAuth: capacitorMocks.signInWithOAuth,
+    },
   }),
 }));
 
@@ -86,6 +114,12 @@ function renderSignIn(
 
 describe("auth form", () => {
   beforeEach(() => {
+    capacitorMocks.browserOpen.mockReset();
+    capacitorMocks.signInWithOAuth.mockReset();
+    capacitorMocks.isNativePlatform.mockReset();
+    capacitorMocks.getPlatform.mockReset();
+    capacitorMocks.isNativePlatform.mockReturnValue(false);
+    capacitorMocks.getPlatform.mockReturnValue("web");
     setDisplayMode(false);
     setNavigatorValue("standalone", false);
     setNavigatorValue("userAgent", "Mozilla/5.0");
@@ -208,6 +242,34 @@ describe("auth form", () => {
 
     await waitFor(() => expect(googleAction).toHaveBeenCalledOnce());
     expect(emailAction).not.toHaveBeenCalled();
+  });
+
+  it("starts Google OAuth from the native WebView and opens the provider URL with Capacitor Browser", async () => {
+    capacitorMocks.isNativePlatform.mockReturnValue(true);
+    capacitorMocks.getPlatform.mockReturnValue("android");
+    capacitorMocks.signInWithOAuth.mockResolvedValueOnce({
+      data: {
+        url: "https://accounts.google.com/o/oauth2/v2/auth?redirect_to=com.calmwallet.app%3A%2F%2Fauth%2Fcallback",
+      },
+      error: null,
+    });
+    const googleAction = vi.fn(async () => undefined);
+    renderSignIn(vi.fn(async () => initialAuthFormState), googleAction);
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+
+    await waitFor(() => expect(capacitorMocks.signInWithOAuth).toHaveBeenCalledOnce());
+    expect(capacitorMocks.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: "com.calmwallet.app://auth/callback?next=%2Fassistant",
+        skipBrowserRedirect: true,
+      },
+    });
+    expect(capacitorMocks.browserOpen).toHaveBeenCalledWith({
+      url: "https://accounts.google.com/o/oauth2/v2/auth?redirect_to=com.calmwallet.app%3A%2F%2Fauth%2Fcallback",
+    });
+    expect(googleAction).not.toHaveBeenCalled();
   });
 
   it("rejects mismatched sign-up passwords before submit", async () => {
