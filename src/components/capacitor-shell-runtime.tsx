@@ -8,6 +8,8 @@ import { Keyboard } from "@capacitor/keyboard";
 import { Network } from "@capacitor/network";
 
 const HOSTED_APP_HOST = "calm-wallet.vercel.app";
+const NATIVE_AUTH_CALLBACK_HOST = "auth";
+const NATIVE_AUTH_CALLBACK_PATH = "/callback";
 const ROOT_APP_PATHS = new Set(["/assistant", "/transactions", "/insights"]);
 
 export type CapacitorNavigationIntent = "internal" | "external-http" | "system";
@@ -36,6 +38,20 @@ export function getCapacitorNavigationIntent(href: string, currentHref: string):
   return "external-http";
 }
 
+export function getNativeAuthCallbackPath(url: string) {
+  const callbackUrl = new URL(url);
+
+  if (
+    callbackUrl.protocol !== "com.calmwallet.app:" ||
+    callbackUrl.hostname !== NATIVE_AUTH_CALLBACK_HOST ||
+    callbackUrl.pathname !== NATIVE_AUTH_CALLBACK_PATH
+  ) {
+    return null;
+  }
+
+  return `/auth/callback${callbackUrl.search}`;
+}
+
 export function CapacitorShellRuntime() {
   useEffect(() => {
     if (!isNativeShell()) {
@@ -59,6 +75,16 @@ export function CapacitorShellRuntime() {
       }
 
       await App.exitApp();
+    });
+    const appUrlOpenListener = App.addListener("appUrlOpen", async (event) => {
+      const callbackPath = getNativeAuthCallbackPath(event.url);
+
+      if (!callbackPath) {
+        return;
+      }
+
+      await Browser.close().catch(() => undefined);
+      window.location.assign(callbackPath);
     });
 
     function handleDocumentClick(event: MouseEvent) {
@@ -103,6 +129,7 @@ export function CapacitorShellRuntime() {
       document.documentElement.removeAttribute("data-connection");
       document.documentElement.style.removeProperty("--capacitor-keyboard-height");
       void backButtonListener.then((listener) => listener.remove());
+      void appUrlOpenListener.then((listener) => listener.remove());
       void keyboardWillShowListener.then((listener) => listener.remove());
       void keyboardWillHideListener.then((listener) => listener.remove());
       void networkStatusListener.then((listener) => listener.remove());

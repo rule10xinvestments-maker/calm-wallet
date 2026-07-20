@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import capacitorConfig from "../../../capacitor.config";
-import { getCapacitorNavigationIntent } from "@/components/capacitor-shell-runtime";
+import { getCapacitorNavigationIntent, getNativeAuthCallbackPath } from "@/components/capacitor-shell-runtime";
 
 const redirect = vi.fn((path: string) => {
   throw new Error(`redirect:${path}`);
@@ -47,5 +47,12 @@ describe("root routing", () => {
       "system",
     );
     expect(getCapacitorNavigationIntent("tel:+40123456789", "https://calm-wallet.vercel.app/assistant")).toBe("system");
+  });
+
+  it("maps native OAuth callbacks back to the hosted app callback route", () => {
+    expect(getNativeAuthCallbackPath("com.calmwallet.app://auth/callback?code=oauth-code&next=%2Fassistant")).toBe(
+      "/auth/callback?code=oauth-code&next=%2Fassistant",
+    );
+    expect(getNativeAuthCallbackPath("https://calm-wallet.vercel.app/auth/callback?code=oauth-code")).toBeNull();
   });
 });

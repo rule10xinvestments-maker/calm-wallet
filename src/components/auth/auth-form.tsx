@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Capacitor } from "@capacitor/core";
 import { Check, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, type FormEvent } from "react";
@@ -60,11 +61,16 @@ export function AuthForm({
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const [isNativeShell, setIsNativeShell] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const resolvedTitle = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.title`, locale) : title;
   const resolvedDescription = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.description`, locale) : description;
   const resolvedSubmitLabel = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.submit`, locale) : submitLabel;
   const resolvedAlternateLabel = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.alternate`, locale) : alternateLabel;
+
+  useEffect(() => {
+    setIsNativeShell(Capacitor.isNativePlatform());
+  }, []);
 
   useEffect(() => {
     if (!state.redirectTo) {
@@ -112,6 +118,7 @@ export function AuthForm({
           <>
             <form action={googleAction}>
               {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
+              {isNativeShell ? <input name="nativeShell" type="hidden" value="true" /> : null}
               <Button
                 className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
                 type="submit"

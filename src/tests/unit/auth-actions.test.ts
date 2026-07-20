@@ -55,6 +55,28 @@ describe("auth actions", () => {
     expect(redirect).toHaveBeenCalledWith("https://accounts.google.com/o/oauth2/v2/auth");
   });
 
+  it("uses the native app callback URL for Google OAuth inside the Android shell", async () => {
+    signInWithOAuth.mockResolvedValueOnce({
+      data: {
+        url: "https://accounts.google.com/o/oauth2/v2/auth",
+      },
+      error: null,
+    });
+    const formData = new FormData();
+    formData.set("nativeShell", "true");
+    formData.set("next", "/assistant");
+    const { signInWithGoogleAction } = await import("@/lib/auth/actions");
+
+    await expect(signInWithGoogleAction(formData)).rejects.toThrow("redirect:https://accounts.google.com/o/oauth2/v2/auth");
+
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: "com.calmwallet.app://auth/callback?next=%2Fassistant",
+      },
+    });
+  });
+
   it("keeps email/password sign-in using the password auth path", async () => {
     signInWithPassword.mockResolvedValueOnce({ error: null });
     const { signInAction } = await import("@/lib/auth/actions");

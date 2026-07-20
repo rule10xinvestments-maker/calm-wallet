@@ -8,6 +8,8 @@ import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import { AUTH_SIGN_IN_PATH, getRequiredEnv } from "@/lib/auth/shared";
 import { signInSchema, signUpSchema } from "@/lib/auth/validation";
 
+const NATIVE_AUTH_CALLBACK_URL = "com.calmwallet.app://auth/callback";
+
 function getAuthErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
     return error.message;
@@ -113,11 +115,14 @@ export async function signUpAction(_previousState: AuthFormState, formData: Form
 
 export async function signInWithGoogleAction(formData: FormData) {
   const next = resolvePostAuthRedirect(typeof formData.get("next") === "string" ? String(formData.get("next")) : null);
+  const isNativeShell = formData.get("nativeShell") === "true";
   let providerUrl: string | null = null;
 
   try {
     const supabase = await createSupabaseServerClient();
-    const redirectTo = new URL("/auth/callback", getRequiredEnv("NEXT_PUBLIC_SITE_URL")).toString();
+    const nativeRedirectTo = new URL(NATIVE_AUTH_CALLBACK_URL);
+    nativeRedirectTo.searchParams.set("next", next);
+    const redirectTo = isNativeShell ? nativeRedirectTo.toString() : new URL("/auth/callback", getRequiredEnv("NEXT_PUBLIC_SITE_URL")).toString();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
