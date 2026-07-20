@@ -55,7 +55,7 @@ describe("auth actions", () => {
     expect(redirect).toHaveBeenCalledWith("https://accounts.google.com/o/oauth2/v2/auth");
   });
 
-  it("uses the native app callback URL for Google OAuth inside the Android shell", async () => {
+  it("uses the explicit native app callback URL for Google OAuth inside the Android shell", async () => {
     signInWithOAuth.mockResolvedValueOnce({
       data: {
         url: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -63,7 +63,7 @@ describe("auth actions", () => {
       error: null,
     });
     const formData = new FormData();
-    formData.set("nativeShell", "true");
+    formData.set("oauthRedirectTo", "com.calmwallet.app://auth/callback?next=%2Fassistant");
     formData.set("next", "/assistant");
     const { signInWithGoogleAction } = await import("@/lib/auth/actions");
 

@@ -6,9 +6,8 @@ import type { AuthFormState } from "@/lib/auth/form-state";
 import { buildSignInRedirectUrl, getAuthCallbackErrorMessage, resolvePostAuthRedirect } from "@/lib/auth/redirects";
 import { createSupabaseServerClient } from "@/lib/auth/server-client";
 import { AUTH_SIGN_IN_PATH, getRequiredEnv } from "@/lib/auth/shared";
+import { resolveAllowedGoogleOAuthRedirectTo } from "@/lib/auth/oauth-redirect";
 import { signInSchema, signUpSchema } from "@/lib/auth/validation";
-
-const NATIVE_AUTH_CALLBACK_URL = "com.calmwallet.app://auth/callback";
 
 function getAuthErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -115,14 +114,15 @@ export async function signUpAction(_previousState: AuthFormState, formData: Form
 
 export async function signInWithGoogleAction(formData: FormData) {
   const next = resolvePostAuthRedirect(typeof formData.get("next") === "string" ? String(formData.get("next")) : null);
-  const isNativeShell = formData.get("nativeShell") === "true";
   let providerUrl: string | null = null;
 
   try {
     const supabase = await createSupabaseServerClient();
-    const nativeRedirectTo = new URL(NATIVE_AUTH_CALLBACK_URL);
-    nativeRedirectTo.searchParams.set("next", next);
-    const redirectTo = isNativeShell ? nativeRedirectTo.toString() : new URL("/auth/callback", getRequiredEnv("NEXT_PUBLIC_SITE_URL")).toString();
+    const redirectTo = resolveAllowedGoogleOAuthRedirectTo({
+      fallbackNext: next,
+      requestedRedirectTo: typeof formData.get("oauthRedirectTo") === "string" ? String(formData.get("oauthRedirectTo")) : null,
+      siteUrl: getRequiredEnv("NEXT_PUBLIC_SITE_URL"),
+    });
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

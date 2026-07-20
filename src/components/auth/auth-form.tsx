@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PwaInstallButton } from "@/components/pwa-install-button";
 import { EMAIL_PASSWORD_AUTH_ENABLED } from "@/lib/auth/features";
 import { type AuthFormState, initialAuthFormState } from "@/lib/auth/form-state";
+import { buildGoogleOAuthRedirectTo } from "@/lib/auth/oauth-redirect";
 import { normalizeLocale, supportedLocales, t, type SupportedLocale } from "@/lib/i18n";
 import { getLocaleFlagLabel } from "@/lib/locale-flags";
 
@@ -61,7 +62,7 @@ export function AuthForm({
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
-  const [isNativeShell, setIsNativeShell] = useState(false);
+  const [googleOAuthRedirectTo, setGoogleOAuthRedirectTo] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
   const resolvedTitle = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.title`, locale) : title;
   const resolvedDescription = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.description`, locale) : description;
@@ -69,8 +70,14 @@ export function AuthForm({
   const resolvedAlternateLabel = copyKeyPrefix ? t(`auth.${copyKeyPrefix}.alternate`, locale) : alternateLabel;
 
   useEffect(() => {
-    setIsNativeShell(Capacitor.isNativePlatform());
-  }, []);
+    setGoogleOAuthRedirectTo(
+      buildGoogleOAuthRedirectTo({
+        isNativeShell: Capacitor.isNativePlatform() || Capacitor.getPlatform() === "android",
+        nextPath,
+        origin: window.location.origin,
+      }),
+    );
+  }, [nextPath]);
 
   useEffect(() => {
     if (!state.redirectTo) {
@@ -118,9 +125,10 @@ export function AuthForm({
           <>
             <form action={googleAction}>
               {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
-              {isNativeShell ? <input name="nativeShell" type="hidden" value="true" /> : null}
+              {googleOAuthRedirectTo ? <input name="oauthRedirectTo" type="hidden" value={googleOAuthRedirectTo} /> : null}
               <Button
                 className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                disabled={!googleOAuthRedirectTo}
                 type="submit"
               >
                 <span
