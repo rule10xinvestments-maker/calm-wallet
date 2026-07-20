@@ -9,7 +9,7 @@ describe("Google OAuth redirect selection", () => {
         nextPath: "/assistant",
         origin: "https://calm-wallet.vercel.app",
       }),
-    ).toBe("com.calmwallet.app://auth/callback?next=%2Fassistant");
+    ).toBe("com.calmwallet.app://auth/callback");
   });
 
   it("selects the HTTPS callback for web and PWA surfaces", () => {
@@ -28,7 +28,7 @@ describe("Google OAuth redirect selection", () => {
         requestedRedirectTo: "com.calmwallet.app://auth/callback?next=%2Finsights",
         siteUrl: "https://calm-wallet.vercel.app",
       }),
-    ).toBe("com.calmwallet.app://auth/callback?next=%2Finsights");
+    ).toBe("com.calmwallet.app://auth/callback");
 
     expect(
       resolveAllowedGoogleOAuthRedirectTo({

@@ -63,7 +63,7 @@ describe("auth actions", () => {
       error: null,
     });
     const formData = new FormData();
-    formData.set("oauthRedirectTo", "com.calmwallet.app://auth/callback?next=%2Fassistant");
+    formData.set("oauthRedirectTo", "com.calmwallet.app://auth/callback");
     formData.set("next", "/assistant");
     const { signInWithGoogleAction } = await import("@/lib/auth/actions");
 
@@ -72,7 +72,7 @@ describe("auth actions", () => {
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
       options: {
-        redirectTo: "com.calmwallet.app://auth/callback?next=%2Fassistant",
+        redirectTo: "com.calmwallet.app://auth/callback",
       },
     });
   });

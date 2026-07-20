@@ -262,7 +262,7 @@ describe("auth form", () => {
     expect(capacitorMocks.signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
       options: {
-        redirectTo: "com.calmwallet.app://auth/callback?next=%2Fassistant",
+        redirectTo: "com.calmwallet.app://auth/callback",
         skipBrowserRedirect: true,
       },
     });

@@ -8,10 +8,12 @@ import { Keyboard } from "@capacitor/keyboard";
 import { Network } from "@capacitor/network";
 import { createSupabaseBrowserClient } from "@/lib/auth/browser-client";
 import { buildSignInRedirectUrl, getAuthCallbackErrorMessage, resolvePostAuthRedirect } from "@/lib/auth/redirects";
+import { NATIVE_GOOGLE_OAUTH_NEXT_STORAGE_KEY } from "@/lib/auth/oauth-redirect";
 
 const HOSTED_APP_HOST = "calm-wallet.vercel.app";
 const NATIVE_AUTH_CALLBACK_HOST = "auth";
 const NATIVE_AUTH_CALLBACK_PATH = "/callback";
+const NATIVE_AUTH_CALLBACK_PROCESSING_KEY = "calm-wallet-native-oauth-callback-processing";
 const ROOT_APP_PATHS = new Set(["/assistant", "/transactions", "/insights"]);
 
 export type CapacitorNavigationIntent = "internal" | "external-http" | "system";
@@ -112,10 +114,24 @@ export function CapacitorShellRuntime() {
         return;
       }
 
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(callbackParams.code);
+      if (window.sessionStorage.getItem(NATIVE_AUTH_CALLBACK_PROCESSING_KEY) === callbackParams.code) {
+        return;
+      }
 
-      if (error) {
+      window.sessionStorage.setItem(NATIVE_AUTH_CALLBACK_PROCESSING_KEY, callbackParams.code);
+      const supabase = createSupabaseBrowserClient();
+      let exchangeError: unknown = null;
+
+      try {
+        const { error } = await supabase.auth.exchangeCodeForSession(callbackParams.code);
+        exchangeError = error;
+      } catch (error) {
+        exchangeError = error;
+      } finally {
+        window.sessionStorage.removeItem(NATIVE_AUTH_CALLBACK_PROCESSING_KEY);
+      }
+
+      if (exchangeError) {
         window.location.assign(
           buildSignInRedirectUrl({
             next: callbackParams.next,
@@ -125,7 +141,9 @@ export function CapacitorShellRuntime() {
         return;
       }
 
-      window.location.assign(callbackParams.next);
+      const storedNext = window.sessionStorage.getItem(NATIVE_GOOGLE_OAUTH_NEXT_STORAGE_KEY);
+      window.sessionStorage.removeItem(NATIVE_GOOGLE_OAUTH_NEXT_STORAGE_KEY);
+      window.location.assign(resolvePostAuthRedirect(storedNext ?? callbackParams.next));
     });
 
     function handleDocumentClick(event: MouseEvent) {

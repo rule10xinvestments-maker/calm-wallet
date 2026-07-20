@@ -13,7 +13,7 @@ import { PwaInstallButton } from "@/components/pwa-install-button";
 import { EMAIL_PASSWORD_AUTH_ENABLED } from "@/lib/auth/features";
 import { createSupabaseBrowserClient } from "@/lib/auth/browser-client";
 import { type AuthFormState, initialAuthFormState } from "@/lib/auth/form-state";
-import { buildGoogleOAuthRedirectTo } from "@/lib/auth/oauth-redirect";
+import { buildGoogleOAuthRedirectTo, NATIVE_GOOGLE_OAUTH_NEXT_STORAGE_KEY } from "@/lib/auth/oauth-redirect";
 import { normalizeLocale, supportedLocales, t, type SupportedLocale } from "@/lib/i18n";
 import { getLocaleFlagLabel } from "@/lib/locale-flags";
 
@@ -121,6 +121,7 @@ export function AuthForm({
     setIsGooglePending(true);
 
     try {
+      window.sessionStorage.setItem(NATIVE_GOOGLE_OAUTH_NEXT_STORAGE_KEY, nextPath ?? "/assistant");
       const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
