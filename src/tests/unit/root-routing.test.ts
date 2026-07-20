@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import capacitorConfig from "../../../capacitor.config";
+import { getCapacitorNavigationIntent } from "@/components/capacitor-shell-runtime";
 
 const redirect = vi.fn((path: string) => {
   throw new Error(`redirect:${path}`);
@@ -23,5 +24,28 @@ describe("root routing", () => {
       cleartext: false,
       allowNavigation: ["calm-wallet.vercel.app"],
     });
+  });
+
+  it("keeps same-origin absolute Calm Wallet URLs inside the native shell", () => {
+    expect(
+      getCapacitorNavigationIntent("https://calm-wallet.vercel.app/insights", "https://calm-wallet.vercel.app/assistant"),
+    ).toBe("internal");
+  });
+
+  it("keeps relative Calm Wallet URLs inside the native shell", () => {
+    expect(getCapacitorNavigationIntent("/transactions", "https://calm-wallet.vercel.app/assistant")).toBe("internal");
+  });
+
+  it("opens external web domains through the Capacitor Browser", () => {
+    expect(getCapacitorNavigationIntent("https://example.com/help", "https://calm-wallet.vercel.app/assistant")).toBe(
+      "external-http",
+    );
+  });
+
+  it("leaves mail and telephone links to the system handler", () => {
+    expect(getCapacitorNavigationIntent("mailto:support@example.test", "https://calm-wallet.vercel.app/assistant")).toBe(
+      "system",
+    );
+    expect(getCapacitorNavigationIntent("tel:+40123456789", "https://calm-wallet.vercel.app/assistant")).toBe("system");
   });
 });

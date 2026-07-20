@@ -22,6 +22,17 @@ describe("auth middleware", () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
   });
 
+  it("redirects the root route to the protected Assistant entry route before auth checks", async () => {
+    const { middleware } = await import("../../middleware");
+
+    const response = await middleware(new NextRequest("https://calm-wallet.example/"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://calm-wallet.example/assistant");
+    expect(getUser).not.toHaveBeenCalled();
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
   it("does not redirect protected navigation when a transient null user still has a session", async () => {
     getUser.mockResolvedValueOnce({
       data: {
@@ -95,6 +106,7 @@ describe("auth middleware", () => {
         "/insights/:path*",
         "/admin",
         "/admin/:path*",
+        "/",
       ]),
     );
   });

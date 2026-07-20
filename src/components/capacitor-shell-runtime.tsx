@@ -7,8 +7,10 @@ import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { Network } from "@capacitor/network";
 
-const HOSTED_APP_ORIGIN = "https://calm-wallet.vercel.app";
+const HOSTED_APP_HOST = "calm-wallet.vercel.app";
 const ROOT_APP_PATHS = new Set(["/assistant", "/transactions", "/insights"]);
+
+export type CapacitorNavigationIntent = "internal" | "external-http" | "system";
 
 function isNativeShell() {
   return Capacitor.isNativePlatform();
@@ -16,6 +18,22 @@ function isNativeShell() {
 
 function isPrimaryAppPath(pathname: string) {
   return ROOT_APP_PATHS.has(pathname) || pathname.startsWith("/settings");
+}
+
+export function getCapacitorNavigationIntent(href: string, currentHref: string): CapacitorNavigationIntent {
+  const url = new URL(href, currentHref);
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return "system";
+  }
+
+  const currentUrl = new URL(currentHref);
+
+  if (url.hostname === HOSTED_APP_HOST || url.origin === currentUrl.origin) {
+    return "internal";
+  }
+
+  return "external-http";
 }
 
 export function CapacitorShellRuntime() {
@@ -51,15 +69,13 @@ export function CapacitorShellRuntime() {
         return;
       }
 
+      const navigationIntent = getCapacitorNavigationIntent(link.href, window.location.href);
+
+      if (navigationIntent !== "external-http") {
+        return;
+      }
+
       const url = new URL(link.href, window.location.href);
-
-      if (url.protocol !== "http:" && url.protocol !== "https:") {
-        return;
-      }
-
-      if (url.origin === HOSTED_APP_ORIGIN || url.origin === window.location.origin) {
-        return;
-      }
 
       event.preventDefault();
       void Browser.open({ url: url.href });

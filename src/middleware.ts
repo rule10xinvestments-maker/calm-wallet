@@ -15,6 +15,10 @@ type CookieToSet = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/assistant", request.url));
+  }
+
   const isProtectedPath = PROTECTED_PATHS.some((path) => pathname.startsWith(path));
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
   const requestHeaders = new Headers(request.headers);
@@ -104,5 +108,6 @@ export const config = {
     "/admin/:path*",
     "/sign-in",
     "/sign-up",
+    "/",
   ],
 };
