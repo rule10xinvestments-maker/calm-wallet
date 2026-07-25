@@ -1069,15 +1069,21 @@
     },
     "calmInsight": {
       "eyebrow": "Calm Insight",
+      "reviewEyebrow": "Needs review",
       "genericCategoryLabel": "a category",
       "actions": {
         "category": "View category",
         "bars": "View timeline",
         "trend": "View trend",
         "snapshot": "View snapshot",
-        "activity": "View activity"
+        "activity": "View activity",
+        "review": "Review entries"
       },
       "rules": {
+        "review_uncategorized_spending": {
+          "title": "Some entries need a category",
+          "body": "{percent}% of tracked spending is still uncategorized."
+        },
         "category_dominance": {
           "title": "This period was led by {categoryLabel}",
           "body": "This category represented {percent}% of tracked spending."

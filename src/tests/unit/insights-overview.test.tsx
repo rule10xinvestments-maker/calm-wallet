@@ -1021,6 +1021,95 @@ describe("insights overview", () => {
     expect(navigationMocks.push).toHaveBeenCalledWith("/transactions?month=2026-04&focusTransaction=txn-large", { scroll: false });
   });
 
+  it("routes a review Calm Insight CTA to Activity Review instead of a category view", () => {
+    renderInsights(
+      makeInsightsData({
+        calmInsight: {
+          id: "review_uncategorized_spending",
+          priority: 79,
+          confidence: 82,
+          discoveryScore: 96,
+          actionType: "review",
+          titleKey: "insights.calmInsight.rules.review_uncategorized_spending.title",
+          bodyKey: "insights.calmInsight.rules.review_uncategorized_spending.body",
+          variables: { percent: 82 },
+        },
+      }),
+    );
+
+    const insight = screen.getByTestId("calm-insight-card");
+
+    expect(within(insight).getByText("Needs review")).toBeInTheDocument();
+    expect(within(insight).getByText("Some entries need a category")).toBeInTheDocument();
+    expect(within(insight).getByText("82% of tracked spending is still uncategorized.")).toBeInTheDocument();
+    expect(within(insight).queryByText(/main category/i)).not.toBeInTheDocument();
+    expect(within(insight).queryByText(/Needs category|Uncategorized|needs_review/)).not.toBeInTheDocument();
+    expect(within(insight).queryByRole("button", { name: "View category" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(insight).getByRole("button", { name: "Review entries" }));
+
+    expect(navigationMocks.push).toHaveBeenCalledWith("/transactions?month=2026-04&view=needs-review", { scroll: false });
+  });
+
+  it.each([
+    [
+      "en",
+      "Needs review",
+      "Some entries need a category",
+      "82% of tracked spending is still uncategorized.",
+      "Review entries",
+    ],
+    [
+      "ro",
+      "De verificat",
+      "Unele intrări nu au categorie",
+      "82% din cheltuielile urmărite sunt încă fără categorie.",
+      "Revizuiește intrările",
+    ],
+    [
+      "fr",
+      "À vérifier",
+      "Certaines entrées n’ont pas de catégorie",
+      "82% des dépenses suivies sont encore sans catégorie.",
+      "Vérifier les entrées",
+    ],
+    [
+      "es",
+      "Por revisar",
+      "Algunas entradas necesitan categoría",
+      "El 82% de los gastos registrados sigue sin categoría.",
+      "Revisar entradas",
+    ],
+  ] satisfies Array<[SupportedLocale, string, string, string, string]>)(
+    "renders localized review Calm Insight copy for %s without internal bucket labels",
+    (locale, eyebrow, title, body, action) => {
+      renderInsights(
+        makeInsightsData({
+          calmInsight: {
+            id: "review_uncategorized_spending",
+            priority: 79,
+            confidence: 82,
+            discoveryScore: 96,
+            actionType: "review",
+            titleKey: "insights.calmInsight.rules.review_uncategorized_spending.title",
+            bodyKey: "insights.calmInsight.rules.review_uncategorized_spending.body",
+            variables: { percent: 82 },
+          },
+        }),
+        { locale },
+      );
+
+      const insight = screen.getByTestId("calm-insight-card");
+
+      expect(within(insight).getByText(eyebrow)).toBeInTheDocument();
+      expect(within(insight).getByText(title)).toBeInTheDocument();
+      expect(within(insight).getByText(body)).toBeInTheDocument();
+      expect(within(insight).getByRole("button", { name: action })).toBeInTheDocument();
+      expect(within(insight).queryByText(/Needs category|Uncategorized|needs_review|needs-category/)).not.toBeInTheDocument();
+      expect(within(insight).queryByRole("button", { name: /View category|Vezi categoria|Voir la catégorie|Ver categoría/ })).not.toBeInTheDocument();
+    },
+  );
+
   it.each([
     ["en", "Calm Insight", "Main spending category: Groceries", "This was your largest tracked expense category."],
     ["ro", "Observație calmă", "Categoria principală de cheltuieli: Alimente", "Aceasta a fost cea mai mare categorie de cheltuieli urmărite."],

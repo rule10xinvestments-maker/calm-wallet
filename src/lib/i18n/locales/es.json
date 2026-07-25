@@ -1069,15 +1069,21 @@
     },
     "calmInsight": {
       "eyebrow": "Observación tranquila",
+      "reviewEyebrow": "Por revisar",
       "genericCategoryLabel": "una categoría",
       "actions": {
         "category": "Ver categoría",
         "bars": "Ver periodo",
         "trend": "Ver tendencia",
         "snapshot": "Ver resumen",
-        "activity": "Ver actividad"
+        "activity": "Ver actividad",
+        "review": "Revisar entradas"
       },
       "rules": {
+        "review_uncategorized_spending": {
+          "title": "Algunas entradas necesitan categoría",
+          "body": "El {percent}% de los gastos registrados sigue sin categoría."
+        },
         "category_dominance": {
           "title": "La categoría principal fue {categoryLabel}",
           "body": "Esta categoría representó el {percent}% de los gastos registrados."

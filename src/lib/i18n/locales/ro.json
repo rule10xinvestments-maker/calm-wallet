@@ -1069,15 +1069,21 @@
     },
     "calmInsight": {
       "eyebrow": "Observație calmă",
+      "reviewEyebrow": "De verificat",
       "genericCategoryLabel": "o categorie",
       "actions": {
         "category": "Vezi categoria",
         "bars": "Vezi perioada",
         "trend": "Vezi evoluția",
         "snapshot": "Vezi sumarul",
-        "activity": "Vezi activitatea"
+        "activity": "Vezi activitatea",
+        "review": "Revizuiește intrările"
       },
       "rules": {
+        "review_uncategorized_spending": {
+          "title": "Unele intrări nu au categorie",
+          "body": "{percent}% din cheltuielile urmărite sunt încă fără categorie."
+        },
         "category_dominance": {
           "title": "Categoria principală a fost {categoryLabel}",
           "body": "Această categorie a reprezentat {percent}% din cheltuielile urmărite."

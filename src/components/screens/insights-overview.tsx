@@ -143,14 +143,19 @@ function buildActivityInspectHref({
   category,
   focusTransaction,
   month,
+  view,
 }: {
   category?: string | null;
   focusTransaction?: string | null;
   month?: string | null;
+  view?: string | null;
 }) {
   const params = new URLSearchParams();
   if (month) {
     params.set("month", month);
+  }
+  if (view) {
+    params.set("view", view);
   }
   if (category) {
     params.set("category", category);
@@ -2430,6 +2435,12 @@ function getCalmInsightActionLabel(insight: NonNullable<InsightsData["calmInsigh
   return t(`insights.calmInsight.actions.${insight.actionType}`, locale);
 }
 
+function getCalmInsightEyebrow(insight: NonNullable<InsightsData["calmInsight"]>, locale: string) {
+  return insight.id === "review_uncategorized_spending"
+    ? t("insights.calmInsight.reviewEyebrow", locale)
+    : t("insights.calmInsight.eyebrow", locale);
+}
+
 function CalmInsightCard({
   data,
   onAction,
@@ -2458,7 +2469,7 @@ function CalmInsightCard({
           <span className="inline-flex size-7 items-center justify-center rounded-full bg-white text-sky-700 shadow-sm">
             <Lightbulb aria-hidden="true" className="size-3.5" />
           </span>
-          <span>{t("insights.calmInsight.eyebrow", locale)}</span>
+          <span>{getCalmInsightEyebrow(insight, locale)}</span>
         </div>
         <div className="flex gap-3">
           {CategoryIcon && categoryVisuals ? (
@@ -3366,6 +3377,9 @@ export function InsightsOverview({ data, loadError = false }: InsightsOverviewPr
         if (insight.actionTarget) {
           router.push(buildActivityInspectHref({ focusTransaction: insight.actionTarget, month: activeData.selectedMonth }), { scroll: false });
         }
+        return;
+      case "review":
+        router.push(buildActivityInspectHref({ month: activeData.selectedMonth, view: "needs-review" }), { scroll: false });
         return;
       default:
         return;

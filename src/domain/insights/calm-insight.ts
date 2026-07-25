@@ -1,6 +1,7 @@
 import type { InsightsData, InsightsTimeframePreset } from "@/lib/server/transactions-read-model";
 
 export type CalmInsightRuleId =
+  | "review_uncategorized_spending"
   | "category_dominance"
   | "balanced_spending"
   | "bars_period_stood_out"
@@ -36,7 +37,7 @@ export type CalmInsightCandidate = {
 };
 
 export type CalmInsightResult = CalmInsightCandidate;
-export type CalmInsightActionType = "category" | "bars" | "trend" | "snapshot" | "activity" | "none";
+export type CalmInsightActionType = "category" | "bars" | "trend" | "snapshot" | "activity" | "review" | "none";
 
 export type CalmInsightCategoryMeta = {
   canonicalCategory: string | null;
@@ -82,6 +83,7 @@ export const calmInsightThresholds = {
 } as const;
 
 const fallbackCategoryKeys = new Set(["other", "uncategorized"]);
+const reviewBucketKeys = new Set(["needs-category", "uncategorized", "uncategorized-income", "needs-review", "needs_review"]);
 
 function candidate(
   id: CalmInsightRuleId,
@@ -170,12 +172,16 @@ function isMeaningfulPeriod(data: InsightsData) {
 }
 
 function isUsefulCategory(key: string) {
-  return !fallbackCategoryKeys.has(key.toLowerCase());
+  return !fallbackCategoryKeys.has(key.toLowerCase()) && !isReviewBucketKey(key);
+}
+
+function isReviewBucketKey(key: string) {
+  return reviewBucketKeys.has(key.trim().toLowerCase());
 }
 
 function getLeadingCategory(items: InsightsData["categoryBreakdown"], totalMinor: number, minimumSharePercent: number) {
   const useful = items.filter((item) => isUsefulCategory(item.key));
-  const leading = useful[0] ?? items[0] ?? null;
+  const leading = useful[0] ?? null;
 
   if (!leading || totalMinor < calmInsightThresholds.meaningfulAmountMinor) {
     return null;
@@ -222,6 +228,31 @@ function splitTrendHalves(days: InsightsData["selectedMonthTrendDays"]) {
 }
 
 export const calmInsightRules = [
+  function reviewUncategorizedSpending({ data }: CalmInsightContext) {
+    if (!isMeaningfulPeriod(data)) {
+      return null;
+    }
+
+    const leading = data.categoryBreakdown[0] ?? null;
+    if (!leading || !isReviewBucketKey(leading.key) || data.selectedPeriodExpenseDisplayMinor < calmInsightThresholds.meaningfulAmountMinor) {
+      return null;
+    }
+
+    const share = percent(leading.amountMinor, data.selectedPeriodExpenseDisplayMinor);
+    if (share < calmInsightThresholds.categoryDominanceSharePercent) {
+      return null;
+    }
+
+    return candidate(
+      "review_uncategorized_spending",
+      79,
+      share,
+      Math.min(96, 60 + share),
+      { percent: share },
+      undefined,
+      "review",
+    );
+  },
   function categoryLargestChanged({ data, previousComparablePeriod }: CalmInsightContext) {
     if (!previousComparablePeriod?.comparable || !isMeaningfulPeriod(data)) {
       return null;

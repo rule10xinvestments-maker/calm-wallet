@@ -1799,6 +1799,61 @@ describe("transactions read model", () => {
     expect(data.calmInsight?.categoryMeta?.canonicalCategory).toBe("housing");
   });
 
+  it("keeps a real largest spending category as a category Calm Insight", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "food-1", amountMinor: 2400, categoryId: "food" }),
+        makeTransaction({ id: "food-2", amountMinor: 1800, categoryId: "food" }),
+        makeTransaction({ id: "travel-1", amountMinor: 1200, categoryId: "travel" }),
+      ],
+      { food: "Groceries", travel: "Travel" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.calmInsight?.id).toBe("category_dominance");
+    expect(data.calmInsight?.variables).toEqual({ categoryLabel: "Groceries", percent: 78 });
+    expect(data.calmInsight?.categoryMeta?.canonicalCategory).toBe("food");
+    expect(data.calmInsight?.actionType).toBe("category");
+  });
+
+  it("uses a review Calm Insight when uncategorized expenses are the largest bucket", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "review-1", amountMinor: 2400, categoryId: null, reviewState: "needs_attention" }),
+        makeTransaction({ id: "review-2", amountMinor: 1800, categoryId: null, reviewState: "needs_attention" }),
+        makeTransaction({ id: "food-1", amountMinor: 900, categoryId: "food" }),
+      ],
+      { food: "Groceries" },
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.categoryBreakdown[0]).toMatchObject({ key: "needs-category", label: "Needs category" });
+    expect(data.calmInsight?.id).toBe("review_uncategorized_spending");
+    expect(data.calmInsight?.variables).toEqual({ percent: 82 });
+    expect(data.calmInsight?.categoryMeta).toBeUndefined();
+    expect(data.calmInsight?.actionType).toBe("review");
+  });
+
+  it("does not present internal review buckets as the main category", () => {
+    const data = buildInsightsData(
+      [
+        makeTransaction({ id: "review-1", amountMinor: 3000, categoryId: null, reviewState: "needs_attention" }),
+        makeTransaction({ id: "review-2", amountMinor: 2000, categoryId: null, reviewState: "pending_review" }),
+        makeTransaction({ id: "review-3", amountMinor: 1000, categoryId: null, reviewState: "needs_attention" }),
+      ],
+      {},
+      "USD",
+      new Date("2026-04-21T00:00:00.000Z"),
+    );
+
+    expect(data.calmInsight?.id).toBe("review_uncategorized_spending");
+    expect(data.calmInsight?.id).not.toBe("category_dominance");
+    expect(data.calmInsight?.variables).not.toHaveProperty("categoryLabel");
+    expect(data.calmInsight?.categoryMeta).toBeUndefined();
+  });
+
   it("builds budget progress math for monthly category budgets", () => {
     const data = buildInsightsData(
       [
