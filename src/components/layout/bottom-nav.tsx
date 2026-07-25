@@ -21,7 +21,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-white/70 bg-white/90 px-3 pb-6 pt-3 backdrop-blur"
+      className="calm-bottom-nav fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md border-t border-white/70 bg-white/90 px-3 pt-3 backdrop-blur transition-transform duration-200"
     >
       <div className="grid grid-cols-3 gap-2">
         {APP_NAV_ITEMS.map(({ href, icon: Icon, labelKey }) => {

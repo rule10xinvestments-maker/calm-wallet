@@ -170,9 +170,11 @@ export function CapacitorShellRuntime() {
 
     const keyboardWillShowListener = Keyboard.addListener("keyboardWillShow", (event) => {
       document.documentElement.style.setProperty("--capacitor-keyboard-height", `${event.keyboardHeight}px`);
+      document.documentElement.dataset.capacitorKeyboardOpen = "true";
     });
     const keyboardWillHideListener = Keyboard.addListener("keyboardWillHide", () => {
       document.documentElement.style.setProperty("--capacitor-keyboard-height", "0px");
+      document.documentElement.dataset.capacitorKeyboardOpen = "false";
     });
     const networkStatusListener = Network.addListener("networkStatusChange", (status) => {
       document.documentElement.dataset.connection = status.connected ? "online" : "offline";
@@ -186,6 +188,7 @@ export function CapacitorShellRuntime() {
       document.removeEventListener("click", handleDocumentClick, true);
       document.documentElement.removeAttribute("data-capacitor-shell");
       document.documentElement.removeAttribute("data-connection");
+      document.documentElement.removeAttribute("data-capacitor-keyboard-open");
       document.documentElement.style.removeProperty("--capacitor-keyboard-height");
       void backButtonListener.then((listener) => listener.remove());
       void appUrlOpenListener.then((listener) => listener.remove());

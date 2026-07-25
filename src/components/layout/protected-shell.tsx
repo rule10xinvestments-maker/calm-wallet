@@ -73,7 +73,7 @@ export function ProtectedShell({
     <LocaleProvider savedLocale={uiLocale}>
       {activityMarkerAction ? <AuthenticatedActivityMarker action={activityMarkerAction} /> : null}
       <DeviceTimezoneSync savedTimezone={timezone} updateTimezoneAction={updateTimezoneAction} />
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4 sm:pt-6">
+      <div className="calm-protected-shell mx-auto flex min-h-screen w-full max-w-md flex-col px-4">
         <ProtectedHeader
           accountHint={accountHint}
           notificationPreferences={notificationPreferences}

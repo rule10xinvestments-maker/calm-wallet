@@ -13,6 +13,9 @@
   --primary: 197 67% 42%;
   --primary-foreground: 210 40% 98%;
   --ring: 197 67% 42%;
+  --calm-safe-area-top: env(safe-area-inset-top);
+  --calm-safe-area-bottom: env(safe-area-inset-bottom);
+  --capacitor-keyboard-height: 0px;
 }
 
 * {
@@ -28,6 +31,25 @@ body {
   background-image:
     radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 35%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 249, 0.95));
+}
+
+.calm-protected-shell {
+  padding-top: calc(1rem + var(--calm-safe-area-top));
+  padding-bottom: calc(7rem + var(--calm-safe-area-bottom));
+}
+
+.calm-bottom-nav {
+  padding-bottom: calc(1rem + var(--calm-safe-area-bottom));
+}
+
+html[data-capacitor-keyboard-open="true"] .calm-bottom-nav {
+  transform: translateY(calc(100% + var(--calm-safe-area-bottom)));
+}
+
+@media (min-width: 640px) {
+  .calm-protected-shell {
+    padding-top: 1.5rem;
+  }
 }
 
 a {
