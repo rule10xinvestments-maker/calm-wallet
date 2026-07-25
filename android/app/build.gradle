@@ -1,5 +1,29 @@
 apply plugin: 'com.android.application'
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+def releaseSigningValue = { String key, String envKey ->
+    def fileValue = keystoreProperties.getProperty(key)
+    if (fileValue != null && fileValue.trim()) {
+        return fileValue
+    }
+    def envValue = System.getenv(envKey)
+    if (envValue != null && envValue.trim()) {
+        return envValue
+    }
+    return null
+}
+
+def releaseStoreFile = releaseSigningValue('storeFile', 'CALM_WALLET_UPLOAD_STORE_FILE')
+def releaseStorePassword = releaseSigningValue('storePassword', 'CALM_WALLET_UPLOAD_STORE_PASSWORD')
+def releaseKeyAlias = releaseSigningValue('keyAlias', 'CALM_WALLET_UPLOAD_KEY_ALIAS')
+def releaseKeyPassword = releaseSigningValue('keyPassword', 'CALM_WALLET_UPLOAD_KEY_PASSWORD')
+def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     namespace = "com.calmwallet.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +40,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (!hasReleaseSigning) {
+                throw new GradleException("Release signing is not configured. Provide android/keystore.properties or CALM_WALLET_UPLOAD_* environment variables.")
+            }
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

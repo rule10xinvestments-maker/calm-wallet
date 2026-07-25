@@ -19,3 +19,7 @@ xw-sprint-*-ready.zip
 android-commandlinetools.zip
 temurin17.zip
 .codex-remote-attachments/
+.android-signing/
+android/keystore.properties
+*.jks
+*.keystore
